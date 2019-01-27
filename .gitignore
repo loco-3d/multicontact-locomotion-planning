@@ -1,0 +1,6 @@
+*.pyc
+*.wpr
+res/*
+build/*
+*_final_dyn_results.yaml
+*_final.yaml
