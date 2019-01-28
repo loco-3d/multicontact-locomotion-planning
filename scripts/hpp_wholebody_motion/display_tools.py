@@ -10,6 +10,22 @@ STONE_HEIGHT = 0.005
 STONE_GROUP = "stepping_stones"        
 TRAJ_GROUP = "com_traj"
 
+def displaySphere(viewer,pos,size=0.01,color=[0,0,0,1]):
+  rootName = "s"
+  # add indices until the name is free
+  list = viewer.client.gui.getNodeList()
+  i=0
+  name = rootName
+  while list.count(name) > 0:
+      name=rootName+"_"+str(i)
+      i+=1     
+  viewer.client.gui.addSphere(name,size,color)
+  viewer.client.gui.addToGroup(name,viewer.sceneName)
+  #viewer.client.gui.setVisibility(name,'ALWAYS_ON_TOP')
+  q=pos+[0,0,0,1]
+  viewer.client.gui.applyConfiguration(name,q)
+  viewer.client.gui.refresh()    
+
 def SE3ToViewerConfig(placement):
     q = [0]*7
     q[0:3] = placement.translation.T.tolist()[0]

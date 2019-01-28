@@ -33,10 +33,10 @@ if cfg.USE_CROC_INIT_GUESS:
     cs_initGuess = generate_cs.generateCROCinitGuess(cs,cp.fullBody,beginState,endState)
 if cfg.DISPLAY_INIT_GUESS_TRAJ and (cfg.USE_GEOM_INIT_GUESS or cfg.USE_CROC_INIT_GUESS):
     colors = [v.color.red, v.color.yellow]
-    display_tools.displayCOMTrajectory(cs,v,colors,"_init")
+    display_tools.displayCOMTrajectory(cs_initGuess,v,colors,"_init")
 
 import hpp_wholebody_motion.centroidal_timeopt as timeopt
-cs_com,tp = timeopt.generateCentroidalTrajectory(cs,cs_initGuess)
+cs_com,tp = timeopt.generateCentroidalTrajectory(cs,cs_initGuess,v)
 print "Duration of the motion : "+str(cs_com.contact_phases[-1].time_trajectory[-1])+" s."
 
 
@@ -49,8 +49,8 @@ if cfg.DISPLAY_COM_TRAJ:
     display_tools.displayCOMTrajectory(cs_com,v,colors)
 
 import hpp_wholebody_motion.whole_body as wb
-if USE_CROC_COM:
-    assert USE_CROC_INIT_GUESS, "You must generate CROC initial guess if you want to use it as reference for the COM"  
+if cfg.USE_CROC_COM:
+    assert cfg.USE_CROC_INIT_GUESS, "You must generate CROC initial guess if you want to use it as reference for the COM"  
     q_t = wb.generateWholeBodyMotion(cs_initGuess,v)
 else : 
     q_t = wb.generateWholeBodyMotion(cs_com,v)

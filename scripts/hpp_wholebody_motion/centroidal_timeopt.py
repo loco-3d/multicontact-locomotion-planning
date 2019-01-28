@@ -6,7 +6,7 @@ import locomote
 from locomote import WrenchCone,SOC6,ContactPatch, ContactPhaseHumanoid, ContactSequenceHumanoid
 import time
 import hpp_wholebody_motion.config as cfg
-
+import hpp_wholebody_motion.display_tools as display
 
 ## check if two given timeOpt adjacent indices belong to the same phase or not
 # by checking the contact forces of each effector
@@ -140,15 +140,19 @@ def extractEffectorPhasesFromCSWithoutInitGuess(cs,ee):
     #TODO : same as above but take hardcoded duration (depending on the type of phases instead of the one inside the trajectory)
     raise Exception("Not implemented yet.")
 
-def addCOMviapoints(tp,cs) : 
+def addCOMviapoints(tp,cs,viewer = None) : 
     phase_previous =None
     for pid in range(1,cs.size()-1) : 
         phase = cs.contact_phases[pid]
         phase_previous = cs.contact_phases[pid-1]
         phase_next = cs.contact_phases[pid+1]
-        if phase_previous and (phase_previous.numAcrivePatchs() < phase.numActivePatchs()) and phase_next and (phase_next.numActivePatchs() < phase.numActivePatchs()) : 
+        if phase_previous and (phase_previous.numActivePatches() < phase.numActivePatches()) and phase_next and (phase_next.numActivePatches() < phase.numActivePatches()) : 
             com = phase.init_state[0 : 3]
             tp.setViapoint(phase.time_trajectory[0],com)
+            if viewer and cfg.DISPLAY_WP_COST :
+                display.displaySphere(viewer,com.T.tolist()[0])
+
+
 
 def extractAllEffectorsPhasesFromCS(cs,cs_initGuess,ee_ids):
     effectors_phases = {}
@@ -167,7 +171,7 @@ def extractAllEffectorsPhasesFromCS(cs,cs_initGuess,ee_ids):
     return effectors_phases,size
 
 
-def generateCentroidalTrajectory(cs,cs_initGuess = None):
+def generateCentroidalTrajectory(cs,cs_initGuess = None, viewer =None):
     q_init = cs.contact_phases[0].reference_configurations[0].copy()
     num_phases = cs.size()
     ee_ids = [timeopt.EndeffectorID.RF, timeopt.EndeffectorID.LF,timeopt.EndeffectorID.RH,timeopt.EndeffectorID.LH]
@@ -192,7 +196,8 @@ def generateCentroidalTrajectory(cs,cs_initGuess = None):
         for phase in effectors_phases[ee]:
             tp.setPhase(i, timeopt.phase(ee, phase[0],  phase[1],  phase[2].translation,  phase[2].rotation))
             i += 1
-    addCOMviapoints(tp,cs_initGuess)
+    if cfg.USE_WP_COST:
+        addCOMviapoints(tp,cs_initGuess,viewer)
     cfg_path=cfg.TIME_OPT_CONFIG_PATH + '/'+  cfg.TIMEOPT_CONFIG_FILE
     print "set configuration file for time-optimization : ",cfg_path
     tp.setConfigurationFile(cfg_path)

@@ -15,7 +15,7 @@ EFF_T_PREDEF = 0.1
 p_max = 0.2
 
 ## Override default settings :
-DISPLAY_INIT_GUESS_TRAJ = True 
-USE_GEOM_INIT_GUESS = False
-USE_CROC_INIT_GUESS = True
-USE_CROC_COM = True
+#DISPLAY_INIT_GUESS_TRAJ = True 
+#USE_GEOM_INIT_GUESS = False
+#USE_CROC_INIT_GUESS = True
+#USE_CROC_COM = True

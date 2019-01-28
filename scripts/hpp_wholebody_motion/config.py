@@ -17,6 +17,7 @@ SAVE_CS_COM = True
 DISPLAY_CS = False # display contact sequence from rbprm
 DISPLAY_CS_STONES = True # display stepping stones
 DISPLAY_INIT_GUESS_TRAJ = False 
+DISPLAY_WP_COST=True
 DISPLAY_COM_TRAJ = True
 DISPLAY_FEET_TRAJ = True
 DISPLAY_WB_MOTION = True
@@ -31,6 +32,8 @@ USE_GEOM_INIT_GUESS = True
 USE_CROC_INIT_GUESS = False
 assert USE_GEOM_INIT_GUESS != USE_CROC_INIT_GUESS , "You must choose exactly one initial guess"
 SOLVER_DT = 0.05 # hardcoded in timeOpt_configs files, must match this one ! 
+
+USE_WP_COST = True # use wp from the contact sequence in the cost function of timeopt
 
 ##  Settings for whole body : 
 USE_CROC_COM = False
