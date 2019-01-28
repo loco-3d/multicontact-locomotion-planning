@@ -140,7 +140,7 @@ def generateContactSequence(fb,configs,beginId,endId):
         #phase_d.time_trajectory.append((fb.getDurationForState(stateId))*cfg.DURATION_n_CONTACTS/cfg.SPEED)
         phase_d.init_state=init_state
         phase_d.final_state=final_state
-        phase_d.reference_configurations.append(np.matrix((configs[config_id][:extraDOF])).T)        
+        phase_d.reference_configurations.append(np.matrix((configs[config_id][:-extraDOF])).T)        
         #print "done for double support"
         
         
@@ -164,7 +164,7 @@ def generateContactSequence(fb,configs,beginId,endId):
                 phase_s.RH_patch.active = False
         # retrieve the COM position for init and final state 
          
-        phase_s.reference_configurations.append(np.matrix((configs[config_id][:extraDOF])).T)
+        phase_s.reference_configurations.append(np.matrix((configs[config_id][:-extraDOF])).T)
         init_state = phase_d.init_state.copy()
         final_state = phase_d.final_state.copy()
         fb.setCurrentConfig(configs[config_id+1])
@@ -235,7 +235,7 @@ def generateContactSequence(fb,configs,beginId,endId):
         if var == fb.rArmId:
             phase_d.RH_patch.placement = MRH
     # retrieve the COM position for init and final state (equal for double support phases)    
-    phase_d.reference_configurations.append(np.matrix((configs[-1][:extraDOF])).T)
+    phase_d.reference_configurations.append(np.matrix((configs[-1][:-extraDOF])).T)
     init_state = phase_d.init_state
     init_state[0:3] = np.matrix(fb.getCenterOfMass()).transpose()
     init_state[3:9] = np.matrix(configs[-1][-6:]).transpose()
