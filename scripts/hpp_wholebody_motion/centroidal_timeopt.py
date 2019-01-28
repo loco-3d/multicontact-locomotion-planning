@@ -140,6 +140,15 @@ def extractEffectorPhasesFromCSWithoutInitGuess(cs,ee):
     #TODO : same as above but take hardcoded duration (depending on the type of phases instead of the one inside the trajectory)
     raise Exception("Not implemented yet.")
 
+def addCOMviapoints(tp,cs) : 
+    phase_previous =None
+    for pid in range(1,cs.size()-1) : 
+        phase = cs.contact_phases[pid]
+        phase_previous = cs.contact_phases[pid-1]
+        phase_next = cs.contact_phases[pid+1]
+        if phase_previous and (phase_previous.numAcrivePatchs() < phase.numActivePatchs()) and phase_next and (phase_next.numActivePatchs() < phase.numActivePatchs()) : 
+            com = phase.init_state[0 : 3]
+            tp.setViapoint(phase.time_trajectory[0],com)
 
 def extractAllEffectorsPhasesFromCS(cs,cs_initGuess,ee_ids):
     effectors_phases = {}
@@ -183,6 +192,7 @@ def generateCentroidalTrajectory(cs,cs_initGuess = None):
         for phase in effectors_phases[ee]:
             tp.setPhase(i, timeopt.phase(ee, phase[0],  phase[1],  phase[2].translation,  phase[2].rotation))
             i += 1
+    addCOMviapoints(tp,cs_initGuess)
     cfg_path=cfg.TIME_OPT_CONFIG_PATH + '/'+  cfg.TIMEOPT_CONFIG_FILE
     print "set configuration file for time-optimization : ",cfg_path
     tp.setConfigurationFile(cfg_path)
