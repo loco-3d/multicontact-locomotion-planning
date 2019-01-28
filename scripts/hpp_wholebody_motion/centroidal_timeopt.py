@@ -204,4 +204,4 @@ def generateCentroidalTrajectory(cs,cs_initGuess = None):
     print "write results in cs"
     
     
-    return fillCSFromTimeopt(cs,cs_initGuess,tp)
+    return fillCSFromTimeopt(cs,cs_initGuess,tp), tp

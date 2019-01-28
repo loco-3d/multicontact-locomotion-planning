@@ -36,7 +36,7 @@ if cfg.DISPLAY_INIT_GUESS_TRAJ and (cfg.USE_GEOM_INIT_GUESS or cfg.USE_CROC_INIT
     display_tools.displayCOMTrajectory(cs,v,colors,"_init")
 
 import hpp_wholebody_motion.centroidal_timeopt as timeopt
-cs_com = timeopt.generateCentroidalTrajectory(cs,cs_initGuess)
+cs_com,tp = timeopt.generateCentroidalTrajectory(cs,cs_initGuess)
 print "Duration of the motion : "+str(cs_com.contact_phases[-1].time_trajectory[-1])+" s."
 
 
