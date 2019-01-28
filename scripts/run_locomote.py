@@ -49,7 +49,11 @@ if cfg.DISPLAY_COM_TRAJ:
     display_tools.displayCOMTrajectory(cs_com,v,colors)
 
 import hpp_wholebody_motion.whole_body as wb
-q_t = wb.generateWholeBodyMotion(cs_com,v)
+if USE_CROC_COM:
+    assert USE_CROC_INIT_GUESS, "You must generate CROC initial guess if you want to use it as reference for the COM"  
+    q_t = wb.generateWholeBodyMotion(cs_initGuess,v)
+else : 
+    q_t = wb.generateWholeBodyMotion(cs_com,v)
 
 if cfg.DISPLAY_WB_MOTION:
     raw_input("Press Enter to display the whole body motion ...")

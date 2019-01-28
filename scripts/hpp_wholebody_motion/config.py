@@ -2,15 +2,6 @@
 DEMO_NAME = "darpa_hyq"
 
 
-import importlib
-# Import the module
-demo_cfg = importlib.import_module('hpp_wholebody_motion.demo_configs.'+DEMO_NAME)
-# Determine a list of names to copy to the current name space
-names = getattr(demo_cfg, '__all__', [n for n in dir(demo_cfg) if not n.startswith('_')])
-# Copy those names into the current name space
-g = globals()
-for name in names:
-    g[name] = getattr(demo_cfg, name)
 
 ## PATHS settings : 
 
@@ -42,6 +33,7 @@ assert USE_GEOM_INIT_GUESS != USE_CROC_INIT_GUESS , "You must choose exactly one
 SOLVER_DT = 0.05 # hardcoded in timeOpt_configs files, must match this one ! 
 
 ##  Settings for whole body : 
+USE_CROC_COM = False
 USE_BEZIER_EE = True
 WB_VERBOSE = True
 WB_STOP_AT_EACH_PHASE = False
@@ -49,26 +41,13 @@ IK_dt = 0.001  # controler time step
 IK_PRINT_N = 100  # print state of the problem every IK_PRINT_N time steps (if verbose = True)
 
 
-"""
-# only used by muscod scripts
-
-ZMP_RADIUS = 0.01 #m
-MU_FOOT = 0.5
-MU_HAND = 0.5
-FN_FOOT = 1200.
-FT_FOOT = MU_FOOT * FN_FOOT
-MN_FOOT = 400.
-#MT_FOOT = FN_FOOT * ZMP_RADIUS
-MT_FOOT = MN_FOOT
-FN_HAND = 150.
-FT_HAND = MU_HAND * FN_HAND
-MN_HAND = 100.
-#MT_HAND = FN_HAND * ZMP_RADIUS
-MT_HAND = MN_HAND
-
-NUM_NODES_INIT = 2
-NUM_NODES_FINAL = 3
-NUM_NODES_SS = 3
-NUM_NODES_DS = 2
-NUM_NODES_TS = 2
-"""
+# import specific settings for the selected demo. This settings may override default ones.
+import importlib
+# Import the module
+demo_cfg = importlib.import_module('hpp_wholebody_motion.demo_configs.'+DEMO_NAME)
+# Determine a list of names to copy to the current name space
+names = getattr(demo_cfg, '__all__', [n for n in dir(demo_cfg) if not n.startswith('_')])
+# Copy those names into the current name space
+g = globals()
+for name in names:
+    g[name] = getattr(demo_cfg, name)
