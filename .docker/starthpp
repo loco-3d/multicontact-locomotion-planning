@@ -1,0 +1,7 @@
+sudo service omniorb4-nameserver restart
+sleep 3
+hpp-rbprm-server &> log-rbprm.txt &
+sleep 3
+echo "start script {$1}"
+ipython -i $1
+pkill hpp-rbprm-server
