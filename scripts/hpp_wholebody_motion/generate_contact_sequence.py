@@ -120,6 +120,8 @@ def generateContactSequence(fb,configs,beginId,endId):
             
             # now we change the contacts that have moved : 
             variations = fb.getContactsVariations(stateId-1,stateId)
+            if len(variations) != 1:
+                print "Several contact changes between states "+str(stateId-1)+" and "+str(stateId)+" : "+str(variations)
             assert len(variations)==1, "Several changes of contacts in adjacent states, not implemented yet !"
             for var in variations:     
                 # FIXME : for loop in variation ? how ?
@@ -153,6 +155,9 @@ def generateContactSequence(fb,configs,beginId,endId):
         phase_s.LH_patch = phase_d.LH_patch 
         # find the contact to break : 
         variations = fb.getContactsVariations(stateId,stateId+1)
+        if len(variations) != 1:
+            print "Several contact changes between states "+str(stateId)+" and "+str(stateId+1)+" : "+str(variations)
+        assert len(variations)==1, "Several changes of contacts in adjacent states, not implemented yet !"        
         for var in variations:
             if var == fb.lLegId:
                 phase_s.LF_patch.active = False
