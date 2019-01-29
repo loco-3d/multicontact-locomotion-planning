@@ -1,5 +1,6 @@
 #DEMO_NAME = "talos_flatGround"
-DEMO_NAME = "darpa_hyq"
+#DEMO_NAME = "darpa_hyq"
+DEMO_NAME = "hyq_slalom_debris"
 
 
 
@@ -14,10 +15,10 @@ SAVE_CS = True
 SAVE_CS_COM = True
 
 ##DISPLAY settings : 
-DISPLAY_CS = False # display contact sequence from rbprm
+DISPLAY_CS = True # display contact sequence from rbprm
 DISPLAY_CS_STONES = True # display stepping stones
 DISPLAY_INIT_GUESS_TRAJ = False 
-DISPLAY_WP_COST=True
+DISPLAY_WP_COST=False
 DISPLAY_COM_TRAJ = True
 DISPLAY_FEET_TRAJ = True
 DISPLAY_WB_MOTION = True
@@ -36,12 +37,13 @@ SOLVER_DT = 0.05 # hardcoded in timeOpt_configs files, must match this one !
 USE_WP_COST = True # use wp from the contact sequence in the cost function of timeopt
 
 ##  Settings for whole body : 
+YAW_ROT_GAIN = 1.
 USE_CROC_COM = False
 USE_BEZIER_EE = True
 WB_VERBOSE = True
 WB_STOP_AT_EACH_PHASE = False
 IK_dt = 0.001  # controler time step
-IK_PRINT_N = 100  # print state of the problem every IK_PRINT_N time steps (if verbose = True)
+IK_PRINT_N = 500  # print state of the problem every IK_PRINT_N time steps (if verbose = True)
 
 
 # import specific settings for the selected demo. This settings may override default ones.
