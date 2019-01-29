@@ -12,7 +12,7 @@ v = cp.v
 if cfg.DISPLAY_CS:
     import tools.display_tools as rbprmDisplay
     raw_input("Press Enter to display the contact sequence ...")
-    rbprmDisplay.displayContactSequence(v,cp.configs)    
+    rbprmDisplay.displayContactSequence(v,cp.configs,0.2)    
 
 beginState = 0
 endState = len(cp.configs) - 1
@@ -57,4 +57,13 @@ else :
 
 if cfg.DISPLAY_WB_MOTION:
     raw_input("Press Enter to display the whole body motion ...")
+    display_tools.displayWBmotion(v,q_t,cfg.IK_dt,cfg.DT_DISPLAY)
+
+
+
+
+def dispCS(step = 0.2): 
+    rbprmDisplay.displayContactSequence(v,cp.configs,step)
+    
+def dispWB():
     display_tools.displayWBmotion(v,q_t,cfg.IK_dt,cfg.DT_DISPLAY)
