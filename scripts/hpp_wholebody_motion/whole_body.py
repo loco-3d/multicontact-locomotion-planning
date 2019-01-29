@@ -326,7 +326,7 @@ def generateWholeBodyMotion(cs,viewer=None):
             phase_prev = cs.contact_phases[pid-1]
         else : 
             phase_prev = None            
-        time_interval = [phase.time_trajectory[0], phase.time_trajectory[-1]]
+        time_interval = [t, phase.time_trajectory[-1]]
         # generate com ref traj from phase : 
         com_init = np.matrix(np.zeros((9, 1)))
         com_init[0:3, 0] = robot.com(invdyn.data())
