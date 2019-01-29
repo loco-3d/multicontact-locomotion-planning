@@ -1,5 +1,5 @@
 import pinocchio as se3
-from pinocchio import SE3
+from pinocchio import SE3, Quaternion
 import tsid
 import numpy as np
 from numpy.linalg import norm as norm
@@ -31,6 +31,14 @@ def MotiontoVec(M):
         v[j] = M.linear[j]
         v[j + 3] = M.angular[j]
     return v
+
+# assume that q.size >= 7 with root pos and quaternion(x,y,z,w)
+def SE3FromConfig(q):
+    placement = SE3.Identity()
+    placement.translation = q[0:3]
+    r = Quaternion(q[6,0],q[3,0],q[4,0],q[5,0])
+    placement.rotation = r.matrix()
+    return placement
 
 # cfg.Robot.MRsole_offset.actInv(p0.RF_patch.placement)
 # get the joint position for the given phase with the given effector name
@@ -255,7 +263,7 @@ def generateWholeBodyMotion(cs,viewer=None):
     
     postureTask = tsid.TaskJointPosture("task-joint-posture", robot)
     postureTask.setKp(cfg.kp_posture * cfg.gain_vector)    
-    postureTask.setKd(2.0 * np.sqrt(cfg.kp_posture) * cfg.gain_vector)
+    postureTask.setKd(2.0 * np.sqrt(cfg.kp_posture* cfg.gain_vector) )
     postureTask.mask(cfg.masks_posture)         
     invdyn.addMotionTask(postureTask, cfg.w_posture,1, 0.0)
     q_ref = q
@@ -264,11 +272,12 @@ def generateWholeBodyMotion(cs,viewer=None):
     orientationRootTask = tsid.TaskSE3Equality("task-orientation-root", robot, 'root_joint')
     mask = np.matrix(np.ones(6)).transpose()
     mask[0:3] = 0
+    mask[5] = cfg.YAW_ROT_GAIN 
     orientationRootTask.setKp(cfg.kp_rootOrientation * mask)
-    orientationRootTask.setKd(2.0 * np.sqrt(cfg.kp_rootOrientation) * mask)
+    orientationRootTask.setKd(2.0 * np.sqrt(cfg.kp_rootOrientation* mask) )
     invdyn.addMotionTask(orientationRootTask, cfg.w_rootOrientation,1, 0.0)
     root_ref = robot.position(data, robot.model().getJointId( 'root_joint'))
-    rootTraj = tsid.TrajectorySE3Constant("traj-root", root_ref)
+    trajRoot = tsid.TrajectorySE3Constant("traj-root", root_ref)
 
     usedEffectors = []
     for eeName in cfg.Robot.dict_limb_joint.values() : 
@@ -317,11 +326,17 @@ def generateWholeBodyMotion(cs,viewer=None):
             phase_prev = cs.contact_phases[pid-1]
         else : 
             phase_prev = None            
+        time_interval = [phase.time_trajectory[0], phase.time_trajectory[-1]]
         # generate com ref traj from phase : 
         com_init = np.matrix(np.zeros((9, 1)))
         com_init[0:3, 0] = robot.com(invdyn.data())
         com_traj = trajectories.SmoothedCOMTrajectory("com_smoothing", phase, com_init, dt) # cubic interpolation from timeopt dt to tsid dt
-        
+        # add root's orientation ref from reference config : 
+        if phase_next :
+            root_traj = trajectories.TrajectorySE3LinearInterp(SE3FromConfig(phase.reference_configurations[0]),SE3FromConfig(phase_next.reference_configurations[0]),time_interval)
+        else : 
+            root_traj = trajectories.TrajectorySE3LinearInterp(SE3FromConfig(phase.reference_configurations[0]),SE3FromConfig(phase.reference_configurations[0]),time_interval)
+            
         # add newly created contacts : 
         for eeName in usedEffectors:
             if phase_prev and not isContactActive(phase_prev,eeName) and isContactActive(phase,eeName) :
@@ -370,8 +385,9 @@ def generateWholeBodyMotion(cs,viewer=None):
             #print "postural task ref : ",samplePosture.pos()
             postureTask.setReference(samplePosture)
             # root orientation : 
-            sampleRoot = rootTraj.computeNext()
-            # TODO : get current orientation (from planned path ? or from ref configs in cs ? )
+            sampleRoot = trajRoot.computeNext()
+            sampleRoot.pos(SE3toVec(root_traj(t)[0]))
+            sampleRoot.vel(MotiontoVec(root_traj(t)[1]))
             orientationRootTask.setReference(sampleRoot)
             
             # end effector (if they exists)

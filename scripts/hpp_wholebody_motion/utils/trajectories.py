@@ -573,3 +573,41 @@ class BezierTrajectory(RefTrajectory):
       #next_angular_vel = (se3.log3(self.M.rotation.T * r_plus_dt)/dt)
       #self.a.angular = (next_angular_vel - self.v.angular)/dt    
     return self.M, self.v, self.a
+
+class TrajectorySE3LinearInterp(RefTrajectory):
+  
+  def __init__(self,placement_init,placement_final,time_interval):
+    RefTrajectory.__init__(self,"TrajectorySE3LinearInterp")
+    self.placement_init = placement_init    
+    self.placement_final = placement_final
+    self.t0 = time_interval[0]
+    self.t1 = time_interval[1]
+    self.length = self.t1 - self.t0
+    self.quat0 = Quaternion(self.placement_init.rotation)
+    self.quat1 = Quaternion(self.placement_final.rotation)    
+    self.M = SE3.Identity()
+    self.v = Motion.Zero()
+    self.a = Motion.Zero()    
+    # constant velocity and null acceleration : 
+    self.v.linear = (placement_final.translation - placement_final.translation)/self.length
+    self.v.angular= se3.log3(placement_final.rotation.T * placement_final.rotation)/self.length
+    
+    
+
+  def __call__(self,t):
+    return self.compute_for_normalized_time(t - self.t0)
+  
+  def compute_for_normalized_time(self,t):
+    if t < 0:
+      print "Trajectory called with negative time."
+      return self.compute_for_normalized_time(0)
+    elif t > self.length:
+      print "Trajectory called after final time."
+      return self.compute_for_normalized_time(self.t_total)    
+    u = t/self.length
+    self.M = SE3.Identity()
+    self.M.translation = u*self.placement_final.translation + (1.-u)*self.placement_init.translation
+    self.M.rotation = (self.quat0.slerp(u,self.quat1)).matrix()  
+    return self.M, self.v, self.a
+    
+    

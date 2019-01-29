@@ -15,4 +15,4 @@ EFF_T_PREDEF = 0.1
 p_max = 0.2
 
 ## Override default settings :
-YAW_ROT_GAIN = 0.01
+YAW_ROT_GAIN = 0.1
