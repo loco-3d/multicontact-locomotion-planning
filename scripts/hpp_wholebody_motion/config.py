@@ -40,7 +40,7 @@ USE_WP_COST = True # use wp from the contact sequence in the cost function of ti
 YAW_ROT_GAIN = 1.
 USE_CROC_COM = False
 USE_BEZIER_EE = True
-WB_VERBOSE = True
+WB_VERBOSE = False
 WB_STOP_AT_EACH_PHASE = False
 IK_dt = 0.001  # controler time step
 IK_PRINT_N = 500  # print state of the problem every IK_PRINT_N time steps (if verbose = True)
