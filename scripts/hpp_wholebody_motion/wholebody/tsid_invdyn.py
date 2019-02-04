@@ -12,8 +12,8 @@ import hpp_wholebody_motion.config as cfg
 import locomote
 from locomote import WrenchCone,SOC6,ContactPatch, ContactPhaseHumanoid, ContactSequenceHumanoid
 from hpp_wholebody_motion.utils import trajectories
-import hpp_wholebody_motion.end_effectors_traj as EETraj
-import hpp_wholebody_motion.display_tools as display_tools
+import hpp_wholebody_motion.end_effector.bezier_predef as EETraj
+import hpp_wholebody_motion.viewer.display_tools as display_tools
 
 
 def SE3toVec(M):

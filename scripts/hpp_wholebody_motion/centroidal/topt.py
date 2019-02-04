@@ -6,7 +6,7 @@ import locomote
 from locomote import WrenchCone,SOC6,ContactPatch, ContactPhaseHumanoid, ContactSequenceHumanoid
 import time
 import hpp_wholebody_motion.config as cfg
-import hpp_wholebody_motion.display_tools as display
+import hpp_wholebody_motion.viewer.display_tools as display
 
 ## check if two given timeOpt adjacent indices belong to the same phase or not
 # by checking the contact forces of each effector

@@ -4,8 +4,8 @@ import importlib
 # with exactly one contact change between each configurations
 # It must also initialise a FullBody object name fullBody and optionnaly a Viewer object named V
 cp = importlib.import_module('scenarios.demos.'+cfg.DEMO_NAME)
-import hpp_wholebody_motion.generate_contact_sequence as generate_cs
-import hpp_wholebody_motion.display_tools as display_tools
+import hpp_wholebody_motion.contact_sequence.rbprm as generate_cs
+import hpp_wholebody_motion.viewer.display_tools as display_tools
 
 v = cp.v
 
@@ -27,16 +27,18 @@ if cfg.DISPLAY_CS_STONES :
     
 if cfg.USE_GEOM_INIT_GUESS:
     print "Generate geometric init guess."
-    cs_initGuess = generate_cs.generateGeometricInitGuess(cs)
+    import hpp_wholebody_motion.centroidal.geometric as initGuess_geom 
+    cs_initGuess = initGuess_geom.generateCentroidalTrajectory(cs)
 if cfg.USE_CROC_INIT_GUESS:
     print "Generate init guess with CROC."
-    cs_initGuess = generate_cs.generateCROCinitGuess(cs,cp.fullBody,beginState,endState)
+    import hpp_wholebody_motion.centroidal.croc as initGuess_croc    
+    cs_initGuess = initGuess_croc.generateCentroidalTrajectory(cs,cp.fullBody,beginState,endState)
 if cfg.DISPLAY_INIT_GUESS_TRAJ and (cfg.USE_GEOM_INIT_GUESS or cfg.USE_CROC_INIT_GUESS):
     colors = [v.color.red, v.color.yellow]
     display_tools.displayCOMTrajectory(cs_initGuess,v,colors,"_init")
 
-import hpp_wholebody_motion.centroidal_timeopt as timeopt
-cs_com,tp = timeopt.generateCentroidalTrajectory(cs,cs_initGuess,v)
+import hpp_wholebody_motion.centroidal.topt as centroidal
+cs_com,tp = centroidal.generateCentroidalTrajectory(cs,cs_initGuess,v)
 print "Duration of the motion : "+str(cs_com.contact_phases[-1].time_trajectory[-1])+" s."
 
 
@@ -48,7 +50,7 @@ if cfg.DISPLAY_COM_TRAJ:
     colors = [v.color.blue, v.color.green]
     display_tools.displayCOMTrajectory(cs_com,v,colors)
 
-import hpp_wholebody_motion.whole_body as wb
+import hpp_wholebody_motion.wholebody.tsid_invdyn as wb
 if cfg.USE_CROC_COM:
     assert cfg.USE_CROC_INIT_GUESS, "You must generate CROC initial guess if you want to use it as reference for the COM"  
     q_t = wb.generateWholeBodyMotion(cs_initGuess,v)

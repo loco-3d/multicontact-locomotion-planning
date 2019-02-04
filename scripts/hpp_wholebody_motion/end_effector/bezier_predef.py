@@ -1,7 +1,7 @@
 import hpp_wholebody_motion.config as cfg
 import time
 import os
-from tools.polyBezier import *
+from hpp_wholebody_motion.utils.polyBezier import *
 import pinocchio as se3
 from pinocchio import SE3
 from pinocchio.utils import *
@@ -9,8 +9,8 @@ import numpy.linalg
 from locomote import WrenchCone,SOC6,ContactSequenceHumanoid
 import numpy as np
 from tools.disp_bezier import *
-import spline
-import bezier_com_traj as bezier_com
+import hpp_spline
+import hpp_bezier_com_traj as bezier_com
 
 
 
