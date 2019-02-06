@@ -93,6 +93,9 @@ def fillCSFromTimeopt(cs,cs_initGuess,tp):
             # first k of the current phase
             k_id = 0
             p_id += 1
+            if p_id > cs_com.size() - 1 :
+                print "Error : more phases in timeopt than in the CS. pid = ",p_id
+                return cs_com
             cs_com.contact_phases[p_id].init_state = np.matrix(x)                
             appendOrReplace(cs_com.contact_phases[p_id].time_trajectory,k_id,tp.getTime(k))
             appendOrReplace(cs_com.contact_phases[p_id].control_trajectory,k_id,np.matrix(u))
