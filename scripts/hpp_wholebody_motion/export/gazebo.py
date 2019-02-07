@@ -2,7 +2,10 @@ import os
 import hpp_wholebody_motion.config as cfg
 
 def export(q_t):
-    filename = cfg.EXPORT_PATH+"/"+cfg.DEMO_NAME+".posture"
+    path = cfg.EXPORT_PATH+"/gazebo"
+    if not os.path.exists(path):
+        os.makedirs(path)
+    filename = path+"/"+cfg.DEMO_NAME+".posture"
     dt = cfg.IK_dt
     with open(filename,'w') as f:
         for i in range(len(q_t)):
