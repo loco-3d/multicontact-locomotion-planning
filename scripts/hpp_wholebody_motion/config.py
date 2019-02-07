@@ -1,6 +1,6 @@
-DEMO_NAME = "talos_flatGround"
+#DEMO_NAME = "talos_flatGround"
 #DEMO_NAME = "darpa_hyq"
-#DEMO_NAME = "hyq_slalom_debris"
+DEMO_NAME = "hyq_slalom_debris"
 
 
 
