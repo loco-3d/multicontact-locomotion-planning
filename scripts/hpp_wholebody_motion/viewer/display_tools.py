@@ -151,22 +151,25 @@ def displaySE3Traj(traj,viewer,name,color,time_interval,offset=SE3.Identity()):
         t += dt
     viewer.client.gui.addCurve(name,path,color)
     viewer.client.gui.addToGroup(name,viewer.sceneName)    
-    viewer.client.gui.refresh()
+    viewer.client.gui.refresh
+    
+def displayWBconfig(viewer,q_matrix):
+  q = q_matrix.T.tolist()[0]
+  extraDof = viewer.robot.getConfigSize() - q_matrix.shape[0]
+  assert extraDof >= 0 , "Robot model used by the IK is not the same as during the planning"
+  if extraDof > 0:
+    q += [0]*extraDof
+  viewer(q)  
     
 def displayWBmotion(viewer,q_t,dt,dt_display):
     id = 0
     step = dt_display / dt 
     assert step%1 == 0 ,"display dt shouldbe a multiple of ik dt"
     # check if robot have extradof : 
-    extraDof = viewer.robot.getConfigSize() - q_t[0].shape[0]
-    assert extraDof >= 0 , "Robot model used by the IK is not the same as during the planning"
     step = int(step)
     while id < len(q_t):
         t_start = time.time()
-        q = q_t[id].T.tolist()[0]
-        if extraDof > 0:
-            q += [0]*extraDof
-        viewer(q)
+        displayWBconfig(viewer,q_t[id])
         id += step
         elapsed = time.time() - t_start
         if elapsed > dt_display :
@@ -174,7 +177,6 @@ def displayWBmotion(viewer,q_t,dt,dt_display):
         else : 
             time.sleep(dt_display - elapsed)
     # display last config if the total duration is not a multiple of the dt
-    q = q_t[-1].T.tolist()[0]
-    if extraDof > 0:
-        q += [0]*extraDof
-    viewer(q)            
+    displayWBconfig(viewer,q_t[-1])
+          
+
