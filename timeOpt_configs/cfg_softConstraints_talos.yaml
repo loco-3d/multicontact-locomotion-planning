@@ -19,13 +19,13 @@ planner_variables:
   torque_range: [-300.0, 300.0]
   eff_offset_rf: [ 0.00,  0.00,  0.00]
   eff_offset_lf: [ 0.00,  0.00,  0.00]
-  eff_offset_rh: [ 0.20,  0.00,  0.48]
-  eff_offset_lh: [-0.20,  0.00,  0.48]
+  eff_offset_rh: [ 0.0,  -0.15,  0.45]
+  eff_offset_lh: [ 0.0,  0.15,  0.45]
   cop_range_rf: [-0.06,  0.06, -0.03,  0.03]
   cop_range_lf: [-0.06,  0.06, -0.03,  0.03]
   cop_range_rh: [-0.01,  0.01, -0.01,  0.01]
   cop_range_lh: [-0.01,  0.01, -0.01,  0.01]
-  max_eef_lengths: [0.88,  0.88,  0.60,  0.60]
+  max_eef_lengths: [0.88,  0.88,  0.9,  0.9]
 
   w_trq_arm:       1.000
   w_trq_leg:       1.000
