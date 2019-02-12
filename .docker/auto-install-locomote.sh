@@ -20,7 +20,7 @@ cd timeopt/build
 cmake -DCMAKE_INSTALL_PREFIX=$DEVEL_HPP_DIR/install/ -DCMAKE_BUILD_TYPE=Release ..
 make install
 cd $DEVEL_HPP_DIR/src
-git clone --recursive https://github.com/ggory15/tsid.git
+git clone --recursive https://github.com/stack-of-tasks/tsid.git
 mkdir tsid/build
 cd tsid/build
 cmake -DCMAKE_INSTALL_PREFIX=$DEVEL_HPP_DIR/install/ -DCMAKE_BUILD_TYPE=Release ..
