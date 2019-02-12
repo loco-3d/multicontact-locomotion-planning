@@ -247,5 +247,29 @@ def generateContactSequence(fb,configs,beginId,endId):
     phase_d.init_state=init_state
     phase_d.final_state=final_state   
     #print "done for last state"
+    
+    # assign contact models : 
+    # only used by muscod ?? But we need to fill it otherwise the serialization fail
+    for k,phase in enumerate(cs.contact_phases):
+        RF_patch = phase.RF_patch
+        cm = RF_patch.contactModel
+        cm.mu = cfg.MU
+        cm.ZMP_radius = 0.01
+        RF_patch.contactModelPlacement = SE3.Identity()
+        LF_patch = phase.LF_patch
+        cm = LF_patch.contactModel
+        cm.mu = cfg.MU
+        cm.ZMP_radius = 0.01
+        LF_patch.contactModelPlacement = SE3.Identity()
+        LH_patch = phase.LH_patch
+        cm = LH_patch.contactModel
+        cm.mu = cfg.MU
+        cm.ZMP_radius = 0.01
+        LH_patch.contactModelPlacement = SE3.Identity()
+        RH_patch = phase.RH_patch            
+        cm = RH_patch.contactModel
+        cm.mu = cfg.MU
+        cm.ZMP_radius = 0.01
+        RH_patch.contactModelPlacement = SE3.Identity()    
         
     return cs
