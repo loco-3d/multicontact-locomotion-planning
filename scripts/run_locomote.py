@@ -6,19 +6,26 @@ import importlib
 cp = importlib.import_module('scenarios.'+cfg.SCRIPT_PATH+'.'+cfg.DEMO_NAME)
 import hpp_wholebody_motion.contact_sequence.rbprm as generate_cs
 import hpp_wholebody_motion.viewer.display_tools as display_tools
+from locomote import ContactSequenceHumanoid
 
 v = cp.v
 
 if cfg.DISPLAY_CS:
     import tools.display_tools as rbprmDisplay
     raw_input("Press Enter to display the contact sequence ...")
-    rbprmDisplay.displayContactSequence(v,cp.configs,0.2)    
+    rbprmDisplay.displayContactSequence(v,cp.configs,0.2) 
+    
+if cfg.LOAD_CS:
+    cs = ContactSequenceHumanoid(0)
+    filename = cfg.CONTACT_SEQUENCE_PATH + "/"+cfg.DEMO_NAME+".xml"   
+    print "Import contact sequence XML file : ",filename    
+    cs.loadFromXML(filename, "ContactSequence") 
+else:
+    beginState = 0
+    endState = len(cp.configs) - 1
+    cs = generate_cs.generateContactSequence(cp.fullBody,cp.configs,beginState,endState)
 
-beginState = 0
-endState = len(cp.configs) - 1
-cs = generate_cs.generateContactSequence(cp.fullBody,cp.configs,beginState,endState)
-
-if cfg.SAVE_CS :
+if cfg.SAVE_CS and not cfg.LOAD_CS:
     filename = cfg.CONTACT_SEQUENCE_PATH + "/"+cfg.DEMO_NAME+".xml"
     print "Write contact sequence XML file : ",filename
     cs.saveAsXML(filename, "ContactSequence")    
@@ -37,12 +44,17 @@ if cfg.DISPLAY_INIT_GUESS_TRAJ and (cfg.USE_GEOM_INIT_GUESS or cfg.USE_CROC_INIT
     colors = [v.color.red, v.color.yellow]
     display_tools.displayCOMTrajectory(cs_initGuess,v,colors,"_init")
 
-import hpp_wholebody_motion.centroidal.topt as centroidal
-cs_com,tp = centroidal.generateCentroidalTrajectory(cs,cs_initGuess,v)
-print "Duration of the motion : "+str(cs_com.contact_phases[-1].time_trajectory[-1])+" s."
+if cfg.LOAD_CS_COM :
+    cs_com = ContactSequenceHumanoid(0)
+    filename = cfg.CONTACT_SEQUENCE_PATH + "/"+cfg.DEMO_NAME+"_COM.xml"
+    cs_com.loadFromXML(filename, "ContactSequence")     
+else:
+    import hpp_wholebody_motion.centroidal.topt as centroidal
+    cs_com,tp = centroidal.generateCentroidalTrajectory(cs,cs_initGuess,v)
+    print "Duration of the motion : "+str(cs_com.contact_phases[-1].time_trajectory[-1])+" s."
 
 
-if cfg.SAVE_CS_COM :
+if cfg.SAVE_CS_COM and not cfg.LOAD_CS_COM:
     filename = cfg.CONTACT_SEQUENCE_PATH + "/"+cfg.DEMO_NAME+"_COM.xml"
     print "Write contact sequence with centroidal trajectory XML file : ",filename
     cs_com.saveAsXML(filename, "ContactSequence") 
