@@ -8,6 +8,27 @@ import time
 import hpp_wholebody_motion.config as cfg
 import hpp_wholebody_motion.viewer.display_tools as display
 
+
+
+def isContactEverActive(cs,eeName):
+    for phase in cs.contact_phases:
+        if eeName == timeopt.EndeffectorID.RF :
+            if phase.RF_patch.active:
+                return True
+        elif eeName == timeopt.EndeffectorID.LF :
+            if phase.LF_patch.active:
+                return True
+        elif eeName == timeopt.EndeffectorID.RH :
+            if phase.RH_patch.active:
+                return True
+        elif eeName == timeopt.EndeffectorID.LH :
+            if phase.LH_patch.active:
+                return True
+        else :
+            raise Exception("Unknown effector name") 
+    return False
+
+
 ## check if two given timeOpt adjacent indices belong to the same phase or not
 # by checking the contact forces of each effector
 def isNewPhaseFromContact(tp,k0,k1):
@@ -188,7 +209,7 @@ def generateCentroidalTrajectory(cs,cs_initGuess = None, viewer =None):
     p0= cs.contact_phases[0]
     for ee in ee_ids:
         patch = getPhasePatchforEE(p0,ee)
-        tp.setInitialPose(patch.active, patch.placement.translation, patch.placement.rotation, ee)
+        tp.setInitialPose(isContactEverActive(cs,ee), patch.placement.translation, patch.placement.rotation, ee)
     tp.setMass(cfg.MASS);#FIXME
     tp.getMass();
     tp.setFinalCOM(cs.contact_phases[-1].final_state[0:3])
