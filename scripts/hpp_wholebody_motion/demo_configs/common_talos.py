@@ -1,5 +1,6 @@
 from hpp.corbaserver.rbprm.talos import Robot
 MASS = 90.27
+
 ## weight and gains used by TSID
 
 fMin = 5.0                      # minimum normal force

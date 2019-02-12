@@ -3,7 +3,7 @@ import importlib
 #the following script must produce a sequence of configurations in contact (configs) 
 # with exactly one contact change between each configurations
 # It must also initialise a FullBody object name fullBody and optionnaly a Viewer object named V
-cp = importlib.import_module('scenarios.demos.'+cfg.DEMO_NAME)
+cp = importlib.import_module('scenarios.'+cfg.SCRIPT_PATH+'.'+cfg.DEMO_NAME)
 import hpp_wholebody_motion.contact_sequence.rbprm as generate_cs
 import hpp_wholebody_motion.viewer.display_tools as display_tools
 
