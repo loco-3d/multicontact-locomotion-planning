@@ -4,9 +4,6 @@
 set -e
 
 cd $DEVEL_HPP_DIR/src
-make hpp-gepetto-viewer.install
-echo "export CORBA_HOST=172.17.0.1" >> ~/.bashrc
-cd $DEVEL_HPP_DIR/src
 git clone --recursive https://git-amd.tuebingen.mpg.de/bponton/timeoptimization
 cd timeoptimization/
 ./src/catkin/third_party/catkin/bin/catkin_make
