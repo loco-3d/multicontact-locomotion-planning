@@ -1,7 +1,7 @@
 #DEMO_NAME = "talos_flatGround"
 #DEMO_NAME = "darpa_hyq"
-DEMO_NAME = "hyq_slalom_debris"
-
+#DEMO_NAME = "hyq_slalom_debris"
+DEMO_NAME = "talos_table"
 
 
 ## PATHS settings : 
@@ -11,13 +11,15 @@ PKG_PATH = os.environ['DEVEL_HPP_DIR']+"/src/hpp-wholebody-motion"
 OUTPUT_DIR = PKG_PATH+"/res"
 CONTACT_SEQUENCE_PATH = OUTPUT_DIR + "/contact_sequences"
 TIME_OPT_CONFIG_PATH = PKG_PATH +'/timeOpt_configs'
+LOAD_CS = True
+LOAD_CS_COM = False
 SAVE_CS = True
 SAVE_CS_COM = True
 EXPORT_GAZEBO = True
 EXPORT_PATH = OUTPUT_DIR+"/export"
 
 ##DISPLAY settings : 
-DISPLAY_CS = True # display contact sequence from rbprm
+DISPLAY_CS = False # display contact sequence from rbprm
 DISPLAY_CS_STONES = True # display stepping stones
 DISPLAY_INIT_GUESS_TRAJ = False 
 DISPLAY_WP_COST=False
