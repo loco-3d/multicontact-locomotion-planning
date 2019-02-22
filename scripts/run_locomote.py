@@ -81,3 +81,12 @@ def dispCS(step = 0.2):
     
 def dispWB():
     display_tools.displayWBmotion(v,q_t,cfg.IK_dt,cfg.DT_DISPLAY)
+    
+"""
+#record gepetto-viewer 
+v.startCapture("capture/capture","png")
+dispWB()
+v.stopCapture()
+
+
+"""
