@@ -14,7 +14,7 @@ from locomote import WrenchCone,SOC6,ContactPatch, ContactPhaseHumanoid, Contact
 from hpp_wholebody_motion.utils import trajectories
 import hpp_wholebody_motion.end_effector.bezier_predef as EETraj
 import hpp_wholebody_motion.viewer.display_tools as display_tools
-
+import math
 
 def SE3toVec(M):
     v = np.matrix(np.zeros((12, 1)))
@@ -194,8 +194,7 @@ def generateEEReferenceTraj(robot,robotData,t,phase,phase_next,eeName,viewer = N
     placements.append(placement_init)
     placements.append(placement_end)    
     if cfg.USE_BEZIER_EE :         
-        curves = EETraj.generateBezierTraj(placement_init,placement_end,time_interval[1]-time_interval[0])
-        ref_traj = trajectories.BezierTrajectory(curves,placement_init,placement_end,time_interval)
+        ref_traj = EETraj.generateBezierTraj(placement_init,placement_end,time_interval)
     else : 
         ref_traj = trajectories.SmoothedFootTrajectory(time_interval, placements) 
     if cfg.WB_VERBOSE :
@@ -444,6 +443,11 @@ def generateWholeBodyMotion(cs,viewer=None):
                 print "/!\ ABORT : controler unstable at t = "+str(t)+"  /!\ "
                 print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"                
                 return q_t
+            if math.isnan(norm(dv)) or math.isnan(norm(v)) :
+                print "!!!!!!    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+                print "/!\ ABORT : nan   at t = "+str(t)+"  /!\ "
+                print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"                
+                return q_t                
             
     time_end = time.time() - time_start
     print "Whole body motion generated in : "+str(time_end)+" s."

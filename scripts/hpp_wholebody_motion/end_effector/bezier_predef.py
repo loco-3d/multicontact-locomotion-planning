@@ -11,6 +11,7 @@ import numpy as np
 from tools.disp_bezier import *
 import hpp_spline
 import hpp_bezier_com_traj as bezier_com
+from hpp_wholebody_motion.utils import trajectories
 
 
 
@@ -76,7 +77,7 @@ def buildPredefinedFinalTraj(placement,t_total):
     n = 4.
     wps = np.matrix(np.zeros((3,int(n+1))))
     T = cfg.EFF_T_PREDEF
-    # constrained init pos and final pos. Init vel, acc and jerk = 0
+    # constrained init pos and final pos. final vel, acc and jerk = 0
     wps[:,0] = (c0); #c0
     wps[:,1] = ((n*n*c1 - n*c1 - 3*n*dc1*T + 3*dc1*T + 3*ddc1*T*T)/(n*(n - 1))) ; # j1
     wps[:,2] = ((n*n*c1 - n*c1 - 2*n*dc1*T + 2*dc1*T + ddc1*T*T)/(n*(n - 1))) ; #ddc1 * T ??
@@ -84,7 +85,8 @@ def buildPredefinedFinalTraj(placement,t_total):
     wps[:,4] = (c1); #c1
     return bezier(wps,T)
 
-def generateBezierTraj(placement_init,placement_final,t_total):
+def generateBezierTraj(placement_init,placement_final,time_interval):
+    t_total = time_interval[1]-time_interval[0]
     # generate two curves for the takeoff/landing : 
     # generate a bezier curve for the middle part of the motion : 
     bezier_takeoff = buildPredefinedInitTraj(placement_init,t_total)
@@ -110,7 +112,8 @@ def generateBezierTraj(placement_init,placement_final,t_total):
     curves.append(bezier_landing)
     pBezier = PolyBezier(curves)
     
-    return pBezier
+    ref_traj = trajectories.BezierTrajectory(pBezier,placement_init,placement_end,time_interval)    
+    return ref_traj
 
 
 """
