@@ -62,7 +62,7 @@ def generateCentroidalTrajectory(cs_origin):
         vel = (com1-com0)/duration
         am = np.matrix(np.zeros(3)).T
         t = 0.
-        while t < duration :
+        while t < duration - 0.0001 :
             u = t/duration
             state = np.matrix(np.zeros(9)).T            
             com = com0*(1.-u) + com1*(u)
