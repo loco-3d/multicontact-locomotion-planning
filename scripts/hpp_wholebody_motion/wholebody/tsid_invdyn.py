@@ -15,7 +15,10 @@ from hpp_wholebody_motion.utils import trajectories
 import hpp_wholebody_motion.end_effector.bezier_predef as EETraj
 import hpp_wholebody_motion.viewer.display_tools as display_tools
 import math
-
+if cfg.USE_LIMB_RRT:
+    import hpp_wholebody_motion.end_effector.limb_rrt as limbrrt
+    
+    
 def SE3toVec(M):
     v = np.matrix(np.zeros((12, 1)))
     for j in range(3):
@@ -192,7 +195,7 @@ def generateEEReferenceTraj(robot,robotData,t,phase,phase_next,eeName,viewer = N
     placement_init = robot.position(robotData, robot.model().getJointId(eeName))
     placement_end = JointPatchForEffector(phase_next,eeName).placement
     placements.append(placement_init)
-    placements.append(placement_end)    
+    placements.append(placement_end)
     if cfg.USE_BEZIER_EE :         
         ref_traj = EETraj.generateBezierTraj(placement_init,placement_end,time_interval)
     else : 
@@ -204,8 +207,20 @@ def generateEEReferenceTraj(robot,robotData,t,phase,phase_next,eeName,viewer = N
         display_tools.displaySE3Traj(ref_traj,viewer,eeName+"_traj",cfg.Robot.dict_limb_color_traj[eeName] ,time_interval ,cfg.Robot.dict_offset[eeName])
     return ref_traj
 
+def generateEEReferenceTrajCollisionFree(fullBody,robot,robotData,t,phase_previous,phase,phase_next,q_init,q_end,eeName,phaseId,viewer = None):
+    time_interval = [t, phase.time_trajectory[-1]]    
+    placements = []
+    placement_init = robot.position(robotData, robot.model().getJointId(eeName))
+    placement_end = JointPatchForEffector(phase_next,eeName).placement
+    placements.append(placement_init)
+    placements.append(placement_end)    
+    if cfg.EFF_CHECK_COLLISION : 
+        ref_traj = limbrrt.generateLimbRRTPath(time_interval,placement_init,placement_end,q_init,q_end,phase_previous,phase,phase_next,fullBody,phaseId,eeName,viewer)                    
+    
+    #if viewer and cfg.DISPLAY_FEET_TRAJ :
+     #   display_tools.displaySE3Traj(ref_traj,viewer,eeName+"_traj",cfg.Robot.dict_limb_color_traj[eeName] ,time_interval ,cfg.Robot.dict_offset[eeName])                               
 
-def generateWholeBodyMotion(cs,viewer=None):
+def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
     if not viewer :
         print "No viewer linked, cannot display end_effector trajectories."
     print "Start TSID ... " 
@@ -219,31 +234,9 @@ def generateWholeBodyMotion(cs,viewer=None):
     if cfg.WB_VERBOSE:
         print "robot loaded in tsid"
     
-    """
-    ### for gepetto viewer .. but Fix me!!
-    robot_display = se3.RobotWrapper(urdf, se3.StdVec_StdString(), se3.JointModelFreeFlyer())
-    l = commands.getstatusoutput("ps aux |grep 'gepetto-gui'|grep -v 'grep'|wc -l")
-    if int(l[1]) == 0:
-        os.system('gepetto-gui &')
-    time.sleep(1)
-    cl = gepetto.corbaserver.Client()
-    gui = cl.gui
-    robot_display.initDisplay(loadModel=True)
-    ###
-    """
     
     q = cs.contact_phases[0].reference_configurations[0].copy()
     v = np.matrix(np.zeros(robot.nv)).transpose()
-    """
-    ###
-    robot_display.displayCollisions(False)
-    robot_display.displayVisuals(True)
-    robot_display.display(q)
-    viewer_tsid = robot_display.viewer
-    gui = viewer_tsid.gui
-    gui.refresh()
-    ###
-    """
     t = 0.0  # time
     q_t = []
     invdyn = tsid.InverseDynamicsFormulationAccForce("tsid", robot, False)
@@ -312,6 +305,7 @@ def generateWholeBodyMotion(cs,viewer=None):
         #raw_input("Enter to start the motion (motion displayed as it's computed, may be slower than real-time)")
     time_start = time.time()
     t = 0.0
+    # For each phases, create the necessary task and references trajectories :
     for pid in range(cs.size()):
         if cfg.WB_VERBOSE :
             print "## for phase : ",pid
@@ -369,86 +363,98 @@ def generateWholeBodyMotion(cs,viewer=None):
         
         if cfg.WB_STOP_AT_EACH_PHASE :
             raw_input('start simulation')
-        # loop with increasing time for this phase : 
-        while t < phase.time_trajectory[-1] - dt :
-            # set traj reference for current time : 
-            # com 
-            sampleCom = trajCom.computeNext()
-            sampleCom.pos(com_traj(t)[0].T)
-            sampleCom.vel(com_traj(t)[1].T)
-            com_desired = com_traj(t)[0].T
-            #print "com desired : ",com_desired.T
-            comTask.setReference(sampleCom)
-            # posture
-            samplePosture = trajPosture.computeNext()
-            #print "postural task ref : ",samplePosture.pos()
-            postureTask.setReference(samplePosture)
-            # root orientation : 
-            sampleRoot = trajRoot.computeNext()
-            sampleRoot.pos(SE3toVec(root_traj(t)[0]))
-            sampleRoot.vel(MotiontoVec(root_traj(t)[1]))
-            orientationRootTask.setReference(sampleRoot)
+        # loop with increasing time for this phase :
+        t_begin = t
+        q_begin = q
+        phaseValid = False
+        swingPhase = False # will be true if an effector move during this phase
+        iter_for_phase = -1
+        while not phaseValid :
+            t = t_begin
+            q = q_begin
+            q_t_phase = []
+            iter_for_phase += 1
+            if cfg.WB_VERBOSE:
+                print "Start simulation for phase "+str(pid)+", try number :  "+str(iter_for_phase)
+            while t < phase.time_trajectory[-1] - dt :
+                # set traj reference for current time : 
+                # com 
+                sampleCom = trajCom.computeNext()
+                sampleCom.pos(com_traj(t)[0].T)
+                sampleCom.vel(com_traj(t)[1].T)
+                com_desired = com_traj(t)[0].T
+                #print "com desired : ",com_desired.T
+                comTask.setReference(sampleCom)
+                # posture
+                samplePosture = trajPosture.computeNext()
+                #print "postural task ref : ",samplePosture.pos()
+                postureTask.setReference(samplePosture)
+                # root orientation : 
+                sampleRoot = trajRoot.computeNext()
+                sampleRoot.pos(SE3toVec(root_traj(t)[0]))
+                sampleRoot.vel(MotiontoVec(root_traj(t)[1]))
+                orientationRootTask.setReference(sampleRoot)
+                
+                # end effector (if they exists)
+                for eeName,traj in dic_effectors_trajs.iteritems():
+                    if traj:
+                        swingPhase = True
+                        sampleEff = effectorTraj.computeNext()
+                        sampleEff.pos(SE3toVec(traj(t)[0]))
+                        sampleEff.vel(MotiontoVec(traj(t)[1]))
+                        dic_effectors_tasks[eeName].setReference(sampleEff)
             
-            # end effector (if they exists)
-            for eeName,traj in dic_effectors_trajs.iteritems():
-                if traj:
-                    sampleEff = effectorTraj.computeNext()
-                    sampleEff.pos(SE3toVec(traj(t)[0]))
-                    sampleEff.vel(MotiontoVec(traj(t)[1]))
-                    dic_effectors_tasks[eeName].setReference(sampleEff)
-        
-            HQPData = invdyn.computeProblemData(t, q, v)
-            if cfg.WB_VERBOSE and t < phase.time_trajectory[0]+dt:
-                print "final data for phase ",pid
-                HQPData.print_all()
-        
-            sol = solver.solve(HQPData)
-            tau = invdyn.getActuatorForces(sol)
-            dv = invdyn.getAccelerations(sol)
-        
-            if cfg.WB_VERBOSE and int(t/dt) % cfg.IK_PRINT_N == 0:
-                print "Time %.3f" % (t)
-                for eeName,contact in dic_contacts.iteritems():
-                    if invdyn.checkContact(contact.name, sol):
-                        f = invdyn.getContactForce(contact.name, sol)
-                        print "\tnormal force %s: %.1f" % (contact.name.ljust(20, '.'), contact.getNormalForce(f))
+                HQPData = invdyn.computeProblemData(t, q, v)
+                if cfg.WB_VERBOSE and t < phase.time_trajectory[0]+dt:
+                    print "final data for phase ",pid
+                    HQPData.print_all()
             
-                print "\ttracking err %s: %.3f" % (comTask.name.ljust(20, '.'), norm(comTask.position_error, 2))
-                for eeName,task in dic_effectors_tasks.iteritems():
-                    print "\ttracking err %s: %.3f" % (task.name.ljust(20, '.'), norm(task.position_error, 2))
-                print "\t||v||: %.3f\t ||dv||: %.3f" % (norm(v, 2), norm(dv))
-        
-            v_mean = v + 0.5 * dt * dv
-            v += dt * dv
-            q = se3.integrate(robot.model(), q, dt * v_mean)
-            q_t += [q]
-            t += dt
+                sol = solver.solve(HQPData)
+                tau = invdyn.getActuatorForces(sol)
+                dv = invdyn.getAccelerations(sol)
             
-            """
-            if int(t/dt) % cfg.IK_DISPLAY_N == 0:
-                if last_display > 0 : 
-                    elapsed_time = time.time() - last_display
-                    delta = (dt*cfg.IK_DISPLAY_N) - elapsed_time
-                    if delta > 0 :
-                        time.sleep(delta)
-                    #else : 
-                        #print "/!\ computation not real time : "+str((elapsed_time/(dt*cfg.IK_DISPLAY_N)) )+" times slower than the real time. "
-                robot_display.display(q)
-                last_display = time.time()
-            """   
+                if cfg.WB_VERBOSE and int(t/dt) % cfg.IK_PRINT_N == 0:
+                    print "Time %.3f" % (t)
+                    for eeName,contact in dic_contacts.iteritems():
+                        if invdyn.checkContact(contact.name, sol):
+                            f = invdyn.getContactForce(contact.name, sol)
+                            print "\tnormal force %s: %.1f" % (contact.name.ljust(20, '.'), contact.getNormalForce(f))
+                
+                    print "\ttracking err %s: %.3f" % (comTask.name.ljust(20, '.'), norm(comTask.position_error, 2))
+                    for eeName,task in dic_effectors_tasks.iteritems():
+                        print "\ttracking err %s: %.3f" % (task.name.ljust(20, '.'), norm(task.position_error, 2))
+                    print "\t||v||: %.3f\t ||dv||: %.3f" % (norm(v, 2), norm(dv))
             
-        
-            if norm(dv) > 1e6 or norm(v) > 1e6 :
-                print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-                print "/!\ ABORT : controler unstable at t = "+str(t)+"  /!\ "
-                print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"                
-                return q_t
-            if math.isnan(norm(dv)) or math.isnan(norm(v)) :
-                print "!!!!!!    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-                print "/!\ ABORT : nan   at t = "+str(t)+"  /!\ "
-                print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"                
-                return q_t                
-            
+                v_mean = v + 0.5 * dt * dv
+                v += dt * dv
+                q = se3.integrate(robot.model(), q, dt * v_mean)
+                q_t_phase += [q]
+                t += dt
+                if norm(dv) > 1e6 or norm(v) > 1e6 :
+                    print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+                    print "/!\ ABORT : controler unstable at t = "+str(t)+"  /!\ "
+                    print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"                
+                    return q_t
+                if math.isnan(norm(dv)) or math.isnan(norm(v)) :
+                    print "!!!!!!    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+                    print "/!\ ABORT : nan   at t = "+str(t)+"  /!\ "
+                    print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"                
+                    return q_t                
+            # end while t \in phase t
+            if swingPhase and cfg.EFF_CHECK_COLLISION :
+                phaseValid = iter_for_phase >= 1 #TODO : check collision here instead for this debug code
+                if not phaseValid :
+                    if cfg.WB_VERBOSE :
+                        print "Phase "+str(pid)+" not valid, try new end effector trajectory."                    
+                    for eeName,oldTraj in dic_effectors_trajs.iteritems():
+                        if oldTraj: # update the traj in the map
+                            ref_traj = generateEEReferenceTrajCollisionFree(fullBody,robot,invdyn.data(),t,phase_prev,phase,phase_next,q_t_phase[0],q_t_phase[-1],eeName,pid,viewer)
+                            dic_effectors_trajs.update({eeName:ref_traj})
+            else :
+                phaseValid = True
+                if cfg.WB_VERBOSE :
+                    print "Phase "+str(pid)+" valid."
+        #end while not phaseValid    
     time_end = time.time() - time_start
     print "Whole body motion generated in : "+str(time_end)+" s."
     if cfg.WB_VERBOSE:
