@@ -85,12 +85,12 @@ def buildPredefinedFinalTraj(placement,t_total):
     wps[:,4] = (c1); #c1
     return bezier(wps,T)
 
-def generateBezierTraj(placement_init,placement_final,time_interval):
+def generateBezierTraj(placement_init,placement_end,time_interval):
     t_total = time_interval[1]-time_interval[0]
     # generate two curves for the takeoff/landing : 
     # generate a bezier curve for the middle part of the motion : 
     bezier_takeoff = buildPredefinedInitTraj(placement_init,t_total)
-    bezier_landing = buildPredefinedFinalTraj(placement_final,t_total)
+    bezier_landing = buildPredefinedFinalTraj(placement_end,t_total)
     # set problem datz for mid curve : 
     pData = bezier_com.ProblemData() 
     pData.c0_ = bezier_takeoff(bezier_takeoff.max())
