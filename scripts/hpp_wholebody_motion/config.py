@@ -1,7 +1,10 @@
-#DEMO_NAME = "talos_flatGround"
+DEMO_NAME = "talos_flatGround"
+DEMO_NAME = "talos_obstaclesFeet"
 #DEMO_NAME = "darpa_hyq"
 #DEMO_NAME = "hyq_slalom_debris"
-DEMO_NAME = "talos_table"
+#DEMO_NAME = "talos_table"
+#DEMO_NAME="anymal_slalom_debris"
+#DEMO_NAME="anymal_flatGround"
 
 
 ## PATHS settings : 
@@ -16,6 +19,11 @@ LOAD_CS_COM = False
 SAVE_CS = True
 SAVE_CS_COM = True
 EXPORT_GAZEBO = True
+LOAD_CS = True
+LOAD_CS_COM = True
+SAVE_CS = False
+SAVE_CS_COM = False
+EXPORT_GAZEBO = False
 EXPORT_PATH = OUTPUT_DIR+"/export"
 
 ##DISPLAY settings : 
@@ -39,13 +47,16 @@ assert USE_GEOM_INIT_GUESS != USE_CROC_INIT_GUESS , "You must choose exactly one
 SOLVER_DT = 0.05 # hardcoded in timeOpt_configs files, must match this one ! 
 
 USE_WP_COST = True # use wp from the contact sequence in the cost function of timeopt
-
+#end effector :
+USE_LIMB_RRT = False
+USE_CONSTRAINED_BEZIER = True
+USE_BEZIER_EE = True
+EFF_CHECK_COLLISION = True
 ##  Settings for whole body : 
 YAW_ROT_GAIN = 1.
 USE_CROC_COM = False
-USE_BEZIER_EE = True
-WB_VERBOSE = False
-WB_STOP_AT_EACH_PHASE = False
+WB_VERBOSE = True
+WB_STOP_AT_EACH_PHASE = True
 IK_dt = 0.001  # controler time step
 IK_PRINT_N = 500  # print state of the problem every IK_PRINT_N time steps (if verbose = True)
 
