@@ -45,12 +45,14 @@ def generateLimbRRTPath(q_init,q_end,phase_previous,phase,phase_next,fullBody,ph
         print "New state added, q_init = ",q_init
         print "New state added, q_end = ",q_end
         contacts = fullBody.getAllLimbsInContact(s0)
+        fullBody.setCurrentConfig(fullBody.getConfigAtState(s0))
         print "contact at init state : ",contacts
         for contact in contacts : 
             effName = cfg.Robot.dict_limb_joint[contact]
             print "contact position for joint "+str(effName)+" = "+str(fullBody.getJointPosition(effName)[0:3])
         contacts = fullBody.getAllLimbsInContact(s1)
-        print "contact at init state : ",contacts
+        fullBody.setCurrentConfig(fullBody.getConfigAtState(s1))        
+        print "contact at end  state : ",contacts
         for contact in contacts : 
             effName = cfg.Robot.dict_limb_joint[contact]
             print "contact position for joint "+str(effName)+" = "+str(fullBody.getJointPosition(effName)[0:3])
