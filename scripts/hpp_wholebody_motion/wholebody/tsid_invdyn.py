@@ -220,6 +220,7 @@ def generateEEReferenceTrajCollisionFree(fullBody,robot,robotData,t,phase_previo
     
     if viewer and cfg.DISPLAY_FEET_TRAJ :
         display_tools.displaySE3Traj(ref_traj,viewer,eeName+"_trajNoColl",cfg.Robot.dict_limb_color_traj[eeName] ,time_interval ,SE3.Identity())#,cfg.Robot.dict_offset[eeName])                               
+        viewer.client.gui.setVisibility(eeName+"_trajNoColl",'ALWAYS_ON_TOP')
     return ref_traj
 
 def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
