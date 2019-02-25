@@ -9,7 +9,7 @@ from locomote import WrenchCone,SOC6,ContactSequenceHumanoid
 import numpy as np
 import math
 VERBOSE = True
-  
+DISPLAY_RRT_PATH = True
 def stdVecToMatrix(std_vector):
     vec_l = []
     for vec in std_vector:
@@ -31,28 +31,30 @@ def createStateFromPhase(fullBody,q,phase):
     return fullBody.createState(q,contacts)
 
 
-# TODO get current q from tsid instead of doing a projection (and next q too ? )
-def generateLimbRRTPath(time_interval,placement_init,placement_end,q_init,q_end,phase_previous,phase,phase_next,fullBody,phaseId,eeName,viewer) :
+def generateLimbRRTPath(q_init,q_end,phase_previous,phase,phase_next,fullBody,phaseId) :
     assert fullBody and "Cannot use limb-rrt method as fullBody object is not defined."
     assert phaseId%2 and "Can only generate limb-rrt for 'middle' phases, ID must be odd (check generation of the contact sequence in contact_sequence/rbprm.py"
     extraDof = int(fullBody.client.robot.getDimensionExtraConfigSpace())
     q_init = q_init.T.tolist()[0] + [0]*extraDof    
     q_end = q_end.T.tolist()[0] + [0]*extraDof
 
-    # get corresponding state ID in fullBody
-    """
-    s0 = int(math.floor(phaseId/2.))    
-    s1 = s0 + 1 
-    if VERBOSE : 
-        print "run limb-rrt between states "+str(s0)+" and "+str(s1)
-        print "init config : ",fullBody.getConfigAtState(s0)
-        print "end config  : ",fullBody.getConfigAtState(s1)
-    """    
+    # create nex states in fullBody corresponding to given configuration and set of contacts 
     s0 = createStateFromPhase(fullBody,q_init,phase_previous)
     s1 = createStateFromPhase(fullBody,q_end,phase_next)
     if VERBOSE : 
         print "New state added, q_init = ",q_init
         print "New state added, q_end = ",q_end
+        contacts = fullBody.getAllLimbsInContact(s0)
+        print "contact at init state : ",contacts
+        for contact in contacts : 
+            effName = cfg.Robot.dict_limb_joint[contact]
+            print "contact position for joint "+str(effName)+" = "+str(fullBody.getJointPosition(effName)[0:3])
+        contacts = fullBody.getAllLimbsInContact(s1)
+        print "contact at init state : ",contacts
+        for contact in contacts : 
+            effName = cfg.Robot.dict_limb_joint[contact]
+            print "contact position for joint "+str(effName)+" = "+str(fullBody.getJointPosition(effName)[0:3])
+            
     
         
     # create a path in hpp corresponding to the discretized trajectory in phase :
@@ -70,9 +72,9 @@ def generateLimbRRTPath(time_interval,placement_init,placement_end,q_init,q_end,
     com0 = c_t.tolist()[0]
     com1 = c_t.tolist()[-1]
     """
-    successProj=fullBody.projectStateToCOM(s0,com0,maxNumSample=1000)
+    successProj=fullBody.projectStateToCOM(s0,com0)
     assert successProj and "Error during projection of state"+str(s0)+" to com position : "+str(com0)
-    successProj=fullBody.projectStateToCOM(s1,com1,maxNumSample=1000)
+    successProj=fullBody.projectStateToCOM(s1,com1)
     assert successProj and "Error during projection of state"+str(s1)+" to com position : "+str(com1)
     q_init = fullBody.getConfigAtState(s0)
     q_end = fullBody.getConfigAtState(s1)
@@ -91,13 +93,22 @@ def generateLimbRRTPath(time_interval,placement_init,placement_end,q_init,q_end,
         print "ref      : ",com1        
     
     # run limb-rrt in hpp : 
-    paths_rrt_ids = fullBody.effectorRRTOnePhase(s0,s1,path_com_id,0)  
-    #paths_rrt_ids = fullBody.generateEffectorBezierArray(s0,s1,path_com_id,1) 
-    path_rrt_id= paths_rrt_ids[0]
+    paths_rrt_ids = fullBody.comRRTOnePhase(s0,s1,path_com_id,0)  
+    if VERBOSE :
+        print "Limb-rrt returned path(s) : ",paths_rrt_ids
+    path_rrt_id= int(paths_rrt_ids[0])
     
-    if viewer and cfg.DISPLAY_FEET_TRAJ:
+    return path_rrt_id
+    
+    
+def generateLimbRRTTraj(time_interval,placement_init,placement_end,q_init,q_end,phase_previous,phase,phase_next,fullBody,phaseId,eeName,viewer) :
+    pathId = generateLimbRRTPath(q_init,q_end,phase_previous,phase,phase_next,fullBody,phaseId)
+    
+    if viewer and cfg.DISPLAY_FEET_TRAJ and DISPLAY_RRT_PATH:
         from hpp.gepetto import PathPlayer
-        pp = PathPlayer (fullBody.client, viewer)   
-        pp.displayPath(path_rrt_id,jointName=eeName)
+        pp = PathPlayer (viewer)   
+        pp.displayPath(pathId,jointName=fullBody.getLinkNames(eeName)[0])
+        
     
-    
+    # TODO : make a HPPRefTraj object and return it
+    return None
