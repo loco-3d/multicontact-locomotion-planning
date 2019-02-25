@@ -16,7 +16,9 @@ import hpp_wholebody_motion.end_effector.bezier_predef as EETraj
 import hpp_wholebody_motion.viewer.display_tools as display_tools
 import math
 if cfg.USE_LIMB_RRT:
-    import hpp_wholebody_motion.end_effector.limb_rrt as limbrrt
+    import hpp_wholebody_motion.end_effector.limb_rrt as limb_rrt
+if cfg.USE_CONSTRAINED_BEZIER:
+    import hpp_wholebody_motion.end_effector.bezier_constrained as bezier_constrained
     
     
 def SE3toVec(M):
@@ -207,18 +209,18 @@ def generateEEReferenceTraj(robot,robotData,t,phase,phase_next,eeName,viewer = N
         display_tools.displaySE3Traj(ref_traj,viewer,eeName+"_traj",cfg.Robot.dict_limb_color_traj[eeName] ,time_interval ,cfg.Robot.dict_offset[eeName])
     return ref_traj
 
-def generateEEReferenceTrajCollisionFree(fullBody,robot,robotData,t,phase_previous,phase,phase_next,q_init,q_end,eeName,phaseId,viewer = None):
+def generateEEReferenceTrajCollisionFree(fullBody,robot,robotData,t,phase_previous,phase,phase_next,q_t,predefTraj,eeName,phaseId,viewer = None):
     time_interval = [t, phase.time_trajectory[-1]]    
     placements = []
     placement_init = robot.position(robotData, robot.model().getJointId(eeName))
     placement_end = JointPatchForEffector(phase_next,eeName).placement
     placements.append(placement_init)
     placements.append(placement_end)    
-    if cfg.EFF_CHECK_COLLISION : 
-        ref_traj = limbrrt.generateLimbRRTPath(time_interval,placement_init,placement_end,q_init,q_end,phase_previous,phase,phase_next,fullBody,phaseId,eeName,viewer)                    
+    ref_traj = bezier_constrained.generateConstrainedBezierTraj(time_interval,placement_init,placement_end,q_t,predefTraj,phase_previous,phase,phase_next,fullBody,phaseId,eeName,viewer)                    
     
-    #if viewer and cfg.DISPLAY_FEET_TRAJ :
-     #   display_tools.displaySE3Traj(ref_traj,viewer,eeName+"_traj",cfg.Robot.dict_limb_color_traj[eeName] ,time_interval ,cfg.Robot.dict_offset[eeName])                               
+    if viewer and cfg.DISPLAY_FEET_TRAJ :
+        display_tools.displaySE3Traj(ref_traj,viewer,eeName+"_trajNoColl",cfg.Robot.dict_limb_color_traj[eeName] ,time_interval ,SE3.Identity())#,cfg.Robot.dict_offset[eeName])                               
+    return ref_traj
 
 def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
     if not viewer :
@@ -365,17 +367,22 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
             raw_input('start simulation')
         # loop with increasing time for this phase :
         t_begin = t
-        q_begin = q
+        q_begin = q.copy()
+        v_begin = v.copy()
         phaseValid = False
         swingPhase = False # will be true if an effector move during this phase
         iter_for_phase = -1
         while not phaseValid :
-            t = t_begin
-            q = q_begin
+            if iter_for_phase >=0 :
+                t = t_begin
+                q = q_begin.copy()
+                v = v_begin.copy()
             q_t_phase = []
             iter_for_phase += 1
             if cfg.WB_VERBOSE:
                 print "Start simulation for phase "+str(pid)+", try number :  "+str(iter_for_phase)
+                print "t begin = ",t_begin
+                print "current t = ",t
             while t < phase.time_trajectory[-1] - dt :
                 # set traj reference for current time : 
                 # com 
@@ -434,12 +441,12 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
                     print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
                     print "/!\ ABORT : controler unstable at t = "+str(t)+"  /!\ "
                     print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"                
-                    return q_t
+                    return q_t+q_t_phase
                 if math.isnan(norm(dv)) or math.isnan(norm(v)) :
                     print "!!!!!!    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
                     print "/!\ ABORT : nan   at t = "+str(t)+"  /!\ "
                     print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"                
-                    return q_t                
+                    return q_t+q_t_phase         
             # end while t \in phase t
             if swingPhase and cfg.EFF_CHECK_COLLISION :
                 phaseValid = iter_for_phase >= 1 #TODO : check collision here instead for this debug code
@@ -448,12 +455,14 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
                         print "Phase "+str(pid)+" not valid, try new end effector trajectory."                    
                     for eeName,oldTraj in dic_effectors_trajs.iteritems():
                         if oldTraj: # update the traj in the map
-                            ref_traj = generateEEReferenceTrajCollisionFree(fullBody,robot,invdyn.data(),t,phase_prev,phase,phase_next,q_t_phase[0],q_t_phase[-1],eeName,pid,viewer)
-                            dic_effectors_trajs.update({eeName:ref_traj})
+                            ref_traj = generateEEReferenceTrajCollisionFree(fullBody,robot,invdyn.data(),t_begin,phase_prev,phase,phase_next,q_t_phase,oldTraj,eeName,pid,viewer)
+                            #dic_effectors_trajs.update({eeName:ref_traj})
             else :
                 phaseValid = True
                 if cfg.WB_VERBOSE :
                     print "Phase "+str(pid)+" valid."
+            if phaseValid:
+                q_t += q_t_phase
         #end while not phaseValid    
     time_end = time.time() - time_start
     print "Whole body motion generated in : "+str(time_end)+" s."
