@@ -277,6 +277,8 @@ def large_col_free_box(client,a,b,y = 0.3 ,z = 0.3, sizeObject = 0.05, margin = 
 
     
 def computeInequalitiesAroundLine(fullBody,p_from,p_to,viewer):
+    if VERBOSE :
+        print "compute constrained for segment : "+str(p_from)+" -> "+str(p_to)
     (a, b, y, z),(H,h) = large_col_free_box(fullBody.clientRbprm.rbprm,p_from,p_to)
     if DISPLAY_CONSTRAINTS :
         display_box(viewer,fullBody.clientRbprm.rbprm,a,b,y,z)
@@ -303,12 +305,13 @@ def computeProblemConstraints(pData,fullBody,pathId,t,eeName,viewer):
     curve_constraints.end_jerk = pData.j1_
     pDef.curveConstraints = curveConstraints
     # get all the waypoints from the limb-rrt
-    wps,t_norm = fullBody.client.problem.getWaypoints(pathId)
+    wps,t_paths = fullBody.client.problem.getWaypoints(pathId)
     # approximate the switching times (infos from limb-rrt)
     if len(t_norm)>2 :
         splits=[]
+        t_ratio = t/t_paths[-1] # ratio between the imposed time of the bezier curve (t) and the "time" (a pseudo distance) of the solution of the rrt 
         for i in range(1,len(t_norm)-1):
-            ti = t_norm[i]*t
+            ti = t_norm[i]*t_ratio
             if ti > t:
                 ti = t
             splits+= [ti]
