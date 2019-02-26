@@ -10,6 +10,8 @@ import numpy as np
 import math
 VERBOSE = True
 DISPLAY_RRT_PATH = True
+DISPLAY_JOINT_LEVEL = True
+
 def stdVecToMatrix(std_vector):
     vec_l = []
     for vec in std_vector:
@@ -95,7 +97,7 @@ def generateLimbRRTPath(q_init,q_end,phase_previous,phase,phase_next,fullBody,ph
         print "ref      : ",com1        
     
     # run limb-rrt in hpp : 
-    paths_rrt_ids = fullBody.comRRTOnePhase(s0,s1,path_com_id,10)  
+    paths_rrt_ids = fullBody.comRRTOnePhase(s0,s1,path_com_id,1)  
     if VERBOSE :
         print "Limb-rrt returned path(s) : ",paths_rrt_ids
     path_rrt_id= int(paths_rrt_ids[0])
@@ -108,9 +110,8 @@ def generateLimbRRTTraj(time_interval,placement_init,placement_end,q_init,q_end,
     
     if viewer and cfg.DISPLAY_FEET_TRAJ and DISPLAY_RRT_PATH:
         from hpp.gepetto import PathPlayer
-        pp = PathPlayer (viewer)   
+        pp = PathPlayer (viewer)
         pp.displayPath(pathId,jointName=fullBody.getLinkNames(eeName)[0])
-        
-    
+
     # TODO : make a HPPRefTraj object and return it
     return None

@@ -219,7 +219,7 @@ def generateEEReferenceTrajCollisionFree(fullBody,robot,robotData,t,phase_previo
     ref_traj = bezier_constrained.generateConstrainedBezierTraj(time_interval,placement_init,placement_end,q_t,predefTraj,phase_previous,phase,phase_next,fullBody,phaseId,eeName,viewer)                    
     
     if viewer and cfg.DISPLAY_FEET_TRAJ :
-        display_tools.displaySE3Traj(ref_traj,viewer,eeName+"_trajNoColl",cfg.Robot.dict_limb_color_traj[eeName] ,time_interval ,SE3.Identity())#,cfg.Robot.dict_offset[eeName])                               
+        display_tools.displaySE3Traj(ref_traj,viewer,eeName+"_trajNoColl",cfg.Robot.dict_limb_color_traj[eeName] ,time_interval ,cfg.Robot.dict_offset[eeName])                               
         viewer.client.gui.setVisibility(eeName+"_trajNoColl",'ALWAYS_ON_TOP')
     return ref_traj
 
@@ -457,7 +457,7 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
                     for eeName,oldTraj in dic_effectors_trajs.iteritems():
                         if oldTraj: # update the traj in the map
                             ref_traj = generateEEReferenceTrajCollisionFree(fullBody,robot,invdyn.data(),t_begin,phase_prev,phase,phase_next,q_t_phase,oldTraj,eeName,pid,viewer)
-                            #dic_effectors_trajs.update({eeName:ref_traj})
+                            dic_effectors_trajs.update({eeName:ref_traj})
             else :
                 phaseValid = True
                 if cfg.WB_VERBOSE :

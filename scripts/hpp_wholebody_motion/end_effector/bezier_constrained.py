@@ -22,6 +22,7 @@ import quadprog
 from numpy import array, dot, vstack, hstack, asmatrix, identity
 import bezier_predef
 import limb_rrt
+from hpp_wholebody_motion.utils.util import toRotationMatrix, se3FromConfig
 eigenpy.switchToNumpyArray()
 
 
@@ -29,6 +30,8 @@ VERBOSE = True
 DISPLAY = True
 DISPLAY_RRT = True
 DISPLAY_CONSTRAINTS = True
+DISPLAY_JOINT_LEVEL = False
+
 
 
 
@@ -87,24 +90,6 @@ def saveProblem(pDef):
     f.close()
     
 
-def toRotationMatrix(q):
-    """
-    Returns a (3*3) array (rotation matrix)
-    representing the same rotation as the (normalized) quaternion.
-    """
-    rm=zeros((3,3))
-    rm[0,0]=1-2*(q[2]**2+q[3]**2)
-    rm[0,1]=2*q[1]*q[2]-2*q[0]*q[3]
-    rm[0,2]=2*q[1]*q[3]+2*q[0]*q[2]
-    rm[1,0]=2*q[1]*q[2]+2*q[0]*q[3]
-    rm[1,1]=1-2*(q[1]**2+q[3]**2)
-    rm[1,2]=2*q[2]*q[3]-2*q[0]*q[1]
-    rm[2,0]=2*q[1]*q[3]-2*q[0]*q[2]
-    rm[2,1]=2*q[2]*q[3]+2*q[0]*q[1]
-    rm[2,2]=1-2*(q[1]**2+q[2]**2)
-    return rm
-
-
 def rot_quat_x(client,a):
     x = [1.,0.,0.]
     return client.rotationQuaternion(x,a)
@@ -161,7 +146,7 @@ def to_ineq(client,a,b,y_r,z_r):
 # y le poids initial alloue a la largeur (si la distance ab vaut 1, initialement la largeur vaut y)
 # z le poids initial alloue a la hauteur (si la distance ab vaut 1, initialement la hauteur vaut y)
 # sizeObject dimension de securite de l'effecteur
-def large_col_free_box(client,a,b,y = 0.3 ,z = 0.3, sizeObject = 0.05, margin = 0.):
+def large_col_free_box(client,a,b,y = 0.3 ,z = 0.3, sizeObject = [0.,0.,0.], margin = 0.):
     # margin distance is not so good, better expand and then reduce box
     # d abord o nessaie de trouver une boite sans collsion
     collision = True
@@ -269,25 +254,55 @@ def large_col_free_box(client,a,b,y = 0.3 ,z = 0.3, sizeObject = 0.05, margin = 
             z_r = tmp_z_r     
 
     #removing offset
-
+    print "a_r = ",a_r
+    print "b_r = ",b_r
+    print "x_dir = ",x_dir
     a_r = (a_r + x_dir*sizeObject/2.).tolist()
     b_r = (b_r - x_dir*sizeObject/2.).tolist()        
 
-    return (a_r, b_r, y_r, z_r), to_ineq(client,a_r, b_r, y_r, z_r)
+    return (a_r, b_r, y_r, z_r)
 
-    
-def computeInequalitiesAroundLine(fullBody,p_from,p_to,viewer):
+### compute the inequalities constraints around the given line
+# The line (p_from, p_to) must be expressed at the contact position
+# but the constraints (H,h) are expressed at the joint level
+# the display is done before the transform and thus show the constraints at the contact level
+def computeInequalitiesAroundLine(fullBody,p_from,p_to,eeName,viewer):
+    a = p_from.translation.T.tolist()[0]
+    b = p_to.translation.T.tolist()[0]
     if VERBOSE :
-        print "compute constrained for segment : "+str(p_from)+" -> "+str(p_to)
-    (a, b, y, z),(H,h) = large_col_free_box(fullBody.clientRbprm.rbprm,p_from,p_to)
-    if DISPLAY_CONSTRAINTS :
+        print "compute constrained for segment : "+str(a)+" -> "+str(b)
+    # size of the end effector (x,y,z)
+    size = []
+    size+=[cfg.Robot.dict_size[eeName][0]+0.03] # 3cm of margin
+    size+=[cfg.Robot.dict_size[eeName][1]+0.03] # 3cm of margin
+    size+= [0.005] # hardcoded z value
+    
+    (a, b, y, z) = large_col_free_box(fullBody.clientRbprm.rbprm,a,b,sizeObject = size)
+    if DISPLAY_CONSTRAINTS and not DISPLAY_JOINT_LEVEL:
         display_box(viewer,fullBody.clientRbprm.rbprm,a,b,y,z)
+    
+    # transform back to joint level
+    pa = p_from.copy()
+    pa.translation = np.matrix(a).T
+    pb = p_to.copy()
+    pb.translation = np.matrix(b).T    
+    pa = cfg.Robot.dict_offset[eeName].actInv(pa)
+    pb = cfg.Robot.dict_offset[eeName].actInv(pb)
+    a_j = pa.translation.T.tolist()[0]
+    b_j = pb.translation.T.tolist()[0]
+    H,h = to_ineq(fullBody.clientRbprm.rbprm,a_j, b_j, y, z)
+    if DISPLAY_CONSTRAINTS and DISPLAY_JOINT_LEVEL:
+        display_box(viewer,fullBody.clientRbprm.rbprm,a_j,b_j,y,z)
+        
     return H,h.reshape(-1,1)
 
-def effPosFromConfig(fullBody,q,eeName):
+def contactPlacementFromConfig(fullBody,q,eeName):
     fullBody.setCurrentConfig(q)
     p = fullBody.getJointPosition(eeName)
-    return p[0:3]
+    p = se3FromConfig(p)
+    # transform to contact position (from joint position)
+    p_contact = cfg.Robot.dict_offset[eeName].act(p)
+    return p_contact
 
 def computeProblemConstraints(pData,fullBody,pathId,t,eeName,viewer):
     pDef = hpp_spline.problemDefinition()
@@ -307,35 +322,35 @@ def computeProblemConstraints(pData,fullBody,pathId,t,eeName,viewer):
     # get all the waypoints from the limb-rrt
     wps,t_paths = fullBody.client.problem.getWaypoints(pathId)
     # approximate the switching times (infos from limb-rrt)
-    if len(t_norm)>2 :
+    if len(t_paths)>2 :
         splits=[]
         t_ratio = t/t_paths[-1] # ratio between the imposed time of the bezier curve (t) and the "time" (a pseudo distance) of the solution of the rrt 
-        for i in range(1,len(t_norm)-1):
-            ti = t_norm[i]*t_ratio
+        for i in range(1,len(t_paths)-1):
+            ti = t_paths[i]*t_ratio
             if ti > t:
                 ti = t
             splits+= [ti]
             if len(splits) > 1:
                 if splits[-1] == splits[-2] :
                     print "Error in bezier_constrained : two adjacent constrained have the same switch time !!"
-        pDef.splits = np.array([splits])
         if VERBOSE:
             print "number of switch between constraints : ",len(splits)
             print "splits timings : ",splits
+        pDef.splits = np.array([splits]).T       
     else : 
         if VERBOSE :
             print "Only one constraint set for the whole trajectory."
     # compute constraints around each line of the limb-rrt solution : 
     q_from = wps[0]
-    p_from = effPosFromConfig(fullBody,q_from,eeName)
+    p_from = contactPlacementFromConfig(fullBody,q_from,eeName)
     for i in range(1,len(wps)):
         q_to = wps[i]
-        p_to = effPosFromConfig(fullBody,q_to,eeName)
-        A,b = computeInequalitiesAroundLine(fullBody,p_from,p_to,viewer)
+        p_to = contactPlacementFromConfig(fullBody,q_to,eeName)
+        A,b = computeInequalitiesAroundLine(fullBody,p_from,p_to,eeName,viewer)
         if VERBOSE :
             print "Inequalities computed."
         pDef.addInequality(A,b)        
-        p_from = p_to[::]
+        p_from = p_to.copy()
         
     return pDef
 
@@ -367,7 +382,11 @@ def generateConstrainedBezierTraj(time_interval,placement_init,placement_end,q_t
     if viewer and cfg.DISPLAY_FEET_TRAJ and DISPLAY_RRT:
         from hpp.gepetto import PathPlayer
         pp = PathPlayer (viewer)   
-        pp.displayPath(pathId,jointName=fullBody.getLinkNames(eeName)[0])    
+        if DISPLAY_JOINT_LEVEL :
+            pp.displayPath(pathId,jointName=fullBody.getLinkNames(eeName)[0]) 
+        else :
+            #TODO
+            pp.displayPath(pathId,jointName=fullBody.getLinkNames(eeName)[0],offset =cfg.Robot.dict_offset[eeName].translation.T.tolist()[0] )            
     
     # compute constraints for the end effector trajectories : 
     pData = bezier_com.ProblemData() 
@@ -430,7 +449,8 @@ def generateConstrainedBezierTraj(time_interval,placement_init,placement_end,q_t
             print "Succeed."
     else :
         print "Constrained End effector Bezier method failed for all numbers of variables control points."
-        # TODO : what to do here ?? 
+        print "Return predef trajectory (may be in collision)."
+        return predefTraj # FIXME throw an error instead of this ? require changes in wb scripts
     
     # retrieve the result of quadprog and create a bezier curve : 
     vars = np.split(res,numVars) 
