@@ -205,8 +205,6 @@ def generateEEReferenceTraj(robot,robotData,t,phase,phase_next,eeName,viewer = N
     if cfg.WB_VERBOSE :
         print "t interval : ",time_interval
         print "positions : ",placements        
-    if viewer and cfg.DISPLAY_FEET_TRAJ :
-        display_tools.displaySE3Traj(ref_traj,viewer,eeName+"_traj",cfg.Robot.dict_limb_color_traj[eeName] ,time_interval ,cfg.Robot.dict_offset[eeName])
     return ref_traj
 
 def generateEEReferenceTrajCollisionFree(fullBody,robot,robotData,t,phase_previous,phase,phase_next,q_t,predefTraj,eeName,phaseId,viewer = None):
@@ -217,10 +215,6 @@ def generateEEReferenceTrajCollisionFree(fullBody,robot,robotData,t,phase_previo
     placements.append(placement_init)
     placements.append(placement_end)    
     ref_traj = bezier_constrained.generateConstrainedBezierTraj(time_interval,placement_init,placement_end,q_t,predefTraj,phase_previous,phase,phase_next,fullBody,phaseId,eeName,viewer)                    
-    
-    if viewer and cfg.DISPLAY_FEET_TRAJ :
-        display_tools.displaySE3Traj(ref_traj,viewer,eeName+"_trajNoColl",cfg.Robot.dict_limb_color_traj[eeName] ,time_interval ,cfg.Robot.dict_offset[eeName])                               
-        viewer.client.gui.setVisibility(eeName+"_trajNoColl",'ALWAYS_ON_TOP')
     return ref_traj
 
 def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
@@ -412,6 +406,7 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
                         sampleEff.vel(MotiontoVec(traj(t)[1]))
                         dic_effectors_tasks[eeName].setReference(sampleEff)
             
+                # solve HQP for the current time
                 HQPData = invdyn.computeProblemData(t, q, v)
                 if cfg.WB_VERBOSE and t < phase.time_trajectory[0]+dt:
                     print "final data for phase ",pid
@@ -432,7 +427,7 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
                     for eeName,task in dic_effectors_tasks.iteritems():
                         print "\ttracking err %s: %.3f" % (task.name.ljust(20, '.'), norm(task.position_error, 2))
                     print "\t||v||: %.3f\t ||dv||: %.3f" % (norm(v, 2), norm(dv))
-            
+                # update state
                 v_mean = v + 0.5 * dt * dv
                 v += dt * dv
                 q = se3.integrate(robot.model(), q, dt * v_mean)
@@ -464,6 +459,13 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
                     print "Phase "+str(pid)+" valid."
             if phaseValid:
                 q_t += q_t_phase
+                # display all the effector trajectories for this phase
+                if viewer and cfg.DISPLAY_FEET_TRAJ :
+                    time_interval = [phase.time_trajectory[0], phase.time_trajectory[-1]] 
+                    for eeName,ref_traj in dic_effectors_trajs.iteritems():
+                        if ref_traj :
+                            display_tools.displaySE3Traj(ref_traj,viewer,eeName+"_traj_"+str(pid),cfg.Robot.dict_limb_color_traj[eeName] ,time_interval ,cfg.Robot.dict_offset[eeName])                               
+                            viewer.client.gui.setVisibility(eeName+"_traj_"+str(pid),'ALWAYS_ON_TOP')                
         #end while not phaseValid    
     time_end = time.time() - time_start
     print "Whole body motion generated in : "+str(time_end)+" s."

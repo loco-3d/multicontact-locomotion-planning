@@ -3,7 +3,7 @@ import time
 import os
 from hpp_wholebody_motion.utils.polyBezier import *
 import pinocchio as se3
-from pinocchio import SE3
+from pinocchio import SE3, Quaternion
 from pinocchio.utils import *
 import numpy.linalg
 from locomote import WrenchCone,SOC6,ContactSequenceHumanoid
@@ -92,21 +92,16 @@ def saveProblem(pDef):
 
 def rot_quat_x(client,a):
     x = [1.,0.,0.]
-    return client.rotationQuaternion(x,a)
+    return Quaternion(np.matrix(x).T,np.matrix(a).T).coeffs().T.tolist()[0]
 
 def rot_mat_x(client,a):
     x = [1.,0.,0.]
-    q = client.rotationQuaternion(x,a)
-    return toRotationMatrix(q)
+    return Quaternion(np.matrix(x).T,np.matrix(a).T).matrix()
 
 
 
-def display_box(viewer,client,a,b,y,z):
-    ar_a = array(a)
-    ar_b = array(b)
-    x_len = norm(ar_b - ar_a)
-    x_pos = ar_a + (ar_b  - ar_a) / 2
-    rootName = "constraints_"
+def display_box(viewer,client,center,dir,dim,groupName):
+    rootName = groupName+"/box_"
     list = viewer.client.gui.getNodeList()
     i=0
     name = rootName
@@ -114,34 +109,26 @@ def display_box(viewer,client,a,b,y,z):
         name=rootName+"_"+str(i)
         i+=1       
     
-    viewer.client.gui.addBox(name,x_len/ 2,y*x_len,z*x_len, [0.,1.,0.,0.3])
-    config = x_pos.tolist()+rot_quat_x(client, ((ar_b - ar_a) / x_len).tolist() )
+    viewer.client.gui.addBox(name,dim[0],dim[1],dim[2], [0.,1.,0.,0.3])
+    config = center+rot_quat_x(client, dir )
     viewer.client.gui.applyConfiguration(name,config)
-    viewer.client.gui.addToGroup(name,viewer.sceneName)
-    viewer.client.gui.refresh()
+    viewer.client.gui.addToGroup(name,groupName)
+    #viewer.client.gui.addTriangleFace(name,p1,p2,p3,color)
 
-
-def to_ineq(client,a,b,y_r,z_r):
-    a_r = array(a); b_r = array(b);
-    normba = norm(b_r - a_r)
-    x_dir = (b_r - a_r) / normba
-    x_pos = a_r + (b_r  - a_r) / 2
-
-    x = normba / 2.
-    y = y_r * normba;
-    z = z_r * normba;
-
-    points = [ [x,-y,z], [x,-y,z], [-x,-y,z], [x,-y,-z], [x,y,-z], [x,y,z], [-x,y,z], [-x,y,-z] ]
+def to_ineq(client,c,dir,dim):
+    center = np.array(c)
+    # TODO, make a loop
+    points = [ [dim[0],-dim[1],dim[2]], [dim[0],-dim[1],dim[2]], [-dim[0],-dim[1],dim[2]], [dim[0],-dim[1],-dim[2]], [dim[0],dim[1],-dim[2]], [dim[0],dim[1],dim[2]], [-dim[0],dim[1],dim[2]], [-dim[0],dim[1],-dim[2]] ]
     #transform
-    rot = rot_mat_x(client,x_dir.tolist())
-    points = [rot.dot(array(el)) + x_pos for el in points]
+    rot = rot_mat_x(client,dir)
+    points = [rot.dot(array(el)) + center for el in points]
     ineq = ConvexHull(points).equations
     return ineq[:,:-1],-ineq[:,-1]
 
 
 
 ##############################################" CALCUL ##################################""
-
+"""
 # a et b sont les extremites du rrt
 # y le poids initial alloue a la largeur (si la distance ab vaut 1, initialement la largeur vaut y)
 # z le poids initial alloue a la hauteur (si la distance ab vaut 1, initialement la hauteur vaut y)
@@ -261,39 +248,159 @@ def large_col_free_box(client,a,b,y = 0.3 ,z = 0.3, sizeObject = [0.,0.,0.], mar
     b_r = (b_r - x_dir*sizeObject/2.).tolist()        
 
     return (a_r, b_r, y_r, z_r)
+"""
 
+# a et b sont les extremites du rrt
+# x_r,y_r,z_r : ratio of the maximal size of the box along each axis (x = direction of the segment)
+def large_col_free_box(client,a,b,maxX = 2.,maxY = 0.05 ,maxZ = 0.1, sizeObject = [0.,0.,0.], margin = 0.):
+    a_r = np.array(a)
+    b_r = np.array(b)
+    center = (b_r+a_r) / 2.
+    x = norm(b_r - a_r)
+    x_origin = x
+    x_dir = (b_r -a_r)/x
+    x /= 2. # initial half-length
+    maxs = [x*maxX_ratio+sizeObject[0],x*maxX_ratio+sizeObject[0],maxY+sizeObject[1],maxY+sizeObject[1],maxZ+sizeObject[2],maxZ+sizeObject[2]]
+    
+    if VERBOSE : 
+        print "compute constraints for segment : "+str(a)+" -> "+str(b)
+        print "center = ",center
+        print "x init = ",x
+        print "direction : ",x_dir
+        print "maxs = ",maxs
+    x_max = maxs[0] # initial max bounds of dichotomy 
+    y_max = maxs[2]
+    z_max = maxs[4]
+    y_prev = 0.001 # initial min bounds of dichotomy
+    z_prev = 0.001
+    x_prev = x # original lenght of the rrt solution
+    
+    collision = not client.isBoxAroundAxisCollisionFree(center.tolist(),x_dir.tolist(),[x,x,y_prev,y_prev,z_prev,z_prev],margin)
+    assert not collision and "initial box is already in collision, limb-rrt path cannot be approximated by a straight line."    
+    # By dichotomy : find the maximal value for y,z with a uniform scaling leading to a collision-free box
+    it = 0
+    found = False
+    eps = 0.01
+    while not found and it < 100:
+        y = (y_max - y_prev)/2. + y_prev
+        z = (z_max - z_prev)/2. + z_prev
+        print "try "+str(y)+" , "+str(z)
+        collision = not client.isBoxAroundAxisCollisionFree(center.tolist(),x_dir.tolist(),[x,x,y,y,z,z],margin)
+        if collision :
+            print "collision"
+            y_max = y
+            z_max = z
+        else :
+            print "no collision"
+            if y-y_prev <= eps and z-z_prev <= eps :
+                print "end dichotomy"
+                found = True
+            else :
+                y_prev = y
+                z_prev = z
+        it += 1
+        
+    if VERBOSE : 
+        print "after dichotomy for uniform scaling : "
+        print "y = ",y
+        print "z = ",z
+    
+    #Now we do the same along x axis : 
+    found = True
+    it = 0
+    while not found and it < 100:
+        x = (x_max - x_prev)/2. + x_prev
+        collision = not client.isBoxAroundAxisCollisionFree(center.tolist(),x_dir.tolist(),[x,x,y,y,z,z],margin)
+        if collision :
+            x_max = x
+        else :
+            if x-x_prev <= eps  :
+                found = True
+            else :
+                x_prev = x
+        it += 1
+        
+    if VERBOSE : 
+        print "x = ",x
+       
+    # now we try iteratively in each direction (non symetric) :
+    success = True
+    it = 0
+    step = 0.01
+    eps = 0.001
+    dim = [x,x,y,y,z,z]
+    
+    while success and it < 100 :
+        success = False # true if at least one axis have been made successfully bigger
+        for i in range(6):
+            if dim[i] < maxs[i] :
+                dim[i] += step
+                collision = not client.isBoxAroundAxisCollisionFree(center.tolist(),x_dir.tolist(),dim,margin)
+                if collision :
+                    dim[i] -= step
+                else :
+                    success = True
+        it += 1
+        if not success and step > eps: #reduce the step
+            success = True
+            step /= 10.
+            
+    if VERBOSE : 
+        print "dimensions after iterative resizing : ",dim
+    for k in range(3):
+        for i in range(2):
+            dim[k*2+i] -= sizeObject[k]/2.
+            if dim[k*2+i] <= 0:
+                dim[k*2+i] = 0.005
+    if VERBOSE : 
+        print "dimensions after taking objectSize : ",dim
+    
+    # compute the new center and the symetric size values:
+    tr_c = [] # translation from the current center to the new one, on the x_dir frame
+    dim_sym = []
+    for i in range(3):
+        tr_c += [(dim[i*2+1] - dim[i*2])/2.]
+        dim_sym += [(dim[i*2+1] + dim[i*2])/2.]
+    transform_cn_co = SE3.Identity() # new center in old center frame
+    transform_cn_co.translation = np.matrix(tr_c).T
+    transform_co_w = SE3.Identity() # old center in world frame
+    transform_co_w.translation = np.matrix(center).T
+    transform_co_w.rotation = rot_mat_x(client,x_dir)
+    transform_cn_w = transform_co_w.act(transform_cn_co) # T_b^a = T_c^a act T_b^c 
+    
+    if VERBOSE : 
+        print "final center :",transform_cn_w.translation.T.tolist()[0]
+        print "dir : ",x_dir.tolist()
+        print "dim : ",dim_sym
+    return transform_cn_w.translation.T.tolist()[0],x_dir.tolist(),dim_sym
+    
 ### compute the inequalities constraints around the given line
 # The line (p_from, p_to) must be expressed at the contact position
 # but the constraints (H,h) are expressed at the joint level
 # the display is done before the transform and thus show the constraints at the contact level
-def computeInequalitiesAroundLine(fullBody,p_from,p_to,eeName,viewer):
+def computeInequalitiesAroundLine(fullBody,p_from,p_to,eeName,groupName,viewer):
     a = p_from.translation.T.tolist()[0]
     b = p_to.translation.T.tolist()[0]
-    if VERBOSE :
-        print "compute constrained for segment : "+str(a)+" -> "+str(b)
     # size of the end effector (x,y,z)
-    size = []
-    size+=[cfg.Robot.dict_size[eeName][0]+0.03] # 3cm of margin
-    size+=[cfg.Robot.dict_size[eeName][1]+0.03] # 3cm of margin
-    size+= [0.005] # hardcoded z value
-    
-    (a, b, y, z) = large_col_free_box(fullBody.clientRbprm.rbprm,a,b,sizeObject = size)
+    size_diagonal = math.sqrt(cfg.Robot.dict_size[eeName][0]**2 + cfg.Robot.dict_size[eeName][1]**2) + 0.02 #2cm of margin
+    size = [size_diagonal]*2
+    size+= [0.01] # hardcoded z value
+    size=[0,0,0] #FIXME debug
+    center,dir,dim = large_col_free_box(fullBody.clientRbprm.rbprm,a,b,sizeObject = size)
     if DISPLAY_CONSTRAINTS and not DISPLAY_JOINT_LEVEL:
-        display_box(viewer,fullBody.clientRbprm.rbprm,a,b,y,z)
+        display_box(viewer,fullBody.clientRbprm.rbprm,center,dir,dim,groupName)
     
-    # transform back to joint level
-    pa = p_from.copy()
-    pa.translation = np.matrix(a).T
-    pb = p_to.copy()
-    pb.translation = np.matrix(b).T    
-    pa = cfg.Robot.dict_offset[eeName].actInv(pa)
-    pb = cfg.Robot.dict_offset[eeName].actInv(pb)
-    a_j = pa.translation.T.tolist()[0]
-    b_j = pb.translation.T.tolist()[0]
-    H,h = to_ineq(fullBody.clientRbprm.rbprm,a_j, b_j, y, z)
+    # transform the center back to joint level
+    pc = SE3.Identity()
+    pc.translation = np.matrix(center).T
+    pc.rotation = rot_mat_x(fullBody.clientRbprm.rbprm,dir)
+    pc = cfg.Robot.dict_offset[eeName].actInv(pc)
+    center = pc.translation.T.tolist()[0]
+    if VERBOSE : 
+        print "center after transform to joint level : ",center
+    H,h = to_ineq(fullBody.clientRbprm.rbprm,center,dir,dim)
     if DISPLAY_CONSTRAINTS and DISPLAY_JOINT_LEVEL:
-        display_box(viewer,fullBody.clientRbprm.rbprm,a_j,b_j,y,z)
-        
+        display_box(viewer,fullBody.clientRbprm.rbprm,center,dir,dim)
     return H,h.reshape(-1,1)
 
 def contactPlacementFromConfig(fullBody,q,eeName):
@@ -301,10 +408,13 @@ def contactPlacementFromConfig(fullBody,q,eeName):
     p = fullBody.getJointPosition(eeName)
     p = se3FromConfig(p)
     # transform to contact position (from joint position)
-    p_contact = cfg.Robot.dict_offset[eeName].act(p)
+    p_contact = p.act(cfg.Robot.dict_offset[eeName])
     return p_contact
 
 def computeProblemConstraints(pData,fullBody,pathId,t,eeName,viewer):
+    groupName = "constraints_"+str(pathId)
+    if DISPLAY_CONSTRAINTS :
+        viewer.client.gui.createGroup(groupName)
     pDef = hpp_spline.problemDefinition()
     # set up problem definition : 
     pDef.flag =  int(hpp_spline.constraint_flag.INIT_POS) |  int(hpp_spline.constraint_flag.INIT_VEL) |int(hpp_spline.constraint_flag.INIT_ACC)|int(hpp_spline.constraint_flag.INIT_JERK) |int(hpp_spline.constraint_flag.END_POS) |  int(hpp_spline.constraint_flag.END_VEL) |int(hpp_spline.constraint_flag.END_ACC)|int(hpp_spline.constraint_flag.END_JERK)
@@ -346,11 +456,14 @@ def computeProblemConstraints(pData,fullBody,pathId,t,eeName,viewer):
     for i in range(1,len(wps)):
         q_to = wps[i]
         p_to = contactPlacementFromConfig(fullBody,q_to,eeName)
-        A,b = computeInequalitiesAroundLine(fullBody,p_from,p_to,eeName,viewer)
+        A,b = computeInequalitiesAroundLine(fullBody,p_from,p_to,eeName,groupName,viewer)
         if VERBOSE :
             print "Inequalities computed."
         pDef.addInequality(A,b)        
         p_from = p_to.copy()
+    if DISPLAY_CONSTRAINTS :
+        viewer.client.gui.addToGroup(groupName,viewer.sceneName)   
+        viewer.client.gui.refresh()
         
     return pDef
 
