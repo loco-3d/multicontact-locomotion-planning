@@ -8,8 +8,8 @@ from pinocchio.utils import *
 import numpy.linalg
 from locomote import WrenchCone,SOC6,ContactSequenceHumanoid
 import numpy as np
-from numpy import array, zeros
-from numpy.linalg import norm
+from numpy import array, dot, vstack, hstack, asmatrix, identity
+from numpy.linalg import norm, inv
 from scipy.spatial import ConvexHull
 from tools.disp_bezier import *
 import hpp_spline
@@ -19,10 +19,9 @@ import math
 from tools.disp_bezier import *
 import eigenpy
 import quadprog
-from numpy import array, dot, vstack, hstack, asmatrix, identity
 import bezier_predef
 import limb_rrt
-from hpp_wholebody_motion.utils.util import toRotationMatrix, se3FromConfig
+from hpp_wholebody_motion.utils.util import  se3FromConfig
 eigenpy.switchToNumpyArray()
 
 
@@ -32,7 +31,38 @@ DISPLAY_RRT = True
 DISPLAY_CONSTRAINTS = True
 DISPLAY_JOINT_LEVEL = False
 
-
+# id of each triangles, to be used with a points list of the form :
+# points = [ [x,-y,-z], [x,-y,z], [-x,-y,z], [-x,-y,-z], [x,y,-z], [x,y,z], [-x,y,z], [-x,y,-z] ]
+# see (hpp-rbprm-corba/src/hpp/rbprm/rbprmBuilder.impl.cc : MeshObstacleBox
+box_points = [  # front
+    [-1.0, -1.0,  1.0,],
+    [ 1.0, -1.0,  1.0,],
+    [ 1.0,  1.0,  1.0,],
+    [-1.0,  1.0,  1.0,],
+    # back
+    [-1.0, -1.0, -1.0,],
+    [ 1.0, -1.0, -1.0,],
+    [ 1.0,  1.0, -1.0,],
+    [-1.0,  1.0, -1.0 ]]
+triangles_ids = [
+        # front
+		[0, 1, 2,],
+		[2, 3, 0,],
+		# right
+		[1, 5, 6,],
+		[6, 2, 1,],
+		# back
+		[7, 6, 5,],
+		[5, 4, 7,],
+		# left
+		[4, 0, 3,],
+		[3, 7, 4,],
+		# bottom
+		[4, 5, 1,],
+		[1, 0, 4,],
+		# top
+		[3, 2, 6,],
+		[6, 7, 3]]
 
 
 #min (1/2)x' P x + q' x  
@@ -100,28 +130,21 @@ def rot_mat_x(client,a):
 
 
 
-def display_box(viewer,client,center,dir,dim,groupName):
-    rootName = groupName+"/box_"
+def display_box(viewer,points,groupName):
+    boxRootName = groupName+"/box"
     list = viewer.client.gui.getNodeList()
     i=0
-    name = rootName
-    while list.count(name) > 0:
-        name=rootName+"_"+str(i)
-        i+=1       
-    
-    viewer.client.gui.addBox(name,dim[0],dim[1],dim[2], [0.,1.,0.,0.3])
-    config = center+rot_quat_x(client, dir )
-    viewer.client.gui.applyConfiguration(name,config)
-    viewer.client.gui.addToGroup(name,groupName)
-    #viewer.client.gui.addTriangleFace(name,p1,p2,p3,color)
+    boxName = boxRootName+"_"+str(i)
+    while list.count(boxName+"/tri_0") > 0:
+        i+=1               
+        boxName=boxRootName+"_"+str(i)
+        
+    for tId in range(len(triangles_ids)):
+        name = boxName+"/tri_"+str(tId)
+        viewer.client.gui.addTriangleFace(name,points[triangles_ids[tId][0]].tolist(),points[triangles_ids[tId][1]].tolist(),points[triangles_ids[tId][2]].tolist(),[0.,1.,0.,0.3])
+        viewer.client.gui.addToGroup(name,groupName)
 
-def to_ineq(client,c,dir,dim):
-    center = np.array(c)
-    # TODO, make a loop
-    points = [ [dim[0],-dim[1],dim[2]], [dim[0],-dim[1],dim[2]], [-dim[0],-dim[1],dim[2]], [dim[0],-dim[1],-dim[2]], [dim[0],dim[1],-dim[2]], [dim[0],dim[1],dim[2]], [-dim[0],dim[1],dim[2]], [-dim[0],dim[1],-dim[2]] ]
-    #transform
-    rot = rot_mat_x(client,dir)
-    points = [rot.dot(array(el)) + center for el in points]
+def to_ineq(points):
     ineq = ConvexHull(points).equations
     return ineq[:,:-1],-ineq[:,-1]
 
@@ -252,15 +275,34 @@ def large_col_free_box(client,a,b,y = 0.3 ,z = 0.3, sizeObject = [0.,0.,0.], mar
 
 # a et b sont les extremites du rrt
 # x_r,y_r,z_r : ratio of the maximal size of the box along each axis (x = direction of the segment)
-def large_col_free_box(client,a,b,maxX = 2.,maxY = 0.05 ,maxZ = 0.1, sizeObject = [0.,0.,0.], margin = 0.):
+def large_col_free_box(client,a,b,maxX = 0.3,maxY = 0.1 ,maxZ = 0.1, sizeObject = [0,0,0],margin = 0.):
     a_r = np.array(a)
     b_r = np.array(b)
     center = (b_r+a_r) / 2.
     x = norm(b_r - a_r)
-    x_origin = x
     x_dir = (b_r -a_r)/x
-    x /= 2. # initial half-length
-    maxs = [x*maxX_ratio+sizeObject[0],x*maxX_ratio+sizeObject[0],maxY+sizeObject[1],maxY+sizeObject[1],maxZ+sizeObject[2],maxZ+sizeObject[2]]
+    MIN_VALUE = 0.01    
+    x = (x/2.) + MIN_VALUE # initial half-length (+margin)
+    x_origin = x
+    # transform the sizeObject from the world frame to the x_dir one (ignoring value on z axis):
+    size_r = np.array(sizeObject)    
+    objPoints = []
+    for sign in box_points :         
+        objPoints += [np.array(sign)*size_r]   
+    inv_rot = inv(rot_mat_x(client,x_dir.tolist()))    
+    objPoints = [inv_rot.dot(array(el)) for el in objPoints]
+    # look for the max displacement in the objBox along each axis and save it as the offset for this axis
+    size_r = np.array([0.]*3)
+    for p in objPoints:
+        for i in range(3):
+            if abs(p[i]) > size_r[i]:
+                size_r[i] = abs(p[i])            
+    if VERBOSE : 
+        print "x_dir = ",x_dir.tolist()
+        #print "obj points after transform : ",objPoints
+        print "sizeObject after  transform : ",size_r.tolist()
+        
+    maxs = [maxX+size_r[0],maxX+size_r[0],maxY+size_r[1],maxY+size_r[1],maxZ+size_r[2],maxZ+size_r[2]]
     
     if VERBOSE : 
         print "compute constraints for segment : "+str(a)+" -> "+str(b)
@@ -284,16 +326,16 @@ def large_col_free_box(client,a,b,maxX = 2.,maxY = 0.05 ,maxZ = 0.1, sizeObject 
     while not found and it < 100:
         y = (y_max - y_prev)/2. + y_prev
         z = (z_max - z_prev)/2. + z_prev
-        print "try "+str(y)+" , "+str(z)
+        #print "try "+str(y)+" , "+str(z)
         collision = not client.isBoxAroundAxisCollisionFree(center.tolist(),x_dir.tolist(),[x,x,y,y,z,z],margin)
         if collision :
-            print "collision"
+            #print "collision"
             y_max = y
             z_max = z
         else :
-            print "no collision"
+            #print "no collision"
             if y-y_prev <= eps and z-z_prev <= eps :
-                print "end dichotomy"
+                #print "end dichotomy"
                 found = True
             else :
                 y_prev = y
@@ -347,33 +389,47 @@ def large_col_free_box(client,a,b,maxX = 2.,maxY = 0.05 ,maxZ = 0.1, sizeObject 
             
     if VERBOSE : 
         print "dimensions after iterative resizing : ",dim
+        
+    # reduce dimensions according to sizeObject :
     for k in range(3):
         for i in range(2):
-            dim[k*2+i] -= sizeObject[k]/2.
-            if dim[k*2+i] <= 0:
-                dim[k*2+i] = 0.005
+            dim[k*2+i] -= size_r[k]
+            # assure that the initial path do not go outside the box after resizing : 
+            if k == 0 :
+                if dim[i] <x_origin:
+                    dim[i] = x_origin             
+            elif dim[k*2+i] <MIN_VALUE:
+                dim[k*2+i] = MIN_VALUE
+               
     if VERBOSE : 
-        print "dimensions after taking objectSize : ",dim
-    
-    # compute the new center and the symetric size values:
-    tr_c = [] # translation from the current center to the new one, on the x_dir frame
-    dim_sym = []
-    for i in range(3):
-        tr_c += [(dim[i*2+1] - dim[i*2])/2.]
-        dim_sym += [(dim[i*2+1] + dim[i*2])/2.]
-    transform_cn_co = SE3.Identity() # new center in old center frame
-    transform_cn_co.translation = np.matrix(tr_c).T
-    transform_co_w = SE3.Identity() # old center in world frame
-    transform_co_w.translation = np.matrix(center).T
-    transform_co_w.rotation = rot_mat_x(client,x_dir)
-    transform_cn_w = transform_co_w.act(transform_cn_co) # T_b^a = T_c^a act T_b^c 
-    
-    if VERBOSE : 
-        print "final center :",transform_cn_w.translation.T.tolist()[0]
-        print "dir : ",x_dir.tolist()
-        print "dim : ",dim_sym
-    return transform_cn_w.translation.T.tolist()[0],x_dir.tolist(),dim_sym
-    
+        print "dimensions after applying sizeObject : ",dim
+        
+    # compute the vertices of this box: 
+    #points = [ [dim[1],-dim[2],-dim[4]], [dim[1],-dim[2],dim[5]], [-dim[0],-dim[2],dim[5]], [-dim[0],-dim[2],-dim[4]], [dim[1],dim[3],-dim[4]], [dim[1],dim[3],dim[5]], [-dim[0],dim[3],dim[5]], [-dim[0],dim[3],-dim[4]] ]    
+    points = []
+    for sign in box_points : 
+        point = []
+        for i in range(3):
+            if sign[i] < 0 : # required because dimensions are not symetrical
+                point += [-dim[i*2]]
+            else :
+                point += [dim[i*2+1]]        
+        points += [point]
+    # transform this points to the position/orientation of the box : 
+    rot = rot_mat_x(client,x_dir.tolist())
+    t_c_w = SE3.Identity() # transform center of box in world frame
+    t_c_w.translation=np.matrix(center).T
+    t_c_w.rotation = rot
+    pointsTransform = []
+    for p in points:
+        t_p_c = SE3.Identity() # vertice position in box frame
+        t_p_c.translation = np.matrix(p).T
+        pointsTransform += [t_c_w.act(t_p_c).translation.T[0]]
+    if VERBOSE :
+        print "final points list : ",pointsTransform
+    return pointsTransform
+
+
 ### compute the inequalities constraints around the given line
 # The line (p_from, p_to) must be expressed at the contact position
 # but the constraints (H,h) are expressed at the joint level
@@ -382,34 +438,87 @@ def computeInequalitiesAroundLine(fullBody,p_from,p_to,eeName,groupName,viewer):
     a = p_from.translation.T.tolist()[0]
     b = p_to.translation.T.tolist()[0]
     # size of the end effector (x,y,z)
-    size_diagonal = math.sqrt(cfg.Robot.dict_size[eeName][0]**2 + cfg.Robot.dict_size[eeName][1]**2) + 0.02 #2cm of margin
-    size = [size_diagonal]*2
-    size+= [0.01] # hardcoded z value
-    size=[0,0,0] #FIXME debug
-    center,dir,dim = large_col_free_box(fullBody.clientRbprm.rbprm,a,b,sizeObject = size)
-    if DISPLAY_CONSTRAINTS and not DISPLAY_JOINT_LEVEL:
-        display_box(viewer,fullBody.clientRbprm.rbprm,center,dir,dim,groupName)
-    
-    # transform the center back to joint level
-    pc = SE3.Identity()
-    pc.translation = np.matrix(center).T
-    pc.rotation = rot_mat_x(fullBody.clientRbprm.rbprm,dir)
-    pc = cfg.Robot.dict_offset[eeName].actInv(pc)
-    center = pc.translation.T.tolist()[0]
+    size_diagonal = math.sqrt(cfg.Robot.dict_size[eeName][0]**2 + cfg.Robot.dict_size[eeName][1]**2)  #TODO margin ??
+    size = [size_diagonal/2., size_diagonal/2.,0.001]
+    #size=[0,0,0] #FIXME debug    
+    """
+    size_r = np.array(size)
+    # rotate size vector according to initial rotation of the effector :
     if VERBOSE : 
-        print "center after transform to joint level : ",center
-    H,h = to_ineq(fullBody.clientRbprm.rbprm,center,dir,dim)
+        print "rotation init : ",p_from.rotation
+    size_r = p_from.rotation.dot(size_r)
+    """
+    points = large_col_free_box(fullBody.clientRbprm.rbprm,a,b,sizeObject=size)
+    # Display the box before the size reduction : 
+    #if DISPLAY_CONSTRAINTS and not DISPLAY_JOINT_LEVEL:
+    #    display_box(viewer,points,groupName)
+    
+    """
+    pointsReduced = []
+    rot_init = p_from.rotation
+    for i in range(len(box_points)):
+        #pointsReduced += [points[i]-rot_init.dot((size_r*array(box_points[i]))/2.)]
+        if VERBOSE :
+            print "for point "+str(i)+" shift of "+str(-((size_r*np.array(box_points[i]))))
+        pointsReduced += [points[i]-((size_r*np.array(box_points[i])))]
+    """    
+    # display the box after size reduction 
+    if DISPLAY_CONSTRAINTS and not DISPLAY_JOINT_LEVEL:
+        display_box(viewer,points,groupName)
+    # transform the points back to joint level
+    pc = SE3.Identity() # take Identity rotation #FIXME probably not the best idea ... 
+    pointsJoint = []
+    for point in points :
+        pc.translation = np.matrix(point).T
+        pointsJoint += [cfg.Robot.dict_offset[eeName].actInv(pc).translation.T.tolist()[0]]
     if DISPLAY_CONSTRAINTS and DISPLAY_JOINT_LEVEL:
-        display_box(viewer,fullBody.clientRbprm.rbprm,center,dir,dim)
+        display_box(viewer,pointsJoint,groupName)
+    H,h = to_ineq(pointsJoint)
     return H,h.reshape(-1,1)
 
 def contactPlacementFromConfig(fullBody,q,eeName):
     fullBody.setCurrentConfig(q)
-    p = fullBody.getJointPosition(eeName)
-    p = se3FromConfig(p)
+    q = fullBody.getJointPosition(eeName)
+    p = se3FromConfig(q)
     # transform to contact position (from joint position)
-    p_contact = p.act(cfg.Robot.dict_offset[eeName])
-    return p_contact
+    # p*=cfg.Robot.dict_offset[eeName] # test ??
+    tr = p.translation + cfg.Robot.dict_offset[eeName].translation
+    p.translation = tr
+    return p
+
+# filter wp : remove "useless" waypoint. 
+# A waypoint is classified useless if :
+# - the directions of the two lines (previous -> wp  and wp -> next ) are close
+# - the segment previous-> wp is really small
+def filterWPs(fullBody,eeName,wps,t):
+    ANGLE_EPS = 0.05 # after a cos(angle)
+    SIZE_EPS = 0.001
+    res = []
+    res_t = []
+    res += [wps[0]]
+    res_t += [t[0]]
+    q_prev = wps[0]
+    p_prev = contactPlacementFromConfig(fullBody,q_prev,eeName).translation.T[0]    
+    for i in range(1,len(wps)-1):
+        q = wps[i]
+        p = contactPlacementFromConfig(fullBody,q,eeName).translation.T[0]    
+        q_next = wps[i+1]
+        p_next = contactPlacementFromConfig(fullBody,q_next,eeName).translation.T[0]  
+        a = p - p_prev
+        b = p_next - p 
+        length = norm(a)
+        ua = a/length
+        ub = b/norm(b)
+        angle = 1 - abs(ua.dot(ub))
+        if length >= SIZE_EPS and angle >= ANGLE_EPS :
+            res += [wps[i]]
+            res_t += [t[i]]            
+    res += [wps[-1]]
+    res_t += [t[-1]]
+    
+    if VERBOSE :
+        print "# filter waypoints, before : "+str(len(wps))+" after : "+str(len(res))
+    return res,res_t
 
 def computeProblemConstraints(pData,fullBody,pathId,t,eeName,viewer):
     groupName = "constraints_"+str(pathId)
@@ -431,6 +540,7 @@ def computeProblemConstraints(pData,fullBody,pathId,t,eeName,viewer):
     pDef.curveConstraints = curveConstraints
     # get all the waypoints from the limb-rrt
     wps,t_paths = fullBody.client.problem.getWaypoints(pathId)
+    wps,t_paths = filterWPs(fullBody,eeName,wps,t_paths)    
     # approximate the switching times (infos from limb-rrt)
     if len(t_paths)>2 :
         splits=[]
@@ -453,9 +563,13 @@ def computeProblemConstraints(pData,fullBody,pathId,t,eeName,viewer):
     # compute constraints around each line of the limb-rrt solution : 
     q_from = wps[0]
     p_from = contactPlacementFromConfig(fullBody,q_from,eeName)
+    # debug test : 
+    #p_from.translation = pData.c0_ # not in the right frame ! 
     for i in range(1,len(wps)):
         q_to = wps[i]
         p_to = contactPlacementFromConfig(fullBody,q_to,eeName)
+        #if i == len(wps)-1 : # debug test
+        #    p_from.translation = pData.c1_            
         A,b = computeInequalitiesAroundLine(fullBody,p_from,p_to,eeName,groupName,viewer)
         if VERBOSE :
             print "Inequalities computed."
