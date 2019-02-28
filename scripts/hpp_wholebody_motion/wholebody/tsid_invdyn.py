@@ -210,7 +210,7 @@ def generateEEReferenceTraj(robot,robotData,t,phase,phase_next,eeName,viewer = N
 def generateEEReferenceTrajCollisionFree(fullBody,robot,robotData,t,phase_previous,phase,phase_next,q_t,predefTraj,eeName,phaseId,viewer = None):
     time_interval = [t, phase.time_trajectory[-1]]    
     placements = []
-    placement_init = robot.position(robotData, robot.model().getJointId(eeName))
+    placement_init = JointPatchForEffector(phase_previous,eeName).placement
     placement_end = JointPatchForEffector(phase_next,eeName).placement
     placements.append(placement_init)
     placements.append(placement_end)    
@@ -303,7 +303,7 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
     time_start = time.time()
     t = 0.0
     # For each phases, create the necessary task and references trajectories :
-    for pid in range(cs.size()):
+    for pid in range(cs.size()-4):
         if cfg.WB_VERBOSE :
             print "## for phase : ",pid
             print "t = ",t

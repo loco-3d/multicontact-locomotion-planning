@@ -21,7 +21,7 @@ import eigenpy
 import quadprog
 import bezier_predef
 import limb_rrt
-from hpp_wholebody_motion.utils.util import  se3FromConfig
+from hpp_wholebody_motion.utils.util import  se3FromConfig,distPointLine
 eigenpy.switchToNumpyArray()
 
 
@@ -273,16 +273,49 @@ def large_col_free_box(client,a,b,y = 0.3 ,z = 0.3, sizeObject = [0.,0.,0.], mar
     return (a_r, b_r, y_r, z_r)
 """
 
+def dimWithSizeObject(dim,size):
+    res = []
+    for k in range(3):
+        for i in range(2):
+            res += [dim[2*k+i] + size[k]]
+    return res
+
+def computeBoxVertices(client,center,x_dir,dim):
+    # compute the vertices of this box: 
+    #points = [ [dim[1],-dim[2],-dim[4]], [dim[1],-dim[2],dim[5]], [-dim[0],-dim[2],dim[5]], [-dim[0],-dim[2],-dim[4]], [dim[1],dim[3],-dim[4]], [dim[1],dim[3],dim[5]], [-dim[0],dim[3],dim[5]], [-dim[0],dim[3],-dim[4]] ]    
+    points = []
+    for sign in box_points : 
+        point = []
+        for i in range(3):
+            if sign[i] < 0 : # required because dimensions are not symetrical
+                point += [-dim[i*2]]
+            else :
+                point += [dim[i*2+1]]        
+        points += [point]
+    # transform this points to the position/orientation of the box : 
+    rot = rot_mat_x(client,x_dir.tolist())
+    t_c_w = SE3.Identity() # transform center of box in world frame
+    t_c_w.translation=np.matrix(center).T
+    t_c_w.rotation = rot
+    pointsTransform = []
+    for p in points:
+        t_p_c = SE3.Identity() # vertice position in box frame
+        t_p_c.translation = np.matrix(p).T
+        pointsTransform += [t_c_w.act(t_p_c).translation.T[0]] 
+        
+    return pointsTransform
+
+
 # a et b sont les extremites du rrt
 # x_r,y_r,z_r : ratio of the maximal size of the box along each axis (x = direction of the segment)
-def large_col_free_box(client,a,b,maxX = 0.3,maxY = 0.1 ,maxZ = 0.1, sizeObject = [0,0,0],margin = 0.):
+def large_col_free_box(client,a,b,maxX = 0.2,maxY = 0.05 ,maxZ = 0.05, sizeObject = [0,0,0],margin = 0.):
     a_r = np.array(a)
     b_r = np.array(b)
     center = (b_r+a_r) / 2.
     x = norm(b_r - a_r)
     x_dir = (b_r -a_r)/x
-    MIN_VALUE = 0.01    
-    x = (x/2.) + MIN_VALUE # initial half-length (+margin)
+    MIN_VALUE = 0.001    
+    x = (x/2.) #+ MIN_VALUE # initial half-length (+margin)
     x_origin = x
     # transform the sizeObject from the world frame to the x_dir one (ignoring value on z axis):
     size_r = np.array(sizeObject)    
@@ -302,7 +335,7 @@ def large_col_free_box(client,a,b,maxX = 0.3,maxY = 0.1 ,maxZ = 0.1, sizeObject 
         #print "obj points after transform : ",objPoints
         print "sizeObject after  transform : ",size_r.tolist()
         
-    maxs = [maxX+size_r[0],maxX+size_r[0],maxY+size_r[1],maxY+size_r[1],maxZ+size_r[2],maxZ+size_r[2]]
+    maxs = [maxX,maxX,maxY,maxY,maxZ,maxZ]
     
     if VERBOSE : 
         print "compute constraints for segment : "+str(a)+" -> "+str(b)
@@ -317,8 +350,11 @@ def large_col_free_box(client,a,b,maxX = 0.3,maxY = 0.1 ,maxZ = 0.1, sizeObject 
     z_prev = 0.001
     x_prev = x # original lenght of the rrt solution
     
-    collision = not client.isBoxAroundAxisCollisionFree(center.tolist(),x_dir.tolist(),[x,x,y_prev,y_prev,z_prev,z_prev],margin)
-    assert not collision and "initial box is already in collision, limb-rrt path cannot be approximated by a straight line."    
+    collision = not client.isBoxAroundAxisCollisionFree(center.tolist(),x_dir.tolist(),dimWithSizeObject([x,x,y_prev,y_prev,z_prev,z_prev],size_r),margin)
+    #assert not collision and "initial box is already in collision, limb-rrt path cannot be approximated by a straight line."    
+    if collision :
+        print "!! initial box is already in collision, limb-rrt path cannot be approximated by a straight line." 
+        return computeBoxVertices(client,center,x_dir,dimWithSizeObject([x,x,y_prev,y_prev,z_prev,z_prev],size_r))
     # By dichotomy : find the maximal value for y,z with a uniform scaling leading to a collision-free box
     it = 0
     found = False
@@ -327,7 +363,7 @@ def large_col_free_box(client,a,b,maxX = 0.3,maxY = 0.1 ,maxZ = 0.1, sizeObject 
         y = (y_max - y_prev)/2. + y_prev
         z = (z_max - z_prev)/2. + z_prev
         #print "try "+str(y)+" , "+str(z)
-        collision = not client.isBoxAroundAxisCollisionFree(center.tolist(),x_dir.tolist(),[x,x,y,y,z,z],margin)
+        collision = not client.isBoxAroundAxisCollisionFree(center.tolist(),x_dir.tolist(),dimWithSizeObject([x,x,y,y,z,z],size_r),margin)
         if collision :
             #print "collision"
             y_max = y
@@ -352,7 +388,7 @@ def large_col_free_box(client,a,b,maxX = 0.3,maxY = 0.1 ,maxZ = 0.1, sizeObject 
     it = 0
     while not found and it < 100:
         x = (x_max - x_prev)/2. + x_prev
-        collision = not client.isBoxAroundAxisCollisionFree(center.tolist(),x_dir.tolist(),[x,x,y,y,z,z],margin)
+        collision = not client.isBoxAroundAxisCollisionFree(center.tolist(),x_dir.tolist(),dimWithSizeObject([x,x,y,y,z,z],size_r),margin)
         if collision :
             x_max = x
         else :
@@ -377,7 +413,7 @@ def large_col_free_box(client,a,b,maxX = 0.3,maxY = 0.1 ,maxZ = 0.1, sizeObject 
         for i in range(6):
             if dim[i] < maxs[i] :
                 dim[i] += step
-                collision = not client.isBoxAroundAxisCollisionFree(center.tolist(),x_dir.tolist(),dim,margin)
+                collision = not client.isBoxAroundAxisCollisionFree(center.tolist(),x_dir.tolist(),dimWithSizeObject(dim,size_r),margin)
                 if collision :
                     dim[i] -= step
                 else :
@@ -389,7 +425,7 @@ def large_col_free_box(client,a,b,maxX = 0.3,maxY = 0.1 ,maxZ = 0.1, sizeObject 
             
     if VERBOSE : 
         print "dimensions after iterative resizing : ",dim
-        
+    """    
     # reduce dimensions according to sizeObject :
     for k in range(3):
         for i in range(2):
@@ -403,31 +439,11 @@ def large_col_free_box(client,a,b,maxX = 0.3,maxY = 0.1 ,maxZ = 0.1, sizeObject 
                
     if VERBOSE : 
         print "dimensions after applying sizeObject : ",dim
-        
-    # compute the vertices of this box: 
-    #points = [ [dim[1],-dim[2],-dim[4]], [dim[1],-dim[2],dim[5]], [-dim[0],-dim[2],dim[5]], [-dim[0],-dim[2],-dim[4]], [dim[1],dim[3],-dim[4]], [dim[1],dim[3],dim[5]], [-dim[0],dim[3],dim[5]], [-dim[0],dim[3],-dim[4]] ]    
-    points = []
-    for sign in box_points : 
-        point = []
-        for i in range(3):
-            if sign[i] < 0 : # required because dimensions are not symetrical
-                point += [-dim[i*2]]
-            else :
-                point += [dim[i*2+1]]        
-        points += [point]
-    # transform this points to the position/orientation of the box : 
-    rot = rot_mat_x(client,x_dir.tolist())
-    t_c_w = SE3.Identity() # transform center of box in world frame
-    t_c_w.translation=np.matrix(center).T
-    t_c_w.rotation = rot
-    pointsTransform = []
-    for p in points:
-        t_p_c = SE3.Identity() # vertice position in box frame
-        t_p_c.translation = np.matrix(p).T
-        pointsTransform += [t_c_w.act(t_p_c).translation.T[0]]
+    """    
+    points = computeBoxVertices(client,center,x_dir,dimWithSizeObject(dim,size_r))
     if VERBOSE :
-        print "final points list : ",pointsTransform
-    return pointsTransform
+        print "final points list : ",points
+    return points
 
 
 ### compute the inequalities constraints around the given line
@@ -439,7 +455,8 @@ def computeInequalitiesAroundLine(fullBody,p_from,p_to,eeName,groupName,viewer):
     b = p_to.translation.T.tolist()[0]
     # size of the end effector (x,y,z)
     size_diagonal = math.sqrt(cfg.Robot.dict_size[eeName][0]**2 + cfg.Robot.dict_size[eeName][1]**2)  #TODO margin ??
-    size = [size_diagonal/2., size_diagonal/2.,0.001]
+    #size = [size_diagonal/2., size_diagonal/2.,0.001]
+    size = [cfg.Robot.dict_size[eeName][0]/2., cfg.Robot.dict_size[eeName][1]/2.,0.001]
     #size=[0,0,0] #FIXME debug    
     """
     size_r = np.array(size)
@@ -487,6 +504,44 @@ def contactPlacementFromConfig(fullBody,q,eeName):
     return p
 
 # filter wp : remove "useless" waypoint. 
+# compute the distance betwen w2 and the segment w1->w3, if inferior to a treshold, w2 is deleted from the list
+def filterWPs(fullBody,eeName,wps,t):
+    EPS = 0.01
+    res = []
+    res_t = []
+    res += [wps[0]]
+    res_t += [t[0]]
+    pts = []
+    for wp in wps :
+        pts += [contactPlacementFromConfig(fullBody,wp,eeName).translation.T[0]]
+    i = 1
+    i_begin = i-1
+    i_mid = [i]
+    while i < len(wps)-1 :
+        i_end = i+1        
+        use = False
+        print "- while i = ",i
+        for id in i_mid :
+            d = distPointLine(pts[id],pts[i_begin],pts[i_end])
+            print "d = ",d
+            if d > EPS:
+                use = True
+        if use :
+            res += [wps[i]]
+            res_t += [t[i]]  
+            i_begin = i
+            i_mid = []
+        i+=1
+        i_mid += [i]
+        
+    res += [wps[-1]]
+    res_t += [t[-1]]
+    
+    if VERBOSE :
+        print "# filter waypoints, before : "+str(len(wps))+" after : "+str(len(res))
+    return res,res_t    
+"""
+# filter wp : remove "useless" waypoint. 
 # A waypoint is classified useless if :
 # - the directions of the two lines (previous -> wp  and wp -> next ) are close
 # - the segment previous-> wp is really small
@@ -496,10 +551,10 @@ def filterWPs(fullBody,eeName,wps,t):
     res = []
     res_t = []
     res += [wps[0]]
-    res_t += [t[0]]
-    q_prev = wps[0]
-    p_prev = contactPlacementFromConfig(fullBody,q_prev,eeName).translation.T[0]    
+    res_t += [t[0]]   
     for i in range(1,len(wps)-1):
+        q_prev = wps[i-1]
+        p_prev = contactPlacementFromConfig(fullBody,q_prev,eeName).translation.T[0] 
         q = wps[i]
         p = contactPlacementFromConfig(fullBody,q,eeName).translation.T[0]    
         q_next = wps[i+1]
@@ -519,6 +574,8 @@ def filterWPs(fullBody,eeName,wps,t):
     if VERBOSE :
         print "# filter waypoints, before : "+str(len(wps))+" after : "+str(len(res))
     return res,res_t
+"""
+
 
 def computeProblemConstraints(pData,fullBody,pathId,t,eeName,viewer):
     groupName = "constraints_"+str(pathId)

@@ -6,9 +6,8 @@ import hpp_wholebody_motion.config as cfg
 import locomote
 from locomote import WrenchCone,SOC6,ContactPatch, ContactPhaseHumanoid, ContactSequenceHumanoid
 global i_sphere 
+from hpp_wholebody_motion.utils.util import quatFromConfig
 
-def quatFromConfig(q):
-    return Quaternion(q[6],q[3],q[4],q[5])
 
 def generateContactSequence(fb,configs,beginId,endId):
     print "generate contact sequence from planning : "
