@@ -446,6 +446,7 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
             # end while t \in phase t
             if swingPhase and cfg.EFF_CHECK_COLLISION :
                 phaseValid = iter_for_phase >= 1 #TODO : check collision here instead for this debug code
+                phaseValid = True # DEBUG FIXME
                 if not phaseValid :
                     if cfg.WB_VERBOSE :
                         print "Phase "+str(pid)+" not valid, try new end effector trajectory."                    
