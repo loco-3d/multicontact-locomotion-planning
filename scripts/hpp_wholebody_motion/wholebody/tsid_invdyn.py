@@ -236,6 +236,8 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
     v = np.matrix(np.zeros(robot.nv)).transpose()
     t = 0.0  # time
     q_t = []
+    v_t = []
+    a_t = []
     invdyn = tsid.InverseDynamicsFormulationAccForce("tsid", robot, False)
     invdyn.computeProblemData(t, q, v)
     data = invdyn.data()
@@ -373,6 +375,8 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
                 q = q_begin.copy()
                 v = v_begin.copy()
             q_t_phase = []
+            v_t_phase = []
+            a_t_phase = []
             iter_for_phase += 1
             if cfg.WB_VERBOSE:
                 print "Start simulation for phase "+str(pid)+", try number :  "+str(iter_for_phase)
@@ -431,18 +435,21 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
                 v_mean = v + 0.5 * dt * dv
                 v += dt * dv
                 q = se3.integrate(robot.model(), q, dt * v_mean)
+                t += dt                
+                # store current state
                 q_t_phase += [q]
-                t += dt
+                v_t_phase += [v]
+                a_t_phase += [dv]
                 if norm(dv) > 1e6 or norm(v) > 1e6 :
                     print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
                     print "/!\ ABORT : controler unstable at t = "+str(t)+"  /!\ "
                     print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"                
-                    return q_t+q_t_phase
+                    return q_t+q_t_phase, v_t+v_t_phase, a_t+a_t_phase
                 if math.isnan(norm(dv)) or math.isnan(norm(v)) :
                     print "!!!!!!    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
                     print "/!\ ABORT : nan   at t = "+str(t)+"  /!\ "
                     print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"                
-                    return q_t+q_t_phase         
+                    return q_t+q_t_phase, v_t+v_t_phase, a_t+a_t_phase        
             # end while t \in phase t
             if swingPhase and cfg.EFF_CHECK_COLLISION :
                 phaseValid = iter_for_phase >= 1 #TODO : check collision here instead for this debug code
@@ -460,6 +467,8 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
                     print "Phase "+str(pid)+" valid."
             if phaseValid:
                 q_t += q_t_phase
+                v_t += v_t_phase
+                a_t += a_t_phase
                 # display all the effector trajectories for this phase
                 if viewer and cfg.DISPLAY_FEET_TRAJ :
                     time_interval = [phase.time_trajectory[0], phase.time_trajectory[-1]] 
@@ -474,7 +483,7 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
         print "\nFinal COM Position  ", robot.com(invdyn.data()).T
         print "Desired COM Position", cs.contact_phases[-1].final_state.T
     
-    return q_t
+    return q_t,v_t,a_t
 
    
     
