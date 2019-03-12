@@ -235,9 +235,10 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
     q = cs.contact_phases[0].reference_configurations[0].copy()
     v = np.matrix(np.zeros(robot.nv)).transpose()
     t = 0.0  # time
-    q_t = []
-    v_t = []
-    a_t = []
+    # init states list with initial state (assume joint velocity is null for t=0)
+    q_t = [q.copy()]
+    v_t = [v.copy()]
+    a_t = [] # fill 'a' one index before v and q : a[i] is the acc needed to go from v[i] to v[i+1]
     invdyn = tsid.InverseDynamicsFormulationAccForce("tsid", robot, False)
     invdyn.computeProblemData(t, q, v)
     data = invdyn.data()
@@ -385,7 +386,7 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
                 print "t begin = ",t_begin
                 print "current t = ",t
             # loop to generate states (q,v,a) for the current contact phase : 
-            while t < phase.time_trajectory[-1] - dt :
+            while (t < phase.time_trajectory[-1] - dt) or (t <= phase.time_trajectory[-1] and pid == cs.size()-1) :
                 # set traj reference for current time : 
                 # com 
                 sampleCom = trajCom.computeNext()
@@ -441,7 +442,7 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
                 t += dt                
                 # store current state
                 q_t_phase += [q]
-                v_t_phase += [v]
+                v_t_phase += [v.copy()]
                 a_t_phase += [dv]
                 if norm(dv) > 1e6 or norm(v) > 1e6 :
                     print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
@@ -486,7 +487,7 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
     if cfg.WB_VERBOSE:
         print "\nFinal COM Position  ", robot.com(invdyn.data()).T
         print "Desired COM Position", cs.contact_phases[-1].final_state.T
-    
+    a_t += [np.matrix(np.zeros(robot.nv)).transpose()] # add last value of 'a' (to have the same size as v and q)
     return q_t,v_t,a_t
 
    
