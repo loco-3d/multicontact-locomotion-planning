@@ -305,7 +305,7 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
     time_start = time.time()
     t = 0.0
     # For each phases, create the necessary task and references trajectories :
-    for pid in range(cs.size()-4):
+    for pid in range(cs.size()):
         if cfg.WB_VERBOSE :
             print "## for phase : ",pid
             print "t = ",t
@@ -362,15 +362,17 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
         
         if cfg.WB_STOP_AT_EACH_PHASE :
             raw_input('start simulation')
-        # loop with increasing time for this phase :
+        # save values at the beginning of the current phase
         t_begin = t
         q_begin = q.copy()
         v_begin = v.copy()
         phaseValid = False
         swingPhase = False # will be true if an effector move during this phase
         iter_for_phase = -1
+        # iterate until a valid phase is found (ie. collision free and which respect joint-limits)
         while not phaseValid :
             if iter_for_phase >=0 :
+                # reset values to their value at the beginning of the contact phase
                 t = t_begin
                 q = q_begin.copy()
                 v = v_begin.copy()
@@ -382,6 +384,7 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
                 print "Start simulation for phase "+str(pid)+", try number :  "+str(iter_for_phase)
                 print "t begin = ",t_begin
                 print "current t = ",t
+            # loop to generate states (q,v,a) for the current contact phase : 
             while t < phase.time_trajectory[-1] - dt :
                 # set traj reference for current time : 
                 # com 
@@ -450,7 +453,7 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
                     print "/!\ ABORT : nan   at t = "+str(t)+"  /!\ "
                     print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"                
                     return q_t+q_t_phase, v_t+v_t_phase, a_t+a_t_phase        
-            # end while t \in phase t
+            # end while t \in phase_t (loop for the current contact phase) 
             if swingPhase and cfg.EFF_CHECK_COLLISION :
                 phaseValid = iter_for_phase >= 1 #TODO : check collision here instead for this debug code
                 phaseValid = True # DEBUG FIXME
@@ -461,11 +464,12 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
                         if oldTraj: # update the traj in the map
                             ref_traj = generateEEReferenceTrajCollisionFree(fullBody,robot,invdyn.data(),t_begin,phase_prev,phase,phase_next,q_t_phase,oldTraj,eeName,pid,viewer)
                             dic_effectors_trajs.update({eeName:ref_traj})
-            else :
+            else : # no effector motions, phase always valid
                 phaseValid = True
                 if cfg.WB_VERBOSE :
                     print "Phase "+str(pid)+" valid."
             if phaseValid:
+                # add states found for this phase to the complete list of states
                 q_t += q_t_phase
                 v_t += v_t_phase
                 a_t += a_t_phase
