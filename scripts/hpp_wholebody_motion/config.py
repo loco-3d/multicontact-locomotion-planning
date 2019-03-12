@@ -1,12 +1,3 @@
-DEMO_NAME = "talos_flatGround"
-DEMO_NAME = "talos_obstaclesFeet"
-#DEMO_NAME = "darpa_hyq"
-#DEMO_NAME = "hyq_slalom_debris"
-#DEMO_NAME = "talos_table"
-#DEMO_NAME="anymal_slalom_debris"
-#DEMO_NAME="anymal_flatGround"
-
-
 ## PATHS settings : 
 
 import os
@@ -14,21 +5,16 @@ PKG_PATH = os.environ['DEVEL_HPP_DIR']+"/src/hpp-wholebody-motion"
 OUTPUT_DIR = PKG_PATH+"/res"
 CONTACT_SEQUENCE_PATH = OUTPUT_DIR + "/contact_sequences"
 TIME_OPT_CONFIG_PATH = PKG_PATH +'/timeOpt_configs'
-LOAD_CS = False
-LOAD_CS_COM = False
-SAVE_CS = True
-SAVE_CS_COM = True
-EXPORT_GAZEBO = True
 LOAD_CS = True
 LOAD_CS_COM = True
-SAVE_CS = False
-SAVE_CS_COM = False
-EXPORT_GAZEBO = False
+SAVE_CS = not LOAD_CS and True 
+SAVE_CS_COM = not LOAD_CS_COM and True
+EXPORT_GAZEBO = True
 EXPORT_PATH = OUTPUT_DIR+"/export"
 
 ##DISPLAY settings : 
 DISPLAY_CS = False # display contact sequence from rbprm
-DISPLAY_CS_STONES = False # display stepping stones
+DISPLAY_CS_STONES = True # display stepping stones
 DISPLAY_INIT_GUESS_TRAJ = False 
 DISPLAY_WP_COST=False
 DISPLAY_COM_TRAJ = True
@@ -55,16 +41,29 @@ EFF_CHECK_COLLISION = True
 ##  Settings for whole body : 
 YAW_ROT_GAIN = 1.
 USE_CROC_COM = False
-WB_VERBOSE = True
-WB_STOP_AT_EACH_PHASE = True
+WB_VERBOSE = False
+WB_STOP_AT_EACH_PHASE = False
 IK_dt = 0.001  # controler time step
 IK_PRINT_N = 500  # print state of the problem every IK_PRINT_N time steps (if verbose = True)
 
 
 # import specific settings for the selected demo. This settings may override default ones.
 import importlib
+import sys
+if len(sys.argv)<2 : 
+    raise IOError("You must call this script with the name of the config file (one of the file contained in hpp_wholebody_motion.demo_config)")
+    
+import argparse
+parser = argparse.ArgumentParser(description = "todo")
+parser.add_argument('demo_name',type=str,help="The name of the demo configuration file to load")
+args = parser.parse_args()
+DEMO_NAME = args.demo_name
+print "# Load demo config : ",DEMO_NAME
 # Import the module
-demo_cfg = importlib.import_module('hpp_wholebody_motion.demo_configs.'+DEMO_NAME)
+try :
+    demo_cfg = importlib.import_module('hpp_wholebody_motion.demo_configs.'+DEMO_NAME)
+except ImportError:
+    raise NameError("No demo config file with the given name in hpp_wholebody_motion.demo_config")
 # Determine a list of names to copy to the current name space
 names = getattr(demo_cfg, '__all__', [n for n in dir(demo_cfg) if not n.startswith('_')])
 # Copy those names into the current name space
