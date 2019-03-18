@@ -189,7 +189,7 @@ def generateOpenHRPMotion(robot, data, path, project_name):
         file_zmp.write(line)
 
     file_zmp.close()
-
+    print "write file : ",filename_zmp
     ## Posture trajectory ##
     filename_pos = filename_prefix + '.pos'
     file_pos = open(filename_pos, "w")
@@ -233,6 +233,7 @@ def generateOpenHRPMotion(robot, data, path, project_name):
         qout_l.append(np.matrix(np.concatenate(q_openhrp)))
 
     file_pos.close()
+    print "write file : ",filename_pos
 
     ## Waist orientation
     filename_hip = filename_prefix + '.hip'
@@ -246,6 +247,7 @@ def generateOpenHRPMotion(robot, data, path, project_name):
         line += eol
         file_hip.write(line)
     file_hip.close()
+    print "write file : ",filename_hip
 
     return qout_l
 
@@ -278,6 +280,7 @@ def writeKinematicsData(robot, data, path, project_name):
         file_config.write(line)
 
     file_config.close()
+    print "write file : ",filename_config
 
     ## Vel trajectory ##
     filename_vel = filename_prefix + '_vel.csv'
@@ -290,6 +293,7 @@ def writeKinematicsData(robot, data, path, project_name):
         file_vel.write(line)
 
     file_vel.close()
+    print "write file : ",filename_vel
 
     ## Acc trajectory ##
     filename_acc = filename_prefix + '_acc.csv'
@@ -302,6 +306,7 @@ def writeKinematicsData(robot, data, path, project_name):
         file_acc.write(line)
 
     file_acc.close()
+    print "write file : ",filename_acc
 
 
 def export(q_t,v_t,a_t):
