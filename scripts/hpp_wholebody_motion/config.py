@@ -32,7 +32,11 @@ USE_CROC_INIT_GUESS = False
 assert USE_GEOM_INIT_GUESS != USE_CROC_INIT_GUESS , "You must choose exactly one initial guess"
 SOLVER_DT = 0.05 # hardcoded in timeOpt_configs files, must match this one ! 
 
-USE_WP_COST = True # use wp from the contact sequence in the cost function of timeopt
+# hardcoded height change between the init (goal) position from planning and the one given to the centroidal solver
+COM_SHIFT_Z = 0.0
+TIME_SHIFT_COM = 0.0
+
+USE_WP_COST = False # use wp from the contact sequence in the cost function of timeopt
 #end effector :
 USE_LIMB_RRT = False
 USE_CONSTRAINED_BEZIER = True
