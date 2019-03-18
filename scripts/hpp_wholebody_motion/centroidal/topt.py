@@ -87,6 +87,9 @@ def fillCSFromTimeopt(cs,cs_initGuess,tp):
     k_id = 1 # id in the current phase
     # tp.getTime(0) == dt !! not 0 
     p0 = cs_com.contact_phases[0]
+    init_state = p0.init_state
+    init_state[0:3] = tp.getInitialCOM()
+    p0.init_state = init_state 
     state = p0.init_state
     appendOrReplace(p0.time_trajectory,0,0.)
     appendOrReplace(p0.state_trajectory,0,state)
@@ -114,14 +117,16 @@ def fillCSFromTimeopt(cs,cs_initGuess,tp):
             # first k of the current phase
             k_id = 0
             p_id += 1
-            if p_id > cs_com.size() - 1 :
-                print "Error : more phases in timeopt than in the CS. pid = ",p_id
-                return cs_com
-            cs_com.contact_phases[p_id].init_state = np.matrix(x)                
-            appendOrReplace(cs_com.contact_phases[p_id].time_trajectory,k_id,tp.getTime(k))
-            appendOrReplace(cs_com.contact_phases[p_id].control_trajectory,k_id,np.matrix(u))
-            appendOrReplace(cs_com.contact_phases[p_id].state_trajectory,k_id,np.matrix(x))                
+            if p_id < cs_com.size()  :
+                cs_com.contact_phases[p_id].init_state = np.matrix(x)                
+                appendOrReplace(cs_com.contact_phases[p_id].time_trajectory,k_id,tp.getTime(k))
+                appendOrReplace(cs_com.contact_phases[p_id].control_trajectory,k_id,np.matrix(u))
+                appendOrReplace(cs_com.contact_phases[p_id].state_trajectory,k_id,np.matrix(x))                
         k_id +=1
+    p_end = cs_com.contact_phases[-1]
+    final_state = p_end.final_state
+    final_state[0:3] = tp.getFinalCOM()
+    p_end.final_state = final_state         
     return cs_com
         
 # helper method to make the link between timeopt.EndEffector and cs.Patch        
@@ -194,6 +199,74 @@ def extractAllEffectorsPhasesFromCS(cs,cs_initGuess,ee_ids):
             effectors_phases.update({ee:ee_phases})
     return effectors_phases,size
 
+def copyPhaseContacts(phase_in,phase_out):
+    phase_out.RF_patch = phase_in.RF_patch
+    phase_out.LF_patch = phase_in.LF_patch
+    phase_out.RH_patch = phase_in.RH_patch
+    phase_out.LH_patch = phase_in.LH_patch
+    
+# fill state trajectory and time trajectory with a linear trajectory connecting init_state to final_state
+# the trajectories vectors must be empty when calling this method ! 
+# Note : don't fill control_traj for now
+def generateLinearInterpTraj(phase,duration,t_total):
+    com0 = phase.init_state[0:3]
+    com1 = phase.final_state[0:3]
+    vel = (com1-com0)/duration
+    am = np.matrix(np.zeros(3)).T
+    t = 0.
+    while t < duration - 0.0001 :
+        u = t/duration
+        state = np.matrix(np.zeros(9)).T            
+        com = com0*(1.-u) + com1*(u)
+        state[0:3] = com
+        state[3:6] = vel
+        state[6:9] = am
+        phase.state_trajectory.append(state)
+        phase.time_trajectory.append(t_total)
+        t += cfg.SOLVER_DT
+        t_total +=cfg.SOLVER_DT
+    state[0:3] = com1
+    state[3:6] = vel
+    state[6:9] = am
+    phase.state_trajectory.append(state)
+    phase.time_trajectory.append(t_total)
+    return phase
+
+
+# add an initial and final phase that only move the COM along z from the given distance
+def addInitAndGoalShift(cs_in):
+    cs = cs_com = ContactSequenceHumanoid(cs_in.size()+2)
+    # copy all phases but leave one phase at the beginning and at the end : 
+    for k in range(cs_in.size()):
+        phase = cs_in.contact_phases[k].copy()
+        # shift times to take in account the new phase : 
+        for i in range(len(phase.time_trajectory)):
+            phase.time_trajectory[i] += cfg.TIME_SHIFT_COM
+        cs.contact_phases[k+1] = phase
+        
+    # now add new first phase :    
+    phase = cs.contact_phases[0]
+    s_final = cs.contact_phases[1].init_state
+    s_init = s_final.copy()
+    s_init[2] -= cfg.COM_SHIFT_Z
+    phase.init_state = s_init
+    phase.final_state = s_final
+    generateLinearInterpTraj(phase,cfg.TIME_SHIFT_COM,0)
+    copyPhaseContacts(cs.contact_phases[1],phase)
+    phase.reference_configurations = cs.contact_phases[1].reference_configurations
+    # add the new final phase
+    phase = cs.contact_phases[-1]
+    s_init = cs.contact_phases[-2].final_state
+    s_final = s_init.copy()
+    s_final[2] -= cfg.COM_SHIFT_Z
+    phase.init_state = s_init
+    phase.final_state = s_final
+    generateLinearInterpTraj(phase,cfg.TIME_SHIFT_COM,cs.contact_phases[-2].time_trajectory[-1])
+    copyPhaseContacts(cs.contact_phases[-2],phase)   
+    phase.reference_configurations = cs.contact_phases[-2].reference_configurations
+    
+    return cs
+    
 
 def generateCentroidalTrajectory(cs,cs_initGuess = None, viewer =None):
     q_init = cs.contact_phases[0].reference_configurations[0].copy()
@@ -205,14 +278,18 @@ def generateCentroidalTrajectory(cs,cs_initGuess = None, viewer =None):
     print "final number of phases : ", size    
     # initialize timeopt problem : 
     tp = timeopt.problem(size)
-    tp.setInitialCOM(cs.contact_phases[0].init_state[:3])
+    com_init = cs.contact_phases[0].init_state[:3]
+    com_end = cs.contact_phases[-1].final_state[:3]
+    com_init[2] += cfg.COM_SHIFT_Z
+    com_end[2] += cfg.COM_SHIFT_Z
+    tp.setInitialCOM(com_init)
+    tp.setFinalCOM(com_end)    
     p0= cs.contact_phases[0]
     for ee in ee_ids:
         patch = getPhasePatchforEE(p0,ee)
         tp.setInitialPose(isContactEverActive(cs,ee), patch.placement.translation, patch.placement.rotation, ee)
     tp.setMass(cfg.MASS);#FIXME
     tp.getMass();
-    tp.setFinalCOM(cs.contact_phases[-1].final_state[0:3])
     
     #add all effector phases to the problem : 
     i = 0
@@ -232,5 +309,8 @@ def generateCentroidalTrajectory(cs,cs_initGuess = None, viewer =None):
     print "timeopt problem solved in : "+str(tTimeOpt)+" s"
     print "write results in cs"
     
+    cs_result = fillCSFromTimeopt(cs,cs_initGuess,tp)
+    if cfg.TIME_SHIFT_COM > 0 :
+        cs_result = addInitAndGoalShift(cs_result)
     
-    return fillCSFromTimeopt(cs,cs_initGuess,tp), tp
+    return cs_result, tp
