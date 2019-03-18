@@ -28,7 +28,9 @@ def generateCentroidalTrajectory(cs_origin):
             com_x += phase.RH_patch.placement.translation[0,0]
             com_y += phase.RH_patch.placement.translation[1,0]  
         com_x /= phase.numActivePatches()   
-        com_y /= phase.numActivePatches()   
+        com_y /= phase.numActivePatches() 
+        # test : take com height from config found from planning : 
+        com_z = cs.contact_phases[pid].init_state[2,0]
         state[0] = com_x
         state[1] = com_y
         state[2] = com_z
