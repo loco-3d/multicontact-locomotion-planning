@@ -243,6 +243,10 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
     invdyn.computeProblemData(t, q, v)
     data = invdyn.data()
     
+    if cfg.EFF_CHECK_COLLISION : # initialise object needed to check the motion
+        from hpp_wholebody_motion.utils import check_path
+        validator = check_path.PathChecker(viewer,fullBody,cs,len(q),False)
+        
     if cfg.WB_VERBOSE:
         print "initialize tasks : "   
     comTask = tsid.TaskComEquality("task-com", robot)
@@ -408,7 +412,7 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
                 # end effector (if they exists)
                 for eeName,traj in dic_effectors_trajs.iteritems():
                     if traj:
-                        swingPhase = True
+                        swingPhase = True # there is an effector motion in this phase
                         sampleEff = effectorTraj.computeNext()
                         sampleEff.pos(SE3toVec(traj(t)[0]))
                         sampleEff.vel(MotiontoVec(traj(t)[1]))
@@ -456,16 +460,19 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
                     return q_t+q_t_phase, v_t+v_t_phase, a_t+a_t_phase        
             # end while t \in phase_t (loop for the current contact phase) 
             if swingPhase and cfg.EFF_CHECK_COLLISION :
-                phaseValid = iter_for_phase >= 1 #TODO : check collision here instead for this debug code
-                phaseValid = True # DEBUG FIXME
+                phaseValid,t_invalid = validator.check_motion(q_t_phase)
                 if not phaseValid :
                     if cfg.WB_VERBOSE :
-                        print "Phase "+str(pid)+" not valid, try new end effector trajectory."                    
-                    for eeName,oldTraj in dic_effectors_trajs.iteritems():
-                        if oldTraj: # update the traj in the map
-                            ref_traj = generateEEReferenceTrajCollisionFree(fullBody,robot,invdyn.data(),t_begin,phase_prev,phase,phase_next,q_t_phase,oldTraj,eeName,pid,viewer)
-                            dic_effectors_trajs.update({eeName:ref_traj})
-            else : # no effector motions, phase always valid
+                        print "Phase "+str(pid)+" not valid at t = "+ t_invalid
+                    if cfg.WB_ABORT_WHEN_INVALID :
+                        return q_t,v_t,a_t
+                    else : 
+                        print "Try new end effector trajectory."  
+                        for eeName,oldTraj in dic_effectors_trajs.iteritems():
+                            if oldTraj: # update the traj in the map
+                                ref_traj = generateEEReferenceTrajCollisionFree(fullBody,robot,invdyn.data(),t_begin,phase_prev,phase,phase_next,q_t_phase,oldTraj,eeName,pid,viewer)
+                                dic_effectors_trajs.update({eeName:ref_traj})
+            else : # no effector motions, phase always valid (or bypass the check)
                 phaseValid = True
                 if cfg.WB_VERBOSE :
                     print "Phase "+str(pid)+" valid."
