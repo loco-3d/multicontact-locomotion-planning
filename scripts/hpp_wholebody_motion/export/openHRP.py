@@ -309,8 +309,9 @@ def writeKinematicsData(robot, data, path, project_name):
     print "write file : ",filename_acc
 
 
-def export(q_t,v_t,a_t):
-    t_t = [i*cfg.IK_dt for i in range(len(q_t))]
+def export(q_t,v_t,a_t,t_t = None):
+    if not t_t :
+        t_t = [i*cfg.IK_dt for i in range(len(q_t))]
     assert len(q_t) == len(v_t) and len(q_t) == len(a_t) and len(q_t) == len(t_t) and "all states vector must have the same size"
     rp = RosPack()
     urdf = rp.get_path(cfg.Robot.packageName)+'/urdf/'+cfg.Robot.urdfName+cfg.Robot.urdfSuffix+'.urdf'
