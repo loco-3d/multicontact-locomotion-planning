@@ -28,7 +28,7 @@ def generateContactSequence(fb,configs,beginId,endId):
 
     
     # for each contact state we must create 2 phase (one with all the contact and one with the next replaced contact(s) broken)
-    for stateId in range(beginId,endId):
+    for stateId in range(beginId,endId+1):
         # %%%%%%%%%  all the contacts : %%%%%%%%%%%%%
         cs_id = (stateId-beginId)*2
         config_id=stateId-beginId
@@ -142,41 +142,42 @@ def generateContactSequence(fb,configs,beginId,endId):
         phase_d.reference_configurations.append(np.matrix((configs[config_id][:configSize])).T)        
         #print "done for double support"
         
-        
-        # %%%%%% simple support : %%%%%%%% 
-        phase_s = cs.contact_phases[cs_id + 1]
-        # copy previous placement :
-        phase_s.RF_patch = phase_d.RF_patch
-        phase_s.LF_patch = phase_d.LF_patch
-        phase_s.RH_patch = phase_d.RH_patch
-        phase_s.LH_patch = phase_d.LH_patch 
-        # find the contact to break : 
-        variations = fb.getContactsVariations(stateId,stateId+1)
-        if len(variations) != 1:
-            print "Several contact changes between states "+str(stateId)+" and "+str(stateId+1)+" : "+str(variations)
-        assert len(variations)==1, "Several changes of contacts in adjacent states, not implemented yet !"        
-        for var in variations:
-            if var == fb.lLegId:
-                phase_s.LF_patch.active = False
-            if var == fb.rLegId:
-                phase_s.RF_patch.active = False
-            if var == fb.lArmId:
-                phase_s.LH_patch.active = False
-            if var == fb.rArmId:
-                phase_s.RH_patch.active = False
-        # retrieve the COM position for init and final state 
-         
-        phase_s.reference_configurations.append(np.matrix((configs[config_id][:configSize])).T)
-        init_state = phase_d.init_state.copy()
-        final_state = phase_d.final_state.copy()
-        fb.setCurrentConfig(configs[config_id+1])
-        final_state[0:3] = np.matrix(fb.getCenterOfMass()).transpose()
-        final_state[3:9] = np.matrix(configs[config_id+1][-6:]).transpose()              
-        #phase_s.time_trajectory.append((fb.getDurationForState(stateId))*(1-cfg.DURATION_n_CONTACTS)/cfg.SPEED) 
-        phase_s.init_state=init_state.copy()
-        phase_s.final_state=final_state.copy()
-        #print "done for single support"      
-        
+        if stateId < endId :
+            # %%%%%% simple support : %%%%%%%% 
+            phase_s = cs.contact_phases[cs_id + 1]
+            # copy previous placement :
+            phase_s.RF_patch = phase_d.RF_patch
+            phase_s.LF_patch = phase_d.LF_patch
+            phase_s.RH_patch = phase_d.RH_patch
+            phase_s.LH_patch = phase_d.LH_patch 
+            # find the contact to break : 
+            variations = fb.getContactsVariations(stateId,stateId+1)
+            if len(variations) != 1:
+                print "Several contact changes between states "+str(stateId)+" and "+str(stateId+1)+" : "+str(variations)
+            assert len(variations)==1, "Several changes of contacts in adjacent states, not implemented yet !"        
+            for var in variations:
+                if var == fb.lLegId:
+                    phase_s.LF_patch.active = False
+                if var == fb.rLegId:
+                    phase_s.RF_patch.active = False
+                if var == fb.lArmId:
+                    phase_s.LH_patch.active = False
+                if var == fb.rArmId:
+                    phase_s.RH_patch.active = False
+            # retrieve the COM position for init and final state 
+             
+            phase_s.reference_configurations.append(np.matrix((configs[config_id][:configSize])).T)
+            init_state = phase_d.init_state.copy()
+            final_state = phase_d.final_state.copy()
+            fb.setCurrentConfig(configs[config_id+1])
+            final_state[0:3] = np.matrix(fb.getCenterOfMass()).transpose()
+            final_state[3:9] = np.matrix(configs[config_id+1][-6:]).transpose()              
+            #phase_s.time_trajectory.append((fb.getDurationForState(stateId))*(1-cfg.DURATION_n_CONTACTS)/cfg.SPEED) 
+            phase_s.init_state=init_state.copy()
+            phase_s.final_state=final_state.copy()
+            #print "done for single support"      
+    
+    """    
     # add the final double support stance : 
     phase_d = cs.contact_phases[n_steps-1]
     fb.setCurrentConfig(configs[n_double_support - 1])
@@ -246,7 +247,7 @@ def generateContactSequence(fb,configs,beginId,endId):
     phase_d.init_state=init_state
     phase_d.final_state=final_state   
     #print "done for last state"
-    
+    """
     # assign contact models : 
     # only used by muscod ?? But we need to fill it otherwise the serialization fail
     for k,phase in enumerate(cs.contact_phases):
