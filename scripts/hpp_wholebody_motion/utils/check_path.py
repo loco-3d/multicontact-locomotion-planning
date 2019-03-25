@@ -1,36 +1,72 @@
 # Copyright 2018, LAAS-CNRS
 # Author: Pierre Fernbach
 
-from hpp.corbaserver.rbprm.rbprmfullbody import FullBody
-from config import *
-
+import hpp_wholebody_motion.config as cfg
 import numpy as np
-def pinnochioQuaternion(q):
-    assert len(q)>6, "config vector size must be superior to 7"
-    w = q[3]
-    q[3:6] = q[4:7]
-    q[6] = w
-    return q
-
-def HPPQuaternion(q):
-    assert len(q)>6, "config vector size must be superior to 7"
-    w = q[6]
-    q[4:7] = q[3:6]
-    q[3] = w
-    return q
-
 
 class PathChecker():
     
-    def __init__(self,r,fullBody,cs,q_t,t_t):
+    def __init__(self,r,fullBody,cs,sizeQ,verbose = False):
         self.r = r
         self.cs = cs
-        self.q_t = q_t
-        self.t_t = t_t
-        self.size_conf = q_t.shape[0]
         self.fullBody = fullBody # with effector collision disabled
+        self.sizeQ = sizeQ
+        self.configSize = fullBody.getConfigSize()
+        self.dt = cfg.IK_dt
+        self.verbose = verbose
+        self.extraDof =  int(fullBody.client.robot.getDimensionExtraConfigSpace())
+    
+    # convert to correct format for hpp, add extra dof if necessary
+    # return valid,message  : valid = bool, message = string
+    def checkConfig(self,q_m):
+        q = [0]*self.configSize
+        q[:self.sizeQ] = q_m.T.tolist()[0]
+        res = self.fullBody.isConfigValid(q)
+        return res[0],res[1]
     
     
+    
+    def qAtT(self,t,q_t):
+        for it in range(1,len(q_t)-1):
+            if t>(self.dt*(it-0.5)) and t<=(self.dt*(it+0.5)):
+                return q_t[it]    
+    
+    
+  
+    def phaseOfT(self,t_switch):
+        for i in range(self.cs.size()):
+            p = self.cs.contact_phases[i]
+            if t_switch>=p.time_trajectory[0] and t_switch<=p.time_trajectory[-1]:
+                return i
+        
+    
+    def phaseOfId(self,id):
+        t_switch = self.dt*float(id)
+        return self.phaseOfT(t_switch)
+        
+    # return a bool (true = valid) and the time of the first invalid q (None if always valid): 
+    # if Verbose = True : check the complete motion before returning,
+    # if False stop at the first invalid
+    def check_motion(self,q_t):
+        always_valid = True
+        first_invalid = None
+        for i in range(len(q_t)):
+            valid,mess = self.checkConfig(q_t[i])
+            if not valid : 
+                if always_valid : # first invalid config
+                    always_valid = False
+                    first_invalid = self.dt*(float(i))
+                if self.verbose:
+                    print "Invalid config at t= ",self.dt*(float(i))
+                    print mess                    
+                else:
+                    return always_valid,first_invalid
+        return always_valid,first_invalid
+    
+    
+    
+    ############# old stuffs (need to be updated if necessary : #############
+    """
     def check_postures(self,verbose = True):
         bad_phases = []
         success_global=True
@@ -149,34 +185,12 @@ class PathChecker():
         q[:self.size_conf] = self.q_t[:,id].transpose().tolist()[0]
         q = HPPQuaternion(q)        
         self.r(q)
-        
-    def qAtT(self,t):
-        for it in range(1,len(self.t_t)-1):
-            if t>((self.t_t[it]+self.t_t[it-1])/2.) and t<=((self.t_t[it]+self.t_t[it+1])/2.):
-                q = [0]*self.fullBody.getConfigSize() 
-                q[:self.size_conf] = self.q_t[:,it].transpose().tolist()[0]
-                q = HPPQuaternion(q)
-                #print "closer t : ",self.t_t[it]
-                #print "at id : ",it
-                return q
+
         
     def showConfigAtTime(self,t):
         q = self.qAtT(t)      
         self.r(q) 
-    
-    def phaseOfT(self,t_switch):
-        for i in range(self.cs.size()):
-            p = self.cs.contact_phases[i]
-            if t_switch>=p.time_trajectory[0] and t_switch<=p.time_trajectory[-1]:
-                return i
-        
-    
-    def phaseOfId(self,id):
-        t_switch = self.t_t[id]
-        return self.phaseOfT(t_switch)
-        
-     
-
+  
 
     def checkAdditionalJointsConstraints(self,list_of_id,mins,maxs):
         valid = True
@@ -191,4 +205,4 @@ class PathChecker():
         
         
         return valid
-    
+    """

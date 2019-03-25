@@ -73,6 +73,25 @@ if cfg.DISPLAY_WB_MOTION:
     raw_input("Press Enter to display the whole body motion ...")
     display_tools.displayWBmotion(v,q_t,cfg.IK_dt,cfg.DT_DISPLAY)
 
+if cfg.CHECK_FINAL_MOTION :
+    from hpp_wholebody_motion.utils import check_path
+    print "## Begin validation of the final motion (collision and joint-limits)"
+    validator = check_path.PathChecker(v,cp.fullBody,cs_com,len(q_t[0]),True)
+    motion_valid,t_invalid = validator.check_motion(q_t)
+    print "## Check final motion, valid = ",motion_valid
+    if not motion_valid:
+        print "## First invalid time : ",t_invalid
+else :
+    motion_valid = True
+
+
+if cfg.EXPORT_OPENHRP and motion_valid:
+    from hpp_wholebody_motion.export import openHRP
+    openHRP.export(q_t,v_t,a_t)
+if cfg.EXPORT_GAZEBO and motion_valid:
+    from hpp_wholebody_motion.export import gazebo
+    gazebo.export(q_t)
+
 
 
 

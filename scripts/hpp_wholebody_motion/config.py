@@ -9,7 +9,8 @@ LOAD_CS = False
 LOAD_CS_COM = False
 SAVE_CS = not LOAD_CS and True 
 SAVE_CS_COM = not LOAD_CS_COM and True
-EXPORT_GAZEBO = True
+EXPORT_GAZEBO = False
+EXPORT_OPENHRP = True
 EXPORT_PATH = OUTPUT_DIR+"/export"
 
 ##DISPLAY settings : 
@@ -19,13 +20,13 @@ DISPLAY_INIT_GUESS_TRAJ = False
 DISPLAY_WP_COST=True
 DISPLAY_COM_TRAJ = True
 DISPLAY_FEET_TRAJ = True
-DISPLAY_WB_MOTION = True
+DISPLAY_WB_MOTION = False
 DT_DISPLAY = 0.05 # dt used to display the wb motion
 
 ###  Settings for generate_contact_sequence
 FORCE_STRAIGHT_LINE = False # DEBUG ONLY should be false
 
-### Settings for locomote script :
+### Settings for centroidal script :
 MU=0.5
 USE_GEOM_INIT_GUESS = True
 USE_CROC_INIT_GUESS = False
@@ -37,19 +38,22 @@ COM_SHIFT_Z = 0.0
 TIME_SHIFT_COM = 0.0
 
 USE_WP_COST = False # use wp from the contact sequence in the cost function of timeopt
-#end effector :
+
+## Settings for end effector :
 USE_LIMB_RRT = False
 USE_CONSTRAINED_BEZIER = True
 USE_BEZIER_EE = True
 EFF_CHECK_COLLISION = True
+WB_ABORT_WHEN_INVALID = True
+
 ##  Settings for whole body : 
 YAW_ROT_GAIN = 1.
 USE_CROC_COM = False
-WB_VERBOSE = True
+WB_VERBOSE = False
 WB_STOP_AT_EACH_PHASE = False
 IK_dt = 0.001  # controler time step
 IK_PRINT_N = 500  # print state of the problem every IK_PRINT_N time steps (if verbose = True)
-
+CHECK_FINAL_MOTION = True
 
 # import specific settings for the selected demo. This settings may override default ones.
 import importlib
