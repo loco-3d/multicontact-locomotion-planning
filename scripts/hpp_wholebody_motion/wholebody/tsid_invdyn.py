@@ -245,7 +245,7 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
     
     if cfg.EFF_CHECK_COLLISION : # initialise object needed to check the motion
         from hpp_wholebody_motion.utils import check_path
-        validator = check_path.PathChecker(viewer,fullBody,cs,len(q),False)
+        validator = check_path.PathChecker(viewer,fullBody,cs,len(q),cfg.WB_VERBOSE)
         
     if cfg.WB_VERBOSE:
         print "initialize tasks : "   
@@ -461,11 +461,14 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
             # end while t \in phase_t (loop for the current contact phase) 
             if swingPhase and cfg.EFF_CHECK_COLLISION :
                 phaseValid,t_invalid = validator.check_motion(q_t_phase)
+                if iter_for_phase > 0:# FIXME : debug only, only allow 1 retry 
+                    phaseValid = True
                 if not phaseValid :
-                    if cfg.WB_VERBOSE :
-                        print "Phase "+str(pid)+" not valid at t = "+ t_invalid
+                    print "Phase "+str(pid)+" not valid at t = "+ str(t_invalid)
                     if cfg.WB_ABORT_WHEN_INVALID :
                         return q_t,v_t,a_t
+                    elif cfg.WB_RETURN_INVALID : 
+                        return q_t+q_t_phase,v_t+v_t_phase,a_t+a_t_phase                        
                     else : 
                         print "Try new end effector trajectory."  
                         for eeName,oldTraj in dic_effectors_trajs.iteritems():
