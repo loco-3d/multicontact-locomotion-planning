@@ -280,7 +280,8 @@ def dimWithSizeObject(dim,size):
             res += [dim[2*k+i] + size[k]]
     return res
 
-def computeBoxVertices(client,center,x_dir,dim):
+# TODO : sizeObject not taken in account
+def computeBoxVertices(client,center,x_dir,dim,sizeObject):
     # compute the vertices of this box: 
     #points = [ [dim[1],-dim[2],-dim[4]], [dim[1],-dim[2],dim[5]], [-dim[0],-dim[2],dim[5]], [-dim[0],-dim[2],-dim[4]], [dim[1],dim[3],-dim[4]], [dim[1],dim[3],dim[5]], [-dim[0],dim[3],dim[5]], [-dim[0],dim[3],-dim[4]] ]    
     points = []
@@ -315,8 +316,9 @@ def large_col_free_box(client,a,b,maxX = 0.2,maxY = 0.05 ,maxZ = 0.05, sizeObjec
     x = norm(b_r - a_r)
     x_dir = (b_r -a_r)/x
     MIN_VALUE = 0.001    
-    x = (x/2.) #+ MIN_VALUE # initial half-length (+margin)
+    x = (x/2.) + MIN_VALUE # initial half-length (+margin)
     x_origin = x
+    """
     # transform the sizeObject from the world frame to the x_dir one (ignoring value on z axis):
     size_r = np.array(sizeObject)    
     objPoints = []
@@ -334,7 +336,7 @@ def large_col_free_box(client,a,b,maxX = 0.2,maxY = 0.05 ,maxZ = 0.05, sizeObjec
         print "x_dir = ",x_dir.tolist()
         #print "obj points after transform : ",objPoints
         print "sizeObject after  transform : ",size_r.tolist()
-        
+    """    
     maxs = [maxX,maxX,maxY,maxY,maxZ,maxZ]
     
     if VERBOSE : 
@@ -350,11 +352,11 @@ def large_col_free_box(client,a,b,maxX = 0.2,maxY = 0.05 ,maxZ = 0.05, sizeObjec
     z_prev = 0.001
     x_prev = x # original lenght of the rrt solution
     
-    collision = not client.isBoxAroundAxisCollisionFree(center.tolist(),x_dir.tolist(),dimWithSizeObject([x,x,y_prev,y_prev,z_prev,z_prev],size_r),margin)
+    collision = not client.isBoxAroundAxisCollisionFree(center.tolist(),x_dir.tolist(),[x,x,y_prev,y_prev,z_prev,z_prev],sizeObject,margin)
     #assert not collision and "initial box is already in collision, limb-rrt path cannot be approximated by a straight line."    
     if collision :
         print "!! initial box is already in collision, limb-rrt path cannot be approximated by a straight line." 
-        return computeBoxVertices(client,center,x_dir,dimWithSizeObject([x,x,y_prev,y_prev,z_prev,z_prev],size_r))
+        return computeBoxVertices(client,center,x_dir,[x,x,y_prev,y_prev,z_prev,z_prev],sizeObject)
     # By dichotomy : find the maximal value for y,z with a uniform scaling leading to a collision-free box
     it = 0
     found = False
@@ -363,7 +365,7 @@ def large_col_free_box(client,a,b,maxX = 0.2,maxY = 0.05 ,maxZ = 0.05, sizeObjec
         y = (y_max - y_prev)/2. + y_prev
         z = (z_max - z_prev)/2. + z_prev
         #print "try "+str(y)+" , "+str(z)
-        collision = not client.isBoxAroundAxisCollisionFree(center.tolist(),x_dir.tolist(),dimWithSizeObject([x,x,y,y,z,z],size_r),margin)
+        collision = not client.isBoxAroundAxisCollisionFree(center.tolist(),x_dir.tolist(),[x,x,y,y,z,z],sizeObject,margin)
         if collision :
             #print "collision"
             y_max = y
@@ -388,7 +390,7 @@ def large_col_free_box(client,a,b,maxX = 0.2,maxY = 0.05 ,maxZ = 0.05, sizeObjec
     it = 0
     while not found and it < 100:
         x = (x_max - x_prev)/2. + x_prev
-        collision = not client.isBoxAroundAxisCollisionFree(center.tolist(),x_dir.tolist(),dimWithSizeObject([x,x,y,y,z,z],size_r),margin)
+        collision = not client.isBoxAroundAxisCollisionFree(center.tolist(),x_dir.tolist(),[x,x,y,y,z,z],sizeObject,margin)
         if collision :
             x_max = x
         else :
@@ -413,7 +415,7 @@ def large_col_free_box(client,a,b,maxX = 0.2,maxY = 0.05 ,maxZ = 0.05, sizeObjec
         for i in range(6):
             if dim[i] < maxs[i] :
                 dim[i] += step
-                collision = not client.isBoxAroundAxisCollisionFree(center.tolist(),x_dir.tolist(),dimWithSizeObject(dim,size_r),margin)
+                collision = not client.isBoxAroundAxisCollisionFree(center.tolist(),x_dir.tolist(),dim,sizeObject,margin)
                 if collision :
                     dim[i] -= step
                 else :
@@ -440,7 +442,7 @@ def large_col_free_box(client,a,b,maxX = 0.2,maxY = 0.05 ,maxZ = 0.05, sizeObjec
     if VERBOSE : 
         print "dimensions after applying sizeObject : ",dim
     """    
-    points = computeBoxVertices(client,center,x_dir,dimWithSizeObject(dim,size_r))
+    points = computeBoxVertices(client,center,x_dir,dim,sizeObject)
     if VERBOSE :
         print "final points list : ",points
     return points
@@ -453,10 +455,12 @@ def large_col_free_box(client,a,b,maxX = 0.2,maxY = 0.05 ,maxZ = 0.05, sizeObjec
 def computeInequalitiesAroundLine(fullBody,p_from,p_to,eeName,groupName,viewer):
     a = p_from.translation.T.tolist()[0]
     b = p_to.translation.T.tolist()[0]
-    # size of the end effector (x,y,z)
+    # size of the end effector (-x,x,-y,y,-z,z)
     size_diagonal = math.sqrt(cfg.Robot.dict_size[eeName][0]**2 + cfg.Robot.dict_size[eeName][1]**2)  #TODO margin ??
     #size = [size_diagonal/2., size_diagonal/2.,0.001]
-    size = [cfg.Robot.dict_size[eeName][0]/2., cfg.Robot.dict_size[eeName][1]/2.,0.001]
+    size = [-cfg.Robot.dict_size[eeName][0]/2.,cfg.Robot.dict_size[eeName][0]/2.,
+            -cfg.Robot.dict_size[eeName][1]/2.,cfg.Robot.dict_size[eeName][1]/2.,
+            -0.001,0.001]
     #size=[0,0,0] #FIXME debug    
     """
     size_r = np.array(size)
@@ -520,10 +524,10 @@ def filterWPs(fullBody,eeName,wps,t):
     while i < len(wps)-1 :
         i_end = i+1        
         use = False
-        print "- while i = ",i
+        #print "- while i = ",i
         for id in i_mid :
             d = distPointLine(pts[id],pts[i_begin],pts[i_end])
-            print "d = ",d
+            #print "d = ",d
             if d > EPS:
                 use = True
         if use :
