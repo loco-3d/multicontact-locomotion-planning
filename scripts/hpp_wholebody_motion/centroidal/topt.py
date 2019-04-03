@@ -115,9 +115,9 @@ def fillCSFromTimeopt(cs,cs_initGuess,tp):
             # set final state of current phase : 
             cs_com.contact_phases[p_id].final_state = np.matrix(x)
             # first k of the current phase
-            k_id = 0
-            p_id += 1
+            p_id += 1                            
             if p_id < cs_com.size()  :
+                k_id = 0
                 cs_com.contact_phases[p_id].init_state = np.matrix(x)                
                 appendOrReplace(cs_com.contact_phases[p_id].time_trajectory,k_id,tp.getTime(k))
                 appendOrReplace(cs_com.contact_phases[p_id].control_trajectory,k_id,np.matrix(u))
@@ -126,7 +126,13 @@ def fillCSFromTimeopt(cs,cs_initGuess,tp):
     p_end = cs_com.contact_phases[-1]
     final_state = p_end.final_state
     final_state[0:3] = tp.getFinalCOM()
-    p_end.final_state = final_state         
+    p_end.final_state = final_state
+    # apparently tp.get{COM,LMOM,AMOM}(tp.getTrajectorySize()-1) don't give the value of the last segment (but the previous one),
+    # so we add a last point in the trajectories here : 
+    appendOrReplace(p_end.time_trajectory,k_id,tp.getTime(tp.getTrajectorySize()-1) + cfg.SOLVER_DT)
+    appendOrReplace(p_end.control_trajectory,k_id,np.matrix(np.zeros(6)).T)
+    appendOrReplace(p_end.state_trajectory,k_id,final_state.copy()) 
+    # because of this the last phase will not have the desired duration, but will be a dt longer ... 
     return cs_com
         
 # helper method to make the link between timeopt.EndEffector and cs.Patch        
