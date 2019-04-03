@@ -349,7 +349,7 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
             if phase_next and not isContactActive(phase,eeName)  and isContactActive(phase_next,eeName): 
                 if cfg.WB_VERBOSE :
                     print "add se3 task for "+eeName
-                invdyn.addMotionTask(task, cfg.w_eff, 1, 0.0)
+                invdyn.addMotionTask(task, cfg.w_eff, 0, 0.0)
                 #create reference trajectory for this task : 
                 ref_traj = generateEEReferenceTraj(robot,invdyn.data(),t,phase,phase_next,eeName,viewer)  
                 dic_effectors_trajs.update({eeName:ref_traj})
