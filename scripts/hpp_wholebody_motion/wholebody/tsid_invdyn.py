@@ -132,7 +132,9 @@ def createContactForEffector(invdyn,robot,phase,eeName):
     invdyn.addRigidContact(contact)
     if cfg.WB_VERBOSE :
         print "create contact for effector ",eeName
-        print "contact placement : ",ref            
+        print "contact placement : ",ref       
+        print "contact_normal : ",contactNormal
+        print "contact points : \n",contact_Point        
     return contact
 """
 # build a dic with keys = effector names used in the cs, value = contact constraints objects
@@ -287,6 +289,11 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
     dic_effectors_trajs={}
     for eeName in dic_effectors_tasks:
         dic_effectors_trajs.update({eeName:None})
+        
+    if cfg.PLOT: # init a dict storing all the reference trajectories used (for plotting)
+        stored_effectors_ref={}
+        for eeName in dic_effectors_tasks:
+            stored_effectors_ref.update({eeName:[]})        
         
     # add initial contacts : 
     dic_contacts={}
@@ -491,6 +498,8 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
                         if ref_traj :
                             display_tools.displaySE3Traj(ref_traj,viewer,eeName+"_traj_"+str(pid),cfg.Robot.dict_limb_color_traj[eeName] ,time_interval ,cfg.Robot.dict_offset[eeName])                               
                             viewer.client.gui.setVisibility(eeName+"_traj_"+str(pid),'ALWAYS_ON_TOP')                
+                            if cfg.PLOT: # add current ref_traj to the list for plotting
+                                stored_effectors_ref[eeName] +=[ref_traj]
         #end while not phaseValid    
     time_end = time.time() - time_start
     print "Whole body motion generated in : "+str(time_end)+" s."
@@ -498,6 +507,11 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
         print "\nFinal COM Position  ", robot.com(invdyn.data()).T
         print "Desired COM Position", cs.contact_phases[-1].final_state.T
     a_t += [np.matrix(np.zeros(robot.nv)).transpose()] # add last value of 'a' (to have the same size as v and q)
+    
+    if cfg.PLOT:
+        from hpp_wholebody_motion.utils import plot
+        plot.plotEffectorRef(stored_effectors_ref)
+        
     return q_t,v_t,a_t
 
    
