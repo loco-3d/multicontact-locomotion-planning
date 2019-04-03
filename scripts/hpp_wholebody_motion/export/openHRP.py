@@ -10,9 +10,12 @@ import numpy as np
 from rospkg import RosPack
 #import tsid # required for robot wrapper ! FIXME
 from pinocchio.robot_wrapper import RobotWrapper
+from hpp_wholebody_motion.utils.computation_tools import *
 
 class Struct():
     None
+    
+DT = 0.005
     
 # hardcoded ID for HRP-2 : 
 ff = range(7)
@@ -24,12 +27,28 @@ l_leg = range(25,31)
 r_leg = range(31,37)
 
 
-def computeResultTrajectory(robot, t_t, q_t, v_t, a_t):
-
+def computeResultTrajectory(robot,cs, q_t_list, v_t_list, a_t_list):
+    # start by adapting the time step between the IK and the the one of open hrp (0.005)
+    assert DT>= cfg.IK_dt and "The dt used when computing q(t) must be superior or equal to 0.005 for this export."
+    assert (DT % cfg.IK_dt)==0 and "The dt used when computing q(t) must be a multiple of 0.005."
+    n = int(DT/cfg.IK_dt)
+    N_ik = len(q_t_list)
+    N = N_ik/n
+    #print "Export openHRP, ratio between dt :  ",n
+    #print "Num point for IK : ",N_ik
+    #print "Num point for openHRP : ",N
+    q_t = np.matrix(np.zeros([q_t_list[0].shape[0],N]))
+    v_t = np.matrix(np.zeros([v_t_list[0].shape[0],N]))
+    a_t = np.matrix(np.zeros([a_t_list[0].shape[0],N]))
+    for i in range(N):
+        q_t[:,i] = q_t_list[i*n] 
+        v_t[:,i] = v_t_list[i*n]    
+        a_t[:,i] = a_t_list[i*n]       
+    # build timeline vector : 
+    t_t = [i*DT for i in range(q_t.shape[1])]
+    #print "timeline size : ",len(t_t)
     model = robot.model
     data = robot.data
-
-    N = q_t.shape[1]
 
     ZMP_t = np.matrix(np.zeros([3,N]))
     waist_t = np.matrix(np.zeros([3,N]))
@@ -78,14 +97,7 @@ def computeResultTrajectory(robot, t_t, q_t, v_t, a_t):
         #phi0 = oXi_s * (M[:6,:] * a + b[:6])
         tau_t[:,k] = data.tau
         phi0 = data.oMi[1].act(se3.Force(data.tau[:6]))
-
-        wrench_t[:,k] = phi0.vector
-
-        forces = wrench_t[:3,k]
-        torques = wrench_t[3:,k]
-
-        ZMP_t[0,k] = -torques[1]/forces[2]
-        ZMP_t[1,k] = torques[0]/forces[2]
+        ZMP_t[:,k] = shiftZMPtoFloorAltitude(cs,t_t[k],phi0)
 
         waist_t[:,k] = robot.data.oMi[1].translation
         waist_orientation_t[:,k] = matrixToRpy(robot.data.oMi[1].rotation)
@@ -164,11 +176,12 @@ def generateOpenHRPMotion(robot, data, path, project_name):
             line += delim + str(vector[k,0])
 
         return line
-
-    timeline = data.t_t - data.t_t[0]
+    
+    timeline = data.t_t
     N = len(timeline)
-    dt = 0.005
-    timeline = np.linspace(0., (N-1)*dt, N) 
+    print "in generateOpenHRPMotion, N= ",N
+    dt = DT
+ 
     delim = " "
     eol = "\n"
 
@@ -260,10 +273,10 @@ def writeKinematicsData(robot, data, path, project_name):
 
         return line
 
-    timeline = data.t_t - data.t_t[0]
+    timeline = data.t_t
     N = len(timeline)
-    dt = 0.005
-    timeline = np.linspace(0., (N-1)*dt, N) 
+    print "in write kinematic, number of points : ",N
+    dt = DT
     delim = " "
     eol = "\n"
 
@@ -309,10 +322,8 @@ def writeKinematicsData(robot, data, path, project_name):
     print "write file : ",filename_acc
 
 
-def export(q_t,v_t,a_t,t_t = None):
-    if not t_t :
-        t_t = [i*cfg.IK_dt for i in range(len(q_t))]
-    assert len(q_t) == len(v_t) and len(q_t) == len(a_t) and len(q_t) == len(t_t) and "all states vector must have the same size"
+def export(cs,q_t,v_t,a_t):
+    assert len(q_t) == len(v_t) and len(q_t) == len(a_t) and "all states vector must have the same size"
     rp = RosPack()
     urdf = rp.get_path(cfg.Robot.packageName)+'/urdf/'+cfg.Robot.urdfName+cfg.Robot.urdfSuffix+'.urdf'
     if cfg.WB_VERBOSE:
@@ -321,35 +332,9 @@ def export(q_t,v_t,a_t,t_t = None):
     robot = RobotWrapper(urdf, se3.StdVec_StdString(), se3.JointModelFreeFlyer(), False)
     if cfg.WB_VERBOSE:
         print "robot loaded in export OpenHRP"    
-    # convert list of states to matrices (line : value, col : id)
-    N = len(q_t)
-    q_t_mat = np.matrix(np.zeros([q_t[0].shape[0],N]))
-    v_t_mat = np.matrix(np.zeros([v_t[0].shape[0],N]))
-    a_t_mat = np.matrix(np.zeros([a_t[0].shape[0],N]))
-    t_t_mat = np.matrix(t_t)
-    for i in range(N):
-        q_t_mat[:,i] = q_t[i] 
-        v_t_mat[:,i] = v_t[i]    
-        a_t_mat[:,i] = a_t[i]    
-    
-    
-    results_sot = computeResultTrajectory(robot, t_t_mat, q_t_mat, v_t_mat, a_t_mat)
-    """
-    ZMP_t = results_sot.ZMP_t.copy()
-    pcom_t = results_sot.pcom_t
-    # Set zmp trajectory to be the reference one
-    Wrench_ref_trajectory = DifferentiableEuclidianTrajectory()
-    Wrench_ref_trajectory.computeFromPoints(trajs.time_t,F0_t,0*F0_t)
-
-    Wrench_trajectory = DifferentiableEuclidianTrajectory()
-    Wrench_trajectory.computeFromPoints(np.asmatrix(results_sot.t_t),results_sot.wrench_t,0*results_sot.wrench_t)
-
-    ZMP_ref_t = computeRefZMP(cs,results_sot.t_t,Wrench_ref_trajectory)
-    ZMP_t = computeRefZMP(cs,results_sot.t_t,Wrench_trajectory)
-    
-    results_sot.ZMP_t[:,:] = ZMP_t
-    """
+  
+    results = computeResultTrajectory(robot,cs, q_t, v_t, a_t)
     path = cfg.EXPORT_PATH+"/openHRP"
-    q_openhrp_l = generateOpenHRPMotion(robot, results_sot, path, cfg.DEMO_NAME)
-    writeKinematicsData(robot, results_sot, path, cfg.DEMO_NAME)
+    q_openhrp_l = generateOpenHRPMotion(robot, results, path, cfg.DEMO_NAME)
+    writeKinematicsData(robot, results, path, cfg.DEMO_NAME)
     
