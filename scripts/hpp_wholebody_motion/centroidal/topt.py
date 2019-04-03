@@ -285,10 +285,12 @@ def generateCentroidalTrajectory(cs,cs_initGuess = None, viewer =None):
     # initialize timeopt problem : 
     tp = timeopt.problem(size)
     com_init = cs.contact_phases[0].init_state[:3]
+    vel_init = cs.contact_phases[0].init_state[3:6]
     com_end = cs.contact_phases[-1].final_state[:3]
     com_init[2] += cfg.COM_SHIFT_Z
     com_end[2] += cfg.COM_SHIFT_Z
     tp.setInitialCOM(com_init)
+    tp.setInitialLMOM(vel_init*cfg.MASS)
     tp.setFinalCOM(com_end)    
     p0= cs.contact_phases[0]
     for ee in ee_ids:
