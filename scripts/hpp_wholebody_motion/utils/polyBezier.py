@@ -27,17 +27,19 @@ class PolyBezier:
             
     def findIntervalAdjustTime(self,t):
         id = self.findInterval(t)
-        t -= self.times[id]
-        return id,t
+        ta = t - self.times[id]
+        if ta >= self.curves[id].max(): #may happen due to numerical imprecision
+            ta = self.curves[id].max()        
+        return id,ta
     
     def getBezierAt(self,t):
         id = self.findInterval(t)
         return self.curves[id]
        
     def __call__(self,t):
-        id = self.findInterval(t)
-        tc = t-self.times[id]
-        return self.curves[id](tc)
+        id,ta = self.findIntervalAdjustTime(t)
+        #print "t = "+str(t)+" in interval "+str(id)+" new t = "+str(tc)+" curve max = "+str(self.curves[id].max())
+        return self.curves[id](ta)
             
     def numCurves(self):
         return len(self.curves)
