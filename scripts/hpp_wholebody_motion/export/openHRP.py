@@ -122,7 +122,10 @@ def computeResultTrajectory(robot,cs, q_t_list, v_t_list, a_t_list):
 
     result.ee_t = ee_t
 
-
+    if cfg.PLOT:
+        from hpp_wholebody_motion.utils import plot
+        plot.plotZMP(cs,result.ZMP_t,result.pcom_t)
+        
     return result
 
 def writeOpenHRPConfig(robot,q,t=0.):

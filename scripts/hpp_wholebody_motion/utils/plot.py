@@ -79,3 +79,28 @@ def plotEffectorRef(dict_refs):
 def plotEffectorError():
     return
     
+    
+def plotZMP(cs,ZMP_t,pcom_t):
+    fig = plt.figure("ZMP-CoM (xy)")
+    ax=fig.gca()
+    plt.title("red = CoM ; black = ZMP ; green = feet placements")    
+    plt.plot(ZMP_t[0,:].T,ZMP_t[1,:].T,color='k')
+    plt.plot(pcom_t[0,:].T,pcom_t[1,:].T,color='r')
+    plt.xlabel("x position (m)")
+    plt.ylabel("y position (m)")
+    plt.axis('equal')
+  
+    for p in cs.contact_phases:
+        # plot x for the center of the feets contact, 
+        # and a circle of 1cm of radius around it (size of the flexibility) :
+        pos = JointPlacementForEffector(p,cfg.Robot.rfoot).translation
+        plt.plot(pos[0], pos[1], marker="x", markersize=20, color='g')
+        circle_r = plt.Circle((pos[0], pos[1]), 0.01, color='g', fill=False)      
+        pos = JointPlacementForEffector(p,cfg.Robot.lfoot).translation
+        plt.plot(pos[0], pos[1], marker="x", markersize=20, color='g')
+        circle_l = plt.Circle((pos[0], pos[1]), 0.01, color='g', fill=False)      
+        ax.add_artist(circle_r)
+        ax.add_artist(circle_l)
+      
+    plt.draw()
+    plt.show()  
