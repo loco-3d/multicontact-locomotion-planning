@@ -15,100 +15,13 @@ from hpp_wholebody_motion.utils import trajectories
 import hpp_wholebody_motion.end_effector.bezier_predef as EETraj
 import hpp_wholebody_motion.viewer.display_tools as display_tools
 import math
+from hpp_wholebody_motion.utils.util import * 
 if cfg.USE_LIMB_RRT:
     import hpp_wholebody_motion.end_effector.limb_rrt as limb_rrt
 if cfg.USE_CONSTRAINED_BEZIER:
     import hpp_wholebody_motion.end_effector.bezier_constrained as bezier_constrained
     
     
-def SE3toVec(M):
-    v = np.matrix(np.zeros((12, 1)))
-    for j in range(3):
-        v[j] = M.translation[j]
-        v[j + 3] = M.rotation[j, 0]
-        v[j + 6] = M.rotation[j, 1]
-        v[j + 9] = M.rotation[j, 2]
-    return v
-
-def MotiontoVec(M):
-    v = np.matrix(np.zeros((6, 1)))
-    for j in range(3):
-        v[j] = M.linear[j]
-        v[j + 3] = M.angular[j]
-    return v
-
-# assume that q.size >= 7 with root pos and quaternion(x,y,z,w)
-def SE3FromConfig(q):
-    placement = SE3.Identity()
-    placement.translation = q[0:3]
-    r = Quaternion(q[6,0],q[3,0],q[4,0],q[5,0])
-    placement.rotation = r.matrix()
-    return placement
-
-# cfg.Robot.MRsole_offset.actInv(p0.RF_patch.placement)
-# get the joint position for the given phase with the given effector name
-# Note that if the effector is not in contact the phase placement may be uninitialized (==Identity)
-def JointPatchForEffector(phase,eeName):
-    if eeName == cfg.Robot.rfoot :
-        patch = phase.RF_patch.copy()
-        patch.placement = cfg.Robot.MRsole_offset.actInv(patch.placement)
-    elif eeName == cfg.Robot.lfoot :
-        patch = phase.LF_patch.copy()
-        patch.placement = cfg.Robot.MLsole_offset.actInv(patch.placement)
-    elif eeName == cfg.Robot.rhand :
-        patch = phase.RH_patch.copy()
-        patch.placement = cfg.Robot.MRhand_offset.actInv(patch.placement)
-    elif eeName == cfg.Robot.lhand :
-        patch = phase.LH_patch.copy()
-        patch.placement = cfg.Robot.MLhand_offset.actInv(patch.placement)   
-    else :
-        raise Exception("Unknown effector name")
-    return patch
-
-def getContactPlacement(phase,eeName):
-    if eeName == cfg.Robot.rfoot :
-        return phase.RF_patch.placement
-    elif eeName == cfg.Robot.lfoot :
-        return phase.LF_patch.placement
-    elif eeName == cfg.Robot.rhand :
-        return phase.RH_patch.placement
-    elif eeName == cfg.Robot.lhand :
-        return phase.LH_patch.placement
-    else :
-        raise Exception("Unknown effector name")
-    return patch
-
-
-def isContactActive(phase,eeName):
-    if eeName == cfg.Robot.rfoot :
-        return phase.RF_patch.active
-    elif eeName == cfg.Robot.lfoot :
-        return phase.LF_patch.active
-    elif eeName == cfg.Robot.rhand :
-        return phase.RH_patch.active
-    elif eeName == cfg.Robot.lhand :
-        return phase.LH_patch.active
-    else :
-        raise Exception("Unknown effector name") 
-
-def isContactEverActive(cs,eeName):
-    for phase in cs.contact_phases:
-        if eeName == cfg.Robot.rfoot :
-            if phase.RF_patch.active:
-                return True
-        elif eeName == cfg.Robot.lfoot :
-            if phase.LF_patch.active:
-                return True
-        elif eeName == cfg.Robot.rhand :
-            if phase.RH_patch.active:
-                return True
-        elif eeName == cfg.Robot.lhand :
-            if phase.LH_patch.active:
-                return True
-        else :
-            raise Exception("Unknown effector name") 
-    return False
-
 def createContactForEffector(invdyn,robot,phase,eeName):
     size = cfg.Robot.dict_size[eeName]
     transform = cfg.Robot.dict_offset[eeName]          
@@ -127,7 +40,7 @@ def createContactForEffector(invdyn,robot,phase,eeName):
     contact = tsid.Contact6d("contact_"+eeName, robot, eeName, contact_Point, contactNormal, cfg.MU, cfg.fMin, cfg.fMax,cfg.w_forceRef)
     contact.setKp(cfg.kp_contact * np.matrix(np.ones(6)).transpose())
     contact.setKd(2.0 * np.sqrt(cfg.kp_contact) * np.matrix(np.ones(6)).transpose())
-    ref = JointPatchForEffector(phase,eeName).placement
+    ref = JointPlacementForEffector(phase,eeName)
     contact.setReference(ref)
     invdyn.addRigidContact(contact)
     if cfg.WB_VERBOSE :
@@ -197,7 +110,7 @@ def generateEEReferenceTraj(robot,robotData,t,phase,phase_next,eeName,viewer = N
     time_interval = [t, phase.time_trajectory[-1]]    
     placements = []
     placement_init = robot.position(robotData, robot.model().getJointId(eeName))
-    placement_end = JointPatchForEffector(phase_next,eeName).placement
+    placement_end = JointPlacementForEffector(phase_next,eeName)
     placements.append(placement_init)
     placements.append(placement_end)
     if cfg.USE_BEZIER_EE :         
@@ -212,8 +125,8 @@ def generateEEReferenceTraj(robot,robotData,t,phase,phase_next,eeName,viewer = N
 def generateEEReferenceTrajCollisionFree(fullBody,robot,robotData,t,phase_previous,phase,phase_next,q_t,predefTraj,eeName,phaseId,viewer = None):
     time_interval = [t, phase.time_trajectory[-1]]    
     placements = []
-    placement_init = JointPatchForEffector(phase_previous,eeName).placement
-    placement_end = JointPatchForEffector(phase_next,eeName).placement
+    placement_init = JointPlacementForEffector(phase_previous,eeName)
+    placement_end = JointPlacementForEffector(phase_next,eeName)
     placements.append(placement_init)
     placements.append(placement_end)    
     ref_traj = bezier_constrained.generateConstrainedBezierTraj(time_interval,placement_init,placement_end,q_t,predefTraj,phase_previous,phase,phase_next,fullBody,phaseId,eeName,viewer)                    
