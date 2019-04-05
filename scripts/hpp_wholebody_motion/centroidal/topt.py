@@ -7,8 +7,9 @@ from locomote import WrenchCone,SOC6,ContactPatch, ContactPhaseHumanoid, Contact
 import time
 import hpp_wholebody_motion.config as cfg
 import hpp_wholebody_motion.viewer.display_tools as display
+from hpp_wholebody_motion.utils.util import *
 
-
+CONTACT_ANKLE_LEVEL = True
 
 def isContactEverActive(cs,eeName):
     for phase in cs.contact_phases:
@@ -138,13 +139,25 @@ def fillCSFromTimeopt(cs,cs_initGuess,tp):
 # helper method to make the link between timeopt.EndEffector and cs.Patch        
 def getPhasePatchforEE(phase,ee):
     if ee == timeopt.EndeffectorID.RF:
-        return phase.RF_patch
+        if CONTACT_ANKLE_LEVEL :
+            return JointPatchForEffector(phase,cfg.Robot.rfoot)
+        else:
+            return phase.RF_patch
     if ee == timeopt.EndeffectorID.LF:
-        return phase.LF_patch
+        if CONTACT_ANKLE_LEVEL :
+            return JointPatchForEffector(phase,cfg.Robot.lfoot)
+        else:
+            return phase.LF_patch        
     if ee == timeopt.EndeffectorID.RH:
-        return phase.RH_patch
+        if CONTACT_ANKLE_LEVEL :
+            return JointPatchForEffector(phase,cfg.Robot.rhand)
+        else:
+            return phase.RH_patch        
     if ee == timeopt.EndeffectorID.LH:
-        return phase.LH_patch
+        if CONTACT_ANKLE_LEVEL :
+            return JointPatchForEffector(phase,cfg.Robot.lhand)
+        else:
+            return phase.LH_patch        
     
 # extract a list of effector phase (t start, t end, placement) (as defined by timeopt) from cs struct
 def extractEffectorPhasesFromCS(cs,ee):
