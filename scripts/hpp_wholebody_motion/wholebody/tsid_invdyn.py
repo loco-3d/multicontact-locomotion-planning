@@ -323,6 +323,7 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
                     for eeName,contact in dic_contacts.iteritems():
                         if invdyn.checkContact(contact.name, sol): 
                             res.contact_forces[eeName][:,k_t] = invdyn.getContactForce(contact.name, sol)
+                            res.contact_normal_force[eeName][:,k_t] = contact.getNormalForce(res.contact_forces[eeName][:,k_t])
                             res.contact_activity[eeName][:,k_t] = 1
                 # store centroidal info (real one and reference) :
                 if cfg.IK_store_centroidal:

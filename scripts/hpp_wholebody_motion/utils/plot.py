@@ -168,6 +168,24 @@ def plotCOMTraj(timeline,ref,c_t,dc_t,ddc_t):
             ax_sub.grid(True)    
     return
 
+def plotContactForces(timeline,forces_dict,N):
+    colors = ['r','g','b','y']  
+    fig = plt.figure("Contact normal force")
+    plt.title("Contact normal force")
+    ax=fig.gca() 
+    ax.set_xlabel('time (s)')
+    ax.set_ylabel("Contact normal force (N)")  
+    ax.grid(True)        
+    i = 0
+    sum_f = np.matrix(np.zeros([1,N]))
+    
+    for eeName,force in forces_dict.iteritems():    
+        ax.plot(timeline.T, force[0,:].T, color=colors[i],label = eeName)
+        sum_f += force[0,:]
+        i += 1
+    sum_f /= float(i)
+    ax.plot(timeline.T, sum_f[0,:].T, color="k",label = "sum")
+    ax.legend()
 
 def plotALLFromWB(res):
     if cfg.IK_store_error : 
@@ -177,5 +195,7 @@ def plotALLFromWB(res):
         plotEffectorTraj(res.t_t,res.effector_references,res.effector_trajectories)
     if cfg.IK_store_centroidal:
         plotCOMTraj(res.t_t,res.c_reference,res.c_t,res.dc_t,res.ddc_t)
+    
+    plotContactForces(res.t_t,res.contact_normal_force,res.N)
     plt.draw()
     plt.show()     
