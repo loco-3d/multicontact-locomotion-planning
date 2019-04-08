@@ -4,6 +4,7 @@ import pinocchio as se3
 from pinocchio import SE3, Motion,Force
 from hpp_wholebody_motion.utils.util import *
 import hpp_wholebody_motion.config as cfg
+import hpp_wholebody_motion.utils.trajectories as Trajectories
 ### tools to compute zmp trajectory : ### 
 
 
@@ -19,8 +20,8 @@ def computeFloorAltitude(cs,t):
     phase = cs.contact_phases[id_phase]
     RF_patch = phase.RF_patch
     LF_patch = phase.LF_patch
-    Mrf = RF_patch.placement
-    Mlf = LF_patch.placement
+    Mrf = JointPlacementForEffector(phase,cfg.Robot.rfoot)
+    Mlf = JointPlacementForEffector(phase,cfg.Robot.lfoot)
 
     if RF_patch.active and LF_patch.active:
         if pacthSameAltitude(Mrf,Mlf):
@@ -70,7 +71,6 @@ def shiftZMPtoFloorAltitude(cs,t,phi0):
     Mshift = SE3.Identity()
     shift = Mshift.translation  
     floor_altitude = computeFloorAltitude(cs,t) 
-    floor_altitude -= cfg.Robot.dict_offset[cfg.Robot.rfoot].translation[2][0] # shift to join level, assume both feet have the same transform
     shift[2] = floor_altitude
     Mshift.translation = shift
     
@@ -83,77 +83,26 @@ def shiftZMPtoFloorAltitude(cs,t,phi0):
     #print "Zy",w[0]/f[2]
     #print floor_altitude
     ZMP = np.matrix([float(-w[1]/f[2]),float(w[0]/f[2]),float(floor_altitude)]).T    
-    return ZMP
-    
+    return ZMP    
     
 # not generic ! only consider feet 
 # (not a problem as we only call it for openHRP)
-def computeRefZMP(cs,time_t,Wrench_traj):
+def computeRefZMP(cs,time_t,wrench_t):
     
     N = len(time_t)
     ZMP_t = np.matrix(np.empty((3,N)))
     Mshift = SE3.Identity()
     shift = Mshift.translation
-
-    phase0 = cs.contact_phases[0]
-    phase1 = cs.contact_phases[1]
-
-    if phase1.RF_patch.active:
-        RF_SS_first = True
-    else:
-        RF_SS_first = False
+    
+    # smooth wrench traj : 
+    Wrench_trajectory = Trajectories.DifferentiableEuclidianTrajectory()
+    Wrench_trajectory.computeFromPoints(np.asmatrix(time_t),wrench_t,0*wrench_t)
+    
 
     for k,t in enumerate(time_t):
-
-        id_phase = findPhase(cs,t)
-        phase = cs.contact_phases[id_phase]
-        wrench = Wrench_traj(t)[0]
+        wrench = Wrench_trajectory(t)[0]
         phi0 = Force(wrench)
-
-        RF_patch = phase.RF_patch
-        LF_patch = phase.LF_patch
-
-        Mrf = RF_patch.placement
-
-        Mlf = LF_patch.placement
-
-        if RF_patch.active and LF_patch.active:
-            if pacthSameAltitude(Mrf,Mlf):
-                floor_altitude = 0.5*(Mrf.translation+Mlf.translation)[2]
-            else:
-
-                if RF_SS_first:
-                    p0 = Mrf.translation[2]
-                    p1 = Mlf.translation[2]
-                else:
-                    p0 = Mlf.translation[2]
-                    p1 = Mrf.translation[2]
-
-                t0 = phase.time_trajectory[0]
-                t1 = phase.time_trajectory[-1]
-                assert t0 < t1
-                s = (t - t0) / (t1-t0)
-                floor_altitude = p0 + s * (p1-p0)
-                pass
-        elif RF_patch.active:
-            floor_altitude = Mrf.translation[2]
-        elif LF_patch.active:
-            floor_altitude = Mlf.translation[2]
-        else:
-            assert "Must never happened"
-
-
-        shift[2] = floor_altitude
-        Mshift.translation = shift
-
-        phi_floor = Mshift.actInv(phi0)
-        w = phi_floor.angular
-        f = phi_floor.linear
-        #print "Zx",-w[1]/f[2]
-        #print "Zy",w[0]/f[2]
-        #print floor_altitude
-        ZMP = np.matrix([float(-w[1]/f[2]),float(w[0]/f[2]),float(floor_altitude)]).T
-        ZMP_t[:,k] = ZMP
+        ZMP_t[:,k] = ZMP = shiftZMPtoFloorAltitude(cs,t,phi0)
 
     return ZMP_t
 
