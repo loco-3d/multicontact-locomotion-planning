@@ -76,10 +76,36 @@ def plotEffectorRef(dict_refs):
     plt.show()
     
 
-def plotEffectorError():
-    return
+def plotEffectorError(timeline,eff_error_dict):
+    labels=["x (m)" , "y (m)" ,"z (m)"]
+    colors = ['r','g','b']    
+    for eeName,error in eff_error_dict.iteritems():
+        fig, ax = plt.subplots(3,1)
+        fig.canvas.set_window_title("Effector tracking error : "+eeName)
+        fig.suptitle("Effector tracking error : "+eeName, fontsize=20)    
+        for i in range(3): # line = x,y,z
+                ax_sub = ax[i]
+                ax_sub.plot(timeline.T, error[i,:].T, color=colors[i])
+                ax_sub.set_xlabel('time (s)')
+                ax_sub.set_ylabel(labels[i])
+                ax_sub.grid(True)    
     
     
+    
+def plotCOMError(timeline,error):
+    labels=["x (m)" , "y (m)" ,"z (m)"]
+    colors = ['r','g','b']
+    fig, ax = plt.subplots(3,1)
+    fig.canvas.set_window_title("COM tracking error")
+    fig.suptitle("COM tracking error", fontsize=20)    
+    for i in range(3): # line = x,y,z
+            ax_sub = ax[i]
+            ax_sub.plot(timeline.T, error[i,:].T, color=colors[i])
+            ax_sub.set_xlabel('time (s)')
+            ax_sub.set_ylabel(labels[i])
+            ax_sub.grid(True)    
+
+
 def plotZMP(cs,ZMP_t,pcom_t):
     fig = plt.figure("ZMP-CoM (xy)")
     ax=fig.gca()
@@ -104,3 +130,52 @@ def plotZMP(cs,ZMP_t,pcom_t):
       
     plt.draw()
     plt.show()  
+
+def plotEffectorTraj(timeline,ref_dict,traj_dict):
+    labels=["x (m)" , "y (m)" ,"z (m)"]
+    colors = ['r','g','b']    
+    for eeName,traj in traj_dict.iteritems():
+        fig, ax = plt.subplots(3,1)
+        fig.canvas.set_window_title("Effector trajectory (dashed = reference) : "+eeName)
+        fig.suptitle("Effector trajectory (dashed = reference) : "+eeName, fontsize=20)    
+        for i in range(3): # line = x,y,z
+                ax_sub = ax[i]
+                ax_sub.plot(timeline.T, traj[i,:].T, color=colors[i])
+                ax_sub.plot(timeline.T, ref_dict[eeName][i,:].T, color=colors[i],linestyle=":")                
+                ax_sub.set_xlabel('time (s)')
+                ax_sub.set_ylabel(labels[i])
+                ax_sub.grid(True)    
+
+    
+def plotCOMTraj(timeline,ref,c_t,dc_t,ddc_t):
+    labels=["x (m)" , "y (m)" ,"z (m)", "dx (m/s)" , "dy (m/s)" ,"dz (m/s)","ddx (m/s^2)" , "ddy (m/s^2)" ,"ddz (m/s^2)"]
+    colors = ['r','g','b']    
+    fig, ax = plt.subplots(3,3)
+    fig.canvas.set_window_title("COM trajectory (dashed = reference)")
+    fig.suptitle("COM trajectory (dashed = reference)", fontsize=20)
+    for i in range(3): # line = pos,vel,acc
+        for j in range(3): # col = x,y,z
+            ax_sub = ax[i,j]
+            if i == 0 :
+                ax_sub.plot(timeline.T, c_t[j,:].T, color=colors[j])
+                ax_sub.plot(timeline.T, ref[j,:].T, color=colors[j],linestyle=":")
+            elif i == 1 :
+                ax_sub.plot(timeline.T, dc_t[j,:].T, color=colors[j])
+            elif i == 2 :
+                ax_sub.plot(timeline.T, ddc_t[j,:].T, color=colors[j])
+            ax_sub.set_xlabel('time (s)')
+            ax_sub.set_ylabel(labels[i*3 + j])
+            ax_sub.grid(True)    
+    return
+
+
+def plotALLFromWB(res):
+    if cfg.IK_store_error : 
+        plotCOMError(res.t_t,res.c_tracking_error)
+        plotEffectorError(res.t_t,res.effector_tracking_error)
+    if cfg.IK_store_effector:
+        plotEffectorTraj(res.t_t,res.effector_references,res.effector_trajectories)
+    if cfg.IK_store_centroidal:
+        plotCOMTraj(res.t_t,res.c_reference,res.c_t,res.dc_t,res.ddc_t)
+    plt.draw()
+    plt.show()     
