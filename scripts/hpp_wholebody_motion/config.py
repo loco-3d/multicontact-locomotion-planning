@@ -5,8 +5,8 @@ PKG_PATH = os.environ['DEVEL_HPP_DIR']+"/src/hpp-wholebody-motion"
 OUTPUT_DIR = PKG_PATH+"/res"
 CONTACT_SEQUENCE_PATH = OUTPUT_DIR + "/contact_sequences"
 TIME_OPT_CONFIG_PATH = PKG_PATH +'/timeOpt_configs'
-LOAD_CS = False
-LOAD_CS_COM = False
+LOAD_CS = True
+LOAD_CS_COM = True
 SAVE_CS = not LOAD_CS and True 
 SAVE_CS_COM = not LOAD_CS_COM and True
 EXPORT_GAZEBO = False
@@ -22,6 +22,7 @@ DISPLAY_COM_TRAJ = True
 DISPLAY_FEET_TRAJ = True
 DISPLAY_WB_MOTION = False
 DT_DISPLAY = 0.05 # dt used to display the wb motion
+PLOT = True
 
 ###  Settings for generate_contact_sequence
 FORCE_STRAIGHT_LINE = False # DEBUG ONLY should be false
@@ -44,17 +45,21 @@ USE_LIMB_RRT = False
 USE_CONSTRAINED_BEZIER = True
 USE_BEZIER_EE = True
 EFF_CHECK_COLLISION = True
-WB_ABORT_WHEN_INVALID = True
+WB_ABORT_WHEN_INVALID = False
+WB_RETURN_INVALID = not WB_ABORT_WHEN_INVALID and True
 
 ##  Settings for whole body : 
 YAW_ROT_GAIN = 1.
 USE_CROC_COM = False
-WB_VERBOSE = False
+WB_VERBOSE = True
 WB_STOP_AT_EACH_PHASE = False
 IK_dt = 0.001  # controler time step
 IK_PRINT_N = 500  # print state of the problem every IK_PRINT_N time steps (if verbose = True)
-CHECK_FINAL_MOTION = True
-
+CHECK_FINAL_MOTION = False
+IK_store_centroidal = True
+IK_store_effector = True
+IK_store_error = True
+IK_store_contact_forces = True
 # import specific settings for the selected demo. This settings may override default ones.
 import importlib
 import sys

@@ -65,9 +65,10 @@ if cfg.DISPLAY_COM_TRAJ:
 import hpp_wholebody_motion.wholebody.tsid_invdyn as wb
 if cfg.USE_CROC_COM:
     assert cfg.USE_CROC_INIT_GUESS, "You must generate CROC initial guess if you want to use it as reference for the COM"  
-    q_t,v_t,a_t = wb.generateWholeBodyMotion(cs_initGuess,v,cp.fullBody)
+    res,robot = wb.generateWholeBodyMotion(cs_initGuess,v,cp.fullBody)
 else : 
-    q_t,v_t,a_t = wb.generateWholeBodyMotion(cs_com,v,cp.fullBody)
+    #q_t,v_t,a_t = wb.generateWholeBodyMotion(cs_com,v,cp.fullBody)
+    res,robot =  wb.generateWholeBodyMotion(cs_com,v,cp.fullBody)
 
 if cfg.DISPLAY_WB_MOTION:
     raw_input("Press Enter to display the whole body motion ...")
@@ -84,6 +85,9 @@ if cfg.CHECK_FINAL_MOTION :
 else :
     motion_valid = True
 
+if cfg.PLOT:
+    from hpp_wholebody_motion.utils import plot
+    plot.plotALLFromWB(res)
 
 if cfg.EXPORT_OPENHRP and motion_valid:
     from hpp_wholebody_motion.export import openHRP
