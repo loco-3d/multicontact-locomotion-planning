@@ -400,6 +400,99 @@ class RefTrajectory (object):
 
   def __call__ (self, t):
     return np.matrix ([]).reshape (0, 0)
+  
+
+
+class DifferentiableEuclidianTrajectory(RefTrajectory):
+
+  def __init__(self, name="Differentiable trajectory"):
+    self.name = name
+    self._time_i = []
+    self._t0_l = []
+    self._coeffs_l = []
+    self._dcoeffs_l = []
+
+  @property
+  def dim(self):
+    return self._dim
+
+  def computeFromPoints(self, timeline, p_points, v_points):
+    m_p, n_p = p_points.shape
+    m_v, n_v = v_points.shape
+
+    timeline = timeline.A.squeeze()
+    N = len(timeline.T)
+
+    assert n_p == N and n_v == N
+    assert m_p == m_v
+
+    self._dim = m_p
+
+    # Compute time intervals
+    self._time_i = []
+    self._t0_l = timeline[:-1]
+
+
+    for k in range(N-1):
+      self._time_i.append((timeline[k], timeline[k+1]))
+
+    # Compute the polynomial coeff on each intervals 
+    self._coeffs_l = []
+    self._dcoeffs_l = []
+
+    for k in range(N-1):
+
+      coeffs = []
+      dcoeffs = []
+      for i in range(self._dim):
+        X0 = p_points[i,k]
+        X1 = p_points[i,k+1]
+        coeffs.append([X0, X1 - X0])
+
+        dX0 = v_points[i,k]
+        dX1 = v_points[i,k+1]
+        dcoeffs.append([dX0, dX1 - dX0])
+
+      self._coeffs_l.append(coeffs)
+      self._dcoeffs_l.append(dcoeffs)
+
+  def __call__ (self, t):
+    #assert t <= self._time_i[-1][1], "t must be lower than the final time tf={}".format(self.time_i[-1][1])
+    index = len(self._t0_l)-1
+    if t > self._time_i[-1][1]:
+      t = self._time_i[-1][1]
+    elif t < self._time_i[0][0]:
+      t = self._time_i[0][0]
+      index = 0
+    else:
+      for k in range(len(self._t0_l)):
+        if self._t0_l[k] > t:
+          index = k-1
+          break
+
+    coeffs_l = self._coeffs_l[index]
+    dcoeffs_l = self._dcoeffs_l[index]
+
+    t0 = self._time_i[index][0]
+    t1 = self._time_i[index][1]
+
+    tau = (t-t0)/(t1-t0)
+
+    dim = self._dim
+    X = np.matrix(np.zeros([dim,1]))
+    Xd = np.matrix(np.zeros([dim,1]))
+
+    for k in range(dim):
+      if not coeffs_l[k] == []: 
+        X[k] = polyval(tau,coeffs_l[k])
+
+      if not dcoeffs_l[k] == []: 
+        Xd[k] = polyval(tau,dcoeffs_l[k])
+
+    return X, Xd
+ 
+
+
 
 class TwiceDifferentiableEuclidianTrajectory(RefTrajectory):
 
