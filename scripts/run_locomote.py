@@ -87,14 +87,14 @@ else :
 
 if cfg.PLOT:
     from hpp_wholebody_motion.utils import plot
-    plot.plotALLFromWB(res)
+    plot.plotALLFromWB(cs_com,res)
 
 if cfg.EXPORT_OPENHRP and motion_valid:
     from hpp_wholebody_motion.export import openHRP
-    openHRP.export(cs_com,q_t,v_t,a_t)
+    openHRP.export(cs_com,res)
 if cfg.EXPORT_GAZEBO and motion_valid:
     from hpp_wholebody_motion.export import gazebo
-    gazebo.export(q_t)
+    gazebo.export(res.q_t)
 
 
 
