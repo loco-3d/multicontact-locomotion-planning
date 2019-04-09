@@ -34,8 +34,8 @@ class Result:
         for ee in self.eeNames : 
             self.contact_forces.update({ee:np.matrix(np.zeros([12,N]))}) 
             self.contact_normal_force.update({ee:np.matrix(np.zeros([1,N]))})              
-            self.effector_trajectories.update({ee:np.matrix(np.zeros([12,N]))}) #FIXME : use SE3, (store in R^7 or in R^4x4 ??)
-            self.effector_references.update({ee:np.matrix(np.zeros([12,N]))}) #FIXME : use SE3
+            self.effector_trajectories.update({ee:np.matrix(np.zeros([12,N]))}) 
+            self.effector_references.update({ee:np.matrix(np.zeros([12,N]))})
             self.effector_tracking_error.update({ee:np.matrix(np.zeros([6,N]))})
             self.contact_activity.update({ee:np.matrix(np.zeros([1,N]))})
         self.phases_intervals = self.buildPhasesIntervals(cs)    
@@ -66,29 +66,55 @@ class Result:
                 new_intervals += [reduced_interval]
                 break
         return new_intervals
+    
+    def fillAllValues(self,k,other,k_other=None):
+        if not k_other:
+            k_other = k
+        self.t_t[k] = other.t_t[k_other]
+        self.q_t [:,k] =other.q_t[:,k_other]
+        self.dq_t[:,k] =other.dq_t[:,k_other]
+        self.ddq_t[:,k] =other.ddq_t[:,k_other]
+        self.tau_t[:,k] =other.tau_t[:,k_other]
+        self.c_t[:,k] =other.c_t[:,k_other]
+        self.dc_t[:,k] =other.dc_t[:,k_other]
+        self.ddc_t[:,k] =other.ddc_t[:,k_other]
+        self.L_t[:,k] =other.L_t[:,k_other]
+        self.dL_t[:,k] =other.dL_t[:,k_other]
+        self.c_tracking_error[:,k] =other.c_tracking_error[:,k_other]
+        self.c_reference[:,k] =other.c_reference[:,k_other]
+        self.wrench_t[:,k] =other.wrench_t[:,k_other]
+        self.zmp_t[:,k] =other.zmp_t[:,k_other]
+        for ee in self.eeNames : 
+            self.contact_forces[ee][:,k] =other.contact_forces[ee][:,k_other]
+            self.contact_normal_force[ee][:,k] = other.contact_normal_force[ee][:,k_other]            
+            other.effector_trajectories[ee][:,k] =other.effector_trajectories[ee][:,k_other]
+            other.effector_references[ee][:,k] =other.effector_references[ee][:,k_other]
+            self.effector_tracking_error[ee][:,k] =other.effector_tracking_error[ee][:,k_other]
+            self.contact_activity[ee][:,k] =other.contact_activity[ee][:,k_other]
+    
             
     def resize(self,N):
         self.N = N
-        self.t_t= np.resize(self.t_t,[N])
-        self.q_t= np.resize(self.q_t,[self.nq,N])
-        self.dq_t= np.resize(self.dq_t ,[self.nv,N])
-        self.ddq_t= np.resize(self.ddq_t ,[self.nv,N])
-        self.tau_t= np.resize(self.tau_t ,[self.nv-6,N])
-        self.c_t= np.resize(self.c_t ,[3,N])
-        self.dc_t= np.resize(self.dc_t ,[3,N])
-        self.ddc_t= np.resize(self.ddc_t ,[3,N])
-        self.L_t= np.resize(self.L_t ,[3,N])
-        self.dL_t= np.resize(self.dL_t ,[3,N])
-        self.c_tracking_error= np.resize(self.c_tracking_error ,[3,N])
-        self.c_reference= np.resize(self.c_reference ,[3,N])
-        self.wrench_t= np.resize(self.wrench_t ,[6,N])
-        self.zmp_t= np.resize(self.zmp_t ,[3,N])      
+        self.t_t = self.t_t[:N]
+        self.q_t = self.q_t[:,:N]
+        self.dq_t = self.dq_t[:,:N]
+        self.ddq_t = self.ddq_t[:,:N]
+        self.tau_t = self.tau_t[:,:N]
+        self.c_t = self.c_t[:,:N]
+        self.dc_t = self.dc_t[:,:N]
+        self.ddc_t = self.ddc_t[:,:N]
+        self.L_t = self.L_t[:,:N]
+        self.dL_t = self.dL_t[:,:N]
+        self.c_tracking_error = self.c_tracking_error[:,:N]
+        self.c_reference = self.c_reference[:,:N]
+        self.wrench_t = self.wrench_t[:,:N]
+        self.zmp_t = self.zmp_t[:,:N]      
         for ee in self.eeNames : 
-            self.contact_forces[ee]= np.resize(self.contact_forces[ee] ,[12,N])     
-            self.contact_normal_force[ee]= np.resize(self.contact_normal_force[ee] ,[1,N])                            
-            self.effector_trajectories[ee]= np.resize(self.effector_trajectories[ee] ,[12,N]) 
-            self.effector_references[ee]= np.resize(self.effector_references[ee] ,[12,N]) 
-            self.effector_tracking_error[ee]= np.resize(self.effector_tracking_error[ee] ,[6,N])
-            self.contact_activity[ee]= np.resize(self.contact_activity[ee] ,[1,N])
+            self.contact_forces[ee] = self.contact_forces[ee][:,:N]     
+            self.contact_normal_force[ee] = self.contact_normal_force[ee][:,:N]                            
+            self.effector_trajectories[ee] = self.effector_trajectories[ee][:,:N] 
+            self.effector_references[ee] = self.effector_references[ee][:,:N] 
+            self.effector_tracking_error[ee] = self.effector_tracking_error[ee][:,:N]
+            self.contact_activity[ee] = self.contact_activity[ee][:,:N]
         self.phases_intervals = self.resizePhasesIntervals(N)
         return self
