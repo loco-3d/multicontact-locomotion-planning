@@ -118,7 +118,7 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
     comTask = tsid.TaskComEquality("task-com", robot)
     comTask.setKp(cfg.kp_com * np.matrix(np.ones(3)).transpose())
     comTask.setKd(2.0 * np.sqrt(cfg.kp_com) * np.matrix(np.ones(3)).transpose())
-    invdyn.addMotionTask(comTask, cfg.w_com, 1, 0.0)     
+    invdyn.addMotionTask(comTask, cfg.w_com, cfg.level_com, 0.0)     
     
     com_ref = robot.com(invdyn.data())
     trajCom = tsid.TrajectoryEuclidianConstant("traj_com", com_ref)    
@@ -127,7 +127,7 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
     postureTask.setKp(cfg.kp_posture * cfg.gain_vector)    
     postureTask.setKd(2.0 * np.sqrt(cfg.kp_posture* cfg.gain_vector) )
     postureTask.mask(cfg.masks_posture)         
-    invdyn.addMotionTask(postureTask, cfg.w_posture,1, 0.0)
+    invdyn.addMotionTask(postureTask, cfg.w_posture,cfg.level_posture, 0.0)
     q_ref = q
     trajPosture = tsid.TrajectoryEuclidianConstant("traj_joint", q_ref[7:])    
     
@@ -137,7 +137,7 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
     mask[5] = cfg.YAW_ROT_GAIN 
     orientationRootTask.setKp(cfg.kp_rootOrientation * mask)
     orientationRootTask.setKd(2.0 * np.sqrt(cfg.kp_rootOrientation* mask) )
-    invdyn.addMotionTask(orientationRootTask, cfg.w_rootOrientation,1, 0.0)
+    invdyn.addMotionTask(orientationRootTask, cfg.w_rootOrientation,cfg.level_rootOrientation, 0.0)
     root_ref = robot.position(data, robot.model().getJointId( 'root_joint'))
     trajRoot = tsid.TrajectorySE3Constant("traj-root", root_ref)
 
@@ -214,17 +214,17 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
         print "\t||v||: %.3f\t ||dv||: %.3f" % (norm(v, 2), norm(dv))      
 
 
-    def abortIfDiverge(res,v,dv):
+    def checkDiverge(res,v,dv):
         if norm(dv) > 1e6 or norm(v) > 1e6 :
             print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
             print "/!\ ABORT : controler unstable at t = "+str(t)+"  /!\ "
             print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"                
-            return res.resize(k_t),robot
+            return True
         if math.isnan(norm(dv)) or math.isnan(norm(v)) :
             print "!!!!!!    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
             print "/!\ ABORT : nan   at t = "+str(t)+"  /!\ "
             print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"                
-            return res.resize(k_t),robot
+            return True
                 
    
     # time check
@@ -283,7 +283,7 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
             if phase_next and not isContactActive(phase,eeName)  and isContactActive(phase_next,eeName): 
                 if cfg.WB_VERBOSE :
                     print "add se3 task for "+eeName
-                invdyn.addMotionTask(task, cfg.w_eff, 0, 0.0)
+                invdyn.addMotionTask(task, cfg.w_eff, cfg.level_eff, 0.0)
                 #create reference trajectory for this task : 
                 ref_traj = generateEEReferenceTraj(robot,invdyn.data(),time_interval,phase,phase_next,eeName,viewer)  
                 dic_effectors_trajs.update({eeName:ref_traj})
@@ -372,7 +372,8 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
 
                 if cfg.WB_VERBOSE and int(t/dt) % cfg.IK_PRINT_N == 0:
                     printIntermediate(v,dv,invdyn,sol)
-                abortIfDiverge(res,v,dv)
+                if checkDiverge(res,v,dv):
+                    return res.resize(k_t),robot
                 
                 
             # end while t \in phase_t (loop for the current contact phase) 
