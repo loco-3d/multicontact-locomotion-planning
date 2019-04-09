@@ -1,6 +1,7 @@
 from hpp.corbaserver.rbprm.talos import Robot
 MASS = 90.27
-
+nq = 39
+nv = 38
 ## weight and gains used by TSID
 
 fMin = 5.0                      # minimum normal force
@@ -15,6 +16,11 @@ kp_com = 3000.0                 # proportional gain of center of mass task
 kp_posture = 30.0               # proportional gain of joint posture task
 kp_rootOrientation = 500.0      # proportional gain of the root's orientation task
 kp_Eff = 3000.0                 # proportional gain ofthe effectors motion task
+level_com = 1
+level_posture = 1
+level_eff = 0
+level_rootOrientation = 1
+
 
 import numpy as np
 gain_vector = np.matrix(
