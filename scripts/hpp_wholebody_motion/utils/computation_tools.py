@@ -5,7 +5,10 @@ from pinocchio import SE3, Motion,Force
 from hpp_wholebody_motion.utils.util import *
 import hpp_wholebody_motion.config as cfg
 import hpp_wholebody_motion.utils.trajectories as Trajectories
-### tools to compute zmp trajectory : ### 
+from rospkg import RosPack
+from pinocchio.robot_wrapper import RobotWrapper
+
+
 
 
 def pacthSameAltitude(M1,M2,eps=1e-3):
@@ -73,7 +76,7 @@ def shiftZMPtoFloorAltitude(cs,t,phi0):
     floor_altitude = computeFloorAltitude(cs,t) 
     shift[2] = floor_altitude
     Mshift.translation = shift
-    
+    #print "phi0",phi0
     # apply transform to wrench : 
     phi_floor = Mshift.actInv(phi0)
     #compute zmp with transformed phi :
@@ -82,6 +85,7 @@ def shiftZMPtoFloorAltitude(cs,t,phi0):
     #print "Zx",-w[1]/f[2]
     #print "Zy",w[0]/f[2]
     #print floor_altitude
+    
     ZMP = np.matrix([float(-w[1]/f[2]),float(w[0]/f[2]),float(floor_altitude)]).T    
     return ZMP    
     
@@ -91,18 +95,35 @@ def computeRefZMP(cs,time_t,wrench_t):
     
     N = len(time_t)
     ZMP_t = np.matrix(np.empty((3,N)))
-    Mshift = SE3.Identity()
-    shift = Mshift.translation
     
     # smooth wrench traj : 
     Wrench_trajectory = Trajectories.DifferentiableEuclidianTrajectory()
     Wrench_trajectory.computeFromPoints(np.asmatrix(time_t),wrench_t,0*wrench_t)
     
 
-    for k,t in enumerate(time_t):
-        wrench = Wrench_trajectory(t)[0]
+    for k in range(N):
+        wrench = Wrench_trajectory(time_t[k])[0]
         phi0 = Force(wrench)
-        ZMP_t[:,k] = ZMP = shiftZMPtoFloorAltitude(cs,t,phi0)
+        ZMP_t[:,k] = shiftZMPtoFloorAltitude(cs,time_t[k],phi0)
 
     return ZMP_t
 
+def computeWrench(res):
+    rp = RosPack()
+    urdf = rp.get_path(cfg.Robot.packageName)+'/urdf/'+cfg.Robot.urdfName+cfg.Robot.urdfSuffix+'.urdf'   
+    #srdf = "package://" + package + '/srdf/' +  cfg.Robot.urdfName+cfg.Robot.srdfSuffix + '.srdf'
+    robot = RobotWrapper(urdf, se3.StdVec_StdString(), se3.JointModelFreeFlyer(), False)
+    model = robot.model
+    data = robot.data    
+    for k in range(res.N):
+        se3.rnea(model,data,res.q_t[:,k],res.dq_t[:,k],res.ddq_t[:,k])
+        pcom, vcom, acom = robot.com(res.q_t[:,k],res.dq_t[:,k],res.ddq_t[:,k]) # FIXME : why do I need to call com to have the correct values in data ??      
+        phi0 = data.oMi[1].act(se3.Force(data.tau[:6]))
+        res.wrench_t[:,k] = phi0.vector
+    return res
+    
+
+def computeZMP(cs,res):
+    res = computeWrench(res)
+    res.zmp_t = computeRefZMP(cs,res.t_t,res.wrench_t)
+    return res

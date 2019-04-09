@@ -7,7 +7,7 @@ import hpp_wholebody_motion.config as cfg
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 from multiprocessing import Process
-
+from hpp_wholebody_motion.utils.computation_tools import computeZMP
 plt.ion()
 
 
@@ -187,7 +187,7 @@ def plotContactForces(timeline,forces_dict,N):
     ax.plot(timeline.T, sum_f[0,:].T, color="k",label = "sum")
     ax.legend()
 
-def plotALLFromWB(res):
+def plotALLFromWB(cs,res):
     if cfg.IK_store_error : 
         plotCOMError(res.t_t,res.c_tracking_error)
         plotEffectorError(res.t_t,res.effector_tracking_error)
@@ -195,7 +195,8 @@ def plotALLFromWB(res):
         plotEffectorTraj(res.t_t,res.effector_references,res.effector_trajectories)
     if cfg.IK_store_centroidal:
         plotCOMTraj(res.t_t,res.c_reference,res.c_t,res.dc_t,res.ddc_t)
-    
     plotContactForces(res.t_t,res.contact_normal_force,res.N)
+    computeZMP(cs,res)
+    plotZMP(cs,res.zmp_t,res.c_t)
     plt.draw()
     plt.show()     
