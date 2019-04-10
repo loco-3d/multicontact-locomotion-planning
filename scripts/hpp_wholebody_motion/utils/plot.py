@@ -147,7 +147,7 @@ def plotEffectorTraj(timeline,ref_dict,traj_dict):
                 ax_sub.grid(True)    
 
     
-def plotCOMTraj(timeline,ref,c_t,dc_t,ddc_t):
+def plotCOMTraj(timeline,ref_c,ref_dc,ref_ddc,c_t,dc_t,ddc_t):
     labels=["x (m)" , "y (m)" ,"z (m)", "dx (m/s)" , "dy (m/s)" ,"dz (m/s)","ddx (m/s^2)" , "ddy (m/s^2)" ,"ddz (m/s^2)"]
     colors = ['r','g','b']    
     fig, ax = plt.subplots(3,3)
@@ -158,11 +158,13 @@ def plotCOMTraj(timeline,ref,c_t,dc_t,ddc_t):
             ax_sub = ax[i,j]
             if i == 0 :
                 ax_sub.plot(timeline.T, c_t[j,:].T, color=colors[j])
-                ax_sub.plot(timeline.T, ref[j,:].T, color=colors[j],linestyle=":")
+                ax_sub.plot(timeline.T, ref_c[j,:].T, color=colors[j],linestyle=":")
             elif i == 1 :
                 ax_sub.plot(timeline.T, dc_t[j,:].T, color=colors[j])
+                ax_sub.plot(timeline.T, ref_dc[j,:].T, color=colors[j],linestyle=":")                
             elif i == 2 :
                 ax_sub.plot(timeline.T, ddc_t[j,:].T, color=colors[j])
+                ax_sub.plot(timeline.T, ref_ddc[j,:].T, color=colors[j],linestyle=":")                                
             ax_sub.set_xlabel('time (s)')
             ax_sub.set_ylabel(labels[i*3 + j])
             ax_sub.grid(True)    
@@ -188,13 +190,13 @@ def plotContactForces(timeline,forces_dict,N):
     ax.legend()
 
 def plotALLFromWB(cs,res):
-    if cfg.IK_store_error : 
-        plotCOMError(res.t_t,res.c_tracking_error)
-        plotEffectorError(res.t_t,res.effector_tracking_error)
     if cfg.IK_store_effector:
         plotEffectorTraj(res.t_t,res.effector_references,res.effector_trajectories)
     if cfg.IK_store_centroidal:
-        plotCOMTraj(res.t_t,res.c_reference,res.c_t,res.dc_t,res.ddc_t)
+        plotCOMTraj(res.t_t,res.c_reference,res.dc_reference,res.ddc_reference,res.c_t,res.dc_t,res.ddc_t)
+    if cfg.IK_store_error : 
+        plotCOMError(res.t_t,res.c_tracking_error)
+        plotEffectorError(res.t_t,res.effector_tracking_error)        
     plotContactForces(res.t_t,res.contact_normal_force,res.N)
     computeZMP(cs,res)
     plotZMP(cs,res.zmp_t,res.c_t)

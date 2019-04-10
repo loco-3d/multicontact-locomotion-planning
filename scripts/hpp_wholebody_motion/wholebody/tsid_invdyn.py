@@ -208,6 +208,8 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
             res.dc_t[:,k_t] = robot.com_vel(invdyn.data())
             res.ddc_t[:,k_t] = robot.com_acc(invdyn.data())
             res.c_reference[:,k_t] = com_desired
+            res.dc_reference[:,k_t] = vcom_desired
+            res.ddc_reference[:,k_t] = acom_desired
         # TODO anuglar momentum ??
         if cfg.IK_store_effector: 
             for eeName in usedEffectors: # real position (not reference)

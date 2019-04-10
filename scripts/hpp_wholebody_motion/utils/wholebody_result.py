@@ -19,6 +19,8 @@ class Result:
         self.dL_t = np.matrix(np.zeros([3,N]))
         self.c_tracking_error = np.matrix(np.zeros([3,N]))
         self.c_reference = np.matrix(np.zeros([3,N]))
+        self.dc_reference = np.matrix(np.zeros([3,N]))
+        self.ddc_reference = np.matrix(np.zeros([3,N]))        
         self.wrench_t = np.matrix(np.zeros([6,N]))
         self.zmp_t = np.matrix(np.zeros([6,N]))
         
@@ -82,6 +84,8 @@ class Result:
         self.dL_t[:,k] =other.dL_t[:,k_other]
         self.c_tracking_error[:,k] =other.c_tracking_error[:,k_other]
         self.c_reference[:,k] =other.c_reference[:,k_other]
+        self.dc_reference[:,k] =other.dc_reference[:,k_other] 
+        self.ddc_reference[:,k] =other.ddc_reference[:,k_other]        
         self.wrench_t[:,k] =other.wrench_t[:,k_other]
         self.zmp_t[:,k] =other.zmp_t[:,k_other]
         for ee in self.eeNames : 
@@ -107,6 +111,8 @@ class Result:
         self.dL_t = self.dL_t[:,:N]
         self.c_tracking_error = self.c_tracking_error[:,:N]
         self.c_reference = self.c_reference[:,:N]
+        self.dc_reference = self.dc_reference[:,:N]
+        self.ddc_reference = self.ddc_reference[:,:N]        
         self.wrench_t = self.wrench_t[:,:N]
         self.zmp_t = self.zmp_t[:,:N]      
         for ee in self.eeNames : 
