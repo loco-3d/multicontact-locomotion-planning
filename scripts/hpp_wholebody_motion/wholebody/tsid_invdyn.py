@@ -87,6 +87,24 @@ def generateEEReferenceTrajCollisionFree(fullBody,robot,robotData,time_interval,
     ref_traj = bezier_constrained.generateConstrainedBezierTraj(time_interval,placement_init,placement_end,q_t,predefTraj,phase_previous,phase,phase_next,fullBody,phaseId,eeName,viewer)                    
     return ref_traj
 
+def computeCOMRefFromPhase(phase,time_interval):
+    #return trajectories.SmoothedCOMTrajectory("com_reference", phase, com_init, dt) # cubic interpolation from timeopt dt to tsid dt
+    com_ref = trajectories.TwiceDifferentiableEuclidianTrajectory("com_reference")
+    # rearrange discretized points from phase to numpy matrices :
+    N = len(phase.time_trajectory)
+    timeline = np.matrix(np.zeros(N))
+    c = np.matrix(np.zeros([3,N]))
+    dc = np.matrix(np.zeros([3,N]))
+    ddc = np.matrix(np.zeros([3,N]))  
+    for i in range(N):
+        timeline[0,i] = phase.time_trajectory[i]
+        c[:,i] = phase.state_trajectory[i][0:3]
+        dc[:,i] = phase.state_trajectory[i][3:6]
+        ddc[:,i] = phase.control_trajectory[i][0:3]
+    com_ref.computeFromPoints(timeline,c,dc,ddc)
+    return com_ref
+
+
 def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
     if not viewer :
         print "No viewer linked, cannot display end_effector trajectories."
@@ -260,7 +278,7 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
         # generate com ref traj from phase : 
         com_init = np.matrix(np.zeros((9, 1)))
         com_init[0:3, 0] = robot.com(invdyn.data())
-        com_traj = trajectories.SmoothedCOMTrajectory("com_smoothing", phase, com_init, dt) # cubic interpolation from timeopt dt to tsid dt
+        com_traj = computeCOMRefFromPhase(phase,time_interval)
         
         # add root's orientation ref from reference config : 
         if phase_next :
@@ -325,9 +343,14 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
                 # set traj reference for current time : 
                 # com 
                 sampleCom = trajCom.computeNext()
-                sampleCom.pos(com_traj(t)[0].T)
-                sampleCom.vel(com_traj(t)[1].T)
-                com_desired = com_traj(t)[0].T
+                print "com_traj shape : ",com_traj(t)[0].shape
+                com_desired = com_traj(t)[0]
+                vcom_desired = com_traj(t)[1]
+                acom_desired = com_traj(t)[2]
+                sampleCom.pos(com_desired)
+                sampleCom.vel(vcom_desired)
+                sampleCom.acc(acom_desired)
+
                 #print "com desired : ",com_desired.T
                 comTask.setReference(sampleCom)
                 # posture
