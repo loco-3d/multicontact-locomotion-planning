@@ -139,7 +139,13 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
     invdyn.addMotionTask(comTask, cfg.w_com, cfg.level_com, 0.0)     
     
     com_ref = robot.com(invdyn.data())
-    trajCom = tsid.TrajectoryEuclidianConstant("traj_com", com_ref)    
+    trajCom = tsid.TrajectoryEuclidianConstant("traj_com", com_ref)  
+    
+    amTask = tsid.TaskAMEquality("task-am", robot)
+    amTask.setKp(cfg.kp_am * np.matrix([1.,1.,0.]).T)    
+    amTask.setKd(2.0 * np.sqrt(cfg.kp_am* np.matrix([1.,1.,0.]).T ))
+    invdyn.addTask(amTask, cfg.w_am,cfg.level_am)
+    trajAM = tsid.TrajectoryEuclidianConstant("traj_am", np.matrix(np.zeros(3)).T)     
     
     postureTask = tsid.TaskJointPosture("task-joint-posture", robot)
     postureTask.setKp(cfg.kp_posture * cfg.gain_vector)    
@@ -345,20 +351,24 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
                 # set traj reference for current time : 
                 # com 
                 sampleCom = trajCom.computeNext()
-                print "com_traj shape : ",com_traj(t)[0].shape
                 com_desired = com_traj(t)[0]
                 vcom_desired = com_traj(t)[1]
                 acom_desired = com_traj(t)[2]
                 sampleCom.pos(com_desired)
                 sampleCom.vel(vcom_desired)
                 sampleCom.acc(acom_desired)
-
                 #print "com desired : ",com_desired.T
                 comTask.setReference(sampleCom)
+                
+                # am 
+                sampleAM = trajAM.computeNext()
+                amTask.setReference(sampleAM)
+                
                 # posture
                 samplePosture = trajPosture.computeNext()
                 #print "postural task ref : ",samplePosture.pos()
                 postureTask.setReference(samplePosture)
+                
                 # root orientation : 
                 sampleRoot = trajRoot.computeNext()
                 sampleRoot.pos(SE3toVec(root_traj(t)[0]))
