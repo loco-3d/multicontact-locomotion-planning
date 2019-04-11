@@ -10,6 +10,7 @@ from locomote import WrenchCone,SOC6,ContactSequenceHumanoid
 import numpy as np
 from tools.disp_bezier import *
 import hpp_spline
+from hpp_spline import bezier
 import hpp_bezier_com_traj as bezier_com
 from hpp_wholebody_motion.utils import trajectories
 
@@ -86,12 +87,12 @@ def buildPredefinedFinalTraj(placement,t_total):
     return bezier(wps,T)
 
 def generateBezierTraj(placement_init,placement_end,time_interval):
-    t_total = time_interval[1]-time_interval[0]
+    t_total = time_interval[1]-time_interval[0] - 2*cfg.EFF_T_DELAY
     # generate two curves for the takeoff/landing : 
     # generate a bezier curve for the middle part of the motion : 
     bezier_takeoff = buildPredefinedInitTraj(placement_init,t_total)
     bezier_landing = buildPredefinedFinalTraj(placement_end,t_total)
-    # set problem datz for mid curve : 
+    # set problem data for mid curve : 
     pData = bezier_com.ProblemData() 
     pData.c0_ = bezier_takeoff(bezier_takeoff.max())
     pData.dc0_ = bezier_takeoff.derivate(bezier_takeoff.max(),1)
@@ -105,11 +106,17 @@ def generateBezierTraj(placement_init,placement_end,time_interval):
     t_middle =  (t_total - (2.*cfg.EFF_T_PREDEF))
     res = bezier_com.computeEndEffector(pData,t_middle)
     bezier_middle = res.c_of_t
-    # create polybezier with concatenation of the 3 curves :
     curves = []
+    # create polybezier with concatenation of the 3 (or 5) curves :    
+    # create constant curve at the beginning and end for the delay : 
+    if cfg.EFF_T_DELAY > 0 :
+        bezier_init_zero=bezier(bezier_takeoff(0),cfg.EFF_T_DELAY)
+        curves.append(bezier_init_zero)
     curves.append(bezier_takeoff)
     curves.append(bezier_middle)
     curves.append(bezier_landing)
+    if cfg.EFF_T_DELAY > 0 :
+        curves.append(bezier(bezier_landing(bezier_landing.max()),cfg.EFF_T_DELAY))    
     pBezier = PolyBezier(curves)
     
     ref_traj = trajectories.BezierTrajectory(pBezier,placement_init,placement_end,time_interval)    
