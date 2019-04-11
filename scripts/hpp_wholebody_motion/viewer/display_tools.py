@@ -167,9 +167,9 @@ def displayWBmotion(viewer,q_t,dt,dt_display):
     assert step%1 == 0 ,"display dt shouldbe a multiple of ik dt"
     # check if robot have extradof : 
     step = int(step)
-    while id < len(q_t):
+    while id < q_t.shape[1]:
         t_start = time.time()
-        displayWBconfig(viewer,q_t[id])
+        displayWBconfig(viewer,q_t[:,id])
         id += step
         elapsed = time.time() - t_start
         if elapsed > dt_display :
@@ -177,6 +177,6 @@ def displayWBmotion(viewer,q_t,dt,dt_display):
         else : 
             time.sleep(dt_display - elapsed)
     # display last config if the total duration is not a multiple of the dt
-    displayWBconfig(viewer,q_t[-1])
+    displayWBconfig(viewer,q_t[:,-1])
           
 
