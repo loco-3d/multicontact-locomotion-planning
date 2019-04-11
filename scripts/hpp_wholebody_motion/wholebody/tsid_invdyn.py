@@ -104,6 +104,21 @@ def computeCOMRefFromPhase(phase,time_interval):
     com_ref.computeFromPoints(timeline,c,dc,ddc)
     return com_ref
 
+def computeAMRefFromPhase(phase,time_interval):
+    #return trajectories.SmoothedCOMTrajectory("com_reference", phase, com_init, dt) # cubic interpolation from timeopt dt to tsid dt
+    am_ref = trajectories.DifferentiableEuclidianTrajectory("am_reference")
+    # rearrange discretized points from phase to numpy matrices :
+    N = len(phase.time_trajectory)
+    timeline = np.matrix(np.zeros(N))
+    L = np.matrix(np.zeros([3,N]))
+    dL = np.matrix(np.zeros([3,N]))
+    for i in range(N):
+        timeline[0,i] = phase.time_trajectory[i]
+        L[:,i] = phase.state_trajectory[i][6:9]
+        dL[:,i] = phase.control_trajectory[i][3:6]
+    am_ref.computeFromPoints(timeline,L,dL)
+    return am_ref
+
 
 def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
     if not viewer :
@@ -210,13 +225,17 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
                     res.contact_activity[eeName][:,k_t] = 1
         # store centroidal info (real one and reference) :
         if cfg.IK_store_centroidal:
+            robot.computeAllTerms(invdyn.data(),q,v)
             res.c_t[:,k_t] = robot.com(invdyn.data())
             res.dc_t[:,k_t] = robot.com_vel(invdyn.data())
             res.ddc_t[:,k_t] = robot.com_acc(invdyn.data())
+            res.L_t[:,k_t] = invdyn.data().hg.angular
+            # TODO : retrieve dL (no API yet, WIP from rohan)
             res.c_reference[:,k_t] = com_desired
             res.dc_reference[:,k_t] = vcom_desired
             res.ddc_reference[:,k_t] = acom_desired
-        # TODO anuglar momentum ??
+            res.L_reference[:,k_t] = L_desired
+            res.dL_reference[:,k_t] = dL_desired            
         if cfg.IK_store_effector: 
             for eeName in usedEffectors: # real position (not reference)
                 res.effector_trajectories[eeName][:,k_t] = SE3toVec(robot.position(invdyn.data(), robot.model().getJointId(eeName)))
@@ -288,6 +307,7 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
         com_init[0:3, 0] = robot.com(invdyn.data())
         com_traj = computeCOMRefFromPhase(phase,time_interval)
         
+        am_traj = computeAMRefFromPhase(phase,time_interval)
         # add root's orientation ref from reference config : 
         if phase_next :
             root_traj = trajectories.TrajectorySE3LinearInterp(SE3FromConfig(phase.reference_configurations[0]),SE3FromConfig(phase_next.reference_configurations[0]),time_interval)
@@ -357,11 +377,14 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
                 sampleCom.pos(com_desired)
                 sampleCom.vel(vcom_desired)
                 sampleCom.acc(acom_desired)
-                #print "com desired : ",com_desired.T
                 comTask.setReference(sampleCom)
                 
                 # am 
                 sampleAM = trajAM.computeNext()
+                L_desired = am_traj(t)[0]
+                dL_desired = am_traj(t)[1] 
+                sampleAM.pos(L_desired)
+                sampleAM.vel(dL_desired)
                 amTask.setReference(sampleAM)
                 
                 # posture
