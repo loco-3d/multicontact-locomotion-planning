@@ -210,16 +210,17 @@ def plotKneeTorque(timeline,p_intervals,tau):
     ax.legend()
     
 def saveAllFigures(): 
-    plt.rcParams['axes.linewidth'] = plt.rcParams['font.size'] / 30.
     path_dir = cfg.OUTPUT_DIR+"/plot/"+cfg.DEMO_NAME
     if not os.path.exists(path_dir):
         os.makedirs(path_dir)
     for i in plt.get_fignums():
         fig = plt.figure(i)
-        fig.savefig(path_dir+"/"+str(fig._suptitle.get_text())+".eps",dpi=3000)
+        fig.savefig(path_dir+"/"+str(fig._suptitle.get_text())+".eps",dpi=600)
 
 def plotALLFromWB(cs,res):
     print "Plotting ..."
+    plt.rcParams['axes.linewidth'] = plt.rcParams['font.size'] / 30.
+    plt.rcParams['lines.linewidth'] = plt.rcParams['font.size'] / 30.    
     if cfg.IK_store_effector:
         plotEffectorTraj(res.t_t,res.phases_intervals,res.effector_references,res.effector_trajectories)
     if cfg.IK_store_centroidal:
