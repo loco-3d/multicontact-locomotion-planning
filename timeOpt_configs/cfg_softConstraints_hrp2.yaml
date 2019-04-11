@@ -21,11 +21,11 @@ planner_variables:
   eff_offset_lf: [ 0.00,  0.00,  0.00]
   eff_offset_rh: [ 0.0,  -0.15,  0.45]
   eff_offset_lh: [ 0.0,  0.15,  0.45]
-  cop_range_rf: [-0.005,  0.005, -0.005,  0.005]
-  cop_range_lf: [-0.005,  0.005, -0.005,  0.005]
+  cop_range_rf: [-0.002,  0.002, -0.002,  0.002]
+  cop_range_lf: [-0.002,  0.002, -0.002,  0.002]
   cop_range_rh: [-0.01,  0.01, -0.01,  0.01]
   cop_range_lh: [-0.01,  0.01, -0.01,  0.01]
-  max_eef_lengths: [0.78,  0.78,  0.6,  0.6]
+  max_eef_lengths: [0.68,  0.68,  0.6,  0.6]
 
   w_trq_arm:       1.000
   w_trq_leg:       1.000
