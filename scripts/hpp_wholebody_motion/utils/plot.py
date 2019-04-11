@@ -1,14 +1,16 @@
 
 import numpy as np
+import os
 import pinocchio as se3
 from pinocchio import SE3
 from hpp_wholebody_motion.utils.util import *
 import hpp_wholebody_motion.config as cfg
-from mpl_toolkits.mplot3d import Axes3D
+import matplotlib
+matplotlib.use("Qt4agg")
 import matplotlib.pyplot as plt
 from multiprocessing import Process
-from hpp_wholebody_motion.utils.computation_tools import computeZMP
-plt.ion()
+from hpp_wholebody_motion.utils.computation_tools import computeZMP,computeZMPRef
+plt.ioff()
 
 
 def show(plt):
@@ -18,7 +20,10 @@ def show_non_blocking(plt):
     p = Process(target=show,args= ([plt]))
     p.start()   
 
-
+def addVerticalLineContactSwitch(timeline,intervals,plt,linestyle="-.",color='k'):
+    plt.axvline(timeline[intervals[0][0]],linestyle=linestyle,color=color)    
+    for interval in intervals:
+        plt.axvline(timeline[interval[-1]],linestyle=linestyle,color=color)
 
 def plotEffectorRef(dict_refs):
     labels=["x (m)" , "y (m)" ,"z (m)", "dx (m/s)" , "dy (m/s)" ,"dz (m/s)","ddx (m/s^2)" , "ddy (m/s^2)" ,"ddz (m/s^2)"]
@@ -71,12 +76,10 @@ def plotEffectorRef(dict_refs):
                 ax_sub.set_xlabel('time (s)')
                 ax_sub.set_ylabel(labels[i*3 + j])
                 ax_sub.grid(True)
-    plt.draw()
     #show_non_blocking(plt)
-    plt.show()
     
 
-def plotEffectorError(timeline,eff_error_dict):
+def plotEffectorError(timeline,p_intervals,eff_error_dict):
     labels=["x (m)" , "y (m)" ,"z (m)"]
     colors = ['r','g','b']    
     for eeName,error in eff_error_dict.iteritems():
@@ -88,11 +91,11 @@ def plotEffectorError(timeline,eff_error_dict):
                 ax_sub.plot(timeline.T, error[i,:].T, color=colors[i])
                 ax_sub.set_xlabel('time (s)')
                 ax_sub.set_ylabel(labels[i])
-                ax_sub.grid(True)    
+                ax_sub.yaxis.grid()    
+                addVerticalLineContactSwitch(timeline.T,p_intervals,ax_sub)
     
     
-    
-def plotCOMError(timeline,error):
+def plotCOMError(timeline,p_intervals,error):
     labels=["x (m)" , "y (m)" ,"z (m)"]
     colors = ['r','g','b']
     fig, ax = plt.subplots(3,1)
@@ -103,19 +106,21 @@ def plotCOMError(timeline,error):
             ax_sub.plot(timeline.T, error[i,:].T, color=colors[i])
             ax_sub.set_xlabel('time (s)')
             ax_sub.set_ylabel(labels[i])
-            ax_sub.grid(True)    
+            ax_sub.yaxis.grid()    
+            addVerticalLineContactSwitch(timeline.T,p_intervals,ax_sub)
 
 
-def plotZMP(cs,ZMP_t,pcom_t):
+def plotZMP(cs,ZMP_t,ZMP_ref,pcom_t):
     fig = plt.figure("ZMP-CoM (xy)")
     ax=fig.gca()
-    plt.title("red = CoM ; black = ZMP ; green = feet placements")    
+    plt.suptitle("ZMP-CoM (xy) red = CoM ; black = ZMP (dashed = reference); green = feet placements")    
     plt.plot(ZMP_t[0,:].T,ZMP_t[1,:].T,color='k')
+    plt.plot(ZMP_ref[0,:].T,ZMP_ref[1,:].T,color='k',linestyle=':')    
     plt.plot(pcom_t[0,:].T,pcom_t[1,:].T,color='r')
     plt.xlabel("x position (m)")
     plt.ylabel("y position (m)")
     plt.axis('equal')
-  
+    plt.grid(True)
     for p in cs.contact_phases:
         # plot x for the center of the feets contact, 
         # and a circle of 1cm of radius around it (size of the flexibility) :
@@ -128,10 +133,7 @@ def plotZMP(cs,ZMP_t,pcom_t):
         ax.add_artist(circle_r)
         ax.add_artist(circle_l)
       
-    plt.draw()
-    plt.show()  
-
-def plotEffectorTraj(timeline,ref_dict,traj_dict):
+def plotEffectorTraj(timeline,p_intervals,ref_dict,traj_dict):
     labels=["x (m)" , "y (m)" ,"z (m)"]
     colors = ['r','g','b']    
     for eeName,traj in traj_dict.iteritems():
@@ -144,10 +146,11 @@ def plotEffectorTraj(timeline,ref_dict,traj_dict):
                 ax_sub.plot(timeline.T, ref_dict[eeName][i,:].T, color=colors[i],linestyle=":")                
                 ax_sub.set_xlabel('time (s)')
                 ax_sub.set_ylabel(labels[i])
-                ax_sub.grid(True)    
+                ax_sub.yaxis.grid()    
+                addVerticalLineContactSwitch(timeline.T,p_intervals,ax_sub)
 
     
-def plotCOMTraj(timeline,ref_c,ref_dc,ref_ddc,c_t,dc_t,ddc_t):
+def plotCOMTraj(timeline,p_intervals,ref_c,ref_dc,ref_ddc,c_t,dc_t,ddc_t):
     labels=["x (m)" , "y (m)" ,"z (m)", "dx (m/s)" , "dy (m/s)" ,"dz (m/s)","ddx (m/s^2)" , "ddy (m/s^2)" ,"ddz (m/s^2)"]
     colors = ['r','g','b']    
     fig, ax = plt.subplots(3,3)
@@ -167,17 +170,20 @@ def plotCOMTraj(timeline,ref_c,ref_dc,ref_ddc,c_t,dc_t,ddc_t):
                 ax_sub.plot(timeline.T, ref_ddc[j,:].T, color=colors[j],linestyle=":")                                
             ax_sub.set_xlabel('time (s)')
             ax_sub.set_ylabel(labels[i*3 + j])
-            ax_sub.grid(True)    
+            ax_sub.yaxis.grid()    
+            addVerticalLineContactSwitch(timeline.T,p_intervals,ax_sub)
+            
     return
 
-def plotContactForces(timeline,forces_dict,N):
+def plotContactForces(timeline,p_intervals,forces_dict,N):
     colors = ['r','g','b','y']  
     fig = plt.figure("Contact normal force")
-    plt.title("Contact normal force")
+    plt.suptitle("Contact normal force")
     ax=fig.gca() 
     ax.set_xlabel('time (s)')
     ax.set_ylabel("Contact normal force (N)")  
-    ax.grid(True)        
+    ax.yaxis.grid() 
+    addVerticalLineContactSwitch(timeline.T,p_intervals,ax)
     i = 0
     sum_f = np.matrix(np.zeros([1,N]))
     
@@ -189,16 +195,45 @@ def plotContactForces(timeline,forces_dict,N):
     ax.plot(timeline.T, sum_f[0,:].T, color="k",label = "sum")
     ax.legend()
 
+def plotKneeTorque(timeline,p_intervals,tau):
+    offset = 6 + (cfg.nq - cfg.nv) # remove freeflyer and addition difference between config and DOF size
+    colors = ['r','g','b','y']  
+    fig = plt.figure("Knee torque")
+    plt.suptitle("Knee torque")
+    ax=fig.gca() 
+    ax.set_xlabel('time (s)')
+    ax.set_ylabel("Torque")  
+    ax.yaxis.grid()    
+    addVerticalLineContactSwitch(timeline.T,p_intervals,ax)    
+    for k,name in enumerate(cfg.Robot.kneeIds.keys()) : 
+        ax.plot(timeline.T, tau[cfg.Robot.kneeIds[name]-offset,:].T, color=colors[k],label = name)
+    ax.legend()
+    
+def saveAllFigures(): 
+    plt.rcParams['axes.linewidth'] = plt.rcParams['font.size'] / 30.
+    path_dir = cfg.OUTPUT_DIR+"/plot/"+cfg.DEMO_NAME
+    if not os.path.exists(path_dir):
+        os.makedirs(path_dir)
+    for i in plt.get_fignums():
+        fig = plt.figure(i)
+        fig.savefig(path_dir+"/"+str(fig._suptitle.get_text())+".eps",dpi=3000)
+
 def plotALLFromWB(cs,res):
+    print "Plotting ..."
     if cfg.IK_store_effector:
-        plotEffectorTraj(res.t_t,res.effector_references,res.effector_trajectories)
+        plotEffectorTraj(res.t_t,res.phases_intervals,res.effector_references,res.effector_trajectories)
     if cfg.IK_store_centroidal:
-        plotCOMTraj(res.t_t,res.c_reference,res.dc_reference,res.ddc_reference,res.c_t,res.dc_t,res.ddc_t)
+        plotCOMTraj(res.t_t,res.phases_intervals,res.c_reference,res.dc_reference,res.ddc_reference,res.c_t,res.dc_t,res.ddc_t)
     if cfg.IK_store_error : 
-        plotCOMError(res.t_t,res.c_tracking_error)
-        plotEffectorError(res.t_t,res.effector_tracking_error)        
-    plotContactForces(res.t_t,res.contact_normal_force,res.N)
+        plotCOMError(res.t_t,res.phases_intervals,res.c_tracking_error)
+        plotEffectorError(res.t_t,res.phases_intervals,res.effector_tracking_error)        
+    plotContactForces(res.t_t,res.phases_intervals,res.contact_normal_force,res.N)
     computeZMP(cs,res)
-    plotZMP(cs,res.zmp_t,res.c_t)
-    plt.draw()
-    plt.show()     
+    computeZMPRef(cs,res)
+    plotZMP(cs,res.zmp_t,res.zmp_reference,res.c_t)
+    plotKneeTorque(res.t_t,res.phases_intervals,res.tau_t)
+    if cfg.DISPLAY_PLOT:
+        plt.show(block = False)
+    if cfg.SAVE_PLOT:
+        saveAllFigures()
+    print "Plotting Done."
