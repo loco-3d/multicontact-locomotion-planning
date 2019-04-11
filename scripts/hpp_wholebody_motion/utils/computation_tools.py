@@ -91,7 +91,7 @@ def shiftZMPtoFloorAltitude(cs,t,phi0):
     
 # not generic ! only consider feet 
 # (not a problem as we only call it for openHRP)
-def computeRefZMP(cs,time_t,wrench_t):
+def computeZMPFromWrench(cs,time_t,wrench_t):
     
     N = len(time_t)
     ZMP_t = np.matrix(np.empty((3,N)))
@@ -125,5 +125,22 @@ def computeWrench(res):
 
 def computeZMP(cs,res):
     res = computeWrench(res)
-    res.zmp_t = computeRefZMP(cs,res.t_t,res.wrench_t)
+    res.zmp_t = computeZMPFromWrench(cs,res.t_t,res.wrench_t)
     return res
+
+# compute wrench F0 from centroidal data
+def computeWrenchRef(res):
+    Mcom = SE3.Identity()
+    for k,t in enumerate(res.t_t):
+        Mcom.translation = res.c_reference[:,k]
+        Fcom = Force.Zero()
+        Fcom.linear = cfg.MASS*(res.ddc_reference[:,k] - cfg.GRAVITY)
+        Fcom.angular = res.dL_reference[:,k]
+        F0 = Mcom.act(Fcom)
+        res.wrench_reference[:,k] = F0.vector
+    return res
+
+def computeZMPRef(cs,res):
+    res = computeWrenchRef(res)
+    res.zmp_reference = computeZMPFromWrench(cs,res.t_t,res.wrench_reference)
+    return res    
