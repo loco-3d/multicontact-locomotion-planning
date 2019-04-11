@@ -10,6 +10,8 @@ DURATION_DS = 0.8
 DURATION_TS = 0.8
 DURATION_QS = 0.3
 
+COM_SHIFT_Z = -0.02
+TIME_SHIFT_COM = 1.
 
 ## Settings for end effectors : 
 EFF_T_PREDEF = 0.1

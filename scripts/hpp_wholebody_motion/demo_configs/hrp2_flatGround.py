@@ -13,6 +13,3 @@ COM_SHIFT_Z = -0.05
 TIME_SHIFT_COM = 1.
 
 
-## Settings for end effectors : 
-EFF_T_PREDEF = 0.3
-p_max = 0.1

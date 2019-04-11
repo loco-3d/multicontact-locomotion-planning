@@ -3,7 +3,7 @@ MASS = 30.47 # cannot retrieve it from urdf because the file is not parsed here 
 
 ## weight and gains used by TSID
 
-fMin = 5.0                      # minimum normal force
+fMin = 1.0                      # minimum normal force
 fMax = 1000.0                  # maximum normal force
 w_com = 1.0                     # weight of center of mass task
 w_posture = 0.75                 # weight of joint posture task
@@ -19,3 +19,4 @@ kp_Eff = 3000.0                 # proportional gain ofthe effectors motion task
 import numpy as np
 gain_vector = np.matrix(np.ones(24)).T
 masks_posture = np.matrix(np.zeros(24)).T
+

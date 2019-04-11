@@ -1,16 +1,17 @@
 ## PATHS settings : 
-
+import numpy as np
 import os
 PKG_PATH = os.environ['DEVEL_HPP_DIR']+"/src/hpp-wholebody-motion"
 OUTPUT_DIR = PKG_PATH+"/res"
 CONTACT_SEQUENCE_PATH = OUTPUT_DIR + "/contact_sequences"
 TIME_OPT_CONFIG_PATH = PKG_PATH +'/timeOpt_configs'
 LOAD_CS = True
-LOAD_CS_COM = True
+LOAD_CS_COM = False
 SAVE_CS = not LOAD_CS and True 
 SAVE_CS_COM = not LOAD_CS_COM and True
 EXPORT_GAZEBO = False
 EXPORT_OPENHRP = True
+openHRP_useZMPref = False
 EXPORT_PATH = OUTPUT_DIR+"/export"
 
 ##DISPLAY settings : 
@@ -23,12 +24,15 @@ DISPLAY_FEET_TRAJ = True
 DISPLAY_WB_MOTION = False
 DT_DISPLAY = 0.05 # dt used to display the wb motion
 PLOT = True
+DISPLAY_PLOT = False
+SAVE_PLOT = True
 
 ###  Settings for generate_contact_sequence
 FORCE_STRAIGHT_LINE = False # DEBUG ONLY should be false
 
 ### Settings for centroidal script :
 MU=0.5
+GRAVITY = np.matrix([0,0,-9.81]).T
 USE_GEOM_INIT_GUESS = True
 USE_CROC_INIT_GUESS = False
 assert USE_GEOM_INIT_GUESS != USE_CROC_INIT_GUESS , "You must choose exactly one initial guess"

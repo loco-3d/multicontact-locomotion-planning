@@ -1,5 +1,5 @@
 from hpp.corbaserver.rbprm.hyq_contact6D import Robot
-MASS = 50.27
+MASS = 76.07
 
 ## weight and gains used by TSID
 

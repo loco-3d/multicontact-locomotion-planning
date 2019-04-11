@@ -9,7 +9,3 @@ DURATION_SS =1.4
 DURATION_DS = 0.3
 DURATION_TS = 0.4
 
-
-## Settings for end effectors : 
-EFF_T_PREDEF = 0.3
-p_max = 0.1
