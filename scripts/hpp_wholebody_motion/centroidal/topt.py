@@ -9,7 +9,7 @@ import hpp_wholebody_motion.config as cfg
 import hpp_wholebody_motion.viewer.display_tools as display
 from hpp_wholebody_motion.utils.util import *
 
-CONTACT_ANKLE_LEVEL = True
+CONTACT_ANKLE_LEVEL = True # probably only required for hrp2, as the center of the feet is not the center of the flexibility ...
 
 def isContactEverActive(cs,eeName):
     for phase in cs.contact_phases:
@@ -231,23 +231,32 @@ def generateLinearInterpTraj(phase,duration,t_total):
     com0 = phase.init_state[0:3]
     com1 = phase.final_state[0:3]
     vel = (com1-com0)/duration
-    am = np.matrix(np.zeros(3)).T
+    acc = np.matrix(np.zeros(3)).T
+    L = np.matrix(np.zeros(3)).T
+    dL = np.matrix(np.zeros(3)).T
+    state = np.matrix(np.zeros(9)).T
+    control = np.matrix(np.zeros(6)).T    
     t = 0.
     while t < duration - 0.0001 :
         u = t/duration
-        state = np.matrix(np.zeros(9)).T            
         com = com0*(1.-u) + com1*(u)
         state[0:3] = com
         state[3:6] = vel
-        state[6:9] = am
+        state[6:9] = L
+        control[0:3] = acc
+        control[3:6] = dL
         phase.state_trajectory.append(state)
+        phase.control_trajectory.append(control)        
         phase.time_trajectory.append(t_total)
         t += cfg.SOLVER_DT
         t_total +=cfg.SOLVER_DT
     state[0:3] = com1
     state[3:6] = vel
-    state[6:9] = am
+    state[6:9] = L
+    control[0:3] = acc
+    control[3:6] = dL    
     phase.state_trajectory.append(state)
+    phase.control_trajectory.append(control)            
     phase.time_trajectory.append(t_total)
     return phase
 
