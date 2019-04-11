@@ -21,7 +21,7 @@ import eigenpy
 import quadprog
 import bezier_predef
 import limb_rrt
-from hpp_wholebody_motion.utils.util import  se3FromConfig,distPointLine
+from hpp_wholebody_motion.utils.util import  SE3FromConfig,distPointLine
 eigenpy.switchToNumpyArray()
 
 
@@ -500,7 +500,7 @@ def computeInequalitiesAroundLine(fullBody,p_from,p_to,eeName,groupName,viewer):
 def contactPlacementFromConfig(fullBody,q,eeName):
     fullBody.setCurrentConfig(q)
     q = fullBody.getJointPosition(eeName)
-    p = se3FromConfig(q)
+    p = SE3FromConfig(q)
     # transform to contact position (from joint position)
     # p*=cfg.Robot.dict_offset[eeName] # test ??
     tr = p.translation + cfg.Robot.dict_offset[eeName].translation
