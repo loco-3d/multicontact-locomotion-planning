@@ -72,13 +72,13 @@ else :
 
 if cfg.DISPLAY_WB_MOTION:
     raw_input("Press Enter to display the whole body motion ...")
-    display_tools.displayWBmotion(v,q_t,cfg.IK_dt,cfg.DT_DISPLAY)
+    display_tools.displayWBmotion(v,res.q_t,cfg.IK_dt,cfg.DT_DISPLAY)
 
 if cfg.CHECK_FINAL_MOTION :
     from hpp_wholebody_motion.utils import check_path
     print "## Begin validation of the final motion (collision and joint-limits)"
     validator = check_path.PathChecker(v,cp.fullBody,cs_com,len(q_t[0]),True)
-    motion_valid,t_invalid = validator.check_motion(q_t)
+    motion_valid,t_invalid = validator.check_motion(res.q_t)
     print "## Check final motion, valid = ",motion_valid
     if not motion_valid:
         print "## First invalid time : ",t_invalid
@@ -103,8 +103,8 @@ def dispCS(step = 0.2):
     rbprmDisplay.displayContactSequence(v,cp.configs,step)
     
 def dispWB():
-    display_tools.displayWBmotion(v,q_t,cfg.IK_dt,cfg.DT_DISPLAY)
-    
+    display_tools.displayWBmotion(v,res.q_t,cfg.IK_dt,cfg.DT_DISPLAY)
+ 
 """
 #record gepetto-viewer 
 v.startCapture("capture/capture","png")
