@@ -24,7 +24,7 @@ if cfg.USE_CONSTRAINED_BEZIER:
     
     
 def createContactForEffector(invdyn,robot,phase,eeName):
-    size = cfg.Robot.dict_size[eeName]
+    size = cfg.IK_eff_size[eeName]
     transform = cfg.Robot.dict_offset[eeName]          
     lxp = size[0]/2. + transform.translation[0,0]  # foot length in positive x direction
     lxn = size[0]/2. - transform.translation[0,0]  # foot length in negative x direction
