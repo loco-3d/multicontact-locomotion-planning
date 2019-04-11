@@ -20,10 +20,13 @@ class Result:
         self.c_tracking_error = np.matrix(np.zeros([3,N]))
         self.c_reference = np.matrix(np.zeros([3,N]))
         self.dc_reference = np.matrix(np.zeros([3,N]))
-        self.ddc_reference = np.matrix(np.zeros([3,N]))        
+        self.ddc_reference = np.matrix(np.zeros([3,N])) 
+        self.L_reference = np.matrix(np.zeros([3,N]))
+        self.dL_reference = np.matrix(np.zeros([3,N]))        
         self.wrench_t = np.matrix(np.zeros([6,N]))
-        self.zmp_t = np.matrix(np.zeros([6,N]))
-        
+        self.wrench_reference = np.matrix(np.zeros([6,N]))        
+        self.zmp_t = np.matrix(np.zeros([3,N]))
+        self.zmp_reference = np.matrix(np.zeros([3,N]))
         if len(eeNames)==0:
             eeNames = cfg.Robot.dict_limb_joint.values()
         self.eeNames = eeNames
@@ -64,7 +67,7 @@ class Result:
                 new_intervals+= [interval]
             else :
                 n = N - interval[0]
-                reduced_interval = interval[:n+1]
+                reduced_interval = interval[:n]
                 new_intervals += [reduced_interval]
                 break
         return new_intervals
@@ -85,9 +88,13 @@ class Result:
         self.c_tracking_error[:,k] =other.c_tracking_error[:,k_other]
         self.c_reference[:,k] =other.c_reference[:,k_other]
         self.dc_reference[:,k] =other.dc_reference[:,k_other] 
-        self.ddc_reference[:,k] =other.ddc_reference[:,k_other]        
+        self.ddc_reference[:,k] =other.ddc_reference[:,k_other]
+        self.L_reference[:,k] =other.L_t[:,k_other]
+        self.dL_reference[:,k] =other.dL_t[:,k_other]        
         self.wrench_t[:,k] =other.wrench_t[:,k_other]
-        self.zmp_t[:,k] =other.zmp_t[:,k_other]
+        self.zmp_reference[:,k] =other.zmp_t[:,k_other]
+        self.wrench_reference[:,k] =other.wrench_t[:,k_other]
+        self.zmp_t[:,k] =other.zmp_t[:,k_other]        
         for ee in self.eeNames : 
             self.contact_forces[ee][:,k] =other.contact_forces[ee][:,k_other]
             self.contact_normal_force[ee][:,k] = other.contact_normal_force[ee][:,k_other]            
@@ -112,9 +119,13 @@ class Result:
         self.c_tracking_error = self.c_tracking_error[:,:N]
         self.c_reference = self.c_reference[:,:N]
         self.dc_reference = self.dc_reference[:,:N]
-        self.ddc_reference = self.ddc_reference[:,:N]        
+        self.ddc_reference = self.ddc_reference[:,:N]
+        self.L_reference = self.L_t[:,:N]
+        self.dL_reference = self.dL_t[:,:N]        
         self.wrench_t = self.wrench_t[:,:N]
-        self.zmp_t = self.zmp_t[:,:N]      
+        self.zmp_t = self.zmp_t[:,:N] 
+        self.wrench_reference = self.wrench_t[:,:N]
+        self.zmp_reference = self.zmp_t[:,:N]        
         for ee in self.eeNames : 
             self.contact_forces[ee] = self.contact_forces[ee][:,:N]     
             self.contact_normal_force[ee] = self.contact_normal_force[ee][:,:N]                            
