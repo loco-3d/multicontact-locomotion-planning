@@ -26,94 +26,27 @@ l_leg = range(25,31)
 r_leg = range(31,37)
 
 
-def computeResultTrajectory(robot,cs, t_t,q_t, v_t, a_t):
-    # start by adapting the time step between the IK and the the one of open hrp (0.005)
-    assert DT>= cfg.IK_dt and "The dt used when computing q(t) must be superior or equal to 0.005 for this export."
-    assert (DT % cfg.IK_dt)==0 and "The dt used when computing q(t) must be a multiple of 0.005."
-    N = len(t_t)
-    #print "Export openHRP, ratio between dt :  ",n
-    #print "Num point for IK : ",N_ik
-    #print "Num point for openHRP : ",N 
-    # build timeline vector : 
-    #print "timeline size : ",len(t_t)
+def computeWaistData(robot,res):
+    N = len(res.t_t)
+   
     model = robot.model
     data = robot.data
 
-    waist_t = np.matrix(np.zeros([3,N]))
-    pcom_t = np.matrix(np.empty([3,N]))
-    vcom_t = np.matrix(np.empty([3,N]))
-    acom_t = np.matrix(np.empty([3,N]))
-    tau_t = np.matrix(np.empty([robot.nv,N]))
-
-    wrench_t = np.matrix(np.empty([6,N]))
-
-    waist_orientation_t = np.matrix(np.empty([3,N]))
-
-    # Sample end effector traj
-    ee_t = dict()
-    for limb_name in cfg.Robot.limbs_names:
-        ee_t[cfg.Robot.dict_limb_joint[limb_name]] = []
-        
-    ee_names = list(ee_t.viewkeys())
+    res.waist_t = np.matrix(np.zeros([3,N]))
+    res.waist_orientation_t = np.matrix(np.empty([3,N]))
 
     for k in range(N):
-        q = q_t[:,k]
-        v = v_t[:,k]
-        a = a_t[:,k]
+        q = res.q_t[:,k]
+        v = res.dq_t[:,k]
+        a = res.ddq_t[:,k]
 
-        #M = robot.mass(q)
-        #b = robot.biais(q,v)
-
-        #robot.dynamics(q,v,0*v)
         se3.rnea(model,data,q,v,a)
-        #se3.forwardKinematics(model,data,q)
-        #robot.computeJacobians(q)
-
         pcom, vcom, acom = robot.com(q,v,a)
-
-        # Update EE placements
-        for ee in ee_names:
-            #ee_t[ee].append(Mee[ee](q,update_kinematics=False).copy())
-            ee_t[ee].append(robot.placement(q, model.getJointId(ee)).copy())
-
-        # Update CoM data
-        pcom_t[:,k] = pcom
-        vcom_t[:,k] = vcom
-        acom_t[:,k] = acom
-
-        #oXi_s = robot.data.oMi[1].inverse().np.T
-        #phi0 = oXi_s * (M[:6,:] * a + b[:6])
-        tau_t[:,k] = data.tau
-        phi0 = data.oMi[1].act(se3.Force(data.tau[:6]))
-        wrench_t[:,k] = phi0.vector
-        #print "openhrp, wrench = ",phi0.vector
-        #ZMP_t[:,k] = shiftZMPtoFloorAltitude(cs,t_t[k],phi0)
-
-        waist_t[:,k] = robot.data.oMi[1].translation
-        waist_orientation_t[:,k] = matrixToRpy(robot.data.oMi[1].rotation)
-
-    result = Struct()
-
-    result.t_t = t_t
-    result.waist_t = waist_t
-    result.waist_orientation_t = waist_orientation_t
-
-    result.pcom_t = pcom_t
-    result.vcom_t = vcom_t
-    result.acom_t = acom_t
-
-    result.wrench_t = wrench_t
-    result.tau_t = tau_t
-
-    result.q_t = q_t
-    result.v_t = v_t
-    result.a_t = a_t
-
-    result.ee_t = ee_t
-    
-    result.ZMP_t = computeRefZMP(cs,t_t,wrench_t)
         
-    return result
+        res.waist_t[:,k] = robot.data.oMi[1].translation
+        res.waist_orientation_t[:,k] = matrixToRpy(robot.data.oMi[1].rotation)
+
+    return res
 
 def writeOpenHRPConfig(robot,q,t=0.):
     def write_vector(vector, delim):
@@ -159,15 +92,19 @@ def writeOpenHRPConfig(robot,q,t=0.):
 
     return q_openhrp,line
 
-def generateOpenHRPMotion(robot, data, path, project_name):
+def generateOpenHRPMotion(res, path, project_name,useRefZMP = False):
     def write_vector(vector, delim):
         line = ""
         for k in range(vector.shape[0]):
             line += delim + str(vector[k,0])
 
         return line
-    
-    timeline = data.t_t
+    if useRefZMP:
+        ZMP_t = res.zmp_reference
+    else:
+        ZMP_t = res.zmp_t
+        
+    timeline = res.t_t
     N = len(timeline)
     print "in generateOpenHRPMotion, N= ",N
     dt = DT
@@ -181,7 +118,7 @@ def generateOpenHRPMotion(robot, data, path, project_name):
     filename_zmp = filename_prefix + '.zmp'
     file_zmp = open(filename_zmp, "w")
 
-    ZMP_waist = data.ZMP_t - data.waist_t
+    ZMP_waist = ZMP_t - res.waist_t
 
     for k in range(N):
         line = str(timeline[k])
@@ -203,28 +140,28 @@ def generateOpenHRPMotion(robot, data, path, project_name):
         q_openhrp = []
 
         # RL
-        line += write_vector(data.q_t[r_leg,k], delim)
-        q_openhrp.append(data.q_t[r_leg,k].tolist())
+        line += write_vector(res.q_t[r_leg,k], delim)
+        q_openhrp.append(res.q_t[r_leg,k].tolist())
 
         # LL
-        line += write_vector(data.q_t[l_leg,k], delim)
-        q_openhrp.append(data.q_t[l_leg,k].tolist())
+        line += write_vector(res.q_t[l_leg,k], delim)
+        q_openhrp.append(res.q_t[l_leg,k].tolist())
 
         # Chest
-        line += write_vector(data.q_t[chest,k], delim)
-        q_openhrp.append(data.q_t[chest,k].tolist())
+        line += write_vector(res.q_t[chest,k], delim)
+        q_openhrp.append(res.q_t[chest,k].tolist())
 
         # Head
-        line += write_vector(data.q_t[head,k], delim)
-        q_openhrp.append(data.q_t[head,k].tolist())
+        line += write_vector(res.q_t[head,k], delim)
+        q_openhrp.append(res.q_t[head,k].tolist())
 
         # RA
-        line += write_vector(data.q_t[r_arm,k], delim)
-        q_openhrp.append(data.q_t[r_arm,k].tolist())
+        line += write_vector(res.q_t[r_arm,k], delim)
+        q_openhrp.append(res.q_t[r_arm,k].tolist())
 
         # LA
-        line += write_vector(data.q_t[l_arm,k], delim)
-        q_openhrp.append(data.q_t[l_arm,k].tolist())
+        line += write_vector(res.q_t[l_arm,k], delim)
+        q_openhrp.append(res.q_t[l_arm,k].tolist())
 
         # Fingers
         line += write_vector(np.matrix(np.zeros([10,1])), delim)
@@ -245,7 +182,7 @@ def generateOpenHRPMotion(robot, data, path, project_name):
     for k in range(N):
         line = str(timeline[k])
 
-        line += write_vector(data.waist_orientation_t[:,k], delim)
+        line += write_vector(res.waist_orientation_t[:,k], delim)
 
         line += eol
         file_hip.write(line)
@@ -255,7 +192,7 @@ def generateOpenHRPMotion(robot, data, path, project_name):
     return qout_l
 
 
-def writeKinematicsData(robot, data, path, project_name):
+def writeKinematicsData(res, path, project_name):
     def write_vector(vector, delim):
         line = ""
         for k in range(vector.shape[0]):
@@ -263,7 +200,7 @@ def writeKinematicsData(robot, data, path, project_name):
 
         return line
 
-    timeline = data.t_t
+    timeline = res.t_t
     N = len(timeline)
     print "in write kinematic, number of points : ",N
     dt = DT
@@ -278,7 +215,7 @@ def writeKinematicsData(robot, data, path, project_name):
 
     for k in range(N):
         line = str(timeline[k])
-        line += write_vector(data.q_t[:,k], delim)
+        line += write_vector(res.q_t[:,k], delim)
         line += eol
         file_config.write(line)
 
@@ -291,7 +228,7 @@ def writeKinematicsData(robot, data, path, project_name):
 
     for k in range(N):
         line = str(timeline[k])
-        line += write_vector(data.v_t[:,k], delim)
+        line += write_vector(res.dq_t[:,k], delim)
         line += eol
         file_vel.write(line)
 
@@ -304,7 +241,7 @@ def writeKinematicsData(robot, data, path, project_name):
 
     for k in range(N):
         line = str(timeline[k])
-        line += write_vector(data.a_t[:,k], delim)
+        line += write_vector(res.ddq_t[:,k], delim)
         line += eol
         file_acc.write(line)
 
@@ -322,8 +259,10 @@ def export(cs,res):
     if cfg.WB_VERBOSE:
         print "robot loaded in export OpenHRP"    
   
-    results = computeResultTrajectory(robot,cs,res.t_t, res.q_t, res.dq_t, res.ddq_t)
-    path = cfg.EXPORT_PATH+"/openHRP"
-    q_openhrp_l = generateOpenHRPMotion(robot, results, path, cfg.DEMO_NAME)
-    writeKinematicsData(robot, results, path, cfg.DEMO_NAME)
+    results = computeWaistData(robot,res)
+    path = cfg.EXPORT_PATH+"/openHRP/"+cfg.DEMO_NAME
+    if not os.path.exists(path):
+        os.makedirs(path)    
+    q_openhrp_l = generateOpenHRPMotion(results, path, cfg.DEMO_NAME,useRefZMP=cfg.openHRP_useZMPref)
+    writeKinematicsData(results, path, cfg.DEMO_NAME)
     
