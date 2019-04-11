@@ -273,7 +273,7 @@ class SmoothedFootTrajectory(object):
             nz = 7  # number of coefficients for polynome on z
             Pz = np.zeros([nz, nz])
             # Position
-            Pz[0, 0] = 1.
+            Pz[0, 0] = 1.	
             Pz[1, :] += 1.
             # Velocity
             Pz[2, 1] = 1.
@@ -509,7 +509,7 @@ class TwiceDifferentiableEuclidianTrajectory(RefTrajectory):
     return self._dim
 
   def computeFromPoints(self, timeline, p_points, v_points, a_points):
-    print p_points
+    #print p_points
     m_p, n_p = p_points.shape
     m_v, n_v = v_points.shape
     m_a, n_a = a_points.shape
