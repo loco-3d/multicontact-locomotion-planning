@@ -77,7 +77,7 @@ if cfg.DISPLAY_WB_MOTION:
 if cfg.CHECK_FINAL_MOTION :
     from hpp_wholebody_motion.utils import check_path
     print "## Begin validation of the final motion (collision and joint-limits)"
-    validator = check_path.PathChecker(v,cp.fullBody,cs_com,len(q_t[0]),True)
+    validator = check_path.PathChecker(v,cp.fullBody,cs_com,cfg.nq,True)
     motion_valid,t_invalid = validator.check_motion(res.q_t)
     print "## Check final motion, valid = ",motion_valid
     if not motion_valid:

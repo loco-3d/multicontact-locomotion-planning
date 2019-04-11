@@ -6,11 +6,11 @@ import numpy as np
 
 class PathChecker():
     
-    def __init__(self,r,fullBody,cs,sizeQ,verbose = False):
+    def __init__(self,r,fullBody,cs,nq,verbose = False):
         self.r = r
         self.cs = cs
         self.fullBody = fullBody # with effector collision disabled
-        self.sizeQ = sizeQ
+        self.nq = nq # without extradof, size of configs in q_t 
         self.configSize = fullBody.getConfigSize()
         self.dt = cfg.IK_dt
         self.verbose = verbose
@@ -20,7 +20,7 @@ class PathChecker():
     # return valid,message  : valid = bool, message = string
     def checkConfig(self,q_m):
         q = [0]*self.configSize
-        q[:self.sizeQ] = q_m.T.tolist()[0]
+        q[:self.nq] = q_m.T.tolist()[0]
         res = self.fullBody.isConfigValid(q)
         return res[0],res[1]
     
@@ -50,8 +50,8 @@ class PathChecker():
     def check_motion(self,q_t):
         always_valid = True
         first_invalid = None
-        for i in range(len(q_t)):
-            valid,mess = self.checkConfig(q_t[i])
+        for i in range(q_t.shape[1]):
+            valid,mess = self.checkConfig(q_t[:,i])
             if not valid : 
                 if always_valid : # first invalid config
                     always_valid = False

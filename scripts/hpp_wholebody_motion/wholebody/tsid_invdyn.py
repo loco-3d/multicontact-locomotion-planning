@@ -301,7 +301,8 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
         t_phase_begin = res.phases_intervals[pid][0]*dt
         t_phase_end = res.phases_intervals[pid][-1]*dt
         time_interval = [t_phase_begin, t_phase_end]
-        print "time_interval ",time_interval
+        if cfg.WB_VERBOSE:
+            print "time_interval ",time_interval
         # generate com ref traj from phase : 
         com_init = np.matrix(np.zeros((9, 1)))
         com_init[0:3, 0] = robot.com(invdyn.data())
@@ -436,8 +437,7 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
                 
             # end while t \in phase_t (loop for the current contact phase) 
             if swingPhase and cfg.EFF_CHECK_COLLISION :
-                #phaseValid,t_invalid = validator.check_motion(res.q_t[:,k_begin:k_t]) #FIXME
-                phaseValid = True
+                phaseValid,t_invalid = validator.check_motion(res.q_t[:,phase_interval[0]:k_t]) #FIXME
                 if iter_for_phase > 0:# FIXME : debug only, only allow 1 retry 
                     phaseValid = True
                 if not phaseValid :
