@@ -24,7 +24,7 @@ DISPLAY_FEET_TRAJ = True
 DISPLAY_WB_MOTION = False
 DT_DISPLAY = 0.05 # dt used to display the wb motion
 PLOT = True
-DISPLAY_PLOT = False
+DISPLAY_PLOT = True
 SAVE_PLOT = True
 
 ###  Settings for generate_contact_sequence
@@ -55,11 +55,11 @@ WB_RETURN_INVALID = not WB_ABORT_WHEN_INVALID and True
 ##  Settings for whole body : 
 YAW_ROT_GAIN = 1.
 USE_CROC_COM = False
-WB_VERBOSE = True
+WB_VERBOSE = False
 WB_STOP_AT_EACH_PHASE = False
 IK_dt = 0.001  # controler time step
 IK_PRINT_N = 500  # print state of the problem every IK_PRINT_N time steps (if verbose = True)
-CHECK_FINAL_MOTION = False
+CHECK_FINAL_MOTION = True
 IK_store_centroidal = True
 IK_store_effector = True
 IK_store_error = True
