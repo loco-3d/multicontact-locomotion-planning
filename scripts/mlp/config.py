@@ -1,7 +1,7 @@
 ## PATHS settings : 
 import numpy as np
 import os
-PKG_PATH = os.environ['DEVEL_HPP_DIR']+"/src/hpp-wholebody-motion"
+PKG_PATH = os.environ['DEVEL_HPP_DIR']+"/src/multicontact-locomotion-planning"
 OUTPUT_DIR = PKG_PATH+"/res"
 CONTACT_SEQUENCE_PATH = OUTPUT_DIR + "/contact_sequences"
 TIME_OPT_CONFIG_PATH = PKG_PATH +'/timeOpt_configs'
@@ -11,7 +11,7 @@ SAVE_CS = not LOAD_CS and True
 SAVE_CS_COM = not LOAD_CS_COM and True
 EXPORT_GAZEBO = False
 EXPORT_OPENHRP = True
-openHRP_useZMPref = False
+openHRP_useZMPref = True
 EXPORT_PATH = OUTPUT_DIR+"/export"
 
 ##DISPLAY settings : 
@@ -68,14 +68,14 @@ IK_store_contact_forces = True
 import importlib
 import sys
 if len(sys.argv)<2 : 
-    print "You must call this script with the name of the config file (one of the file contained in hpp_wholebody_motion.demo_config)"
+    print "You must call this script with the name of the config file (one of the file contained in mlp.demo_config)"
     print "Available demo files : "
-    configs_path = PKG_PATH+"/scripts/hpp_wholebody_motion/demo_configs"
+    configs_path = PKG_PATH+"/scripts/mlp/demo_configs"
     demos_list = os.listdir(configs_path)
     for f in demos_list:
         if f.endswith(".py") and not f.startswith("__") : 
             print f.rstrip(".py")
-    raise IOError("You must call this script with the name of the config file (one of the file contained in hpp_wholebody_motion.demo_config)")
+    raise IOError("You must call this script with the name of the config file (one of the file contained in mlp.demo_config)")
     
 import argparse
 parser = argparse.ArgumentParser(description = "todo")
@@ -85,9 +85,9 @@ DEMO_NAME = args.demo_name
 print "# Load demo config : ",DEMO_NAME
 # Import the module
 try :
-    demo_cfg = importlib.import_module('hpp_wholebody_motion.demo_configs.'+DEMO_NAME)
+    demo_cfg = importlib.import_module('mlp.demo_configs.'+DEMO_NAME)
 except ImportError:
-    raise NameError("No demo config file with the given name in hpp_wholebody_motion.demo_config")
+    raise NameError("No demo config file with the given name in mlp.demo_config")
 # Determine a list of names to copy to the current name space
 names = getattr(demo_cfg, '__all__', [n for n in dir(demo_cfg) if not n.startswith('_')])
 # Copy those names into the current name space

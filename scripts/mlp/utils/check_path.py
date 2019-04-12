@@ -1,7 +1,7 @@
 # Copyright 2018, LAAS-CNRS
 # Author: Pierre Fernbach
 
-import hpp_wholebody_motion.config as cfg
+import mlp.config as cfg
 import numpy as np
 
 class PathChecker():

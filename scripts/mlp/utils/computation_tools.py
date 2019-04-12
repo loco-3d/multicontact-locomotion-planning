@@ -2,9 +2,9 @@
 import numpy as np
 import pinocchio as se3
 from pinocchio import SE3, Motion,Force
-from hpp_wholebody_motion.utils.util import *
-import hpp_wholebody_motion.config as cfg
-import hpp_wholebody_motion.utils.trajectories as Trajectories
+from mlp.utils.util import *
+import mlp.config as cfg
+import mlp.utils.trajectories as Trajectories
 from rospkg import RosPack
 from pinocchio.robot_wrapper import RobotWrapper
 

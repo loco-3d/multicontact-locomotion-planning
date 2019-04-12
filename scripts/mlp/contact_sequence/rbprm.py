@@ -2,11 +2,11 @@ import pinocchio as se3
 from pinocchio import SE3, Quaternion
 from pinocchio.utils import *
 import inspect
-import hpp_wholebody_motion.config as cfg
+import mlp.config as cfg
 import locomote
 from locomote import WrenchCone,SOC6,ContactPatch, ContactPhaseHumanoid, ContactSequenceHumanoid
 global i_sphere 
-from hpp_wholebody_motion.utils.util import quatFromConfig
+from mlp.utils.util import quatFromConfig
 
 
 def generateContactSequence(fb,configs,beginId,endId):

@@ -1,11 +1,11 @@
-import hpp_wholebody_motion.config as cfg
+import mlp.config as cfg
 import importlib
 #the following script must produce a sequence of configurations in contact (configs) 
 # with exactly one contact change between each configurations
 # It must also initialise a FullBody object name fullBody and optionnaly a Viewer object named V
 cp = importlib.import_module('scenarios.'+cfg.SCRIPT_PATH+'.'+cfg.DEMO_NAME)
-import hpp_wholebody_motion.contact_sequence.rbprm as generate_cs
-import hpp_wholebody_motion.viewer.display_tools as display_tools
+import mlp.contact_sequence.rbprm as generate_cs
+import mlp.viewer.display_tools as display_tools
 from locomote import ContactSequenceHumanoid
 
 v = cp.v
@@ -34,11 +34,11 @@ if cfg.DISPLAY_CS_STONES :
     
 if cfg.USE_GEOM_INIT_GUESS:
     print "Generate geometric init guess."
-    import hpp_wholebody_motion.centroidal.geometric as initGuess_geom 
+    import mlp.centroidal.geometric as initGuess_geom 
     cs_initGuess = initGuess_geom.generateCentroidalTrajectory(cs)
 if cfg.USE_CROC_INIT_GUESS:
     print "Generate init guess with CROC."
-    import hpp_wholebody_motion.centroidal.croc as initGuess_croc    
+    import mlp.centroidal.croc as initGuess_croc    
     cs_initGuess = initGuess_croc.generateCentroidalTrajectory(cs,cp.fullBody,beginState,endState)
 if cfg.DISPLAY_INIT_GUESS_TRAJ and (cfg.USE_GEOM_INIT_GUESS or cfg.USE_CROC_INIT_GUESS):
     colors = [v.color.red, v.color.yellow]
@@ -49,7 +49,7 @@ if cfg.LOAD_CS_COM :
     filename = cfg.CONTACT_SEQUENCE_PATH + "/"+cfg.DEMO_NAME+"_COM.xml"
     cs_com.loadFromXML(filename, "ContactSequence")     
 else:
-    import hpp_wholebody_motion.centroidal.topt as centroidal
+    import mlp.centroidal.topt as centroidal
     cs_com,tp = centroidal.generateCentroidalTrajectory(cs,cs_initGuess,v)
     print "Duration of the motion : "+str(cs_com.contact_phases[-1].time_trajectory[-1])+" s."
 
@@ -62,7 +62,7 @@ if cfg.DISPLAY_COM_TRAJ:
     colors = [v.color.blue, v.color.green]
     display_tools.displayCOMTrajectory(cs_com,v,colors)
 
-import hpp_wholebody_motion.wholebody.tsid_invdyn as wb
+import mlp.wholebody.tsid_invdyn as wb
 if cfg.USE_CROC_COM:
     assert cfg.USE_CROC_INIT_GUESS, "You must generate CROC initial guess if you want to use it as reference for the COM"  
     res,robot = wb.generateWholeBodyMotion(cs_initGuess,v,cp.fullBody)
@@ -75,7 +75,7 @@ if cfg.DISPLAY_WB_MOTION:
     display_tools.displayWBmotion(v,res.q_t,cfg.IK_dt,cfg.DT_DISPLAY)
 
 if cfg.CHECK_FINAL_MOTION :
-    from hpp_wholebody_motion.utils import check_path
+    from mlp.utils import check_path
     print "## Begin validation of the final motion (collision and joint-limits)"
     validator = check_path.PathChecker(v,cp.fullBody,cs_com,cfg.nq,True)
     motion_valid,t_invalid = validator.check_motion(res.q_t)
@@ -86,14 +86,14 @@ else :
     motion_valid = True
 
 if cfg.PLOT:
-    from hpp_wholebody_motion.utils import plot
+    from mlp.utils import plot
     plot.plotALLFromWB(cs_com,res)
 
 if cfg.EXPORT_OPENHRP and motion_valid:
-    from hpp_wholebody_motion.export import openHRP
+    from mlp.export import openHRP
     openHRP.export(cs_com,res)
 if cfg.EXPORT_GAZEBO and motion_valid:
-    from hpp_wholebody_motion.export import gazebo
+    from mlp.export import gazebo
     gazebo.export(res.q_t)
 
 

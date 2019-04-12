@@ -1,5 +1,5 @@
 import numpy as np
-import hpp_wholebody_motion.config as cfg
+import mlp.config as cfg
 import locomote 
 from locomote import WrenchCone,SOC6,ContactPatch, ContactPhaseHumanoid, ContactSequenceHumanoid
 from hpp_spline import bezier

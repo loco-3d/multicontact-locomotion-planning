@@ -1,4 +1,4 @@
-import hpp_wholebody_motion.config as cfg
+import mlp.config as cfg
 import pinocchio as se3
 from pinocchio import SE3, Quaternion
 import locomote

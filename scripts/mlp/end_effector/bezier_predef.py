@@ -1,7 +1,7 @@
-import hpp_wholebody_motion.config as cfg
+import mlp.config as cfg
 import time
 import os
-from hpp_wholebody_motion.utils.polyBezier import *
+from mlp.utils.polyBezier import *
 import pinocchio as se3
 from pinocchio import SE3
 from pinocchio.utils import *
@@ -12,7 +12,7 @@ from tools.disp_bezier import *
 import hpp_spline
 from hpp_spline import bezier
 import hpp_bezier_com_traj as bezier_com
-from hpp_wholebody_motion.utils import trajectories
+from mlp.utils import trajectories
 
 
 

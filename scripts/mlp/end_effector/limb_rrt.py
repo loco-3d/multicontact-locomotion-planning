@@ -1,4 +1,4 @@
-import hpp_wholebody_motion.config as cfg
+import mlp.config as cfg
 import time
 import os
 import pinocchio as se3

@@ -1,5 +1,5 @@
 import numpy as np
-import hpp_wholebody_motion.config as cfg
+import mlp.config as cfg
 class Result:
     
     nq = cfg.nq

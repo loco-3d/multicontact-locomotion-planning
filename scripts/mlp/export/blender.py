@@ -1,6 +1,6 @@
 import os
-import hpp_wholebody_motion.config as cfg
-import hpp_wholebody_motion.viewer.display_tools as display_tools
+import mlp.config as cfg
+import mlp.viewer.display_tools as display_tools
 
 def export(q_t,v):
     path = cfg.EXPORT_PATH+"/blender"

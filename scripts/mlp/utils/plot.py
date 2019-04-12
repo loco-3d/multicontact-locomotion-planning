@@ -3,13 +3,13 @@ import numpy as np
 import os
 import pinocchio as se3
 from pinocchio import SE3
-from hpp_wholebody_motion.utils.util import *
-import hpp_wholebody_motion.config as cfg
+from mlp.utils.util import *
+import mlp.config as cfg
 import matplotlib
 matplotlib.use("Qt4agg")
 import matplotlib.pyplot as plt
 from multiprocessing import Process
-from hpp_wholebody_motion.utils.computation_tools import computeZMP,computeZMPRef
+from mlp.utils.computation_tools import computeZMP,computeZMPRef
 plt.ioff()
 
 

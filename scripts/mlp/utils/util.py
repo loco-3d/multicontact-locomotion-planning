@@ -3,7 +3,7 @@ import numpy as np
 from numpy import cross
 from numpy.linalg import norm
 from pinocchio import SE3, Quaternion
-import hpp_wholebody_motion.config as cfg
+import mlp.config as cfg
 
 def quatFromConfig(q):
     return Quaternion(q[6],q[3],q[4],q[5])
@@ -43,12 +43,15 @@ def SE3toVec(M):
         v[j + 9] = M.rotation[j, 2]
     return v
 
+# TODO : def SE3FromVec(s):
+
 def MotiontoVec(M):
     v = np.matrix(np.zeros((6, 1)))
     for j in range(3):
         v[j] = M.linear[j]
         v[j + 3] = M.angular[j]
     return v
+
 
 # assume that q.size >= 7 with root pos and quaternion(x,y,z,w)
 def SE3FromConfig(q):

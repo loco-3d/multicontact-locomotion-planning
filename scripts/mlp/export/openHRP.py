@@ -2,14 +2,14 @@
 ## ONLY WORK FOR HRP-2 !! 
 
 import os
-import hpp_wholebody_motion.config as cfg
+import mlp.config as cfg
 import pinocchio as se3 
 from pinocchio import SE3, rnea
 from pinocchio.utils import *
 import numpy as np
 from rospkg import RosPack
 from pinocchio.robot_wrapper import RobotWrapper
-from hpp_wholebody_motion.utils.computation_tools import *
+from mlp.utils.computation_tools import *
 
 class Struct():
     None

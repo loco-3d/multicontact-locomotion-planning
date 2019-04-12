@@ -1,5 +1,5 @@
 import os
-import hpp_wholebody_motion.config as cfg
+import mlp.config as cfg
 
 def export(q_t):
     path = cfg.EXPORT_PATH+"/gazebo"

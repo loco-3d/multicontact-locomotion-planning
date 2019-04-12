@@ -5,9 +5,9 @@ import timeopt
 import locomote
 from locomote import WrenchCone,SOC6,ContactPatch, ContactPhaseHumanoid, ContactSequenceHumanoid
 import time
-import hpp_wholebody_motion.config as cfg
-import hpp_wholebody_motion.viewer.display_tools as display
-from hpp_wholebody_motion.utils.util import *
+import mlp.config as cfg
+import mlp.viewer.display_tools as display
+from mlp.utils.util import *
 
 CONTACT_ANKLE_LEVEL = True # probably only required for hrp2, as the center of the feet is not the center of the flexibility ...
 

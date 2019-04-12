@@ -1,7 +1,7 @@
-import hpp_wholebody_motion.config as cfg
+import mlp.config as cfg
 import time
 import os
-from hpp_wholebody_motion.utils.polyBezier import *
+from mlp.utils.polyBezier import *
 import pinocchio as se3
 from pinocchio import SE3, Quaternion
 from pinocchio.utils import *
@@ -14,14 +14,14 @@ from scipy.spatial import ConvexHull
 from tools.disp_bezier import *
 import hpp_spline
 import hpp_bezier_com_traj as bezier_com
-from hpp_wholebody_motion.utils import trajectories
+from mlp.utils import trajectories
 import math
 from tools.disp_bezier import *
 import eigenpy
 import quadprog
 import bezier_predef
 import limb_rrt
-from hpp_wholebody_motion.utils.util import  SE3FromConfig,distPointLine
+from mlp.utils.util import  SE3FromConfig,distPointLine
 eigenpy.switchToNumpyArray()
 
 

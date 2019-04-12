@@ -8,19 +8,19 @@ from rospkg import RosPack
 import time
 import commands
 import gepetto.corbaserver
-import hpp_wholebody_motion.config as cfg
+import mlp.config as cfg
 import locomote
 from locomote import WrenchCone,SOC6,ContactPatch, ContactPhaseHumanoid, ContactSequenceHumanoid
-from hpp_wholebody_motion.utils import trajectories
-import hpp_wholebody_motion.end_effector.bezier_predef as EETraj
-import hpp_wholebody_motion.viewer.display_tools as display_tools
+from mlp.utils import trajectories
+import mlp.end_effector.bezier_predef as EETraj
+import mlp.viewer.display_tools as display_tools
 import math
-from hpp_wholebody_motion.utils.wholebody_result import Result
-from hpp_wholebody_motion.utils.util import * 
+from mlp.utils.wholebody_result import Result
+from mlp.utils.util import * 
 if cfg.USE_LIMB_RRT:
-    import hpp_wholebody_motion.end_effector.limb_rrt as limb_rrt
+    import mlp.end_effector.limb_rrt as limb_rrt
 if cfg.USE_CONSTRAINED_BEZIER:
-    import hpp_wholebody_motion.end_effector.bezier_constrained as bezier_constrained
+    import mlp.end_effector.bezier_constrained as bezier_constrained
     
     
 def createContactForEffector(invdyn,robot,phase,eeName):
@@ -143,7 +143,7 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
     data = invdyn.data()
     
     if cfg.EFF_CHECK_COLLISION : # initialise object needed to check the motion
-        from hpp_wholebody_motion.utils import check_path
+        from mlp.utils import check_path
         validator = check_path.PathChecker(viewer,fullBody,cs,len(q),cfg.WB_VERBOSE)
         
     if cfg.WB_VERBOSE:
@@ -478,7 +478,7 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
 
 
     if cfg.PLOT:
-        from hpp_wholebody_motion.utils import plot
+        from mlp.utils import plot
         plot.plotEffectorRef(stored_effectors_ref)            
     
     assert (k_t == res.N-1) and "res struct not fully filled."
