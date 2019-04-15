@@ -1,4 +1,4 @@
-from locomote import ContactSequenceHumanoid
+from multicontact_api import ContactSequenceHumanoid
 
 cs_com = ContactSequenceHumanoid(0)
 filename = "/local/dev_hpp/src/hpp-wholebody-motion/res/contact_sequences/talos_table_COM.xml" # FIXME : load it from somewhere

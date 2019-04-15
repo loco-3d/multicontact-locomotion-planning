@@ -2,8 +2,8 @@ import numpy as np
 from numpy.linalg import norm
 import os
 import timeopt
-import locomote
-from locomote import WrenchCone,SOC6,ContactPatch, ContactPhaseHumanoid, ContactSequenceHumanoid
+import multicontact_api
+from multicontact_api import WrenchCone,SOC6,ContactPatch, ContactPhaseHumanoid, ContactSequenceHumanoid
 import time
 import mlp.config as cfg
 import mlp.viewer.display_tools as display

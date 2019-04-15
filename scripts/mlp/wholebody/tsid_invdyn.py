@@ -9,8 +9,8 @@ import time
 import commands
 import gepetto.corbaserver
 import mlp.config as cfg
-import locomote
-from locomote import WrenchCone,SOC6,ContactPatch, ContactPhaseHumanoid, ContactSequenceHumanoid
+import multicontact_api
+from multicontact_api import WrenchCone,SOC6,ContactPatch, ContactPhaseHumanoid, ContactSequenceHumanoid
 from mlp.utils import trajectories
 import mlp.end_effector.bezier_predef as EETraj
 import mlp.viewer.display_tools as display_tools
@@ -38,12 +38,12 @@ def createContactForEffector(invdyn,robot,phase,eeName):
     contact_Point[1, :] = [-lyn, lyp, -lyn, lyp]
     contact_Point[2, :] = [lz]*4
     # build ContactConstraint object
-    contact = tsid.Contact6d("contact_"+eeName, robot, eeName, contact_Point, contactNormal, cfg.MU, cfg.fMin, cfg.fMax,cfg.w_forceRef)
+    contact = tsid.Contact6d("contact_"+eeName, robot, eeName, contact_Point, contactNormal, cfg.MU, cfg.fMin, cfg.fMax)
     contact.setKp(cfg.kp_contact * np.matrix(np.ones(6)).transpose())
     contact.setKd(2.0 * np.sqrt(cfg.kp_contact) * np.matrix(np.ones(6)).transpose())
     ref = JointPlacementForEffector(phase,eeName)
     contact.setReference(ref)
-    invdyn.addRigidContact(contact)
+    invdyn.addRigidContact(contact,cfg.w_forceRef)
     if cfg.WB_VERBOSE :
         print "create contact for effector ",eeName
         print "contact placement : ",ref       

@@ -6,7 +6,7 @@ import importlib
 cp = importlib.import_module('scenarios.'+cfg.SCRIPT_PATH+'.'+cfg.DEMO_NAME)
 import mlp.contact_sequence.rbprm as generate_cs
 import mlp.viewer.display_tools as display_tools
-from locomote import ContactSequenceHumanoid
+from multicontact_api import ContactSequenceHumanoid
 
 v = cp.v
 

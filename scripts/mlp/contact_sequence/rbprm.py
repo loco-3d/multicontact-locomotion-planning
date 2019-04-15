@@ -3,8 +3,8 @@ from pinocchio import SE3, Quaternion
 from pinocchio.utils import *
 import inspect
 import mlp.config as cfg
-import locomote
-from locomote import WrenchCone,SOC6,ContactPatch, ContactPhaseHumanoid, ContactSequenceHumanoid
+import multicontact_api
+from multicontact_api import WrenchCone,SOC6,ContactPatch, ContactPhaseHumanoid, ContactSequenceHumanoid
 global i_sphere 
 from mlp.utils.util import quatFromConfig
 

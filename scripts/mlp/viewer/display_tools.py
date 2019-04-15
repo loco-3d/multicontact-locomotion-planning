@@ -1,8 +1,8 @@
 import mlp.config as cfg
 import pinocchio as pin
 from pinocchio import SE3, Quaternion
-import locomote
-from locomote import WrenchCone,SOC6,ContactPatch, ContactPhaseHumanoid, ContactSequenceHumanoid
+import multicontact_api
+from multicontact_api import WrenchCone,SOC6,ContactPatch, ContactPhaseHumanoid, ContactSequenceHumanoid
 import numpy as np
 import time
 

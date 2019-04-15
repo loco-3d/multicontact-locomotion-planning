@@ -5,7 +5,7 @@ import pinocchio as pin
 from pinocchio import SE3
 from pinocchio.utils import *
 import numpy.linalg
-from locomote import WrenchCone,SOC6,ContactSequenceHumanoid
+from multicontact_api import WrenchCone,SOC6,ContactSequenceHumanoid
 import numpy as np
 import math
 VERBOSE = True
