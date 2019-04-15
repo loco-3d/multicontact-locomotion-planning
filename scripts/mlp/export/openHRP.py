@@ -255,7 +255,7 @@ def export(cs,res):
     if cfg.WB_VERBOSE:
         print "load robot : " ,urdf    
     #srdf = "package://" + package + '/srdf/' +  cfg.Robot.urdfName+cfg.Robot.srdfSuffix + '.srdf'
-    robot = RobotWrapper(urdf, pin.StdVec_StdString(), pin.JointModelFreeFlyer(), False)
+    robot = RobotWrapper.BuildFromURDF(urdf, pin.StdVec_StdString(), pin.JointModelFreeFlyer(), False)
     if cfg.WB_VERBOSE:
         print "robot loaded in export OpenHRP"    
   
