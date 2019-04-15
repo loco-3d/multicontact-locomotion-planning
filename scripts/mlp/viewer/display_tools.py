@@ -1,5 +1,5 @@
 import mlp.config as cfg
-import pinocchio as se3
+import pinocchio as pin
 from pinocchio import SE3, Quaternion
 import locomote
 from locomote import WrenchCone,SOC6,ContactPatch, ContactPhaseHumanoid, ContactSequenceHumanoid

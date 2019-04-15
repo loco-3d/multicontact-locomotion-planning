@@ -1,7 +1,7 @@
 import mlp.config as cfg
 import time
 import os
-import pinocchio as se3
+import pinocchio as pin
 from pinocchio import SE3
 from pinocchio.utils import *
 import numpy.linalg

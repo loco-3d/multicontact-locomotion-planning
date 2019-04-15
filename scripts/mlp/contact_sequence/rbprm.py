@@ -1,4 +1,4 @@
-import pinocchio as se3
+import pinocchio as pin
 from pinocchio import SE3, Quaternion
 from pinocchio.utils import *
 import inspect

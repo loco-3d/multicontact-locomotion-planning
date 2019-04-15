@@ -1,7 +1,7 @@
 
 import numpy as np
 import os
-import pinocchio as se3
+import pinocchio as pin
 from pinocchio import SE3
 from mlp.utils.util import *
 import mlp.config as cfg

@@ -1,4 +1,4 @@
-import pinocchio as se3
+import pinocchio as pin
 from pinocchio import SE3, Quaternion
 import tsid
 import numpy as np
@@ -130,7 +130,7 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
     if cfg.WB_VERBOSE:
         print "load robot : " ,urdf    
     #srdf = "package://" + package + '/srdf/' +  cfg.Robot.urdfName+cfg.Robot.srdfSuffix + '.srdf'
-    robot = tsid.RobotWrapper(urdf, se3.StdVec_StdString(), se3.JointModelFreeFlyer(), False)
+    robot = tsid.RobotWrapper(urdf, pin.StdVec_StdString(), pin.JointModelFreeFlyer(), False)
     if cfg.WB_VERBOSE:
         print "robot loaded in tsid"
         
@@ -318,7 +318,7 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
         # add newly created contacts : 
         for eeName in usedEffectors:
             if phase_prev and not isContactActive(phase_prev,eeName) and isContactActive(phase,eeName) :
-                invdyn.removeTask(dic_effectors_tasks[eeName].name, 0.0) # remove se3 task for this contact
+                invdyn.removeTask(dic_effectors_tasks[eeName].name, 0.0) # remove pin task for this contact
                 dic_effectors_trajs.update({eeName:None}) # delete reference trajectory for this task
                 if cfg.WB_VERBOSE :
                     print "remove se3 task : "+dic_effectors_tasks[eeName].name                
@@ -427,7 +427,7 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
                 # update state
                 v_mean = v + 0.5 * dt * dv
                 v += dt * dv
-                q = se3.integrate(robot.model(), q, dt * v_mean)    
+                q = pin.integrate(robot.model(), q, dt * v_mean)    
 
                 if cfg.WB_VERBOSE and int(t/dt) % cfg.IK_PRINT_N == 0:
                     printIntermediate(v,dv,invdyn,sol)

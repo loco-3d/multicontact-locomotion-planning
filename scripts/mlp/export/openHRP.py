@@ -3,7 +3,7 @@
 
 import os
 import mlp.config as cfg
-import pinocchio as se3 
+import pinocchio as pin 
 from pinocchio import SE3, rnea
 from pinocchio.utils import *
 import numpy as np
@@ -40,7 +40,7 @@ def computeWaistData(robot,res):
         v = res.dq_t[:,k]
         a = res.ddq_t[:,k]
 
-        se3.rnea(model,data,q,v,a)
+        pin.rnea(model,data,q,v,a)
         pcom, vcom, acom = robot.com(q,v,a)
         
         res.waist_t[:,k] = robot.data.oMi[1].translation
@@ -255,7 +255,7 @@ def export(cs,res):
     if cfg.WB_VERBOSE:
         print "load robot : " ,urdf    
     #srdf = "package://" + package + '/srdf/' +  cfg.Robot.urdfName+cfg.Robot.srdfSuffix + '.srdf'
-    robot = RobotWrapper(urdf, se3.StdVec_StdString(), se3.JointModelFreeFlyer(), False)
+    robot = RobotWrapper(urdf, pin.StdVec_StdString(), pin.JointModelFreeFlyer(), False)
     if cfg.WB_VERBOSE:
         print "robot loaded in export OpenHRP"    
   

@@ -3,7 +3,7 @@ import numpy.matlib
 from numpy.polynomial.polynomial import polyval
 #from  numpy import polyder
 from  numpy.linalg import pinv
-import pinocchio as se3
+import pinocchio as pin
 from pinocchio import SE3, log3, exp3, Motion, Quaternion
 from pinocchio.utils import zero as mat_zeros
 
@@ -658,12 +658,12 @@ class BezierTrajectory(RefTrajectory):
       dt=0.001
       u_dt = dt/self.t_mid
       r_plus_dt = (quat0.slerp(u+u_dt,quat1)).matrix()
-      self.v.angular= se3.log3(self.M.rotation.T * r_plus_dt)/dt
+      self.v.angular= pin.log3(self.M.rotation.T * r_plus_dt)/dt
       r_plus2_dt = (quat0.slerp(u+(2.*u_dt),quat1)).matrix()
-      next_angular_velocity = se3.log3( r_plus_dt.T * r_plus2_dt)/dt
+      next_angular_velocity = pin.log3( r_plus_dt.T * r_plus2_dt)/dt
       self.a.angular = ( next_angular_velocity - self.v.angular)/dt
       #r_plus_dt = (quat0.slerp(u+u_dt,quat1)).matrix()            
-      #next_angular_vel = (se3.log3(self.M.rotation.T * r_plus_dt)/dt)
+      #next_angular_vel = (pin.log3(self.M.rotation.T * r_plus_dt)/dt)
       #self.a.angular = (next_angular_vel - self.v.angular)/dt    
     return self.M, self.v, self.a
 
@@ -683,7 +683,7 @@ class TrajectorySE3LinearInterp(RefTrajectory):
     self.a = Motion.Zero()    
     # constant velocity and null acceleration : 
     self.v.linear = (placement_final.translation - placement_final.translation)/self.length
-    self.v.angular= se3.log3(placement_final.rotation.T * placement_final.rotation)/self.length
+    self.v.angular= pin.log3(placement_final.rotation.T * placement_final.rotation)/self.length
     
     
 
