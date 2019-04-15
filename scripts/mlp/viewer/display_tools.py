@@ -58,7 +58,7 @@ def displayContactsLandmarkFromPhase(phase,viewer):
     viewer.client.gui.refresh() 
 
 def addSteppingStone(viewer,placement,name,size,color):
-    viewer.client.gui.addBox(name,size[0]/2.,size[1]/2.,STONE_HEIGHT,color)
+    viewer.client.gui.addBox(name,size[0],size[1],STONE_HEIGHT,color)
     viewer.client.gui.addToGroup(name,STONE_GROUP)
     viewer.client.gui.applyConfiguration(name,SE3ToViewerConfig(placement))
     
