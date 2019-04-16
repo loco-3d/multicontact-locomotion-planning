@@ -88,6 +88,10 @@ def buildPredefinedFinalTraj(placement,t_total):
 
 def generateBezierTraj(placement_init,placement_end,time_interval):
     t_total = time_interval[1]-time_interval[0] - 2*cfg.EFF_T_DELAY
+    #print "Generate Bezier Traj :"
+    #print "placement Init = ",placement_init
+    #print "placement End  = ",placement_end
+    #print "time interval  = ",time_interval
     # generate two curves for the takeoff/landing : 
     # generate a bezier curve for the middle part of the motion : 
     bezier_takeoff = buildPredefinedInitTraj(placement_init,t_total)
@@ -131,5 +135,6 @@ placement_end = SE3.Identity()
 placement_end.translation = np.matrix([0.6,0.22,0]).T
 placement_end.rotation = Quaternion(0.9800666,0.1986693,0, 0).matrix()
 t_total = 1.2
+time_interval = [1,1+t_total]
 
 """
