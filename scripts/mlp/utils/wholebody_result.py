@@ -141,3 +141,57 @@ class Result:
             self.contact_activity[ee] = self.contact_activity[ee][:,:N]
         self.phases_intervals = self.resizePhasesIntervals(N)
         return self
+    
+    def exportNPZ(self,path,name):
+        import os
+        if not os.path.exists(path):
+            os.makedirs(path)
+        filename = path+"/"+name       
+        np.savez(filename,N=self.N,nq=self.nq,nv=self.nv,dt=self.dt,t_t=self.t_t,
+                 q_t=self.q_t,dq_t=self.dq_t,ddq_t=self.ddq_t,tau_t=self.tau_t,
+                 c_t=self.c_t,dc_t=self.dc_t,ddc_t=self.ddc_t,L_t=self.L_t,dL_t=self.dL_t,
+                 c_tracking_error=self.c_tracking_error,c_reference=self.c_reference,dc_reference=self.dc_reference,ddc_reference=self.ddc_reference,
+                 L_reference=self.L_reference,dL_reference=self.dL_reference,
+                 wrench_t=self.wrench_t,zmp_t=self.zmp_t,wrench_reference=self.wrench_reference,zmp_reference=self.zmp_reference,
+                 eeNames=self.eeNames,contact_forces=self.contact_forces,contact_normal_force=self.contact_normal_force,
+                 effector_trajectories=self.effector_trajectories,effector_references=self.effector_references,effector_tracking_error=self.effector_tracking_error,
+                 contact_activity=self.contact_activity,phases_intervals=self.phases_intervals)
+        
+        print "Results exported to ",filename
+
+def loadFromNPZ(filename):
+    f=np.load(filename)
+    N = f['N'].tolist()
+    nq = f['nq'].tolist()
+    nv = f['nv'].tolist()
+    dt = f['dt'].tolist()
+    eeNames = f['eeNames'].tolist()
+    res = Result(nq,nv,dt,eeNames=eeNames,N=N)
+    res.t_t = f['t_t']
+    res.q_t  =f['q_t']
+    res.dq_t =f['dq_t']
+    res.ddq_t =f['ddq_t']
+    res.tau_t =f['tau_t']
+    res.c_t =f['c_t']
+    res.dc_t =f['dc_t']
+    res.ddc_t =f['ddc_t']
+    res.L_t =f['L_t']
+    res.dL_t =f['dL_t']
+    res.c_tracking_error =f['c_tracking_error']
+    res.c_reference =f['c_reference']
+    res.dc_reference =f['dc_reference']
+    res.ddc_reference =f['ddc_reference']
+    res.L_reference =f['L_t']
+    res.dL_reference =f['dL_t']
+    res.wrench_t =f['wrench_t']
+    res.zmp_reference =f['zmp_t']
+    res.wrench_reference =f['wrench_t']
+    res.zmp_t =f['zmp_t']        
+    res.contact_forces =f['contact_forces'].tolist()
+    res.contact_normal_force = f['contact_normal_force'].tolist()            
+    res.effector_trajectories =f['effector_trajectories'].tolist()
+    res.effector_references =f['effector_references'].tolist()
+    res.effector_tracking_error =f['effector_tracking_error'].tolist()
+    res.contact_activity =f['contact_activity'].tolist()
+    res.phases_intervals = f['phases_intervals'].tolist()
+    return res
