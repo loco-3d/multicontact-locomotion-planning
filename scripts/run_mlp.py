@@ -17,18 +17,18 @@ if cfg.DISPLAY_CS:
     
 if cfg.LOAD_CS:
     cs = ContactSequenceHumanoid(0)
-    filename = cfg.CONTACT_SEQUENCE_PATH + "/"+cfg.DEMO_NAME+".xml"   
-    print "Import contact sequence XML file : ",filename    
-    cs.loadFromXML(filename, "ContactSequence") 
+    filename = cfg.CONTACT_SEQUENCE_PATH + "/"+cfg.DEMO_NAME   
+    print "Import contact sequence binary file : ",filename    
+    cs.loadFromBinary(filename) 
 else:
     beginState = 0
     endState = len(cp.configs) - 1
     cs = generate_cs.generateContactSequence(cp.fullBody,cp.configs,beginState,endState)
 
 if cfg.SAVE_CS and not cfg.LOAD_CS:
-    filename = cfg.CONTACT_SEQUENCE_PATH + "/"+cfg.DEMO_NAME+".xml"
-    print "Write contact sequence XML file : ",filename
-    cs.saveAsXML(filename, "ContactSequence")    
+    filename = cfg.CONTACT_SEQUENCE_PATH + "/"+cfg.DEMO_NAME
+    print "Write contact sequence binary file : ",filename
+    cs.saveAsBinary(filename)    
 if cfg.DISPLAY_CS_STONES :
     display_tools.displaySteppingStones(cs,v)
     
@@ -46,8 +46,8 @@ if cfg.DISPLAY_INIT_GUESS_TRAJ and (cfg.USE_GEOM_INIT_GUESS or cfg.USE_CROC_INIT
 
 if cfg.LOAD_CS_COM :
     cs_com = ContactSequenceHumanoid(0)
-    filename = cfg.CONTACT_SEQUENCE_PATH + "/"+cfg.DEMO_NAME+"_COM.xml"
-    cs_com.loadFromXML(filename, "ContactSequence")     
+    filename = cfg.CONTACT_SEQUENCE_PATH + "/"+cfg.DEMO_NAME+"_COM"
+    cs_com.loadFromBinary(filename)     
 else:
     import mlp.centroidal.topt as centroidal
     cs_com,tp = centroidal.generateCentroidalTrajectory(cs,cs_initGuess,v)
@@ -57,7 +57,7 @@ else:
 if cfg.SAVE_CS_COM and not cfg.LOAD_CS_COM:
     filename = cfg.CONTACT_SEQUENCE_PATH + "/"+cfg.DEMO_NAME+"_COM.xml"
     print "Write contact sequence with centroidal trajectory XML file : ",filename
-    cs_com.saveAsXML(filename, "ContactSequence") 
+    cs_com.saveAsBinary(filename) 
 if cfg.DISPLAY_COM_TRAJ:
     colors = [v.color.blue, v.color.green]
     display_tools.displayCOMTrajectory(cs_com,v,colors)
