@@ -5,12 +5,13 @@ PKG_PATH = os.environ['DEVEL_HPP_DIR']+"/src/multicontact-locomotion-planning"
 OUTPUT_DIR = PKG_PATH+"/res"
 CONTACT_SEQUENCE_PATH = OUTPUT_DIR + "/contact_sequences"
 TIME_OPT_CONFIG_PATH = PKG_PATH +'/timeOpt_configs'
-LOAD_CS = False
-LOAD_CS_COM = False
+LOAD_CS = True
+LOAD_CS_COM = True
 SAVE_CS = not LOAD_CS and True 
 SAVE_CS_COM = not LOAD_CS_COM and True
 EXPORT_GAZEBO = False
-EXPORT_OPENHRP = True
+EXPORT_OPENHRP = False
+EXPORT_NPZ = True
 openHRP_useZMPref = True
 EXPORT_PATH = OUTPUT_DIR+"/export"
 
