@@ -16,16 +16,16 @@ planner_variables:
   robot_mass: 90.27
   friction_coeff: 0.3
   friction_cone: LinearCone  # Types: LinearCone, SocCone #
-  torque_range: [-300.0, 300.0]
+  torque_range: [-1000.0, 1000.0]
   eff_offset_rf: [ 0.00,  0.00,  0.00]
   eff_offset_lf: [ 0.00,  0.00,  0.00]
   eff_offset_rh: [ 0.0,  -0.15,  0.45]
   eff_offset_lh: [ 0.0,  0.15,  0.45]
-  cop_range_rf: [-0.06,  0.06, -0.03,  0.03]
-  cop_range_lf: [-0.06,  0.06, -0.03,  0.03]
+  cop_range_rf: [-0.01,  0.01, -0.01,  0.01]
+  cop_range_lf: [-0.01,  0.01, -0.01,  0.01]
   cop_range_rh: [-0.01,  0.01, -0.01,  0.01]
   cop_range_lh: [-0.01,  0.01, -0.01,  0.01]
-  max_eef_lengths: [0.88,  0.88,  0.9,  0.9]
+  max_eef_lengths: [0.87,  0.87,  0.9,  0.9]
 
   w_trq_arm:       1.000
   w_trq_leg:       1.000
@@ -36,7 +36,7 @@ planner_variables:
   w_lmomd:         [ 0.015,  0.015,  0.015]
   w_amom_final:    [ 10.00,  10.00,  10.00]
   w_lmom_final:    [ 10.00,  10.00,  10.00]
-  w_com_via:       [ 0.2,  0.2,  50.000]
+  w_com_via:       [ 0.2,  0.2,  100.000]
   w_frc_arm:       [ 0.001,  0.001,  0.001]
   w_frc_leg:       [ 0.001,  0.001,  0.001]
   w_dfrc_arm:      [ 0.000,  0.000,  0.000]
