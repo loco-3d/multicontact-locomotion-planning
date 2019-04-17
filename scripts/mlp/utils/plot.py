@@ -228,8 +228,11 @@ def plotALLFromWB(cs,res,display=True,save=False):
         plotCOMError(res.t_t,res.phases_intervals,res.c_tracking_error)
         plotEffectorError(res.t_t,res.phases_intervals,res.effector_tracking_error)        
     plotContactForces(res.t_t,res.phases_intervals,res.contact_normal_force,res.N)
-    computeZMP(cs,res)
-    computeZMPRef(cs,res)
+    # compute zmp from whole body or centroidal (only if it hasn't been computed already)
+    if not res.zmp_t.any():
+        computeZMP(cs,res)
+    if not res.zmp_reference.any():
+        computeZMPRef(cs,res)
     plotZMP(cs,res.zmp_t,res.zmp_reference,res.c_t)
     plotKneeTorque(res.t_t,res.phases_intervals,res.tau_t,6 + (res.nq - res.nv))
     if display:
