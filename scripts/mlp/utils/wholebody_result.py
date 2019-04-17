@@ -1,13 +1,19 @@
 import numpy as np
-import mlp.config as cfg
 class Result:
     
-    nq = cfg.nq
-    nv = cfg.nv
-    def __init__(self,cs,eeNames=[],t_begin = 0):
-        N = int(round(cs.contact_phases[-1].time_trajectory[-1]/cfg.IK_dt)) + 1 
-        self.N = N
-        self.t_t = np.array([t_begin + i*cfg.IK_dt for i in range(N)])
+    
+    def __init__(self,nq,nv,dt,eeNames=[],N=None,cs=None,t_begin = 0):
+        self.dt = dt
+        if cs :
+            self.N = int(round(cs.contact_phases[-1].time_trajectory[-1]/self.dt)) + 1             
+        elif N :
+            self.N = N            
+        else : 
+            raise RuntimeError("Result constructor must be called with either a contactSequence object or a number of points")
+        N = self.N
+        self.nq = nq
+        self.nv = nv
+        self.t_t = np.array([t_begin + i*self.dt for i in range(N)])
         self.q_t = np.matrix(np.zeros([self.nq,N]))
         self.dq_t = np.matrix(np.zeros([self.nv,N]))
         self.ddq_t = np.matrix(np.zeros([self.nv,N]))
@@ -27,8 +33,6 @@ class Result:
         self.wrench_reference = np.matrix(np.zeros([6,N]))        
         self.zmp_t = np.matrix(np.zeros([3,N]))
         self.zmp_reference = np.matrix(np.zeros([3,N]))
-        if len(eeNames)==0:
-            eeNames = cfg.Robot.dict_limb_joint.values()
         self.eeNames = eeNames
         self.contact_forces = {}
         self.contact_normal_force={}
@@ -43,7 +47,10 @@ class Result:
             self.effector_references.update({ee:np.matrix(np.zeros([12,N]))})
             self.effector_tracking_error.update({ee:np.matrix(np.zeros([6,N]))})
             self.contact_activity.update({ee:np.matrix(np.zeros([1,N]))})
-        self.phases_intervals = self.buildPhasesIntervals(cs)    
+        if cs:
+            self.phases_intervals = self.buildPhasesIntervals(cs)    
+        else :
+            print "Result constructor called without contactSequence object, phase_interval member not initialized"
      
     # By definition of a contact sequence, at the state at the transition time between two contact phases
     # belong to both contact phases
@@ -51,10 +58,9 @@ class Result:
     def buildPhasesIntervals(self,cs):
         intervals = []
         k = 0
-        dt = cfg.IK_dt
         for phase in cs.contact_phases :
             duration = phase.time_trajectory[-1]-phase.time_trajectory[0]
-            n_phase = int(round(duration/dt))
+            n_phase = int(round(duration/self.dt))
             interval = range(k,k+n_phase+1)
             k += n_phase
             intervals += [interval]

@@ -276,7 +276,7 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
     dt = cfg.IK_dt  
     if cfg.WB_VERBOSE:
         print "dt : ",dt
-    res = Result(cs,eeNames=usedEffectors)
+    res = Result(robot.nq,robot.nv,cfg.IK_dt,eeNames=usedEffectors,cs=cs)
     N = res.N    
     last_display = 0 
     if cfg.WB_VERBOSE:
