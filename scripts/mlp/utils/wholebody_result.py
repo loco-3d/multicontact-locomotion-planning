@@ -2,7 +2,7 @@ import numpy as np
 class Result:
     
     
-    def __init__(self,nq,nv,dt,eeNames=[],N=None,cs=None,t_begin = 0):
+    def __init__(self,nq,nv,dt,eeNames,N=None,cs=None,t_begin = 0):
         self.dt = dt
         if cs :
             self.N = int(round(cs.contact_phases[-1].time_trajectory[-1]/self.dt)) + 1             
@@ -147,7 +147,7 @@ class Result:
         if not os.path.exists(path):
             os.makedirs(path)
         filename = path+"/"+name       
-        np.savez(filename,N=self.N,nq=self.nq,nv=self.nv,dt=self.dt,t_t=self.t_t,
+        np.savez_compressed(filename,N=self.N,nq=self.nq,nv=self.nv,dt=self.dt,t_t=self.t_t,
                  q_t=self.q_t,dq_t=self.dq_t,ddq_t=self.ddq_t,tau_t=self.tau_t,
                  c_t=self.c_t,dc_t=self.dc_t,ddc_t=self.ddc_t,L_t=self.L_t,dL_t=self.dL_t,
                  c_tracking_error=self.c_tracking_error,c_reference=self.c_reference,dc_reference=self.dc_reference,ddc_reference=self.ddc_reference,
@@ -168,25 +168,25 @@ def loadFromNPZ(filename):
     eeNames = f['eeNames'].tolist()
     res = Result(nq,nv,dt,eeNames=eeNames,N=N)
     res.t_t = f['t_t']
-    res.q_t  =f['q_t']
-    res.dq_t =f['dq_t']
-    res.ddq_t =f['ddq_t']
-    res.tau_t =f['tau_t']
-    res.c_t =f['c_t']
-    res.dc_t =f['dc_t']
-    res.ddc_t =f['ddc_t']
-    res.L_t =f['L_t']
-    res.dL_t =f['dL_t']
-    res.c_tracking_error =f['c_tracking_error']
-    res.c_reference =f['c_reference']
-    res.dc_reference =f['dc_reference']
-    res.ddc_reference =f['ddc_reference']
-    res.L_reference =f['L_t']
-    res.dL_reference =f['dL_t']
-    res.wrench_t =f['wrench_t']
-    res.zmp_reference =f['zmp_t']
-    res.wrench_reference =f['wrench_t']
-    res.zmp_t =f['zmp_t']        
+    res.q_t  =np.asmatrix(f['q_t'])
+    res.dq_t =np.asmatrix(f['dq_t'])
+    res.ddq_t =np.asmatrix(f['ddq_t'])
+    res.tau_t =np.asmatrix(f['tau_t'])
+    res.c_t =np.asmatrix(f['c_t'])
+    res.dc_t =np.asmatrix(f['dc_t'])
+    res.ddc_t =np.asmatrix(f['ddc_t'])
+    res.L_t =np.asmatrix(f['L_t'])
+    res.dL_t =np.asmatrix(f['dL_t'])
+    res.c_tracking_error =np.asmatrix(f['c_tracking_error'])
+    res.c_reference =np.asmatrix(f['c_reference'])
+    res.dc_reference =np.asmatrix(f['dc_reference'])
+    res.ddc_reference =np.asmatrix(f['ddc_reference'])
+    res.L_reference =np.asmatrix(f['L_t'])
+    res.dL_reference =np.asmatrix(f['dL_t'])
+    res.wrench_t =np.asmatrix(f['wrench_t'])
+    res.zmp_reference =np.asmatrix(f['zmp_t'])
+    res.wrench_reference =np.asmatrix(f['wrench_t'])
+    res.zmp_t =np.asmatrix(f['zmp_t'])        
     res.contact_forces =f['contact_forces'].tolist()
     res.contact_normal_force = f['contact_normal_force'].tolist()            
     res.effector_trajectories =f['effector_trajectories'].tolist()
@@ -194,4 +194,12 @@ def loadFromNPZ(filename):
     res.effector_tracking_error =f['effector_tracking_error'].tolist()
     res.contact_activity =f['contact_activity'].tolist()
     res.phases_intervals = f['phases_intervals'].tolist()
+    f.close()
+    for ee in res.eeNames : 
+        res.contact_forces[ee] = np.asmatrix(res.contact_forces[ee])
+        res.contact_normal_force[ee] = np.asmatrix(res.contact_normal_force[ee])                           
+        res.effector_trajectories[ee] = np.asmatrix(res.effector_trajectories[ee])
+        res.effector_references[ee] = np.asmatrix(res.effector_references[ee])
+        res.effector_tracking_error[ee] = np.asmatrix(res.effector_tracking_error[ee])
+        res.contact_activity[ee] = np.asmatrix(res.contact_activity[ee])   
     return res
