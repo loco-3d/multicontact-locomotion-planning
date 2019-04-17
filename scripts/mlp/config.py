@@ -69,29 +69,30 @@ IK_store_contact_forces = True
 import importlib
 import sys
 if len(sys.argv)<2 : 
-    print "You must call this script with the name of the config file (one of the file contained in mlp.demo_config)"
-    print "Available demo files : "
+    print "## WARNING : script called without specifying a demo config file (one of the file contained in mlp.demo_config)"
+    print "## Available demo files : "
     configs_path = PKG_PATH+"/scripts/mlp/demo_configs"
     demos_list = os.listdir(configs_path)
     for f in demos_list:
-        if f.endswith(".py") and not f.startswith("__") : 
+        if f.endswith(".py") and not f.startswith("__") and not f.startswith("common") : 
             print f.rstrip(".py")
-    raise IOError("You must call this script with the name of the config file (one of the file contained in mlp.demo_config)")
-    
-import argparse
-parser = argparse.ArgumentParser(description = "todo")
-parser.add_argument('demo_name',type=str,help="The name of the demo configuration file to load")
-args = parser.parse_args()
-DEMO_NAME = args.demo_name
-print "# Load demo config : ",DEMO_NAME
-# Import the module
-try :
-    demo_cfg = importlib.import_module('mlp.demo_configs.'+DEMO_NAME)
-except ImportError:
-    raise NameError("No demo config file with the given name in mlp.demo_config")
-# Determine a list of names to copy to the current name space
-names = getattr(demo_cfg, '__all__', [n for n in dir(demo_cfg) if not n.startswith('_')])
-# Copy those names into the current name space
-g = globals()
-for name in names:
-    g[name] = getattr(demo_cfg, name)
+    print "## Some data will be missing, scripts may fails. (cfg.Robot will not exist)"
+    #raise IOError("You must call this script with the name of the config file (one of the file contained in mlp.demo_config)")
+else :  
+    import argparse
+    parser = argparse.ArgumentParser(description = "todo")
+    parser.add_argument('demo_name',type=str,help="The name of the demo configuration file to load")
+    args = parser.parse_args()
+    DEMO_NAME = args.demo_name
+    print "# Load demo config : ",DEMO_NAME
+    # Import the module
+    try :
+        demo_cfg = importlib.import_module('mlp.demo_configs.'+DEMO_NAME)
+    except ImportError:
+        raise NameError("No demo config file with the given name in mlp.demo_config")
+    # Determine a list of names to copy to the current name space
+    names = getattr(demo_cfg, '__all__', [n for n in dir(demo_cfg) if not n.startswith('_')])
+    # Copy those names into the current name space
+    g = globals()
+    for name in names:
+        g[name] = getattr(demo_cfg, name)
