@@ -167,3 +167,12 @@ def displayWBmotion(viewer,q_t,dt,dt_display):
     displayWBconfig(viewer,q_t[:,-1])
           
 
+def displayFeetTrajFromResult(viewer,res):
+  for eeName in res.eeNames:
+    name = "feet_traj_"+str(eeName)
+    traj = numpy2DToList(res.effector_references[eeName][:3,:])
+    color = cfg.Robot.dict_limb_color_traj[eeName]
+    offset = cfg.Robot.dict_offset[eeName]
+    viewer.client.gui.addCurve(name,traj,color)
+    viewer.client.gui.addToGroup(name,viewer.sceneName)    
+    viewer.client.gui.refresh()    
