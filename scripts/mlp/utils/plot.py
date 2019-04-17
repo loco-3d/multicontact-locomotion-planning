@@ -195,8 +195,7 @@ def plotContactForces(timeline,p_intervals,forces_dict,N):
     ax.plot(timeline.T, sum_f[0,:].T, color="k",label = "sum")
     ax.legend()
 
-def plotKneeTorque(timeline,p_intervals,tau):
-    offset = 6 + (cfg.nq - cfg.nv) # remove freeflyer and addition difference between config and DOF size
+def plotKneeTorque(timeline,p_intervals,tau,offset):
     colors = ['r','g','b','y']  
     fig = plt.figure("Knee torque")
     plt.suptitle("Knee torque")
@@ -232,7 +231,7 @@ def plotALLFromWB(cs,res):
     computeZMP(cs,res)
     computeZMPRef(cs,res)
     plotZMP(cs,res.zmp_t,res.zmp_reference,res.c_t)
-    plotKneeTorque(res.t_t,res.phases_intervals,res.tau_t)
+    plotKneeTorque(res.t_t,res.phases_intervals,res.tau_t,6 + (res.nq - res.nv))
     if cfg.DISPLAY_PLOT:
         plt.show(block = False)
     if cfg.SAVE_PLOT:
