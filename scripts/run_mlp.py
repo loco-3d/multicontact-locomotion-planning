@@ -87,8 +87,9 @@ else :
 
 if cfg.PLOT:
     from mlp.utils import plot
-    plot.plotALLFromWB(cs_com,res,cfg.DISPLAY_PLOT,cfg.SAVE_PLOT)
-
+    plot.plotALLFromWB(cs_com,res,cfg.DISPLAY_PLOT,cfg.SAVE_PLOT,cfg.OUTPUT_DIR+"/plot/"+cfg.DEMO_NAME)
+    plot.plotKneeTorque(res.t_t,res.phases_intervals,res.tau_t,6 + (res.nq - res.nv),cfg.Robot.kneeIds)
+    
 if cfg.EXPORT_OPENHRP and motion_valid:
     from mlp.export import openHRP
     openHRP.export(cs_com,res)

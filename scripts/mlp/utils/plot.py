@@ -4,7 +4,6 @@ import os
 import pinocchio as pin
 from pinocchio import SE3
 from mlp.utils.util import *
-import mlp.config as cfg
 import matplotlib
 matplotlib.use("Qt4agg")
 import matplotlib.pyplot as plt
@@ -25,10 +24,9 @@ def addVerticalLineContactSwitch(timeline,intervals,plt,linestyle="-.",color='k'
     for interval in intervals:
         plt.axvline(timeline[interval[-1]],linestyle=linestyle,color=color)
 
-def plotEffectorRef(dict_refs):
+def plotEffectorRef(dict_refs,dt):
     labels=["x (m)" , "y (m)" ,"z (m)", "dx (m/s)" , "dy (m/s)" ,"dz (m/s)","ddx (m/s^2)" , "ddy (m/s^2)" ,"ddz (m/s^2)"]
     colors = ['r','g','b']    
-    dt = cfg.IK_dt
     # look for the maximal time in the trajectories :
     t_max = 0.
     for trajs in dict_refs.itervalues():
@@ -124,14 +122,16 @@ def plotZMP(cs,ZMP_t,ZMP_ref,pcom_t):
     for p in cs.contact_phases:
         # plot x for the center of the feets contact, 
         # and a circle of 1cm of radius around it (size of the flexibility) :
-        pos = JointPlacementForEffector(p,cfg.Robot.rfoot).translation
-        plt.plot(pos[0], pos[1], marker="x", markersize=20, color='g')
-        circle_r = plt.Circle((pos[0], pos[1]), 0.01, color='g', fill=False)      
-        pos = JointPlacementForEffector(p,cfg.Robot.lfoot).translation
-        plt.plot(pos[0], pos[1], marker="x", markersize=20, color='g')
-        circle_l = plt.Circle((pos[0], pos[1]), 0.01, color='g', fill=False)      
-        ax.add_artist(circle_r)
-        ax.add_artist(circle_l)
+        if p.RF_patch.active:
+            pos = p.RF_patch.placement.translation
+            plt.plot(pos[0], pos[1], marker="x", markersize=20, color='g')
+            circle_r = plt.Circle((pos[0], pos[1]), 0.01, color='g', fill=False)
+            ax.add_artist(circle_r)     
+        if p.LF_patch.active:   
+            pos = p.LF_patch.placement.translation
+            plt.plot(pos[0], pos[1], marker="x", markersize=20, color='g')
+            circle_l = plt.Circle((pos[0], pos[1]), 0.01, color='g', fill=False)      
+            ax.add_artist(circle_l)
       
 def plotEffectorTraj(timeline,p_intervals,ref_dict,traj_dict):
     labels=["x (m)" , "y (m)" ,"z (m)"]
@@ -195,7 +195,7 @@ def plotContactForces(timeline,p_intervals,forces_dict,N):
     ax.plot(timeline.T, sum_f[0,:].T, color="k",label = "sum")
     ax.legend()
 
-def plotKneeTorque(timeline,p_intervals,tau,offset):
+def plotKneeTorque(timeline,p_intervals,tau,offset,kneeIds):
     colors = ['r','g','b','y']  
     fig = plt.figure("Knee torque")
     plt.suptitle("Knee torque")
@@ -204,27 +204,26 @@ def plotKneeTorque(timeline,p_intervals,tau,offset):
     ax.set_ylabel("Torque")  
     ax.yaxis.grid()    
     addVerticalLineContactSwitch(timeline.T,p_intervals,ax)    
-    for k,name in enumerate(cfg.Robot.kneeIds.keys()) : 
-        ax.plot(timeline.T, tau[cfg.Robot.kneeIds[name]-offset,:].T, color=colors[k],label = name)
+    for k,name in enumerate(kneeIds.keys()) : 
+        ax.plot(timeline.T, tau[kneeIds[name]-offset,:].T, color=colors[k],label = name)
     ax.legend()
     
-def saveAllFigures(): 
-    path_dir = cfg.OUTPUT_DIR+"/plot/"+cfg.DEMO_NAME
+def saveAllFigures(path_dir): 
     if not os.path.exists(path_dir):
         os.makedirs(path_dir)
     for i in plt.get_fignums():
         fig = plt.figure(i)
         fig.savefig(path_dir+"/"+str(fig._suptitle.get_text())+".eps",dpi=600)
 
-def plotALLFromWB(cs,res,display=True,save=False):
+def plotALLFromWB(cs,res,display=True,save=False,path=None):
     print "Plotting ..."
     plt.rcParams['axes.linewidth'] = plt.rcParams['font.size'] / 30.
     plt.rcParams['lines.linewidth'] = plt.rcParams['font.size'] / 30.    
-    if cfg.IK_store_effector:
+    if res.effector_trajectories.values()[0].any():
         plotEffectorTraj(res.t_t,res.phases_intervals,res.effector_references,res.effector_trajectories)
-    if cfg.IK_store_centroidal:
+    if res.c_t.any():
         plotCOMTraj(res.t_t,res.phases_intervals,res.c_reference,res.dc_reference,res.ddc_reference,res.c_t,res.dc_t,res.ddc_t)
-    if cfg.IK_store_error : 
+    if res.c_tracking_error.any() : 
         plotCOMError(res.t_t,res.phases_intervals,res.c_tracking_error)
         plotEffectorError(res.t_t,res.phases_intervals,res.effector_tracking_error)        
     plotContactForces(res.t_t,res.phases_intervals,res.contact_normal_force,res.N)
@@ -234,9 +233,8 @@ def plotALLFromWB(cs,res,display=True,save=False):
     if not res.zmp_reference.any():
         computeZMPRef(cs,res)
     plotZMP(cs,res.zmp_t,res.zmp_reference,res.c_t)
-    plotKneeTorque(res.t_t,res.phases_intervals,res.tau_t,6 + (res.nq - res.nv))
     if display:
         plt.show(block = False)
-    if save:
-        saveAllFigures()
+    if save and path:
+        saveAllFigures(path)
     print "Plotting Done."
