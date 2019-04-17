@@ -263,14 +263,14 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
         if norm(dv) > 1e6 or norm(v) > 1e6 :
             print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
             print "/!\ ABORT : controler unstable at t = "+str(t)+"  /!\ "
-            print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"                
-            return True
+            print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+            raise ValueError("ABORT : controler unstable at t = "+str(t))
         if math.isnan(norm(dv)) or math.isnan(norm(v)) :
             print "!!!!!!    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
             print "/!\ ABORT : nan   at t = "+str(t)+"  /!\ "
-            print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"                
-            return True
-                
+            print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"  
+            raise ValueError("ABORT : controler unstable at t = "+str(t))            
+    
    
     # time check
     dt = cfg.IK_dt  
@@ -431,8 +431,7 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
 
                 if cfg.WB_VERBOSE and int(t/dt) % cfg.IK_PRINT_N == 0:
                     printIntermediate(v,dv,invdyn,sol)
-                if checkDiverge(res,v,dv):
-                    return res.resize(k_t),robot
+                checkDiverge(res,v,dv)
                 
                 
             # end while t \in phase_t (loop for the current contact phase) 
