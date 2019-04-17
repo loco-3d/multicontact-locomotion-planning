@@ -13,19 +13,12 @@ import hpp_spline
 from hpp_spline import bezier
 import hpp_bezier_com_traj as bezier_com
 from mlp.utils import trajectories
-
+from mlp.utils.util import stdVecToMatrix
 
 
 class Empty:
     None
     
-def stdVecToMatrix(std_vector):
-    vec_l = []
-    for vec in std_vector:
-        vec_l.append(vec)
-
-    res = np.hstack(tuple(vec_l))
-    return res
 
 def computeConstantsWithDDJerk(ddjerk,t):
     a = (1./6.)*ddjerk *t*t*t

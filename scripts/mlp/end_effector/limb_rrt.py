@@ -8,17 +8,11 @@ import numpy.linalg
 from multicontact_api import WrenchCone,SOC6,ContactSequenceHumanoid
 import numpy as np
 import math
+from mlp.utils.util import stdVecToMatrix
 VERBOSE = True
 DISPLAY_RRT_PATH = True
 DISPLAY_JOINT_LEVEL = True
 
-def stdVecToMatrix(std_vector):
-    vec_l = []
-    for vec in std_vector:
-        vec_l.append(vec)
-
-    res = np.hstack(tuple(vec_l))
-    return res
 
 def createStateFromPhase(fullBody,q,phase):
     contacts = []

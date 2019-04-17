@@ -5,7 +5,7 @@ import multicontact_api
 from multicontact_api import WrenchCone,SOC6,ContactPatch, ContactPhaseHumanoid, ContactSequenceHumanoid
 import numpy as np
 import time
-
+from mlp.utils.util import stdVecToMatrix,numpy2DToList
 STONE_HEIGHT = 0.005
 STONE_GROUP = "stepping_stones"        
 TRAJ_GROUP = "com_traj"
@@ -91,23 +91,10 @@ def displaySteppingStones(cs,viewer):
     viewer.client.gui.addToGroup(STONE_GROUP,viewer.sceneName)
     viewer.client.gui.refresh()
 
-def stdVecToMatrix(std_vector):
-    if len(std_vector) == 0:
-        raise Exception("std_vector is Empty")
-    vec_l = []
-    for vec in std_vector:
-        vec_l.append(vec)
-
-    res = np.hstack(tuple(vec_l))
-    return res
-
 def comPosListFromState(state_traj):
     state = stdVecToMatrix(state_traj)
     c =state[:3,:]
-    c_l = []
-    for i in range(c.shape[1]):
-        c_l += [c[:,i].T.tolist()[0]]
-    return c_l
+    return numpy2DToList(c)
 
 def displayCOMTrajForPhase(p,viewer,name,name_group,color):
     c = comPosListFromState(p.state_trajectory)
