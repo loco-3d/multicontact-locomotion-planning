@@ -9,7 +9,7 @@ import mlp.config as cfg
 import mlp.viewer.display_tools as display
 from mlp.utils.util import *
 
-CONTACT_ANKLE_LEVEL = True # probably only required for hrp2, as the center of the feet is not the center of the flexibility ...
+CONTACT_ANKLE_LEVEL = False # probably only required for hrp2, as the center of the feet is not the center of the flexibility ...
 
 def isContactEverActive(cs,eeName):
     for phase in cs.contact_phases:

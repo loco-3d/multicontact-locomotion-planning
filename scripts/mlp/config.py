@@ -42,7 +42,7 @@ SOLVER_DT = 0.05 # hardcoded in timeOpt_configs files, must match this one !
 COM_SHIFT_Z = 0.0
 TIME_SHIFT_COM = 0.0
 
-USE_WP_COST = False # use wp from the contact sequence in the cost function of timeopt
+USE_WP_COST = True # use wp from the contact sequence in the cost function of timeopt
 
 ## Settings for end effector :
 USE_LIMB_RRT = False
@@ -55,7 +55,7 @@ WB_RETURN_INVALID = not WB_ABORT_WHEN_INVALID and True
 ##  Settings for whole body : 
 YAW_ROT_GAIN = 1.
 USE_CROC_COM = False
-WB_VERBOSE = False
+WB_VERBOSE = 0 # 0,1 or 2
 WB_STOP_AT_EACH_PHASE = False
 IK_dt = 0.001  # controler time step
 IK_PRINT_N = 500  # print state of the problem every IK_PRINT_N time steps (if verbose = True)
