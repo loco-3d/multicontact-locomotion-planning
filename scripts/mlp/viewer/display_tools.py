@@ -138,7 +138,7 @@ def displaySE3Traj(traj,viewer,name,color,time_interval,offset=SE3.Identity()):
         t += dt
     viewer.client.gui.addCurve(name,path,color)
     viewer.client.gui.addToGroup(name,viewer.sceneName)    
-    viewer.client.gui.refresh
+    viewer.client.gui.refresh()
     
 def displayWBconfig(viewer,q_matrix):
   q = q_matrix.T.tolist()[0]
