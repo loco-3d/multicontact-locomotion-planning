@@ -399,6 +399,16 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
                 sampleRoot.vel(MotiontoVec(root_traj(t)[1]))
                 orientationRootTask.setReference(sampleRoot)
                 
+                if cfg.WB_VERBOSE == 2:
+                    print "### references given : ###"
+                    print "com  pos : ",sampleCom.pos()
+                    print "com  vel : ",sampleCom.vel()
+                    print "com  acc : ",sampleCom.acc()
+                    print "AM   pos : ",sampleAM.pos()
+                    print "AM   vel : ",sampleAM.vel()
+                    print "root pos : ",sampleRoot.pos()
+                    print "root vel : ",sampleRoot.vel()
+                
                 # end effector (if they exists)
                 for eeName,traj in dic_effectors_trajs.iteritems():
                     if traj:
@@ -407,6 +417,9 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
                         sampleEff.pos(SE3toVec(traj(t)[0]))
                         sampleEff.vel(MotiontoVec(traj(t)[1]))
                         dic_effectors_tasks[eeName].setReference(sampleEff)
+                        if cfg.WB_VERBOSE == 2:
+                            print "effector "+str(eeName)+" pos : "+str(sampleEff.pos())
+                            print "effector "+str(eeName)+" vel : "+str(sampleEff.vel()) 
                         if cfg.IK_store_effector:
                             res.effector_references[eeName][:,k_t] = SE3toVec(traj(t)[0])
                     elif cfg.IK_store_effector:
