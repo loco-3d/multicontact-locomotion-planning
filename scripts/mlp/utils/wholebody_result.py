@@ -104,8 +104,8 @@ class Result:
         for ee in self.eeNames : 
             self.contact_forces[ee][:,k] =other.contact_forces[ee][:,k_other]
             self.contact_normal_force[ee][:,k] = other.contact_normal_force[ee][:,k_other]            
-            other.effector_trajectories[ee][:,k] =other.effector_trajectories[ee][:,k_other]
-            other.effector_references[ee][:,k] =other.effector_references[ee][:,k_other]
+            self.effector_trajectories[ee][:,k] =other.effector_trajectories[ee][:,k_other]
+            self.effector_references[ee][:,k] =other.effector_references[ee][:,k_other]
             self.effector_tracking_error[ee][:,k] =other.effector_tracking_error[ee][:,k_other]
             self.contact_activity[ee][:,k] =other.contact_activity[ee][:,k_other]
     
