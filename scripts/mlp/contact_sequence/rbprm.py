@@ -134,7 +134,7 @@ def generateContactSequence(fb,configs,beginId,endId):
         # retrieve the COM position for init and final state (equal for double support phases)
         init_state = phase_d.init_state.copy()
         init_state[0:3] = np.matrix(fb.getCenterOfMass()).transpose()
-        init_state[3:9] = np.matrix(configs[config_id][-6:]).transpose()
+        init_state[3:6] = np.matrix(configs[config_id][-6:-3]).transpose()
         final_state = init_state.copy()
         #phase_d.time_trajectory.append((fb.getDurationForState(stateId))*cfg.DURATION_n_CONTACTS/cfg.SPEED)
         phase_d.init_state=init_state
@@ -171,7 +171,7 @@ def generateContactSequence(fb,configs,beginId,endId):
             final_state = phase_d.final_state.copy()
             fb.setCurrentConfig(configs[config_id+1])
             final_state[0:3] = np.matrix(fb.getCenterOfMass()).transpose()
-            final_state[3:9] = np.matrix(configs[config_id+1][-6:]).transpose()              
+            final_state[3:6] = np.matrix(configs[config_id+1][-6:-3]).transpose()              
             #phase_s.time_trajectory.append((fb.getDurationForState(stateId))*(1-cfg.DURATION_n_CONTACTS)/cfg.SPEED) 
             phase_s.init_state=init_state.copy()
             phase_s.final_state=final_state.copy()
