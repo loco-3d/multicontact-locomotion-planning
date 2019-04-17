@@ -1,13 +1,19 @@
 import numpy as np
-import mlp.config as cfg
 class Result:
     
-    nq = cfg.nq
-    nv = cfg.nv
-    def __init__(self,cs,eeNames=[],t_begin = 0):
-        N = int(round(cs.contact_phases[-1].time_trajectory[-1]/cfg.IK_dt)) + 1 
-        self.N = N
-        self.t_t = np.array([t_begin + i*cfg.IK_dt for i in range(N)])
+    
+    def __init__(self,nq,nv,dt,eeNames,N=None,cs=None,t_begin = 0):
+        self.dt = dt
+        if cs :
+            self.N = int(round(cs.contact_phases[-1].time_trajectory[-1]/self.dt)) + 1             
+        elif N :
+            self.N = N            
+        else : 
+            raise RuntimeError("Result constructor must be called with either a contactSequence object or a number of points")
+        N = self.N
+        self.nq = nq
+        self.nv = nv
+        self.t_t = np.array([t_begin + i*self.dt for i in range(N)])
         self.q_t = np.matrix(np.zeros([self.nq,N]))
         self.dq_t = np.matrix(np.zeros([self.nv,N]))
         self.ddq_t = np.matrix(np.zeros([self.nv,N]))
@@ -27,8 +33,6 @@ class Result:
         self.wrench_reference = np.matrix(np.zeros([6,N]))        
         self.zmp_t = np.matrix(np.zeros([3,N]))
         self.zmp_reference = np.matrix(np.zeros([3,N]))
-        if len(eeNames)==0:
-            eeNames = cfg.Robot.dict_limb_joint.values()
         self.eeNames = eeNames
         self.contact_forces = {}
         self.contact_normal_force={}
@@ -43,7 +47,10 @@ class Result:
             self.effector_references.update({ee:np.matrix(np.zeros([12,N]))})
             self.effector_tracking_error.update({ee:np.matrix(np.zeros([6,N]))})
             self.contact_activity.update({ee:np.matrix(np.zeros([1,N]))})
-        self.phases_intervals = self.buildPhasesIntervals(cs)    
+        if cs:
+            self.phases_intervals = self.buildPhasesIntervals(cs)    
+        else :
+            print "Result constructor called without contactSequence object, phase_interval member not initialized"
      
     # By definition of a contact sequence, at the state at the transition time between two contact phases
     # belong to both contact phases
@@ -51,10 +58,9 @@ class Result:
     def buildPhasesIntervals(self,cs):
         intervals = []
         k = 0
-        dt = cfg.IK_dt
         for phase in cs.contact_phases :
             duration = phase.time_trajectory[-1]-phase.time_trajectory[0]
-            n_phase = int(round(duration/dt))
+            n_phase = int(round(duration/self.dt))
             interval = range(k,k+n_phase+1)
             k += n_phase
             intervals += [interval]
@@ -98,8 +104,8 @@ class Result:
         for ee in self.eeNames : 
             self.contact_forces[ee][:,k] =other.contact_forces[ee][:,k_other]
             self.contact_normal_force[ee][:,k] = other.contact_normal_force[ee][:,k_other]            
-            other.effector_trajectories[ee][:,k] =other.effector_trajectories[ee][:,k_other]
-            other.effector_references[ee][:,k] =other.effector_references[ee][:,k_other]
+            self.effector_trajectories[ee][:,k] =other.effector_trajectories[ee][:,k_other]
+            self.effector_references[ee][:,k] =other.effector_references[ee][:,k_other]
             self.effector_tracking_error[ee][:,k] =other.effector_tracking_error[ee][:,k_other]
             self.contact_activity[ee][:,k] =other.contact_activity[ee][:,k_other]
     
@@ -135,3 +141,65 @@ class Result:
             self.contact_activity[ee] = self.contact_activity[ee][:,:N]
         self.phases_intervals = self.resizePhasesIntervals(N)
         return self
+    
+    def exportNPZ(self,path,name):
+        import os
+        if not os.path.exists(path):
+            os.makedirs(path)
+        filename = path+"/"+name       
+        np.savez_compressed(filename,N=self.N,nq=self.nq,nv=self.nv,dt=self.dt,t_t=self.t_t,
+                 q_t=self.q_t,dq_t=self.dq_t,ddq_t=self.ddq_t,tau_t=self.tau_t,
+                 c_t=self.c_t,dc_t=self.dc_t,ddc_t=self.ddc_t,L_t=self.L_t,dL_t=self.dL_t,
+                 c_tracking_error=self.c_tracking_error,c_reference=self.c_reference,dc_reference=self.dc_reference,ddc_reference=self.ddc_reference,
+                 L_reference=self.L_reference,dL_reference=self.dL_reference,
+                 wrench_t=self.wrench_t,zmp_t=self.zmp_t,wrench_reference=self.wrench_reference,zmp_reference=self.zmp_reference,
+                 eeNames=self.eeNames,contact_forces=self.contact_forces,contact_normal_force=self.contact_normal_force,
+                 effector_trajectories=self.effector_trajectories,effector_references=self.effector_references,effector_tracking_error=self.effector_tracking_error,
+                 contact_activity=self.contact_activity,phases_intervals=self.phases_intervals)
+        
+        print "Results exported to ",filename
+
+def loadFromNPZ(filename):
+    f=np.load(filename)
+    N = f['N'].tolist()
+    nq = f['nq'].tolist()
+    nv = f['nv'].tolist()
+    dt = f['dt'].tolist()
+    eeNames = f['eeNames'].tolist()
+    res = Result(nq,nv,dt,eeNames=eeNames,N=N)
+    res.t_t = f['t_t']
+    res.q_t  =np.asmatrix(f['q_t'])
+    res.dq_t =np.asmatrix(f['dq_t'])
+    res.ddq_t =np.asmatrix(f['ddq_t'])
+    res.tau_t =np.asmatrix(f['tau_t'])
+    res.c_t =np.asmatrix(f['c_t'])
+    res.dc_t =np.asmatrix(f['dc_t'])
+    res.ddc_t =np.asmatrix(f['ddc_t'])
+    res.L_t =np.asmatrix(f['L_t'])
+    res.dL_t =np.asmatrix(f['dL_t'])
+    res.c_tracking_error =np.asmatrix(f['c_tracking_error'])
+    res.c_reference =np.asmatrix(f['c_reference'])
+    res.dc_reference =np.asmatrix(f['dc_reference'])
+    res.ddc_reference =np.asmatrix(f['ddc_reference'])
+    res.L_reference =np.asmatrix(f['L_t'])
+    res.dL_reference =np.asmatrix(f['dL_t'])
+    res.wrench_t =np.asmatrix(f['wrench_t'])
+    res.zmp_reference =np.asmatrix(f['zmp_t'])
+    res.wrench_reference =np.asmatrix(f['wrench_t'])
+    res.zmp_t =np.asmatrix(f['zmp_t'])        
+    res.contact_forces =f['contact_forces'].tolist()
+    res.contact_normal_force = f['contact_normal_force'].tolist()            
+    res.effector_trajectories =f['effector_trajectories'].tolist()
+    res.effector_references =f['effector_references'].tolist()
+    res.effector_tracking_error =f['effector_tracking_error'].tolist()
+    res.contact_activity =f['contact_activity'].tolist()
+    res.phases_intervals = f['phases_intervals'].tolist()
+    f.close()
+    for ee in res.eeNames : 
+        res.contact_forces[ee] = np.asmatrix(res.contact_forces[ee])
+        res.contact_normal_force[ee] = np.asmatrix(res.contact_normal_force[ee])                           
+        res.effector_trajectories[ee] = np.asmatrix(res.effector_trajectories[ee])
+        res.effector_references[ee] = np.asmatrix(res.effector_references[ee])
+        res.effector_tracking_error[ee] = np.asmatrix(res.effector_tracking_error[ee])
+        res.contact_activity[ee] = np.asmatrix(res.contact_activity[ee])   
+    return res

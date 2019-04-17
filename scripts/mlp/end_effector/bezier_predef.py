@@ -2,30 +2,23 @@ import mlp.config as cfg
 import time
 import os
 from mlp.utils.polyBezier import *
-import pinocchio as se3
+import pinocchio as pin
 from pinocchio import SE3
 from pinocchio.utils import *
 import numpy.linalg
-from locomote import WrenchCone,SOC6,ContactSequenceHumanoid
+from multicontact_api import WrenchCone,SOC6,ContactSequenceHumanoid
 import numpy as np
 from tools.disp_bezier import *
 import hpp_spline
 from hpp_spline import bezier
 import hpp_bezier_com_traj as bezier_com
 from mlp.utils import trajectories
-
+from mlp.utils.util import stdVecToMatrix
 
 
 class Empty:
     None
     
-def stdVecToMatrix(std_vector):
-    vec_l = []
-    for vec in std_vector:
-        vec_l.append(vec)
-
-    res = np.hstack(tuple(vec_l))
-    return res
 
 def computeConstantsWithDDJerk(ddjerk,t):
     a = (1./6.)*ddjerk *t*t*t
@@ -88,6 +81,10 @@ def buildPredefinedFinalTraj(placement,t_total):
 
 def generateBezierTraj(placement_init,placement_end,time_interval):
     t_total = time_interval[1]-time_interval[0] - 2*cfg.EFF_T_DELAY
+    #print "Generate Bezier Traj :"
+    #print "placement Init = ",placement_init
+    #print "placement End  = ",placement_end
+    #print "time interval  = ",time_interval
     # generate two curves for the takeoff/landing : 
     # generate a bezier curve for the middle part of the motion : 
     bezier_takeoff = buildPredefinedInitTraj(placement_init,t_total)
@@ -131,5 +128,6 @@ placement_end = SE3.Identity()
 placement_end.translation = np.matrix([0.6,0.22,0]).T
 placement_end.rotation = Quaternion(0.9800666,0.1986693,0, 0).matrix()
 t_total = 1.2
+time_interval = [1,1+t_total]
 
 """

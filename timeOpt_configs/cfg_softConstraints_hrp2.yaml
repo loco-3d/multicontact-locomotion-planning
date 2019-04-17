@@ -25,7 +25,7 @@ planner_variables:
   cop_range_lf: [-0.002,  0.002, -0.002,  0.002]
   cop_range_rh: [-0.01,  0.01, -0.01,  0.01]
   cop_range_lh: [-0.01,  0.01, -0.01,  0.01]
-  max_eef_lengths: [0.68,  0.68,  0.6,  0.6]
+  max_eef_lengths: [0.7,  0.7,  0.6,  0.6]
 
   w_trq_arm:       1.000
   w_trq_leg:       1.000

@@ -1,4 +1,4 @@
-import pinocchio as se3
+import pinocchio as pin
 from pinocchio import SE3, Quaternion
 import tsid
 import numpy as np
@@ -9,8 +9,8 @@ import time
 import commands
 import gepetto.corbaserver
 import mlp.config as cfg
-import locomote
-from locomote import WrenchCone,SOC6,ContactPatch, ContactPhaseHumanoid, ContactSequenceHumanoid
+import multicontact_api
+from multicontact_api import WrenchCone,SOC6,ContactPatch, ContactPhaseHumanoid, ContactSequenceHumanoid
 from mlp.utils import trajectories
 import mlp.end_effector.bezier_predef as EETraj
 import mlp.viewer.display_tools as display_tools
@@ -38,12 +38,12 @@ def createContactForEffector(invdyn,robot,phase,eeName):
     contact_Point[1, :] = [-lyn, lyp, -lyn, lyp]
     contact_Point[2, :] = [lz]*4
     # build ContactConstraint object
-    contact = tsid.Contact6d("contact_"+eeName, robot, eeName, contact_Point, contactNormal, cfg.MU, cfg.fMin, cfg.fMax,cfg.w_forceRef)
+    contact = tsid.Contact6d("contact_"+eeName, robot, eeName, contact_Point, contactNormal, cfg.MU, cfg.fMin, cfg.fMax)
     contact.setKp(cfg.kp_contact * np.matrix(np.ones(6)).transpose())
     contact.setKd(2.0 * np.sqrt(cfg.kp_contact) * np.matrix(np.ones(6)).transpose())
     ref = JointPlacementForEffector(phase,eeName)
     contact.setReference(ref)
-    invdyn.addRigidContact(contact)
+    invdyn.addRigidContact(contact,cfg.w_forceRef)
     if cfg.WB_VERBOSE :
         print "create contact for effector ",eeName
         print "contact placement : ",ref       
@@ -130,7 +130,7 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
     if cfg.WB_VERBOSE:
         print "load robot : " ,urdf    
     #srdf = "package://" + package + '/srdf/' +  cfg.Robot.urdfName+cfg.Robot.srdfSuffix + '.srdf'
-    robot = tsid.RobotWrapper(urdf, se3.StdVec_StdString(), se3.JointModelFreeFlyer(), False)
+    robot = tsid.RobotWrapper(urdf, pin.StdVec_StdString(), pin.JointModelFreeFlyer(), False)
     if cfg.WB_VERBOSE:
         print "robot loaded in tsid"
         
@@ -263,20 +263,20 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
         if norm(dv) > 1e6 or norm(v) > 1e6 :
             print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
             print "/!\ ABORT : controler unstable at t = "+str(t)+"  /!\ "
-            print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"                
-            return True
+            print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+            raise ValueError("ABORT : controler unstable at t = "+str(t))
         if math.isnan(norm(dv)) or math.isnan(norm(v)) :
             print "!!!!!!    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
             print "/!\ ABORT : nan   at t = "+str(t)+"  /!\ "
-            print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"                
-            return True
-                
+            print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"  
+            raise ValueError("ABORT : controler unstable at t = "+str(t))            
+    
    
     # time check
     dt = cfg.IK_dt  
     if cfg.WB_VERBOSE:
         print "dt : ",dt
-    res = Result(cs,eeNames=usedEffectors)
+    res = Result(robot.nq,robot.nv,cfg.IK_dt,eeNames=usedEffectors,cs=cs)
     N = res.N    
     last_display = 0 
     if cfg.WB_VERBOSE:
@@ -318,7 +318,7 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
         # add newly created contacts : 
         for eeName in usedEffectors:
             if phase_prev and not isContactActive(phase_prev,eeName) and isContactActive(phase,eeName) :
-                invdyn.removeTask(dic_effectors_tasks[eeName].name, 0.0) # remove se3 task for this contact
+                invdyn.removeTask(dic_effectors_tasks[eeName].name, 0.0) # remove pin task for this contact
                 dic_effectors_trajs.update({eeName:None}) # delete reference trajectory for this task
                 if cfg.WB_VERBOSE :
                     print "remove se3 task : "+dic_effectors_tasks[eeName].name                
@@ -399,6 +399,16 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
                 sampleRoot.vel(MotiontoVec(root_traj(t)[1]))
                 orientationRootTask.setReference(sampleRoot)
                 
+                if cfg.WB_VERBOSE == 2:
+                    print "### references given : ###"
+                    print "com  pos : ",sampleCom.pos()
+                    print "com  vel : ",sampleCom.vel()
+                    print "com  acc : ",sampleCom.acc()
+                    print "AM   pos : ",sampleAM.pos()
+                    print "AM   vel : ",sampleAM.vel()
+                    print "root pos : ",sampleRoot.pos()
+                    print "root vel : ",sampleRoot.vel()
+                
                 # end effector (if they exists)
                 for eeName,traj in dic_effectors_trajs.iteritems():
                     if traj:
@@ -407,6 +417,9 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
                         sampleEff.pos(SE3toVec(traj(t)[0]))
                         sampleEff.vel(MotiontoVec(traj(t)[1]))
                         dic_effectors_tasks[eeName].setReference(sampleEff)
+                        if cfg.WB_VERBOSE == 2:
+                            print "effector "+str(eeName)+" pos : "+str(sampleEff.pos())
+                            print "effector "+str(eeName)+" vel : "+str(sampleEff.vel()) 
                         if cfg.IK_store_effector:
                             res.effector_references[eeName][:,k_t] = SE3toVec(traj(t)[0])
                     elif cfg.IK_store_effector:
@@ -427,12 +440,11 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
                 # update state
                 v_mean = v + 0.5 * dt * dv
                 v += dt * dv
-                q = se3.integrate(robot.model(), q, dt * v_mean)    
+                q = pin.integrate(robot.model(), q, dt * v_mean)    
 
                 if cfg.WB_VERBOSE and int(t/dt) % cfg.IK_PRINT_N == 0:
                     printIntermediate(v,dv,invdyn,sol)
-                if checkDiverge(res,v,dv):
-                    return res.resize(k_t),robot
+                checkDiverge(res,v,dv)
                 
                 
             # end while t \in phase_t (loop for the current contact phase) 

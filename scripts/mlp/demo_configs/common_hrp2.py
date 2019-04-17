@@ -1,8 +1,6 @@
 from hpp.corbaserver.rbprm.hrp2 import Robot
 ## following info are already accessible once the urdf is loaded, but here we do not load the urdf ...
 MASS = 55.88363633
-nq = 37
-nv = 36
 ## weight and gains used by TSID
 
 fMin = 1.0                      # minimum normal force

@@ -6,11 +6,12 @@ OUTPUT_DIR = PKG_PATH+"/res"
 CONTACT_SEQUENCE_PATH = OUTPUT_DIR + "/contact_sequences"
 TIME_OPT_CONFIG_PATH = PKG_PATH +'/timeOpt_configs'
 LOAD_CS = True
-LOAD_CS_COM = False
+LOAD_CS_COM = True
 SAVE_CS = not LOAD_CS and True 
 SAVE_CS_COM = not LOAD_CS_COM and True
 EXPORT_GAZEBO = False
-EXPORT_OPENHRP = True
+EXPORT_OPENHRP = False
+EXPORT_NPZ = True
 openHRP_useZMPref = True
 EXPORT_PATH = OUTPUT_DIR+"/export"
 
@@ -42,7 +43,7 @@ SOLVER_DT = 0.05 # hardcoded in timeOpt_configs files, must match this one !
 COM_SHIFT_Z = 0.0
 TIME_SHIFT_COM = 0.0
 
-USE_WP_COST = False # use wp from the contact sequence in the cost function of timeopt
+USE_WP_COST = True # use wp from the contact sequence in the cost function of timeopt
 
 ## Settings for end effector :
 USE_LIMB_RRT = False
@@ -55,7 +56,7 @@ WB_RETURN_INVALID = not WB_ABORT_WHEN_INVALID and True
 ##  Settings for whole body : 
 YAW_ROT_GAIN = 1.
 USE_CROC_COM = False
-WB_VERBOSE = False
+WB_VERBOSE = 0 # 0,1 or 2
 WB_STOP_AT_EACH_PHASE = False
 IK_dt = 0.001  # controler time step
 IK_PRINT_N = 500  # print state of the problem every IK_PRINT_N time steps (if verbose = True)
@@ -68,29 +69,30 @@ IK_store_contact_forces = True
 import importlib
 import sys
 if len(sys.argv)<2 : 
-    print "You must call this script with the name of the config file (one of the file contained in mlp.demo_config)"
-    print "Available demo files : "
+    print "## WARNING : script called without specifying a demo config file (one of the file contained in mlp.demo_config)"
+    print "## Available demo files : "
     configs_path = PKG_PATH+"/scripts/mlp/demo_configs"
     demos_list = os.listdir(configs_path)
     for f in demos_list:
-        if f.endswith(".py") and not f.startswith("__") : 
+        if f.endswith(".py") and not f.startswith("__") and not f.startswith("common") : 
             print f.rstrip(".py")
-    raise IOError("You must call this script with the name of the config file (one of the file contained in mlp.demo_config)")
-    
-import argparse
-parser = argparse.ArgumentParser(description = "todo")
-parser.add_argument('demo_name',type=str,help="The name of the demo configuration file to load")
-args = parser.parse_args()
-DEMO_NAME = args.demo_name
-print "# Load demo config : ",DEMO_NAME
-# Import the module
-try :
-    demo_cfg = importlib.import_module('mlp.demo_configs.'+DEMO_NAME)
-except ImportError:
-    raise NameError("No demo config file with the given name in mlp.demo_config")
-# Determine a list of names to copy to the current name space
-names = getattr(demo_cfg, '__all__', [n for n in dir(demo_cfg) if not n.startswith('_')])
-# Copy those names into the current name space
-g = globals()
-for name in names:
-    g[name] = getattr(demo_cfg, name)
+    print "## Some data will be missing, scripts may fails. (cfg.Robot will not exist)"
+    #raise IOError("You must call this script with the name of the config file (one of the file contained in mlp.demo_config)")
+else :  
+    import argparse
+    parser = argparse.ArgumentParser(description = "todo")
+    parser.add_argument('demo_name',type=str,help="The name of the demo configuration file to load")
+    args = parser.parse_args()
+    DEMO_NAME = args.demo_name
+    print "# Load demo config : ",DEMO_NAME
+    # Import the module
+    try :
+        demo_cfg = importlib.import_module('mlp.demo_configs.'+DEMO_NAME)
+    except ImportError:
+        raise NameError("No demo config file with the given name in mlp.demo_config")
+    # Determine a list of names to copy to the current name space
+    names = getattr(demo_cfg, '__all__', [n for n in dir(demo_cfg) if not n.startswith('_')])
+    # Copy those names into the current name space
+    g = globals()
+    for name in names:
+        g[name] = getattr(demo_cfg, name)

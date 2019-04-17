@@ -1,24 +1,18 @@
 import mlp.config as cfg
 import time
 import os
-import pinocchio as se3
+import pinocchio as pin
 from pinocchio import SE3
 from pinocchio.utils import *
 import numpy.linalg
-from locomote import WrenchCone,SOC6,ContactSequenceHumanoid
+from multicontact_api import WrenchCone,SOC6,ContactSequenceHumanoid
 import numpy as np
 import math
+from mlp.utils.util import stdVecToMatrix
 VERBOSE = True
 DISPLAY_RRT_PATH = True
 DISPLAY_JOINT_LEVEL = True
 
-def stdVecToMatrix(std_vector):
-    vec_l = []
-    for vec in std_vector:
-        vec_l.append(vec)
-
-    res = np.hstack(tuple(vec_l))
-    return res
 
 def createStateFromPhase(fullBody,q,phase):
     contacts = []

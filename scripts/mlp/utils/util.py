@@ -53,6 +53,22 @@ def MotiontoVec(M):
     return v
 
 
+def stdVecToMatrix(std_vector):
+    if len(std_vector) == 0:
+        raise Exception("std_vector is Empty")
+    vec_l = []
+    for vec in std_vector:
+        vec_l.append(vec)
+
+    res = np.hstack(tuple(vec_l))
+    return res
+
+def numpy2DToList(m):
+    l = []
+    for i in range(m.shape[1]):
+        l += [m[:,i].T.tolist()[0]]
+    return l    
+
 # assume that q.size >= 7 with root pos and quaternion(x,y,z,w)
 def SE3FromConfig(q):
     placement = SE3.Identity()

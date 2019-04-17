@@ -1,11 +1,11 @@
 import mlp.config as cfg
-import pinocchio as se3
+import pinocchio as pin
 from pinocchio import SE3, Quaternion
-import locomote
-from locomote import WrenchCone,SOC6,ContactPatch, ContactPhaseHumanoid, ContactSequenceHumanoid
+import multicontact_api
+from multicontact_api import WrenchCone,SOC6,ContactPatch, ContactPhaseHumanoid, ContactSequenceHumanoid
 import numpy as np
 import time
-
+from mlp.utils.util import stdVecToMatrix,numpy2DToList
 STONE_HEIGHT = 0.005
 STONE_GROUP = "stepping_stones"        
 TRAJ_GROUP = "com_traj"
@@ -58,7 +58,7 @@ def displayContactsLandmarkFromPhase(phase,viewer):
     viewer.client.gui.refresh() 
 
 def addSteppingStone(viewer,placement,name,size,color):
-    viewer.client.gui.addBox(name,size[0]/2.,size[1]/2.,STONE_HEIGHT,color)
+    viewer.client.gui.addBox(name,size[0],size[1],STONE_HEIGHT,color)
     viewer.client.gui.addToGroup(name,STONE_GROUP)
     viewer.client.gui.applyConfiguration(name,SE3ToViewerConfig(placement))
     
@@ -91,23 +91,10 @@ def displaySteppingStones(cs,viewer):
     viewer.client.gui.addToGroup(STONE_GROUP,viewer.sceneName)
     viewer.client.gui.refresh()
 
-def stdVecToMatrix(std_vector):
-    if len(std_vector) == 0:
-        raise Exception("std_vector is Empty")
-    vec_l = []
-    for vec in std_vector:
-        vec_l.append(vec)
-
-    res = np.hstack(tuple(vec_l))
-    return res
-
 def comPosListFromState(state_traj):
     state = stdVecToMatrix(state_traj)
     c =state[:3,:]
-    c_l = []
-    for i in range(c.shape[1]):
-        c_l += [c[:,i].T.tolist()[0]]
-    return c_l
+    return numpy2DToList(c)
 
 def displayCOMTrajForPhase(p,viewer,name,name_group,color):
     c = comPosListFromState(p.state_trajectory)
@@ -151,7 +138,7 @@ def displaySE3Traj(traj,viewer,name,color,time_interval,offset=SE3.Identity()):
         t += dt
     viewer.client.gui.addCurve(name,path,color)
     viewer.client.gui.addToGroup(name,viewer.sceneName)    
-    viewer.client.gui.refresh
+    viewer.client.gui.refresh()
     
 def displayWBconfig(viewer,q_matrix):
   q = q_matrix.T.tolist()[0]
@@ -180,3 +167,15 @@ def displayWBmotion(viewer,q_t,dt,dt_display):
     displayWBconfig(viewer,q_t[:,-1])
           
 
+def displayFeetTrajFromResult(viewer,res):
+  for eeName in res.eeNames:
+    name = "feet_traj_"+str(eeName)
+    offset = cfg.Robot.dict_offset[eeName].translation    
+    traj = res.effector_references[eeName][:3,:]
+    for i in range(traj.shape[1]):
+      traj[:,i] += offset
+    traj = numpy2DToList(traj)
+    color = cfg.Robot.dict_limb_color_traj[eeName]
+    viewer.client.gui.addCurve(name,traj,color)
+    viewer.client.gui.addToGroup(name,viewer.sceneName)    
+    viewer.client.gui.refresh()    

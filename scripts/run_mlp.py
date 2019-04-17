@@ -6,7 +6,7 @@ import importlib
 cp = importlib.import_module('scenarios.'+cfg.SCRIPT_PATH+'.'+cfg.DEMO_NAME)
 import mlp.contact_sequence.rbprm as generate_cs
 import mlp.viewer.display_tools as display_tools
-from locomote import ContactSequenceHumanoid
+from multicontact_api import ContactSequenceHumanoid
 
 v = cp.v
 
@@ -77,7 +77,7 @@ if cfg.DISPLAY_WB_MOTION:
 if cfg.CHECK_FINAL_MOTION :
     from mlp.utils import check_path
     print "## Begin validation of the final motion (collision and joint-limits)"
-    validator = check_path.PathChecker(v,cp.fullBody,cs_com,cfg.nq,True)
+    validator = check_path.PathChecker(v,cp.fullBody,cs_com,res.nq,True)
     motion_valid,t_invalid = validator.check_motion(res.q_t)
     print "## Check final motion, valid = ",motion_valid
     if not motion_valid:
@@ -87,7 +87,7 @@ else :
 
 if cfg.PLOT:
     from mlp.utils import plot
-    plot.plotALLFromWB(cs_com,res)
+    plot.plotALLFromWB(cs_com,res,cfg.DISPLAY_PLOT,cfg.SAVE_PLOT)
 
 if cfg.EXPORT_OPENHRP and motion_valid:
     from mlp.export import openHRP
@@ -95,8 +95,8 @@ if cfg.EXPORT_OPENHRP and motion_valid:
 if cfg.EXPORT_GAZEBO and motion_valid:
     from mlp.export import gazebo
     gazebo.export(res.q_t)
-
-
+if cfg.EXPORT_NPZ and motion_valid :
+    res.exportNPZ(cfg.EXPORT_PATH+"/npz",cfg.DEMO_NAME+".npz")
 
 
 def dispCS(step = 0.2): 

@@ -1,6 +1,6 @@
 
 import numpy as np
-import pinocchio as se3
+import pinocchio as pin
 from pinocchio import SE3, Motion,Force
 from mlp.utils.util import *
 import mlp.config as cfg
@@ -112,13 +112,13 @@ def computeWrench(res):
     rp = RosPack()
     urdf = rp.get_path(cfg.Robot.packageName)+'/urdf/'+cfg.Robot.urdfName+cfg.Robot.urdfSuffix+'.urdf'   
     #srdf = "package://" + package + '/srdf/' +  cfg.Robot.urdfName+cfg.Robot.srdfSuffix + '.srdf'
-    robot = RobotWrapper(urdf, se3.StdVec_StdString(), se3.JointModelFreeFlyer(), False)
+    robot = RobotWrapper.BuildFromURDF(urdf, pin.StdVec_StdString(), pin.JointModelFreeFlyer(), False)
     model = robot.model
     data = robot.data    
     for k in range(res.N):
-        se3.rnea(model,data,res.q_t[:,k],res.dq_t[:,k],res.ddq_t[:,k])
+        pin.rnea(model,data,res.q_t[:,k],res.dq_t[:,k],res.ddq_t[:,k])
         pcom, vcom, acom = robot.com(res.q_t[:,k],res.dq_t[:,k],res.ddq_t[:,k]) # FIXME : why do I need to call com to have the correct values in data ??      
-        phi0 = data.oMi[1].act(se3.Force(data.tau[:6]))
+        phi0 = data.oMi[1].act(pin.Force(data.tau[:6]))
         res.wrench_t[:,k] = phi0.vector
     return res
     

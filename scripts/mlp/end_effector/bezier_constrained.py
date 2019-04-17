@@ -2,11 +2,11 @@ import mlp.config as cfg
 import time
 import os
 from mlp.utils.polyBezier import *
-import pinocchio as se3
+import pinocchio as pin
 from pinocchio import SE3, Quaternion
 from pinocchio.utils import *
 import numpy.linalg
-from locomote import WrenchCone,SOC6,ContactSequenceHumanoid
+from multicontact_api import WrenchCone,SOC6,ContactSequenceHumanoid
 import numpy as np
 from numpy import array, dot, vstack, hstack, asmatrix, identity
 from numpy.linalg import norm, inv

@@ -1,7 +1,7 @@
 import numpy as np
 import mlp.config as cfg
-import locomote
-from locomote import WrenchCone,SOC6,ContactPatch, ContactPhaseHumanoid, ContactSequenceHumanoid
+import multicontact_api
+from multicontact_api import WrenchCone,SOC6,ContactPatch, ContactPhaseHumanoid, ContactSequenceHumanoid
 
 ## straight line from the center of the support polygon of the current phase to the next one
 def generateCentroidalTrajectory(cs_origin):

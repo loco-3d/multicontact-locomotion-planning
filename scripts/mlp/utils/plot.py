@@ -1,7 +1,7 @@
 
 import numpy as np
 import os
-import pinocchio as se3
+import pinocchio as pin
 from pinocchio import SE3
 from mlp.utils.util import *
 import mlp.config as cfg
@@ -195,8 +195,7 @@ def plotContactForces(timeline,p_intervals,forces_dict,N):
     ax.plot(timeline.T, sum_f[0,:].T, color="k",label = "sum")
     ax.legend()
 
-def plotKneeTorque(timeline,p_intervals,tau):
-    offset = 6 + (cfg.nq - cfg.nv) # remove freeflyer and addition difference between config and DOF size
+def plotKneeTorque(timeline,p_intervals,tau,offset):
     colors = ['r','g','b','y']  
     fig = plt.figure("Knee torque")
     plt.suptitle("Knee torque")
@@ -217,7 +216,7 @@ def saveAllFigures():
         fig = plt.figure(i)
         fig.savefig(path_dir+"/"+str(fig._suptitle.get_text())+".eps",dpi=600)
 
-def plotALLFromWB(cs,res):
+def plotALLFromWB(cs,res,display=True,save=False):
     print "Plotting ..."
     plt.rcParams['axes.linewidth'] = plt.rcParams['font.size'] / 30.
     plt.rcParams['lines.linewidth'] = plt.rcParams['font.size'] / 30.    
@@ -229,12 +228,15 @@ def plotALLFromWB(cs,res):
         plotCOMError(res.t_t,res.phases_intervals,res.c_tracking_error)
         plotEffectorError(res.t_t,res.phases_intervals,res.effector_tracking_error)        
     plotContactForces(res.t_t,res.phases_intervals,res.contact_normal_force,res.N)
-    computeZMP(cs,res)
-    computeZMPRef(cs,res)
+    # compute zmp from whole body or centroidal (only if it hasn't been computed already)
+    if not res.zmp_t.any():
+        computeZMP(cs,res)
+    if not res.zmp_reference.any():
+        computeZMPRef(cs,res)
     plotZMP(cs,res.zmp_t,res.zmp_reference,res.c_t)
-    plotKneeTorque(res.t_t,res.phases_intervals,res.tau_t)
-    if cfg.DISPLAY_PLOT:
+    plotKneeTorque(res.t_t,res.phases_intervals,res.tau_t,6 + (res.nq - res.nv))
+    if display:
         plt.show(block = False)
-    if cfg.SAVE_PLOT:
+    if save:
         saveAllFigures()
     print "Plotting Done."

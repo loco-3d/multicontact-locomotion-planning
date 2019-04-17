@@ -2,14 +2,14 @@ import numpy as np
 from numpy.linalg import norm
 import os
 import timeopt
-import locomote
-from locomote import WrenchCone,SOC6,ContactPatch, ContactPhaseHumanoid, ContactSequenceHumanoid
+import multicontact_api
+from multicontact_api import WrenchCone,SOC6,ContactPatch, ContactPhaseHumanoid, ContactSequenceHumanoid
 import time
 import mlp.config as cfg
 import mlp.viewer.display_tools as display
 from mlp.utils.util import *
 
-CONTACT_ANKLE_LEVEL = True # probably only required for hrp2, as the center of the feet is not the center of the flexibility ...
+CONTACT_ANKLE_LEVEL = False # probably only required for hrp2, as the center of the feet is not the center of the flexibility ...
 
 def isContactEverActive(cs,eeName):
     for phase in cs.contact_phases:
@@ -101,8 +101,9 @@ def fillCSFromTimeopt(cs,cs_initGuess,tp):
         if k == 0:
             u[0:3] = ((tp.getLMOM(k)/MASS) / tp.getTime(k)).tolist() # acceleration
             u[3:6] = ((tp.getAMOM(k))/(tp.getTime(k))).tolist() # angular momentum variation
-        u[0:3] = (((tp.getLMOM(k)/MASS) - (tp.getLMOM(k-1)/MASS)) / (tp.getTime(k)-tp.getTime(k-1))).tolist()#acceleration
-        u[3:6] = ((tp.getAMOM(k) - tp.getAMOM(k-1))/(tp.getTime(k)-tp.getTime(k-1))).tolist() # angular momentum variation
+        else :
+            u[0:3] = (((tp.getLMOM(k)/MASS) - (tp.getLMOM(k-1)/MASS)) / (tp.getTime(k)-tp.getTime(k-1))).tolist()#acceleration
+            u[3:6] = ((tp.getAMOM(k) - tp.getAMOM(k-1))/(tp.getTime(k)-tp.getTime(k-1))).tolist() # angular momentum variation
         #print "control = ",np.matrix(u)    
         x[0:3] = tp.getCOM(k).tolist() # position
         x[3:6] = (tp.getLMOM(k)/MASS).tolist() # velocity
