@@ -216,7 +216,7 @@ def saveAllFigures():
         fig = plt.figure(i)
         fig.savefig(path_dir+"/"+str(fig._suptitle.get_text())+".eps",dpi=600)
 
-def plotALLFromWB(cs,res):
+def plotALLFromWB(cs,res,display=True,save=False):
     print "Plotting ..."
     plt.rcParams['axes.linewidth'] = plt.rcParams['font.size'] / 30.
     plt.rcParams['lines.linewidth'] = plt.rcParams['font.size'] / 30.    
@@ -232,8 +232,8 @@ def plotALLFromWB(cs,res):
     computeZMPRef(cs,res)
     plotZMP(cs,res.zmp_t,res.zmp_reference,res.c_t)
     plotKneeTorque(res.t_t,res.phases_intervals,res.tau_t,6 + (res.nq - res.nv))
-    if cfg.DISPLAY_PLOT:
+    if display:
         plt.show(block = False)
-    if cfg.SAVE_PLOT:
+    if save:
         saveAllFigures()
     print "Plotting Done."

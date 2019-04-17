@@ -87,7 +87,7 @@ else :
 
 if cfg.PLOT:
     from mlp.utils import plot
-    plot.plotALLFromWB(cs_com,res)
+    plot.plotALLFromWB(cs_com,res,cfg.DISPLAY_PLOT,cfg.SAVE_PLOT)
 
 if cfg.EXPORT_OPENHRP and motion_valid:
     from mlp.export import openHRP
