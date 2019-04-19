@@ -499,7 +499,7 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
 
     if cfg.PLOT:
         from mlp.utils import plot
-        plot.plotEffectorRef(stored_effectors_ref)            
+        plot.plotEffectorRef(stored_effectors_ref,dt)            
     
     assert (k_t == res.N-1) and "res struct not fully filled."
     return res,robot
