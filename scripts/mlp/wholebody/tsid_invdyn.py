@@ -78,13 +78,16 @@ def generateEEReferenceTraj(robot,robotData,time_interval,phase,phase_next,eeNam
         print "positions : ",placements        
     return ref_traj
 
-def generateEEReferenceTrajCollisionFree(fullBody,robot,robotData,time_interval,phase_previous,phase,phase_next,q_t,predefTraj,eeName,phaseId,viewer = None):
+def generateEEReferenceTrajCollisionFree(fullBody,robot,robotData,time_interval,phase_previous,phase,phase_next,q_init,q_end,predefTraj,eeName,phaseId,numTry,viewer = None):
     placements = []
     placement_init = JointPlacementForEffector(phase_previous,eeName)
     placement_end = JointPlacementForEffector(phase_next,eeName)
     placements.append(placement_init)
-    placements.append(placement_end)    
-    ref_traj = bezier_constrained.generateConstrainedBezierTraj(time_interval,placement_init,placement_end,q_t,predefTraj,phase_previous,phase,phase_next,fullBody,phaseId,eeName,viewer)                    
+    placements.append(placement_end)
+    if cfg.USE_CONSTRAINED_BEZIER :
+        ref_traj = bezier_constrained.generateConstrainedBezierTraj(time_interval,placement_init,placement_end,q_init,q_end,predefTraj,phase_previous,phase,phase_next,fullBody,phaseId,eeName,viewer)                    
+    elif cfg.USE_LIMB_RRT:
+        ref_traj = limb_rrt.generateLimbRRTOptimizedTraj(time_interval,placement_init,placement_end,q_init,q_end,predefTraj,phase_previous,phase,phase_next,fullBody,phaseId,eeName,numTry,viewer) 
     return ref_traj
 
 def computeCOMRefFromPhase(phase,time_interval):
@@ -450,20 +453,25 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
             # end while t \in phase_t (loop for the current contact phase) 
             if swingPhase and cfg.EFF_CHECK_COLLISION :
                 phaseValid,t_invalid = validator.check_motion(res.q_t[:,phase_interval[0]:k_t]) #FIXME
-                if iter_for_phase > 0:# FIXME : debug only, only allow 1 retry 
-                    phaseValid = True
+                #if iter_for_phase == 0:# FIXME : debug only, force limb-rrt
+                #    phaseValid = False
                 if not phaseValid :
                     print "Phase "+str(pid)+" not valid at t = "+ str(t_invalid)
-                    if cfg.WB_ABORT_WHEN_INVALID :
-                        return res.resize(k_begin),robot
-                    elif cfg.WB_RETURN_INVALID : 
-                        return res.resize(k_t),robot                      
-                    else : 
+                    if cfg.USE_CONSTRAINED_BEZIER or cfg.USE_LIMB_RRT: 
                         print "Try new end effector trajectory."  
-                        for eeName,oldTraj in dic_effectors_trajs.iteritems():
-                            if oldTraj: # update the traj in the map
-                                ref_traj = generateEEReferenceTrajCollisionFree(fullBody,robot,invdyn.data(),time_interval,phase_prev,phase,phase_next,q_t_phase,oldTraj,eeName,pid,viewer)
-                                dic_effectors_trajs.update({eeName:ref_traj})
+                        try:
+                            for eeName,oldTraj in dic_effectors_trajs.iteritems():
+                                if oldTraj: # update the traj in the map
+                                    ref_traj = generateEEReferenceTrajCollisionFree(fullBody,robot,invdyn.data(),time_interval,phase_prev,phase,phase_next,q_begin,q,oldTraj,eeName,pid,iter_for_phase,viewer)
+                                    dic_effectors_trajs.update({eeName:ref_traj}) 
+                        except ValueError,e :
+                            print "ERROR in generateEEReferenceTrajCollisionFree :"
+                            print e.message
+                            if cfg.WB_ABORT_WHEN_INVALID :
+                                return res.resize(k_begin),robot
+                            elif cfg.WB_RETURN_INVALID : 
+                                return res.resize(k_t),robot                      
+                    
             else : # no effector motions, phase always valid (or bypass the check)
                 phaseValid = True
                 if cfg.WB_VERBOSE :
