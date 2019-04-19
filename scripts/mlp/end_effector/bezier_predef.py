@@ -3,7 +3,7 @@ import time
 import os
 from mlp.utils.polyBezier import *
 import pinocchio as pin
-from pinocchio import SE3
+from pinocchio import SE3,Quaternion
 from pinocchio.utils import *
 import numpy.linalg
 from multicontact_api import WrenchCone,SOC6,ContactSequenceHumanoid
