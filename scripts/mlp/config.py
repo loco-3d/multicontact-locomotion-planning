@@ -46,8 +46,8 @@ TIME_SHIFT_COM = 0.0
 USE_WP_COST = True # use wp from the contact sequence in the cost function of timeopt
 
 ## Settings for end effector :
-USE_LIMB_RRT = False
-USE_CONSTRAINED_BEZIER = True
+USE_LIMB_RRT = True
+USE_CONSTRAINED_BEZIER = False
 USE_BEZIER_EE = True
 EFF_CHECK_COLLISION = True
 WB_ABORT_WHEN_INVALID = False
