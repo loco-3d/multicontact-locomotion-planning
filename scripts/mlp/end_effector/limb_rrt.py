@@ -18,7 +18,7 @@ eigenpy.switchToNumpyArray()
 from mlp.utils import trajectories
 
 
-VERBOSE = 2
+VERBOSE = 1
 DISPLAY_RRT_PATH = True
 DISPLAY_JOINT_LEVEL = True
 # order to try weight values and number of variables : 
@@ -173,7 +173,7 @@ def computeDistanceCostMatrices(fb,pathId,pData,T,eeName,numPoints = 50):
     return bezier_com.computeEndEffectorDistanceCost(pData,T,numPoints,pts)
 
 
-def generateLimbRRTOptimizedTraj(time_interval,placement_init,placement_end,q_init,q_end,predefTraj,phase_previous,phase,phase_next,fullBody,phaseId,eeName,numTry,viewer):
+def generateLimbRRTOptimizedTraj(time_interval,placement_init,placement_end,q_t,predefTraj,phase_previous,phase,phase_next,fullBody,phaseId,eeName,numTry,viewer):
     t_total = time_interval[1]-time_interval[0]
     predef_curves = predefTraj.curves
     bezier_takeoff = predef_curves.curves[predef_curves.idFirstNonZero()]
@@ -192,7 +192,8 @@ def generateLimbRRTOptimizedTraj(time_interval,placement_init,placement_end,q_in
     if VERBOSE : 
         print "t begin : ",t_begin
         print "t end   : ",t_end
-        
+    q_init = q_t[:,int(t_begin/cfg.IK_dt)] # after the predef takeoff
+    q_end = q_t[:,int(t_end/cfg.IK_dt)]        
     global current_limbRRT_id
     # compute new limb-rrt path if needed:
     if not current_limbRRT_id or (numTry in recompute_rrt_at_tries):

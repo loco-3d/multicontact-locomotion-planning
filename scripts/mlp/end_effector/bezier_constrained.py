@@ -643,7 +643,7 @@ def computeProblemConstraints(pData,fullBody,pathId,t,eeName,viewer):
     return pDef
 
 
-def generateConstrainedBezierTraj(time_interval,placement_init,placement_end,q_init,q_end,predefTraj,phase_previous,phase,phase_next,fullBody,phaseId,eeName,viewer):
+def generateConstrainedBezierTraj(time_interval,placement_init,placement_end,q_t,predefTraj,phase_previous,phase,phase_next,fullBody,phaseId,eeName,viewer):
     t_total = time_interval[1]-time_interval[0]
     predef_curves = predefTraj.curves
     bezier_takeoff = predef_curves.curves[predef_curves.idFirstNonZero()]
@@ -661,7 +661,8 @@ def generateConstrainedBezierTraj(time_interval,placement_init,placement_end,q_i
     if VERBOSE : 
         print "t begin : ",t_begin
         print "t end   : ",t_end
-
+    q_init = q_t[:,int(t_begin/cfg.IK_dt)] # after the predef takeoff
+    q_end = q_t[:,int(t_end/cfg.IK_dt)]
     # compute limb-rrt path : 
     pathId = limb_rrt.generateLimbRRTPath(q_init,q_end,phase_previous,phase,phase_next,fullBody,phaseId)
             
