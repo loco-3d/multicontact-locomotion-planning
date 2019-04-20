@@ -1,6 +1,8 @@
 TIMEOPT_CONFIG_FILE = "cfg_softConstraints_anymal.yaml"
 from common_anymal import *
 SCRIPT_PATH = "sandbox.ANYmal"
+ENV_NAME = "multicontact/ground"
+
 
 DURATION_INIT = 1.5 # Time to init the motion
 DURATION_FINAL = 1.5 # Time to stop the robot

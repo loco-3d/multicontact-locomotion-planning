@@ -1,6 +1,7 @@
 TIMEOPT_CONFIG_FILE = "cfg_softConstraints_talos.yaml"
 from common_talos import *
 SCRIPT_PATH = "demos"
+ENV_NAME = "multicontact/ground"
 
 DURATION_INIT = 1.5 # Time to init the motion
 DURATION_FINAL = 1.5 # Time to stop the robot
