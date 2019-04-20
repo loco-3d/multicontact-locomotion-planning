@@ -124,6 +124,20 @@ def plotCOMError(timeline,p_intervals,error):
             ax_sub.yaxis.grid()    
             addVerticalLineContactSwitch(timeline.T,p_intervals,ax_sub)
 
+def plotAMError(timeline,p_intervals,error):
+    labels=["x" , "y" ,"z"]
+    colors = ['r','g','b']
+    fig, ax = plt.subplots(3,1)
+    fig.canvas.set_window_title("AM tracking error")
+    fig.suptitle("AM tracking error", fontsize=20)    
+    for i in range(3): # line = x,y,z
+            ax_sub = ax[i]
+            ax_sub.plot(timeline.T, error[i,:].T, color=colors[i])
+            ax_sub.set_xlabel('time (s)')
+            ax_sub.set_ylabel(labels[i])
+            ax_sub.yaxis.grid()    
+            addVerticalLineContactSwitch(timeline.T,p_intervals,ax_sub)
+
 
 def plotZMP(cs,ZMP_t,ZMP_ref,pcom_t):
     fig = plt.figure("ZMP-CoM (xy)")
@@ -173,7 +187,25 @@ def plotCOMTraj(timeline,p_intervals,ref_c,ref_dc,ref_ddc,c_t,dc_t,ddc_t):
             ax_sub.yaxis.grid()    
             addVerticalLineContactSwitch(timeline.T,p_intervals,ax_sub)
             
-    return
+def plotAMTraj(timeline,p_intervals,L_t,dL_t,L_reference,dL_reference):
+    labels=["x" , "y" ,"z", "dx" , "dy" ,"dz"]
+    colors = ['r','g','b']    
+    fig, ax = plt.subplots(2,3)
+    fig.canvas.set_window_title("AM trajectory (dashed = reference)")
+    fig.suptitle("AM trajectory (dashed = reference)", fontsize=20)
+    for i in range(2): # line = L,dL
+        for j in range(3): # col = x,y,z
+            ax_sub = ax[i,j]
+            if i == 0 :
+                ax_sub.plot(timeline.T, L_t[j,:].T, color=colors[j])
+                ax_sub.plot(timeline.T, L_reference[j,:].T, color=colors[j],linestyle=":")
+            elif i == 1 :
+                ax_sub.plot(timeline.T, dL_t[j,:].T, color=colors[j])
+                ax_sub.plot(timeline.T, dL_reference[j,:].T, color=colors[j],linestyle=":")                                                
+            ax_sub.set_xlabel('time (s)')
+            ax_sub.set_ylabel(labels[i*3 + j])
+            ax_sub.yaxis.grid()    
+            addVerticalLineContactSwitch(timeline.T,p_intervals,ax_sub)
 
 def plotContactForces(timeline,p_intervals,forces_dict,N):
     colors = ['r','g','b','y']  
@@ -222,6 +254,9 @@ def plotALLFromWB(cs,res,display=True,save=False,path=None):
     if res.c_t.any():
         plotCOMTraj(res.t_t,res.phases_intervals,res.c_reference,res.dc_reference,res.ddc_reference,res.c_t,res.dc_t,res.ddc_t)
         plotCOMError(res.t_t,res.phases_intervals,res.c_t - res.c_reference)        
+    if res.dL_t.any():
+        plotAMTraj(res.t_t,res.phases_intervals,res.L_t,res.dL_t,res.L_reference,res.dL_reference) 
+        plotAMError(res.t_t,res.phases_intervals,res.L_t - res.L_reference)                
     if res.effector_trajectories.values()[0].any():
         plotEffectorTraj(res.t_t,res.phases_intervals,res.effector_references,res.effector_trajectories)    
         plotEffectorError(res.t_t,res.phases_intervals,res.effector_references,res.effector_trajectories)        
