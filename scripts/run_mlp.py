@@ -1,30 +1,21 @@
 import mlp.config as cfg
-import importlib
-#the following script must produce a sequence of configurations in contact (configs) 
-# with exactly one contact change between each configurations
-# It must also initialise a FullBody object name fullBody and optionnaly a Viewer object named V
-cp = importlib.import_module('scenarios.'+cfg.SCRIPT_PATH+'.'+cfg.DEMO_NAME)
-import mlp.contact_sequence.rbprm as generate_cs
 import mlp.viewer.display_tools as display_tools
 from multicontact_api import ContactSequenceHumanoid
 
-v = cp.v
+
+if cfg.LOAD_CS:
+    import mlp.contact_sequence.fromCSfile as gen_cs
+else:
+    import mlp.contact_sequence.rbprm as gen_cs
+
+cs,fullBody,v = gen_cs.generateContactSequence()
+
+
 
 if cfg.DISPLAY_CS:
-    import tools.display_tools as rbprmDisplay
     raw_input("Press Enter to display the contact sequence ...")
-    rbprmDisplay.displayContactSequence(v,cp.configs,0.2) 
+    display_tools.displayContactSequence(v,cs,step)
     
-if cfg.LOAD_CS:
-    cs = ContactSequenceHumanoid(0)
-    filename = cfg.CONTACT_SEQUENCE_PATH + "/"+cfg.DEMO_NAME   
-    print "Import contact sequence binary file : ",filename    
-    cs.loadFromBinary(filename) 
-else:
-    beginState = 0
-    endState = len(cp.configs) - 1
-    cs = generate_cs.generateContactSequence(cp.fullBody,cp.configs,beginState,endState)
-
 if cfg.SAVE_CS and not cfg.LOAD_CS:
     filename = cfg.CONTACT_SEQUENCE_PATH + "/"+cfg.DEMO_NAME
     print "Write contact sequence binary file : ",filename
@@ -39,7 +30,7 @@ if cfg.USE_GEOM_INIT_GUESS:
 if cfg.USE_CROC_INIT_GUESS:
     print "Generate init guess with CROC."
     import mlp.centroidal.croc as initGuess_croc    
-    cs_initGuess = initGuess_croc.generateCentroidalTrajectory(cs,cp.fullBody,beginState,endState)
+    cs_initGuess = initGuess_croc.generateCentroidalTrajectory(cs,fullBody,beginState,endState)
 if cfg.DISPLAY_INIT_GUESS_TRAJ and (cfg.USE_GEOM_INIT_GUESS or cfg.USE_CROC_INIT_GUESS):
     colors = [v.color.red, v.color.yellow]
     display_tools.displayCOMTrajectory(cs_initGuess,v,colors,"_init")
@@ -65,10 +56,10 @@ if cfg.DISPLAY_COM_TRAJ:
 import mlp.wholebody.tsid_invdyn as wb
 if cfg.USE_CROC_COM:
     assert cfg.USE_CROC_INIT_GUESS, "You must generate CROC initial guess if you want to use it as reference for the COM"  
-    res,robot = wb.generateWholeBodyMotion(cs_initGuess,v,cp.fullBody)
+    res,robot = wb.generateWholeBodyMotion(cs_initGuess,v,fullBody)
 else : 
-    #q_t,v_t,a_t = wb.generateWholeBodyMotion(cs_com,v,cp.fullBody)
-    res,robot =  wb.generateWholeBodyMotion(cs_com,v,cp.fullBody)
+    #q_t,v_t,a_t = wb.generateWholeBodyMotion(cs_com,v,fullBody)
+    res,robot =  wb.generateWholeBodyMotion(cs_com,v,fullBody)
 
 if cfg.DISPLAY_WB_MOTION:
     raw_input("Press Enter to display the whole body motion ...")
@@ -77,7 +68,7 @@ if cfg.DISPLAY_WB_MOTION:
 if cfg.CHECK_FINAL_MOTION :
     from mlp.utils import check_path
     print "## Begin validation of the final motion (collision and joint-limits)"
-    validator = check_path.PathChecker(v,cp.fullBody,cs_com,res.nq,True)
+    validator = check_path.PathChecker(v,fullBody,cs_com,res.nq,True)
     motion_valid,t_invalid = validator.check_motion(res.q_t)
     print "## Check final motion, valid = ",motion_valid
     if not motion_valid:
@@ -101,7 +92,7 @@ if cfg.EXPORT_NPZ and motion_valid :
 
 
 def dispCS(step = 0.2): 
-    rbprmDisplay.displayContactSequence(v,cp.configs,step)
+    display_tools.displayContactSequence(v,cs,step)
     
 def dispWB():
     display_tools.displayWBmotion(v,res.q_t,cfg.IK_dt,cfg.DT_DISPLAY)
