@@ -25,8 +25,8 @@ DISPLAY_FEET_TRAJ = True
 DISPLAY_WB_MOTION = False
 DT_DISPLAY = 0.05 # dt used to display the wb motion
 PLOT = True
-DISPLAY_PLOT = True
-SAVE_PLOT = True
+DISPLAY_PLOT = PLOT and True
+SAVE_PLOT = PLOT and True
 
 ###  Settings for generate_contact_sequence
 FORCE_STRAIGHT_LINE = False # DEBUG ONLY should be false
@@ -64,7 +64,6 @@ CHECK_FINAL_MOTION = True
 IK_store_centroidal = True
 IK_store_zmp = True # need store_centroidal
 IK_store_effector = True
-IK_store_error = True
 IK_store_contact_forces = True
 # import specific settings for the selected demo. This settings may override default ones.
 import importlib

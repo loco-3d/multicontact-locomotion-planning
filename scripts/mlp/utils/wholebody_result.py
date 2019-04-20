@@ -23,7 +23,6 @@ class Result:
         self.ddc_t = np.matrix(np.zeros([3,N]))
         self.L_t = np.matrix(np.zeros([3,N]))
         self.dL_t = np.matrix(np.zeros([3,N]))
-        self.c_tracking_error = np.matrix(np.zeros([3,N]))
         self.c_reference = np.matrix(np.zeros([3,N]))
         self.dc_reference = np.matrix(np.zeros([3,N]))
         self.ddc_reference = np.matrix(np.zeros([3,N])) 
@@ -38,14 +37,12 @@ class Result:
         self.contact_normal_force={}
         self.effector_trajectories = {}
         self.effector_references = {}
-        self.effector_tracking_error = {}
         self.contact_activity = {}
         for ee in self.eeNames : 
             self.contact_forces.update({ee:np.matrix(np.zeros([12,N]))}) 
             self.contact_normal_force.update({ee:np.matrix(np.zeros([1,N]))})              
             self.effector_trajectories.update({ee:np.matrix(np.zeros([12,N]))}) 
             self.effector_references.update({ee:np.matrix(np.zeros([12,N]))})
-            self.effector_tracking_error.update({ee:np.matrix(np.zeros([6,N]))})
             self.contact_activity.update({ee:np.matrix(np.zeros([1,N]))})
         if cs:
             self.phases_intervals = self.buildPhasesIntervals(cs)    
@@ -91,7 +88,6 @@ class Result:
         self.ddc_t[:,k] =other.ddc_t[:,k_other]
         self.L_t[:,k] =other.L_t[:,k_other]
         self.dL_t[:,k] =other.dL_t[:,k_other]
-        self.c_tracking_error[:,k] =other.c_tracking_error[:,k_other]
         self.c_reference[:,k] =other.c_reference[:,k_other]
         self.dc_reference[:,k] =other.dc_reference[:,k_other] 
         self.ddc_reference[:,k] =other.ddc_reference[:,k_other]
@@ -106,7 +102,6 @@ class Result:
             self.contact_normal_force[ee][:,k] = other.contact_normal_force[ee][:,k_other]            
             self.effector_trajectories[ee][:,k] =other.effector_trajectories[ee][:,k_other]
             self.effector_references[ee][:,k] =other.effector_references[ee][:,k_other]
-            self.effector_tracking_error[ee][:,k] =other.effector_tracking_error[ee][:,k_other]
             self.contact_activity[ee][:,k] =other.contact_activity[ee][:,k_other]
     
             
@@ -122,7 +117,6 @@ class Result:
         self.ddc_t = self.ddc_t[:,:N]
         self.L_t = self.L_t[:,:N]
         self.dL_t = self.dL_t[:,:N]
-        self.c_tracking_error = self.c_tracking_error[:,:N]
         self.c_reference = self.c_reference[:,:N]
         self.dc_reference = self.dc_reference[:,:N]
         self.ddc_reference = self.ddc_reference[:,:N]
@@ -137,7 +131,6 @@ class Result:
             self.contact_normal_force[ee] = self.contact_normal_force[ee][:,:N]                            
             self.effector_trajectories[ee] = self.effector_trajectories[ee][:,:N] 
             self.effector_references[ee] = self.effector_references[ee][:,:N] 
-            self.effector_tracking_error[ee] = self.effector_tracking_error[ee][:,:N]
             self.contact_activity[ee] = self.contact_activity[ee][:,:N]
         self.phases_intervals = self.resizePhasesIntervals(N)
         return self
@@ -150,11 +143,11 @@ class Result:
         np.savez_compressed(filename,N=self.N,nq=self.nq,nv=self.nv,dt=self.dt,t_t=self.t_t,
                  q_t=self.q_t,dq_t=self.dq_t,ddq_t=self.ddq_t,tau_t=self.tau_t,
                  c_t=self.c_t,dc_t=self.dc_t,ddc_t=self.ddc_t,L_t=self.L_t,dL_t=self.dL_t,
-                 c_tracking_error=self.c_tracking_error,c_reference=self.c_reference,dc_reference=self.dc_reference,ddc_reference=self.ddc_reference,
+                 c_reference=self.c_reference,dc_reference=self.dc_reference,ddc_reference=self.ddc_reference,
                  L_reference=self.L_reference,dL_reference=self.dL_reference,
                  wrench_t=self.wrench_t,zmp_t=self.zmp_t,wrench_reference=self.wrench_reference,zmp_reference=self.zmp_reference,
                  eeNames=self.eeNames,contact_forces=self.contact_forces,contact_normal_force=self.contact_normal_force,
-                 effector_trajectories=self.effector_trajectories,effector_references=self.effector_references,effector_tracking_error=self.effector_tracking_error,
+                 effector_trajectories=self.effector_trajectories,effector_references=self.effector_references,
                  contact_activity=self.contact_activity,phases_intervals=self.phases_intervals)
         
         print "Results exported to ",filename
@@ -177,7 +170,6 @@ def loadFromNPZ(filename):
     res.ddc_t =np.asmatrix(f['ddc_t'])
     res.L_t =np.asmatrix(f['L_t'])
     res.dL_t =np.asmatrix(f['dL_t'])
-    res.c_tracking_error =np.asmatrix(f['c_tracking_error'])
     res.c_reference =np.asmatrix(f['c_reference'])
     res.dc_reference =np.asmatrix(f['dc_reference'])
     res.ddc_reference =np.asmatrix(f['ddc_reference'])
@@ -191,7 +183,6 @@ def loadFromNPZ(filename):
     res.contact_normal_force = f['contact_normal_force'].tolist()            
     res.effector_trajectories =f['effector_trajectories'].tolist()
     res.effector_references =f['effector_references'].tolist()
-    res.effector_tracking_error =f['effector_tracking_error'].tolist()
     res.contact_activity =f['contact_activity'].tolist()
     res.phases_intervals = f['phases_intervals'].tolist()
     f.close()
@@ -200,6 +191,5 @@ def loadFromNPZ(filename):
         res.contact_normal_force[ee] = np.asmatrix(res.contact_normal_force[ee])                           
         res.effector_trajectories[ee] = np.asmatrix(res.effector_trajectories[ee])
         res.effector_references[ee] = np.asmatrix(res.effector_references[ee])
-        res.effector_tracking_error[ee] = np.asmatrix(res.effector_tracking_error[ee])
         res.contact_activity[ee] = np.asmatrix(res.contact_activity[ee])   
     return res

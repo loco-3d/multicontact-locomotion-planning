@@ -261,12 +261,7 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
                 res.zmp_reference[:,k_t] = shiftZMPtoFloorAltitude(cs,res.t_t[k_t],F0)
         if cfg.IK_store_effector: 
             for eeName in usedEffectors: # real position (not reference)
-                res.effector_trajectories[eeName][:,k_t] = SE3toVec(robot.position(invdyn.data(), robot.model().getJointId(eeName)))
-        # store tracking error : 
-        if cfg.IK_store_error : 
-            res.c_tracking_error[:,k_t] = comTask.position_error
-            for eeName,task in dic_effectors_tasks.iteritems():
-                res.effector_tracking_error[eeName][:,k_t] = task.position_error                  
+                res.effector_trajectories[eeName][:,k_t] = SE3toVec(robot.position(invdyn.data(), robot.model().getJointId(eeName)))        
         return res
         
     def printIntermediate(v,dv,invdyn,sol):
