@@ -137,8 +137,8 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
     robot = tsid.RobotWrapper(urdf, pin.StdVec_StdString(), pin.JointModelFreeFlyer(), False)
     if cfg.WB_VERBOSE:
         print "robot loaded in tsid"
-    if cfg.IK_store_centroidal : # FIXME : tsid robotWrapper don't have all the required methods, only pinocchio have them
-        pinRobot  = pin.RobotWrapper.BuildFromURDF(urdf, pin.StdVec_StdString(), pin.JointModelFreeFlyer(), False)
+    # FIXME : tsid robotWrapper don't have all the required methods, only pinocchio have them
+    pinRobot  = pin.RobotWrapper.BuildFromURDF(urdf, pin.StdVec_StdString(), pin.JointModelFreeFlyer(), False)
 
     q = cs.contact_phases[0].reference_configurations[0].copy()
     v = np.matrix(np.zeros(robot.nv)).transpose()
@@ -483,9 +483,9 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
                             print "ERROR in generateEEReferenceTrajCollisionFree :"
                             print e.message
                             if cfg.WB_ABORT_WHEN_INVALID :
-                                return res.resize(k_begin),robot
+                                return res.resize(k_begin),pinRobot
                             elif cfg.WB_RETURN_INVALID : 
-                                return res.resize(k_t),robot                      
+                                return res.resize(k_t),pinRobot                    
                     
             else : # no effector motions, phase always valid (or bypass the check)
                 phaseValid = True
@@ -514,10 +514,10 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
 
     if cfg.PLOT:
         from mlp.utils import plot
-        plot.plotEffectorRef(stored_effectors_ref,dt)            
+        plot.plotEffectorRef(stored_effectors_ref,dt)   # plot inside this file, as we have access to the real Bezier object and not only the discretization stored in 'res' struct         
     
     assert (k_t == res.N-1) and "res struct not fully filled."
-    return res,robot
+    return res,pinRobot
 
    
     
