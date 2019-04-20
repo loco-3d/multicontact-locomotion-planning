@@ -17,7 +17,7 @@ class Result:
         self.q_t = np.matrix(np.zeros([self.nq,N]))
         self.dq_t = np.matrix(np.zeros([self.nv,N]))
         self.ddq_t = np.matrix(np.zeros([self.nv,N]))
-        self.tau_t = np.matrix(np.zeros([self.nv-6,N]))
+        self.tau_t = np.matrix(np.zeros([self.nv,N]))
         self.c_t = np.matrix(np.zeros([3,N]))  
         self.dc_t = np.matrix(np.zeros([3,N]))
         self.ddc_t = np.matrix(np.zeros([3,N]))
