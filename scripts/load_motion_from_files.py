@@ -4,9 +4,7 @@ import mlp.utils.plot as plot
 import multicontact_api
 from multicontact_api import ContactSequenceHumanoid
 import mlp.viewer.display_tools as display_tools
-from hpp.gepetto import Viewer,ViewerFactory
 from hpp.corbaserver.rbprm.rbprmfullbody import FullBody
-from hpp.corbaserver import ProblemSolver
 import time
 import os
 class Robot (FullBody):
@@ -23,14 +21,7 @@ class Robot (FullBody):
             self.loadFullBodyModel(self.urdfName, self.rootJointType, self.meshPackageName, self.packageName, self.urdfSuffix, self.srdfSuffix)
         if name != None:
             self.name = name
-            
-def initScene(envName = "multicontact/ground"):
-    fullBody = Robot ()
-    ps = ProblemSolver(fullBody)
-    vf = ViewerFactory (ps)
-    vf.loadObstacleModel ("hpp_environments", envName, "planning")
-    v = vf.createViewer( displayCoM = True)    
-    return v,fullBody
+
             
 def loadMotionFromFiles(v,path,npzFilename,csFilename):
     # load cs from file : 
@@ -58,16 +49,14 @@ os.system('gepetto-gui &>/dev/null 2>&1')
 os.system('hpp-rbprm-server &>/dev/null 2>&1')
 time.sleep(2)
 
-v,fb = initScene()
+v,fb = display_tools.initScene(Robot)
 path = "/local/dev_hpp/src/multicontact-locomotion-planning/res/"
 npzFile = "export/npz/talos_flatGround.npz"
 csFile = "contact_sequences/talos_flatGround_COM.xml"
 res,cs = loadMotionFromFiles(v,path,npzFile,csFile)
 
 def dispCS(step = 0.2): 
-    for p in cs.contact_phases:
-        display_tools.displayWBconfig(v,p.reference_configurations[0])
-        time.sleep(step)
+    display_tools.displayContactSequence(v,cs,step)
      
 def dispWB():
     display_tools.displayWBmotion(v,res.q_t,res.dt,0.05)

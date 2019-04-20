@@ -179,3 +179,21 @@ def displayFeetTrajFromResult(viewer,res):
     viewer.client.gui.addCurve(name,traj,color)
     viewer.client.gui.addToGroup(name,viewer.sceneName)    
     viewer.client.gui.refresh()    
+    
+def displayContactSequence(v,cs,step = 0.2):
+  for p in cs.contact_phases:
+    displayWBconfig(v,p.reference_configurations[0])
+    time.sleep(step)  
+    
+
+def initScene(Robot,envName = "multicontact/ground"):
+  from hpp.gepetto import Viewer,ViewerFactory
+  from hpp.corbaserver.rbprm.rbprmfullbody import FullBody
+  from hpp.corbaserver import ProblemSolver  
+  fullBody = Robot ()
+  ps = ProblemSolver(fullBody)
+  vf = ViewerFactory (ps)
+  vf.loadObstacleModel ("hpp_environments", envName, "planning")
+  v = vf.createViewer( displayCoM = True)
+  v(fullBody.getCurrentConfig())
+  return v,fullBody    
