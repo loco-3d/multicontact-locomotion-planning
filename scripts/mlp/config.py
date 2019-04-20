@@ -62,6 +62,7 @@ IK_dt = 0.001  # controler time step
 IK_PRINT_N = 500  # print state of the problem every IK_PRINT_N time steps (if verbose = True)
 CHECK_FINAL_MOTION = True
 IK_store_centroidal = True
+IK_store_zmp = True # need store_centroidal
 IK_store_effector = True
 IK_store_error = True
 IK_store_contact_forces = True

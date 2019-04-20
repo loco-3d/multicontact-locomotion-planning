@@ -1,5 +1,5 @@
 import pinocchio as pin
-from pinocchio import SE3, Quaternion
+from pinocchio import SE3, Quaternion,Force
 import tsid
 import numpy as np
 from numpy.linalg import norm as norm
@@ -12,6 +12,7 @@ import mlp.config as cfg
 import multicontact_api
 from multicontact_api import WrenchCone,SOC6,ContactPatch, ContactPhaseHumanoid, ContactSequenceHumanoid
 from mlp.utils import trajectories
+from mlp.utils.computation_tools import shiftZMPtoFloorAltitude
 import mlp.end_effector.bezier_predef as EETraj
 import mlp.viewer.display_tools as display_tools
 import math
@@ -136,7 +137,9 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
     robot = tsid.RobotWrapper(urdf, pin.StdVec_StdString(), pin.JointModelFreeFlyer(), False)
     if cfg.WB_VERBOSE:
         print "robot loaded in tsid"
-        
+    if cfg.IK_store_centroidal : # FIXME : tsid robotWrapper don't have all the required methods, only pinocchio have them
+        pinRobot  = pin.RobotWrapper.BuildFromURDF(urdf, pin.StdVec_StdString(), pin.JointModelFreeFlyer(), False)
+
     q = cs.contact_phases[0].reference_configurations[0].copy()
     v = np.matrix(np.zeros(robot.nv)).transpose()
     t = 0.0  # time
@@ -216,10 +219,9 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
         # store current state
         res.q_t[:,k_t] = q
         res.dq_t[:,k_t] = v                
-        res.ddq_t[:,k_t] = dv
-        tau = invdyn.getActuatorForces(sol)                                
-        res.tau_t[:,k_t] = tau
-        # store contact info (force and status)
+        res.ddq_t[:,k_t] = dv                             
+        res.tau_t[6:,k_t] = invdyn.getActuatorForces(sol) # actuator forces, with external forces (contact forces)
+        #store contact info (force and status)
         if cfg.IK_store_contact_forces :
             for eeName,contact in dic_contacts.iteritems():
                 if invdyn.checkContact(contact.name, sol): 
@@ -228,17 +230,35 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
                     res.contact_activity[eeName][:,k_t] = 1
         # store centroidal info (real one and reference) :
         if cfg.IK_store_centroidal:
-            robot.computeAllTerms(invdyn.data(),q,v)
-            res.c_t[:,k_t] = robot.com(invdyn.data())
-            res.dc_t[:,k_t] = robot.com_vel(invdyn.data())
-            res.ddc_t[:,k_t] = robot.com_acc(invdyn.data())
-            res.L_t[:,k_t] = invdyn.data().hg.angular
-            # TODO : retrieve dL (no API yet, WIP from rohan)
+            pcom, vcom, acom = pinRobot.com(q,v,dv) 
+            res.c_t[:,k_t] = pcom
+            res.dc_t[:,k_t] = vcom
+            res.ddc_t[:,k_t] = acom
+            res.L_t[:,k_t] = pinRobot.centroidalMomentum(q,v).angular
+            #res.dL_t[:,k_t] = pinRobot.centroidalMomentumVariation(q,v,dv) # FIXME : in robot wrapper, use * instead of .dot() for np matrices            
+            pin.dccrba(pinRobot.model, pinRobot.data, q, v)
+            res.dL_t[:,k_t] = Force(pinRobot.data.Ag.dot(dv)+pinRobot.data.dAg.dot(v)).angular
+            # same for reference data : 
             res.c_reference[:,k_t] = com_desired
             res.dc_reference[:,k_t] = vcom_desired
             res.ddc_reference[:,k_t] = acom_desired
             res.L_reference[:,k_t] = L_desired
-            res.dL_reference[:,k_t] = dL_desired            
+            res.dL_reference[:,k_t] = dL_desired 
+            if cfg.IK_store_zmp : 
+                tau = pin.rnea(pinRobot.model,pinRobot.data,q,v,dv) # tau without external forces, only used for the 6 first
+                res.tau_t[:6,k_t] = tau[:6]
+                phi0 = pinRobot.data.oMi[1].act(Force(tau[:6]))
+                res.wrench_t[:,k_t] = phi0.vector
+                res.zmp_t[:,k_t] = shiftZMPtoFloorAltitude(cs,res.t_t[k_t],phi0)
+                # same but from the 'reference' values : 
+                Mcom = SE3.Identity()
+                Mcom.translation = com_desired
+                Fcom = Force.Zero()
+                Fcom.linear = cfg.MASS*(acom_desired - cfg.GRAVITY)
+                Fcom.angular = dL_desired
+                F0 = Mcom.act(Fcom)
+                res.wrench_reference[:,k_t] = F0.vector 
+                res.zmp_reference[:,k_t] = shiftZMPtoFloorAltitude(cs,res.t_t[k_t],F0)
         if cfg.IK_store_effector: 
             for eeName in usedEffectors: # real position (not reference)
                 res.effector_trajectories[eeName][:,k_t] = SE3toVec(robot.position(invdyn.data(), robot.model().getJointId(eeName)))

@@ -228,10 +228,6 @@ def plotALLFromWB(cs,res,display=True,save=False,path=None):
         plotEffectorError(res.t_t,res.phases_intervals,res.effector_tracking_error)        
     plotContactForces(res.t_t,res.phases_intervals,res.contact_normal_force,res.N)
     # compute zmp from whole body or centroidal (only if it hasn't been computed already)
-    if not res.zmp_t.any():
-        computeZMP(cs,res)
-    if not res.zmp_reference.any():
-        computeZMPRef(cs,res)
     plotZMP(cs,res.zmp_t,res.zmp_reference,res.c_t)
     if display:
         plt.show(block = False)
