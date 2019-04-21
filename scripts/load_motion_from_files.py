@@ -49,7 +49,7 @@ os.system('gepetto-gui &>/dev/null 2>&1')
 os.system('hpp-rbprm-server &>/dev/null 2>&1')
 time.sleep(2)
 
-v,fb = display_tools.initScene(Robot)
+fb,v = display_tools.initScene(Robot)
 path = "/local/dev_hpp/src/multicontact-locomotion-planning/res/"
 npzFile = "export/npz/talos_flatGround.npz"
 csFile = "contact_sequences/talos_flatGround_COM.xml"

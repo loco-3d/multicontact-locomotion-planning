@@ -197,4 +197,4 @@ def initScene(Robot,envName = "multicontact/ground"):
   vf.loadObstacleModel ("hpp_environments", envName, "planning")
   v = vf.createViewer( displayCoM = True)
   v(fullBody.getCurrentConfig())
-  return v,fullBody    
+  return fullBody,v    

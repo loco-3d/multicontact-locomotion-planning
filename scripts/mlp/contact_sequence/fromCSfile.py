@@ -3,7 +3,7 @@ import mlp.config as cfg
 import mlp.viewer.display_tools as display_tools
 
 def generateContactSequence():
-    v,fb = display_tools.initScene(cfg.Robot,cfg.ENV_NAME)
+    fb,v = display_tools.initScene(cfg.Robot,cfg.ENV_NAME)
     cs = ContactSequenceHumanoid(0)
     filename = cfg.CONTACT_SEQUENCE_PATH + "/"+cfg.DEMO_NAME   
     print "Import contact sequence binary file : ",filename    
