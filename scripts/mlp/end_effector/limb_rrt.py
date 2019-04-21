@@ -159,8 +159,7 @@ def generateLimbRRTTraj(time_interval,placement_init,placement_end,numTry,q_t,ph
         pp = PathPlayer (viewer)
         pp.displayPath(pathId,jointName=fullBody.getLinkNames(eeName)[0])
 
-    # TODO : make a HPPRefTraj object and return it
-    return None
+    return trajectories.HPPEffectorTrajectory(eeName,fullBody,fullBody.client.problem,pathId)
 
 def computeDistanceCostMatrices(fb,pathId,pData,T,eeName,numPoints = 50):
     problem = fb.client.problem

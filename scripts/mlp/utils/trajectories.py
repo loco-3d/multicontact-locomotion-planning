@@ -703,4 +703,23 @@ class TrajectorySE3LinearInterp(RefTrajectory):
     self.M.rotation = (self.quat0.slerp(u,self.quat1)).matrix()  
     return self.M, self.v, self.a
     
-    
+
+class HPPEffectorTrajectory (RefTrajectory):
+
+  def __init__ (self,eeName,fullBody,problem,pid,name = "HPP-effector-trajectory"):
+    RefTrajectory.__init__(self,name)
+    self._dim = 3
+    self._eeName = eenName
+    self._fb = fullBody
+    self._problem = problem
+    self._pid = pid
+    self._length = problem.pathLength(pid)
+
+  def __call__ (self, t):
+    if t < 0. : 
+      print "Trajectory called with negative time."
+      t = 0.
+    elif t > self._length:
+      print "Trajectory called after final time."
+      t = self._length    
+    return effectorPositionFromHPPPath(self._fb,self._problem,self._eeName,self._pid,t)
