@@ -19,7 +19,7 @@ import math
 from tools.disp_bezier import *
 import eigenpy
 import quadprog
-import bezier_predef
+from mlp.end_effector.bezier_predef import generatePredefLandingTakeoff,generateSmoothBezierTraj
 import limb_rrt
 from mlp.utils.util import  SE3FromConfig,distPointLine
 eigenpy.switchToNumpyArray()
@@ -643,20 +643,24 @@ def computeProblemConstraints(pData,fullBody,pathId,t,eeName,viewer):
     return pDef
 
 
-def generateConstrainedBezierTraj(time_interval,placement_init,placement_end,q_t,predefTraj,phase_previous,phase,phase_next,fullBody,phaseId,eeName,viewer):
-    t_total = time_interval[1]-time_interval[0]
-    predef_curves = predefTraj.curves
+def generateConstrainedBezierTraj(time_interval,placement_init,placement_end,numTry,q_t=None,phase_previous=None,phase=None,phase_next=None,fullBody=None,eeName=None,viewer=None):
+    if numTry == 0 :
+        return generateSmoothBezierTraj(time_interval,placement_init,placement_end)
+    else :
+        if not q_t or not phase_previous or not phase or not phase_next or not fullBody or not eeName :
+            raise ValueError("Cannot compute LimbRRTOptimizedTraj for try >= 1 without optionnal arguments")
+           
+    predef_curves = generatePredefLandingTakeoff(time_interval,placement_init,placement_end)
     bezier_takeoff = predef_curves.curves[predef_curves.idFirstNonZero()]
     bezier_landing = predef_curves.curves[predef_curves.idLastNonZero()]
     id_middle = int(math.floor(len(predef_curves.curves)/2.))
-    bezier_mid_predef= predef_curves.curves[id_middle]
     pos_init = bezier_takeoff(bezier_takeoff.max())
     pos_end = bezier_landing(0)
     if VERBOSE :
         print "bezier takeoff end : ",pos_init
         print "bezier landing init : ",pos_end
     t_begin = predef_curves.times[id_middle]
-    t_middle = bezier_mid_predef.max()
+    t_middle =  predef_curves.curves[id_middle].max()
     t_end = t_begin + t_middle
     if VERBOSE : 
         print "t begin : ",t_begin
@@ -664,7 +668,7 @@ def generateConstrainedBezierTraj(time_interval,placement_init,placement_end,q_t
     q_init = q_t[:,int(t_begin/cfg.IK_dt)] # after the predef takeoff
     q_end = q_t[:,int(t_end/cfg.IK_dt)]
     # compute limb-rrt path : 
-    pathId = limb_rrt.generateLimbRRTPath(q_init,q_end,phase_previous,phase,phase_next,fullBody,phaseId)
+    pathId = limb_rrt.generateLimbRRTPath(q_init,q_end,phase_previous,phase,phase_next,fullBody)
             
     if viewer and cfg.DISPLAY_FEET_TRAJ and DISPLAY_RRT:
         from hpp.gepetto import PathPlayer
@@ -737,7 +741,7 @@ def generateConstrainedBezierTraj(time_interval,placement_init,placement_end,q_t
     else :
         print "Constrained End effector Bezier method failed for all numbers of variables control points."
         print "Return predef trajectory (may be in collision)."
-        return predefTraj # FIXME throw an error instead of this ? require changes in wb scripts
+        return 
     
     # retrieve the result of quadprog and create a bezier curve : 
     vars = np.split(res,numVars) 
@@ -750,10 +754,8 @@ def generateConstrainedBezierTraj(time_interval,placement_init,placement_end,q_t
     
     bezier_middle = hpp_spline.bezier(wps,t_middle)    
     # create concatenation with takeoff/landing 
-    curves = []
-    curves.append(bezier_takeoff)
-    curves.append(bezier_middle)
-    curves.append(bezier_landing)
+    curves = predef_curves.curves[::]
+    curves[id_middle] = bezier_middle
     pBezier = PolyBezier(curves)
     if VERBOSE :
         print "time interval     = ",time_interval[1]-time_interval[0]

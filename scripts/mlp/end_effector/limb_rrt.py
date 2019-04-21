@@ -16,7 +16,7 @@ from mlp.utils.polyBezier import PolyBezier
 import quadprog
 eigenpy.switchToNumpyArray()
 from mlp.utils import trajectories
-
+from mlp.end_effector.bezier_predef import generatePredefLandingTakeoff,generateSmoothBezierTraj
 
 VERBOSE = 1
 DISPLAY_RRT_PATH = True
@@ -26,7 +26,7 @@ weights_vars = [[0.5,bezier_com.ConstraintFlag.ONE_FREE_VAR,1],[0.75,bezier_com.
               [0.5,bezier_com.ConstraintFlag.THREE_FREE_VAR,3],[0.75,bezier_com.ConstraintFlag.THREE_FREE_VAR,3],[0.85,bezier_com.ConstraintFlag.THREE_FREE_VAR,3],[0.90,bezier_com.ConstraintFlag.THREE_FREE_VAR,3],[0.95,bezier_com.ConstraintFlag.THREE_FREE_VAR,3],[1.,bezier_com.ConstraintFlag.THREE_FREE_VAR,3],
               [0.5,bezier_com.ConstraintFlag.FIVE_FREE_VAR,5],[0.75,bezier_com.ConstraintFlag.FIVE_FREE_VAR,5],[0.85,bezier_com.ConstraintFlag.FIVE_FREE_VAR,5],[0.90,bezier_com.ConstraintFlag.FIVE_FREE_VAR,5],[0.95,bezier_com.ConstraintFlag.FIVE_FREE_VAR,5],[1.,bezier_com.ConstraintFlag.FIVE_FREE_VAR,5]]
 # if numTry is equal to a number in this list, recompute the the limb-rrt path. This list is made such that low weight/num vars are tried for several limb-rrt path before trying higher weight/num variables
-recompute_rrt_at_tries=[0,3,6,9, 15,21,21+len(weights_vars),21+2*len(weights_vars),21+3*len(weights_vars),21+4*len(weights_vars)]
+recompute_rrt_at_tries=[1,4,7,10, 16,23,23+len(weights_vars),23+2*len(weights_vars),23+3*len(weights_vars),23+4*len(weights_vars)]
 # store the last limbRRT path ID computed        
 current_limbRRT_id = None
 
@@ -68,9 +68,8 @@ def createStateFromPhase(fullBody,q,phase):
     return fullBody.createState(q,contacts)
 
 
-def generateLimbRRTPath(q_init,q_end,phase_previous,phase,phase_next,fullBody,phaseId) :
+def generateLimbRRTPath(q_init,q_end,phase_previous,phase,phase_next,fullBody) :
     assert fullBody and "Cannot use limb-rrt method as fullBody object is not defined."
-    #assert phaseId%2 and "Can only generate limb-rrt for 'middle' phases, ID must be odd (check generation of the contact sequence in contact_sequence/rbprm.py"
     extraDof = int(fullBody.client.robot.getDimensionExtraConfigSpace())
     q_init = q_init.T.tolist()[0] + [0]*extraDof    
     q_end = q_end.T.tolist()[0] + [0]*extraDof
@@ -148,8 +147,12 @@ def generateLimbRRTPath(q_init,q_end,phase_previous,phase,phase_next,fullBody,ph
     return path_rrt_id
     
     
-def generateLimbRRTTraj(time_interval,placement_init,placement_end,q_init,q_end,phase_previous,phase,phase_next,fullBody,phaseId,eeName,viewer) :
-    pathId = generateLimbRRTPath(q_init,q_end,phase_previous,phase,phase_next,fullBody,phaseId)
+def generateLimbRRTTraj(time_interval,placement_init,placement_end,numTry,q_t,phase_previous=None,phase=None,phase_next=None,fullBody=None,eeName=None,viewer=None):
+    t_begin = cfg.EFF_T_PREDEF + cfg.EFF_T_DELAY
+    t_end = time_interval[1]-time_interval[0] - t_begin
+    q_init = q_t[:,int(t_begin/cfg.IK_dt)] # after the predef takeoff
+    q_end = q_t[:,int(t_end/cfg.IK_dt)]       
+    pathId = generateLimbRRTPath(q_init,q_end,phase_previous,phase,phase_next,fullBody)
     
     if viewer and cfg.DISPLAY_FEET_TRAJ and DISPLAY_RRT_PATH:
         from hpp.gepetto import PathPlayer
@@ -165,29 +168,30 @@ def computeDistanceCostMatrices(fb,pathId,pData,T,eeName,numPoints = 50):
     step = problem.pathLength(pathId)/(numPoints-1);
     pts = np.matrix(np.zeros([3,numPoints]))
     for i in range(numPoints):
-        q = problem.configAtParam(pathId,float(step*i))
-        # compute effector pos from q : 
-        fb.setCurrentConfig(q)
-        p = fb.getJointPosition(eeName)[0:3]
-        pts[:,i] = np.matrix(p).T
+        p = effectorPositionFromHPPPath(fb,problem,eeName,pathId,float(step*i))
+        pts[:,i] = p
     return bezier_com.computeEndEffectorDistanceCost(pData,T,numPoints,pts)
 
 
-def generateLimbRRTOptimizedTraj(time_interval,placement_init,placement_end,q_t,predefTraj,phase_previous,phase,phase_next,fullBody,phaseId,eeName,numTry,viewer):
-    t_total = time_interval[1]-time_interval[0]
-    predef_curves = predefTraj.curves
+def generateLimbRRTOptimizedTraj(time_interval,placement_init,placement_end,numTry,q_t=None,phase_previous=None,phase=None,phase_next=None,fullBody=None,eeName=None,viewer=None):
+    if numTry == 0 :
+        return generateSmoothBezierTraj(time_interval,placement_init,placement_end)
+    else :
+        if not q_t or not phase_previous or not phase or not phase_next or not fullBody or not eeName :
+            raise ValueError("Cannot compute LimbRRTOptimizedTraj for try >= 1 without optionnal arguments")
+        
+    predef_curves = generatePredefLandingTakeoff(time_interval,placement_init,placement_end)
     bezier_takeoff = predef_curves.curves[predef_curves.idFirstNonZero()]
     bezier_landing = predef_curves.curves[predef_curves.idLastNonZero()]
     id_middle = int(math.floor(len(predef_curves.curves)/2.))
-    bezier_mid_predef= predef_curves.curves[id_middle]
     pos_init = bezier_takeoff(bezier_takeoff.max())
     pos_end = bezier_landing(0)
     if VERBOSE :
-        print "generateLimbRRTOptimizedTraj for phase "+str(phaseId)+" try number "+str(numTry)
+        print "generateLimbRRTOptimizedTraj, try number "+str(numTry)
         print "bezier takeoff end : ",pos_init
         print "bezier landing init : ",pos_end
     t_begin = predef_curves.times[id_middle]
-    t_middle = bezier_mid_predef.max()
+    t_middle =  predef_curves.curves[id_middle].max()
     t_end = t_begin + t_middle
     if VERBOSE : 
         print "t begin : ",t_begin
@@ -197,7 +201,7 @@ def generateLimbRRTOptimizedTraj(time_interval,placement_init,placement_end,q_t,
     global current_limbRRT_id
     # compute new limb-rrt path if needed:
     if not current_limbRRT_id or (numTry in recompute_rrt_at_tries):
-        current_limbRRT_id = generateLimbRRTPath(q_init,q_end,phase_previous,phase,phase_next,fullBody,phaseId)    
+        current_limbRRT_id = generateLimbRRTPath(q_init,q_end,phase_previous,phase,phase_next,fullBody)    
         if viewer and cfg.DISPLAY_FEET_TRAJ and DISPLAY_RRT_PATH:
             from hpp.gepetto import PathPlayer
             pp = PathPlayer (viewer)
@@ -209,7 +213,7 @@ def generateLimbRRTOptimizedTraj(time_interval,placement_init,placement_end,q_t,
             id = numTry - offset
             break
     if id > len(weights_vars):
-        raise ValueError("Max number of try allow to find a collision-end effector trajectory for phase "+str(phaseId)+" reached.")
+        raise ValueError("Max number of try allow to find a collision-end effector trajectory reached.")
     weight = weights_vars[id][0]
     varFlag = weights_vars[id][1]
     numVars = weights_vars[id][2]
@@ -259,7 +263,7 @@ def generateLimbRRTOptimizedTraj(time_interval,placement_init,placement_end,q_t,
     except ValueError, e:
         print "Quadprog error : "
         print e.message
-        raise ValueError("Quadprog failed to solve QP for optimized limb-RRT end-effector trajectory, at phase "+str(phaseId)+" for try number "+str(numTry))              
+        raise ValueError("Quadprog failed to solve QP for optimized limb-RRT end-effector trajectory, for try number "+str(numTry))              
     
     # build a bezier curve from the result of quadprog : 
     vars = np.split(res,numVars) 
