@@ -50,11 +50,18 @@ def initGuessForPhaseFromBezier(phase,c,current_t,start,end,append = False):
         t += cfg.SOLVER_DT
         if t > c.max():
             t = c.max() # may happend due to numerical imprecisions
-       
+            
+def createFullbodyStatesFromCS(cs,fb):
+    raise NotImplemented("TODO")
 
         
-def generateCentroidalTrajectory(cs_origin,fb,beginId,endId):
-    cs = ContactSequenceHumanoid(cs_origin)
+def generateCentroidalTrajectory(cs,cs_initGuess = None, fb = None, viewer = None):
+    if cs_initGuess :
+        print "WARNING : in centroidal.croc, initial guess is ignored."
+    if not fb : 
+        raise ValueError("CROC called without fullBody object.")
+    beginId,endId = createFullbodyStatesFromCS(cs,fb)
+    cs_result = ContactSequenceHumanoid(cs)
     # for each phase in the cs, create a corresponding FullBody State and call CROC,
     # then discretize the solution and fill the cs struct
     # Make the assumption that the CS was created with the generateContactSequence method from the same fb object
@@ -63,28 +70,28 @@ def generateCentroidalTrajectory(cs_origin,fb,beginId,endId):
         pid = fb.isDynamicallyReachableFromState(id_state,id_state+1,True,numPointsPerPhases=0)
         if len(pid) != 4:
             print "Cannot compute qp initial guess for state "+str(id_state)
-            return cs_origin
+            return cs
         if id_state == 0:
             append = False
             t =0.
         else :
             append = True
-            t = cs.contact_phases[id_state*2].time_trajectory[-1]
+            t = cs_result.contact_phases[id_state*2].time_trajectory[-1]
         c = fb.getPathAsBezier(int(pid[0]))
         assert c.min() == 0 ,"bezier curve should start at t=0."     
         start = 0
         end = fb.client.problem.pathLength(int(pid[1]))
         #print "first DS phase"
-        initGuessForPhaseFromBezier(cs.contact_phases[id_state*2], c,t,start,end,append)
+        initGuessForPhaseFromBezier(cs_result.contact_phases[id_state*2], c,t,start,end,append)
         start = end
         end += fb.client.problem.pathLength(int(pid[2]))
         #print " SS phase"
-        initGuessForPhaseFromBezier(cs.contact_phases[id_state*2+1], c,cs.contact_phases[id_state*2].time_trajectory[-1],start,end)
+        initGuessForPhaseFromBezier(cs_result.contact_phases[id_state*2+1], c,cs_result.contact_phases[id_state*2].time_trajectory[-1],start,end)
         start = end
         end += fb.client.problem.pathLength(int(pid[3])) 
         assert abs(end - c.max()) < 1e-10 ,"Error in computation of time interval"
         #print "second DS phase"        
-        initGuessForPhaseFromBezier(cs.contact_phases[id_state*2+2], c,cs.contact_phases[id_state*2+1].time_trajectory[-1],start,end)
+        initGuessForPhaseFromBezier(cs_result.contact_phases[id_state*2+2], c,cs_result.contact_phases[id_state*2+1].time_trajectory[-1],start,end)
         
-    return cs
+    return cs_result
      

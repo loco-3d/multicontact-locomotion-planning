@@ -297,7 +297,9 @@ def addInitAndGoalShift(cs_in):
     return cs
     
 
-def generateCentroidalTrajectory(cs,cs_initGuess = None, viewer =None):
+def generateCentroidalTrajectory(cs,cs_initGuess = None,fullBody=None, viewer =None):
+    if cs_initGuess:
+        print "WARNING : in current implementation of timeopt.generateCentroidalTrajectory the initial guess is ignored. (TODO)"
     q_init = cs.contact_phases[0].reference_configurations[0].copy()
     num_phases = cs.size()
     ee_ids = [timeopt.EndeffectorID.RF, timeopt.EndeffectorID.LF,timeopt.EndeffectorID.RH,timeopt.EndeffectorID.LH]
@@ -344,4 +346,4 @@ def generateCentroidalTrajectory(cs,cs_initGuess = None, viewer =None):
     if cfg.TIME_SHIFT_COM > 0 :
         cs_result = addInitAndGoalShift(cs_result)
     
-    return cs_result, tp
+    return cs_result
