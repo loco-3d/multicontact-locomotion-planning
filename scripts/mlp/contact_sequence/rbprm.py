@@ -149,7 +149,7 @@ def contactSequenceFromRBPRMConfigs(fb,configs,beginId,endId):
                     phase_d.RH_patch.placement = MRH
                     
         # retrieve the COM position for init and final state (equal for double support phases)
-        init_state = phase_d.init_state.copy()
+        init_state = np.matrix(np.zeros(9)).T
         init_state[0:3] = np.matrix(fb.getCenterOfMass()).transpose()
         init_state[3:6] = np.matrix(configs[config_id][-6:-3]).transpose()
         final_state = init_state.copy()
