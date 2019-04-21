@@ -144,3 +144,9 @@ def isContactEverActive(cs,eeName):
             raise Exception("Unknown effector name") 
     return False
     
+def effectorPositionFromHPPPath(fb,problem,eeName,pid,t):
+    q = problem.configAtParam(pid,t)
+    # compute effector pos from q : 
+    fb.setCurrentConfig(q)
+    p = fb.getJointPosition(eeName)[0:3] 
+    return np.matrix(p).T

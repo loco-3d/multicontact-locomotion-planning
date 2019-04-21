@@ -13,16 +13,11 @@ import multicontact_api
 from multicontact_api import WrenchCone,SOC6,ContactPatch, ContactPhaseHumanoid, ContactSequenceHumanoid
 from mlp.utils import trajectories
 from mlp.utils.computation_tools import shiftZMPtoFloorAltitude
-import mlp.end_effector.bezier_predef as EETraj
 import mlp.viewer.display_tools as display_tools
 import math
 from mlp.utils.wholebody_result import Result
 from mlp.utils.util import * 
-if cfg.USE_LIMB_RRT:
-    import mlp.end_effector.limb_rrt as limb_rrt
-if cfg.USE_CONSTRAINED_BEZIER:
-    import mlp.end_effector.bezier_constrained as bezier_constrained
-    
+from mlp.end_effector import generateEndEffectorTraj
     
 def createContactForEffector(invdyn,robot,phase,eeName):
     size = cfg.IK_eff_size[eeName]
@@ -64,32 +59,6 @@ def createEffectorTasksDic(cs,robot):
             res.update({eeName:effectorTask})
     return res
 
-def generateEEReferenceTraj(robot,robotData,time_interval,phase,phase_next,eeName,viewer = None):   
-    placements = []
-    placement_init = robot.position(robotData, robot.model().getJointId(eeName))
-    placement_end = JointPlacementForEffector(phase_next,eeName)
-    placements.append(placement_init)
-    placements.append(placement_end)
-    if cfg.USE_BEZIER_EE :         
-        ref_traj = EETraj.generateBezierTraj(placement_init,placement_end,time_interval)
-    else : 
-        ref_traj = trajectories.SmoothedFootTrajectory(time_interval, placements) 
-    if cfg.WB_VERBOSE :
-        print "t interval : ",time_interval
-        print "positions : ",placements        
-    return ref_traj
-
-def generateEEReferenceTrajCollisionFree(fullBody,robot,robotData,time_interval,phase_previous,phase,phase_next,q_t,predefTraj,eeName,phaseId,numTry,viewer = None):
-    placements = []
-    placement_init = JointPlacementForEffector(phase_previous,eeName)
-    placement_end = JointPlacementForEffector(phase_next,eeName)
-    placements.append(placement_init)
-    placements.append(placement_end)
-    if cfg.USE_CONSTRAINED_BEZIER :
-        ref_traj = bezier_constrained.generateConstrainedBezierTraj(time_interval,placement_init,placement_end,q_t,predefTraj,phase_previous,phase,phase_next,fullBody,phaseId,eeName,viewer)                    
-    elif cfg.USE_LIMB_RRT:
-        ref_traj = limb_rrt.generateLimbRRTOptimizedTraj(time_interval,placement_init,placement_end,q_t,predefTraj,phase_previous,phase,phase_next,fullBody,phaseId,eeName,numTry,viewer) 
-    return ref_traj
 
 def computeCOMRefFromPhase(phase,time_interval):
     #return trajectories.SmoothedCOMTrajectory("com_reference", phase, com_init, dt) # cubic interpolation from timeopt dt to tsid dt
@@ -124,7 +93,7 @@ def computeAMRefFromPhase(phase,time_interval):
     return am_ref
 
 
-def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
+def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
     if not viewer :
         print "No viewer linked, cannot display end_effector trajectories."
     print "Start TSID ... " 
@@ -136,7 +105,7 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
     #srdf = "package://" + package + '/srdf/' +  cfg.Robot.urdfName+cfg.Robot.srdfSuffix + '.srdf'
     robot = tsid.RobotWrapper(urdf, pin.StdVec_StdString(), pin.JointModelFreeFlyer(), False)
     if cfg.WB_VERBOSE:
-        print "robot loaded in tsid"
+        print "robot loaded in tsid."
     # FIXME : tsid robotWrapper don't have all the required methods, only pinocchio have them
     pinRobot  = pin.RobotWrapper.BuildFromURDF(urdf, pin.StdVec_StdString(), pin.JointModelFreeFlyer(), False)
 
@@ -350,7 +319,12 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
                     print "add se3 task for "+eeName
                 invdyn.addMotionTask(task, cfg.w_eff, cfg.level_eff, 0.0)
                 #create reference trajectory for this task : 
-                ref_traj = generateEEReferenceTraj(robot,invdyn.data(),time_interval,phase,phase_next,eeName,viewer)  
+                placement_init = robot.position(invdyn.data(), robot.model().getJointId(eeName))
+                placement_end = JointPlacementForEffector(phase_next,eeName)                
+                ref_traj = generateEndEffectorTraj(time_interval,placement_init,placement_end,0)
+                if cfg.WB_VERBOSE :
+                    print "t interval : ",time_interval
+                    print "positions : ",placements                 
                 dic_effectors_trajs.update({eeName:ref_traj})
 
         # start removing the contact that will be broken in the next phase :
@@ -477,10 +451,12 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
                         try:
                             for eeName,oldTraj in dic_effectors_trajs.iteritems():
                                 if oldTraj: # update the traj in the map
-                                    ref_traj = generateEEReferenceTrajCollisionFree(fullBody,robot,invdyn.data(),time_interval,phase_prev,phase,phase_next,res.q_t[:,phase_interval[0]:k_t],oldTraj,eeName,pid,iter_for_phase,viewer)
+                                    placement_init = JointPlacementForEffector(phase_prev,eeName)
+                                    placement_end = JointPlacementForEffector(phase_next,eeName)  
+                                    ref_traj = generateEndEffectorTraj(time_interval,placement_init,placement_end,iter_for_phase+1,res.q_t[:,phase_interval[0]:k_t],phase_prev,phase,phase_next,fullBody,eeName,viewer)
                                     dic_effectors_trajs.update({eeName:ref_traj}) 
                         except ValueError,e :
-                            print "ERROR in generateEEReferenceTrajCollisionFree :"
+                            print "ERROR in generateEndEffectorTraj :"
                             print e.message
                             if cfg.WB_ABORT_WHEN_INVALID :
                                 return res.resize(k_begin),pinRobot
