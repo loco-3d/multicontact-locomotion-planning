@@ -2,7 +2,7 @@ import numpy as np
 class Result:
     
     
-    def __init__(self,nq,nv,dt,eeNames,N=None,cs=None,t_begin = 0):
+    def __init__(self,nq,nv,dt,eeNames,N=None,cs=None,t_begin = 0,nu = None):
         self.dt = dt
         if cs :
             self.N = int(round(cs.contact_phases[-1].time_trajectory[-1]/self.dt)) + 1             
@@ -13,11 +13,14 @@ class Result:
         N = self.N
         self.nq = nq
         self.nv = nv
+        if not nu : 
+            nu = nv -6 
+        self.nu = nu
         self.t_t = np.array([t_begin + i*self.dt for i in range(N)])
         self.q_t = np.matrix(np.zeros([self.nq,N]))
         self.dq_t = np.matrix(np.zeros([self.nv,N]))
         self.ddq_t = np.matrix(np.zeros([self.nv,N]))
-        self.tau_t = np.matrix(np.zeros([self.nv,N]))
+        self.tau_t = np.matrix(np.zeros([self.nu,N]))
         self.c_t = np.matrix(np.zeros([3,N]))  
         self.dc_t = np.matrix(np.zeros([3,N]))
         self.ddc_t = np.matrix(np.zeros([3,N]))
@@ -140,7 +143,7 @@ class Result:
         if not os.path.exists(path):
             os.makedirs(path)
         filename = path+"/"+name       
-        np.savez_compressed(filename,N=self.N,nq=self.nq,nv=self.nv,dt=self.dt,t_t=self.t_t,
+        np.savez_compressed(filename,N=self.N,nq=self.nq,nv=self.nv,nu = self.nu,dt=self.dt,t_t=self.t_t,
                  q_t=self.q_t,dq_t=self.dq_t,ddq_t=self.ddq_t,tau_t=self.tau_t,
                  c_t=self.c_t,dc_t=self.dc_t,ddc_t=self.ddc_t,L_t=self.L_t,dL_t=self.dL_t,
                  c_reference=self.c_reference,dc_reference=self.dc_reference,ddc_reference=self.ddc_reference,
@@ -157,9 +160,10 @@ def loadFromNPZ(filename):
     N = f['N'].tolist()
     nq = f['nq'].tolist()
     nv = f['nv'].tolist()
+    nu = f['nu'].tolist()
     dt = f['dt'].tolist()
     eeNames = f['eeNames'].tolist()
-    res = Result(nq,nv,dt,eeNames=eeNames,N=N)
+    res = Result(nq,nv,dt,eeNames=eeNames,N=N,nu=nu)
     res.t_t = f['t_t']
     res.q_t  =np.asmatrix(f['q_t'])
     res.dq_t =np.asmatrix(f['dq_t'])

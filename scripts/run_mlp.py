@@ -59,7 +59,7 @@ if cfg.DISPLAY_WB_MOTION:
 
 if cfg.PLOT:
     from mlp.utils import plot
-    plot.plotKneeTorque(res.t_t,res.phases_intervals,res.tau_t,6 + (res.nq - res.nv),cfg.Robot.kneeIds)    
+    plot.plotKneeTorque(res.t_t,res.phases_intervals,res.tau_t,(res.nq - res.nu),cfg.Robot.kneeIds)    
     plot.plotALLFromWB(cs_com,res,cfg.DISPLAY_PLOT,cfg.SAVE_PLOT,cfg.OUTPUT_DIR+"/plot/"+cfg.DEMO_NAME)
     
 if cfg.EXPORT_OPENHRP and motion_valid:

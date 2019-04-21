@@ -189,7 +189,7 @@ def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
         res.q_t[:,k_t] = q
         res.dq_t[:,k_t] = v                
         res.ddq_t[:,k_t] = dv                             
-        res.tau_t[6:,k_t] = invdyn.getActuatorForces(sol) # actuator forces, with external forces (contact forces)
+        res.tau_t[:,k_t] = invdyn.getActuatorForces(sol) # actuator forces, with external forces (contact forces)
         #store contact info (force and status)
         if cfg.IK_store_contact_forces :
             for eeName,contact in dic_contacts.iteritems():
@@ -215,7 +215,7 @@ def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
             res.dL_reference[:,k_t] = dL_desired 
             if cfg.IK_store_zmp : 
                 tau = pin.rnea(pinRobot.model,pinRobot.data,q,v,dv) # tau without external forces, only used for the 6 first
-                res.tau_t[:6,k_t] = tau[:6]
+                #res.tau_t[:6,k_t] = tau[:6]
                 phi0 = pinRobot.data.oMi[1].act(Force(tau[:6]))
                 res.wrench_t[:,k_t] = phi0.vector
                 res.zmp_t[:,k_t] = shiftZMPtoFloorAltitude(cs,res.t_t[k_t],phi0)
