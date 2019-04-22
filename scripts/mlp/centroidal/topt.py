@@ -66,7 +66,37 @@ def isNewPhase(tp,k0,k1,cs_com,cs_initGuess,p_id):
         return isNewPhaseFromCS(cs_com,cs_initGuess,p_id)
     else : 
         return isNewPhaseFromContact(tp,k0,k1)
-       
+
+
+def connectFinalPhase(phase,duration = cfg.DURATION_CONNECT_GOAL):
+    init_state = phase.state_trajectory[-1]
+    final_state = phase.final_state
+    init_control = phase.control_trajectory[-1]
+    t_init = phase.time_trajectory[-1]
+    t_end = t_init + duration
+    com_traj = genCOMTrajFromPhaseStates(t_init,t_end,init_state,final_state,init_control)
+    am_traj = genAMTrajFromPhaseStates(t_init,t_end,init_state,final_state,init_control)
+    i = len(phase.time_trajectory)
+    
+    dt = cfg.SOLVER_DT
+    t = t_init + dt
+    while t < t_end + dt/2. :
+        if t > t_end: # may happen due to numerical imprecision
+            t = t_end
+        c,dc,ddc = com_traj(t)
+        L,dL = am_traj(t)
+        state = np.matrix(np.zeros(9)).T
+        control= np.matrix(np.zeros(6)).T
+        state[0:3] = c
+        state[3:6] = dc
+        control[0:3] = ddc
+        state[6:9] = L
+        control[3:6] = dL
+        phase.state_trajectory.append(state)
+        phase.control_trajectory.append(control)
+        phase.time_trajectory.append(t)
+        t += dt
+           
 def fillCSFromTimeopt(cs,cs_initGuess,tp):
     cs_com = ContactSequenceHumanoid(cs)
     
@@ -102,29 +132,21 @@ def fillCSFromTimeopt(cs,cs_initGuess,tp):
         appendOrReplace(cs_com.contact_phases[p_id].control_trajectory,k_id,np.matrix(u))
         appendOrReplace(cs_com.contact_phases[p_id].state_trajectory,k_id,np.matrix(x))
         
-        if k > 0 and isNewPhase(tp,k-1,k,cs_com,cs_initGuess,p_id):
+        if k > 0 and isNewPhase(tp,k-1,k,cs_com,cs_initGuess,p_id) and p_id < cs_com.size()-1:
             #last k of current phase, first k of next one (same state_traj and time)
             # set final state of current phase : 
             cs_com.contact_phases[p_id].final_state = np.matrix(x)
             # first k of the current phase
             p_id += 1                            
-            if p_id < cs_com.size()  :
-                k_id = 0
-                cs_com.contact_phases[p_id].init_state = np.matrix(x)                
-                appendOrReplace(cs_com.contact_phases[p_id].time_trajectory,k_id,tp.getTime(k))
-                appendOrReplace(cs_com.contact_phases[p_id].control_trajectory,k_id,np.matrix(u))
-                appendOrReplace(cs_com.contact_phases[p_id].state_trajectory,k_id,np.matrix(x))                
+            k_id = 0
+            cs_com.contact_phases[p_id].init_state = np.matrix(x)                
+            appendOrReplace(cs_com.contact_phases[p_id].time_trajectory,k_id,tp.getTime(k))
+            appendOrReplace(cs_com.contact_phases[p_id].control_trajectory,k_id,np.matrix(u))
+            appendOrReplace(cs_com.contact_phases[p_id].state_trajectory,k_id,np.matrix(x))                
         k_id +=1
-    p_end = cs_com.contact_phases[-1]
-    final_state = p_end.final_state
-    final_state[0:3] = tp.getFinalCOM()
-    p_end.final_state = final_state
-    # apparently tp.get{COM,LMOM,AMOM}(tp.getTrajectorySize()-1) don't give the value of the last segment (but the previous one),
-    # so we add a last point in the trajectories here : 
-    appendOrReplace(p_end.time_trajectory,k_id,tp.getTime(tp.getTrajectorySize()-1) + cfg.SOLVER_DT)
-    appendOrReplace(p_end.control_trajectory,k_id,np.matrix(np.zeros(6)).T)
-    appendOrReplace(p_end.state_trajectory,k_id,final_state.copy()) 
-    # because of this the last phase will not have the desired duration, but will be a dt longer ... 
+    # timeopt solution is not guarantee to end at the desired final state.
+    # so we add a final phase here, with a smooth motion from the final state atteined by timeopt to the desired one      
+    connectFinalPhase(cs_com.contact_phases[-1])
     return cs_com
         
 # helper method to make the link between timeopt.EndEffector and cs.Patch        
@@ -209,40 +231,40 @@ def extractAllEffectorsPhasesFromCS(cs,cs_initGuess,ee_ids):
             effectors_phases.update({ee:ee_phases})
     return effectors_phases,size
 
-# fill state trajectory and time trajectory with a linear trajectory connecting init_state to final_state
-# the trajectories vectors must be empty when calling this method ! 
-def generateLinearInterpTraj(phase,duration,t_total):
-    com0 = phase.init_state[0:3]
-    com1 = phase.final_state[0:3]
-    vel = (com1-com0)/duration
-    acc = np.matrix(np.zeros(3)).T
-    L = np.matrix(np.zeros(3)).T
-    dL = np.matrix(np.zeros(3)).T
-    state = np.matrix(np.zeros(9)).T
-    control = np.matrix(np.zeros(6)).T    
-    t = 0.
-    while t < duration - 0.0001 :
-        u = t/duration
-        com = com0*(1.-u) + com1*(u)
-        state[0:3] = com
-        state[3:6] = vel
-        state[6:9] = L
-        control[0:3] = acc
-        control[3:6] = dL
-        phase.state_trajectory.append(state)
-        phase.control_trajectory.append(control)        
-        phase.time_trajectory.append(t_total)
-        t += cfg.SOLVER_DT
-        t_total +=cfg.SOLVER_DT
-    state[0:3] = com1
-    state[3:6] = vel
-    state[6:9] = L
-    control[0:3] = acc
-    control[3:6] = dL    
-    phase.state_trajectory.append(state)
-    phase.control_trajectory.append(control)            
-    phase.time_trajectory.append(t_total)
-    return phase
+## fill state trajectory and time trajectory with a linear trajectory connecting init_state to final_state
+## the trajectories vectors must be empty when calling this method ! 
+#def generateLinearInterpTraj(phase,duration,t_total):
+    #com0 = phase.init_state[0:3]
+    #com1 = phase.final_state[0:3]
+    #vel = (com1-com0)/duration
+    #acc = np.matrix(np.zeros(3)).T
+    #L = np.matrix(np.zeros(3)).T
+    #dL = np.matrix(np.zeros(3)).T
+    #state = np.matrix(np.zeros(9)).T
+    #control = np.matrix(np.zeros(6)).T    
+    #t = 0.
+    #while t < duration - 0.0001 :
+        #u = t/duration
+        #com = com0*(1.-u) + com1*(u)
+        #state[0:3] = com
+        #state[3:6] = vel
+        #state[6:9] = L
+        #control[0:3] = acc
+        #control[3:6] = dL
+        #phase.state_trajectory.append(state)
+        #phase.control_trajectory.append(control)        
+        #phase.time_trajectory.append(t_total)
+        #t += cfg.SOLVER_DT
+        #t_total +=cfg.SOLVER_DT
+    #state[0:3] = com1
+    #state[3:6] = vel
+    #state[6:9] = L
+    #control[0:3] = acc
+    #control[3:6] = dL    
+    #phase.state_trajectory.append(state)
+    #phase.control_trajectory.append(control)            
+    #phase.time_trajectory.append(t_total)
+    #return phase
 
 
 # add an initial and final phase that only move the COM along z from the given distance
