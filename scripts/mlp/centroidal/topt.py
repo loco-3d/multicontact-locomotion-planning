@@ -66,17 +66,7 @@ def isNewPhase(tp,k0,k1,cs_com,cs_initGuess,p_id):
         return isNewPhaseFromCS(cs_com,cs_initGuess,p_id)
     else : 
         return isNewPhaseFromContact(tp,k0,k1)
-        
-
-## helper method to deal with StateVectorState and other exposed c++ vectors : 
-# replace vec[i] with value if it already exist or append the value
-def appendOrReplace(vec,i,value):
-    assert len(vec) >= i , "There is an uninitialized gap in the vector."
-    if i < len(vec) :
-        vec[i] = value
-    else :
-        vec.append(value)
-        
+       
 def fillCSFromTimeopt(cs,cs_initGuess,tp):
     cs_com = ContactSequenceHumanoid(cs)
     
@@ -219,15 +209,8 @@ def extractAllEffectorsPhasesFromCS(cs,cs_initGuess,ee_ids):
             effectors_phases.update({ee:ee_phases})
     return effectors_phases,size
 
-def copyPhaseContacts(phase_in,phase_out):
-    phase_out.RF_patch = phase_in.RF_patch
-    phase_out.LF_patch = phase_in.LF_patch
-    phase_out.RH_patch = phase_in.RH_patch
-    phase_out.LH_patch = phase_in.LH_patch
-    
 # fill state trajectory and time trajectory with a linear trajectory connecting init_state to final_state
 # the trajectories vectors must be empty when calling this method ! 
-# Note : don't fill control_traj for now
 def generateLinearInterpTraj(phase,duration,t_total):
     com0 = phase.init_state[0:3]
     com1 = phase.final_state[0:3]

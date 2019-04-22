@@ -65,6 +65,15 @@ def stdVecToMatrix(std_vector):
     res = np.hstack(tuple(vec_l))
     return res
 
+## helper method to deal with StateVectorState and other exposed c++ vectors : 
+# replace vec[i] with value if it already exist or append the value
+def appendOrReplace(vec,i,value):
+    assert len(vec) >= i , "There is an uninitialized gap in the vector."
+    if i < len(vec) :
+        vec[i] = value
+    else :
+        vec.append(value)
+
 def numpy2DToList(m):
     l = []
     for i in range(m.shape[1]):
@@ -218,3 +227,8 @@ def genSplinesForPhase(phase,init_control = None, final_control = None):
     return phase
 
 
+def copyPhaseContacts(phase_in,phase_out):
+    phase_out.RF_patch = phase_in.RF_patch
+    phase_out.LF_patch = phase_in.LF_patch
+    phase_out.RH_patch = phase_in.RH_patch
+    phase_out.LH_patch = phase_in.LH_patch
