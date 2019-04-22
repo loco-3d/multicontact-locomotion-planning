@@ -4,6 +4,8 @@ from numpy import cross
 from numpy.linalg import norm
 from pinocchio import SE3, Quaternion
 import mlp.config as cfg
+from mlp.utils.trajectories import cubicSplineTrajectory,quinticSplineTrajectory
+import math
 
 def quatFromConfig(q):
     return Quaternion(q[6],q[3],q[4],q[5])
@@ -150,3 +152,69 @@ def effectorPositionFromHPPPath(fb,problem,eeName,pid,t):
     fb.setCurrentConfig(q)
     p = fb.getJointPosition(eeName)[0:3] 
     return np.matrix(p).T
+
+def genAMTrajFromPhaseStates(t_init,t_end,init_state,final_state,init_control = None,final_control = None):
+    # build Angular moment cubic spline : 
+    am_init = init_state[6:9]
+    am_end = final_state[6:9]
+    if init_control is None:
+        dAm_init = np.zeros([3,1])
+    else:
+        dAm_init = init_control[3:6]
+    if final_control is None:
+        dAm_end = np.zeros([3,1])      
+    else:
+        dAm_end = final_control[3:6]
+    return cubicSplineTrajectory(t_init,t_end,am_init,dAm_init,am_end,dAm_end)
+    
+def genCOMTrajFromPhaseStates(t_init,t_end,init_state,final_state,init_control = None,final_control = None):
+    # build quintic spline for the com position : 
+    p_init = init_state[0:3]
+    p_end = final_state[0:3]
+    v_init = init_state[3:6]
+    v_end = final_state[3:6]
+    if init_control is None:
+        a_init = np.zeros([3,1])
+    else:
+        a_init = init_control[0:3]
+    if final_control is None:
+        a_end = np.zeros([3,1])       
+    else:
+        a_end = final_control[0:3]
+    return quinticSplineTrajectory(t_init,t_end,p_init,v_init,a_init,p_end,v_end,a_end)
+    
+# fill state_trajectory and control_trajectory in order to connect init_state and final_state of the phase
+# use quintic spline for the com position and cubic spline for the angular momentum
+# The state_trajectory and control_trajectory in phase should be empty
+# and the time_trajectory should start and end at the correct timings
+def genSplinesForPhase(phase,init_control = None, final_control = None):
+    init_state = phase.init_state
+    final_state = phase.final_state    
+    t_init = phase.time_trajectory[0]
+    t_end = phase.time_trajectory[-1]
+    com_traj = genCOMTrajFromPhaseStates(t_init,t_end,init_state,final_state,init_control,final_control)
+    am_traj = genAMTrajFromPhaseStates(t_init,t_end,init_state,final_state,init_control,final_control)
+    
+    # Iiterate from t_init to t_end and fill the trajectories : 
+    dt = cfg.SOLVER_DT
+    numStep = int(round((t_end - t_init)/dt))
+    for i in range(numStep):
+        t = t_init + float(i)*dt
+        if t > t_end: # may happen due to numerical imprecision
+            t = t_end
+        c,dc,ddc = com_traj(t)
+        L,dL = am_traj(t)
+        state = np.matrix(np.zeros(9)).T
+        control= np.matrix(np.zeros(6)).T
+        state[0:3] = c
+        state[3:6] = dc
+        control[0:3] = ddc
+        state[6:9] = L
+        control[3:6] = dL
+        appendOrReplace(phase.state_trajectory,i ,state)
+        appendOrReplace(phase.control_trajectory,i, control)
+        appendOrReplace(phase.time_trajectory,i , t)
+        
+    return phase
+
+
