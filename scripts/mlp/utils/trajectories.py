@@ -723,3 +723,125 @@ class HPPEffectorTrajectory (RefTrajectory):
       print "Trajectory called after final time."
       t = self._length    
     return effectorPositionFromHPPPath(self._fb,self._problem,self._eeName,self._pid,t)
+
+
+## thrid order spline with equation : 
+# c0 + c1*t + c2*t^2 +c3*t^3
+class cubicSplineTrajectory(RefTrajectory):
+  def __init__ (self,t_init,t_end,p_init,v_init,p_end,v_end, name="cubic-spline-trajectory"):
+    RefTrajectory.__init__(self,name)
+    self.t_init = t_init
+    self.t_end = t_end
+    T = t_end - t_init
+    self.T = T
+    dim = len(p_init)
+    assert len(v_init) == dim
+    assert len(p_end) == dim
+    assert len(v_end) == dim
+    self._dim = dim
+    self.coefs=[]
+    self.dcoefs=[]
+    T2 = T*T
+    T3 = T2*T
+    # M_inv : matrice use to compute the polynomial coefficient : [coefs] = M [boundary conditions]
+    M_inv = np.matrix(np.zeros([4,4]))
+    M_inv[0,:] = np.matrix([1.,0.,0.,0.])
+    M_inv[1,:] = np.matrix([1.,T,T2,T3])
+    M_inv[2,:] = np.matrix([0.,1.,0.,0.])
+    M_inv[3,:] = np.matrix([0.,1.,2.*T,3.*T2])
+    M = pinv(M_inv)
+    for k in range(self._dim):
+      # compute boundary condition vector (column) : 
+      bc = np.matrix(np.zeros(4)).T
+      bc[0,0] = p_init[k,0]
+      bc[1,0] = p_end[k,0]
+      bc[2,0] = v_init[k,0]
+      bc[3,0] = v_end[k,0]
+      ## compute polynomes coefficients from boundary conditions : 
+      coefs = (M.dot(bc)).T.tolist()[0]
+      self.coefs.append(np.array(coefs))
+      self.dcoefs.append(np.array([coefs[1], 2.*coefs[2], 3.*coefs[3]]))
+
+
+  def __call__ (self, t_total):
+    assert t_total >= self.t_init and "t less than min bound"
+    assert t_total <= self.t_end and "t greater than max bound"
+    # compute normalized time : 
+    t = (t_total-self.t_init)
+    X = np.matrix(np.zeros(self._dim)).T
+    dX = np.matrix(np.zeros(self._dim)).T
+    for k in range(self._dim):
+      X[k,0] = polyval(t,self.coefs[k])
+      dX[k,0] = polyval(t,self.dcoefs[k])
+
+    return X,dX 
+  
+
+
+
+## five order spline with equation : 
+# c0 + c1*t + c2*t^2 +c3*t^3 +c4*t^4 +c5*t^5 
+class quinticSplineTrajectory(RefTrajectory):
+  def __init__ (self,t_init,t_end,p_init,v_init,a_init,p_end,v_end,a_end, name="qintic-spline-trajectory"):
+    RefTrajectory.__init__(self,name)
+    self.t_init = t_init
+    self.t_end = t_end
+    T = t_end - t_init
+    self.T = T
+    dim = len(p_init)
+    assert len(v_init) == dim
+    assert len(a_init) == dim
+    assert len(p_end) == dim
+    assert len(v_end) == dim
+    assert len(a_end) == dim
+    self._dim = dim
+    self.coefs=[]
+    self.dcoefs=[]
+    self.ddcoefs=[]
+    T2 = T*T
+    T3 = T2*T
+    T4 = T3*T
+    T5 = T4*T
+    # M_inv : matrice use to compute the polynomial coefficient : [coefs] = M * [boundary conditions]
+    M_inv = np.matrix(np.zeros([6,6]))
+    M_inv[0,:] = np.matrix([1.,0.,0.,0.,0.,0.])
+    M_inv[1,:] = np.matrix([1.,T,T2,T3,T4,T5])
+    M_inv[2,:] = np.matrix([0.,1.,0.,0.,0.,0.])
+    M_inv[3,:] = np.matrix([0.,1.,2.*T,3.*T2,4.*T3,5.*T4])
+    M_inv[4,:] = np.matrix([0.,0.,2.,0.,0.,0.])
+    M_inv[5,:] = np.matrix([0.,0.,2.,6.*T,12.*T2,20.*T3])
+    M = pinv(M_inv)
+    for k in range(self._dim):
+      # compute boundary condition vector (column) : 
+      bc = np.matrix(np.zeros(6)).T
+      bc[0,0] = p_init[k,0]
+      bc[1,0] = p_end[k,0]
+      bc[2,0] = v_init[k,0]
+      bc[3,0] = v_end[k,0]
+      bc[4,0] = a_init[k,0]
+      bc[5,0] = a_end[k,0]
+      
+      ## compute polynomes coefficients from boundary conditions : 
+      coefs = (M.dot(bc)).T.tolist()[0]
+      self.coefs.append(np.array(coefs))
+      self.dcoefs.append(np.array([coefs[1], 2.*coefs[2], 3.*coefs[3], 4.*coefs[4], 5.*coefs[5]]))
+      self.ddcoefs.append(np.array([2.*coefs[2], 6.*coefs[3], 12.*coefs[4], 20.*coefs[5]]))
+
+
+  def __call__ (self, t_total):
+    assert t_total >= self.t_init and "t less than min bound"
+    assert t_total <= self.t_end and "t greater than max bound"
+    # compute normalized time : 
+    t = (t_total-self.t_init)
+    X = np.matrix(np.zeros(self._dim)).T
+    dX = np.matrix(np.zeros(self._dim)).T
+    ddX = np.matrix(np.zeros(self._dim)).T
+    
+    for k in range(self._dim):
+      X[k,0] = polyval(t,self.coefs[k])
+      dX[k,0] = polyval(t,self.dcoefs[k])
+      ddX[k,0] = polyval(t,self.ddcoefs[k])
+
+    return X,dX,ddX 
+  
+  
