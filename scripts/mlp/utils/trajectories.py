@@ -724,6 +724,16 @@ class HPPEffectorTrajectory (RefTrajectory):
       t = self._length    
     return effectorPositionFromHPPPath(self._fb,self._problem,self._eeName,self._pid,t)
 
+# coefs represent a polynome in the forme
+# c0 + c1*x +c2*x^2 + ... +cn*x^n
+# returns the coefficients of the first derivative
+def derivatePolynome(coefs):
+  dim,deg = coefs.shape
+  deg -= 1
+  dcoefs = np.matrix(np.zeros([dim,deg]))
+  for i in range(deg):
+    dcoefs[:,i] = float(i+1.)*coefs[:,i+1]
+  return dcoefs
 
 ## thrid order spline with equation : 
 # c0 + c1*t + c2*t^2 +c3*t^3
@@ -739,8 +749,7 @@ class cubicSplineTrajectory(RefTrajectory):
     assert len(p_end) == dim
     assert len(v_end) == dim
     self._dim = dim
-    self.coefs=[]
-    self.dcoefs=[]
+    self.coefs=np.matrix(np.zeros([dim,4])) # one column for each coefficient
     T2 = T*T
     T3 = T2*T
     # M_inv : matrice use to compute the polynomial coefficient : [coefs] = M [boundary conditions]
@@ -758,10 +767,10 @@ class cubicSplineTrajectory(RefTrajectory):
       bc[2,0] = v_init[k,0]
       bc[3,0] = v_end[k,0]
       ## compute polynomes coefficients from boundary conditions : 
-      coefs = (M.dot(bc)).T.tolist()[0]
-      self.coefs.append(np.array(coefs))
-      self.dcoefs.append(np.array([coefs[1], 2.*coefs[2], 3.*coefs[3]]))
-
+      self.coefs[k,:] = (M.dot(bc)).T
+    # compute values of coefficients for first derivative : 
+    self.dcoefs = derivatePolynome(self.coefs)
+    
 
   def __call__ (self, t_total):
     assert t_total >= self.t_init and "t less than min bound"
@@ -771,8 +780,8 @@ class cubicSplineTrajectory(RefTrajectory):
     X = np.matrix(np.zeros(self._dim)).T
     dX = np.matrix(np.zeros(self._dim)).T
     for k in range(self._dim):
-      X[k,0] = polyval(t,self.coefs[k])
-      dX[k,0] = polyval(t,self.dcoefs[k])
+      X[k,0] = polyval(t,self.coefs[k,:].T)
+      dX[k,0] = polyval(t,self.dcoefs[k,:].T)
 
     return X,dX 
   
@@ -795,9 +804,9 @@ class quinticSplineTrajectory(RefTrajectory):
     assert len(v_end) == dim
     assert len(a_end) == dim
     self._dim = dim
-    self.coefs=[]
-    self.dcoefs=[]
-    self.ddcoefs=[]
+    self.coefs=np.matrix(np.zeros([dim,6])) # one column for each coefficient
+    self.dcoefs=np.matrix(np.zeros([dim,5])) # one column for each coefficient
+    self.ddcoefs=np.matrix(np.zeros([dim,4])) # one column for each coefficient
     T2 = T*T
     T3 = T2*T
     T4 = T3*T
@@ -820,14 +829,12 @@ class quinticSplineTrajectory(RefTrajectory):
       bc[3,0] = v_end[k,0]
       bc[4,0] = a_init[k,0]
       bc[5,0] = a_end[k,0]
-      
       ## compute polynomes coefficients from boundary conditions : 
-      coefs = (M.dot(bc)).T.tolist()[0]
-      self.coefs.append(np.array(coefs))
-      self.dcoefs.append(np.array([coefs[1], 2.*coefs[2], 3.*coefs[3], 4.*coefs[4], 5.*coefs[5]]))
-      self.ddcoefs.append(np.array([2.*coefs[2], 6.*coefs[3], 12.*coefs[4], 20.*coefs[5]]))
-
-
+      self.coefs[k,:] = (M.dot(bc)).T
+    self.dcoefs = derivatePolynome(self.coefs)
+    self.ddcoefs = derivatePolynome(self.dcoefs)
+    
+    
   def __call__ (self, t_total):
     assert t_total >= self.t_init and "t less than min bound"
     assert t_total <= self.t_end and "t greater than max bound"
@@ -838,9 +845,9 @@ class quinticSplineTrajectory(RefTrajectory):
     ddX = np.matrix(np.zeros(self._dim)).T
     
     for k in range(self._dim):
-      X[k,0] = polyval(t,self.coefs[k])
-      dX[k,0] = polyval(t,self.dcoefs[k])
-      ddX[k,0] = polyval(t,self.ddcoefs[k])
+      X[k,0] = polyval(t,self.coefs[k,:].T)
+      dX[k,0] = polyval(t,self.dcoefs[k,:].T)
+      ddX[k,0] = polyval(t,self.ddcoefs[k,:].T)
 
     return X,dX,ddX 
   
