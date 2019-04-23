@@ -64,6 +64,8 @@ triangles_ids = [
 		[3, 2, 6,],
 		[6, 7, 3]]
 
+def effectorCanRetry():
+    return True
 
 #min (1/2)x' P x + q' x  
 #subject to  G x <= h

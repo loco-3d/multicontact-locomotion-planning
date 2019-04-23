@@ -17,7 +17,7 @@ import mlp.viewer.display_tools as display_tools
 import math
 from mlp.utils.wholebody_result import Result
 from mlp.utils.util import * 
-from mlp.end_effector import generateEndEffectorTraj
+from mlp.end_effector import generateEndEffectorTraj,effectorCanRetry
     
 def createContactForEffector(invdyn,robot,phase,eeName):
     size = cfg.IK_eff_size[eeName]
@@ -442,11 +442,11 @@ def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
             # end while t \in phase_t (loop for the current contact phase) 
             if swingPhase and cfg.EFF_CHECK_COLLISION :
                 phaseValid,t_invalid = validator.check_motion(res.q_t[:,phase_interval[0]:k_t])
-                #if iter_for_phase == 0:# FIXME : debug only, force limb-rrt
+                #if iter_for_phase < 3 :# FIXME : debug only, force limb-rrt
                 #    phaseValid = False
                 if not phaseValid :
                     print "Phase "+str(pid)+" not valid at t = "+ str(t_invalid)
-                    if cfg.USE_CONSTRAINED_BEZIER or cfg.USE_LIMB_RRT: 
+                    if effectorCanRetry() : 
                         print "Try new end effector trajectory."  
                         try:
                             for eeName,oldTraj in dic_effectors_trajs.iteritems():
@@ -459,10 +459,15 @@ def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
                             print "ERROR in generateEndEffectorTraj :"
                             print e.message
                             if cfg.WB_ABORT_WHEN_INVALID :
-                                return res.resize(k_begin),pinRobot
+                                return res.resize(phase_interval[0]),pinRobot
                             elif cfg.WB_RETURN_INVALID : 
                                 return res.resize(k_t),pinRobot                    
-                    
+                    else : 
+                        print "End effector method choosen do not allow retries, abort here."
+                        if cfg.WB_ABORT_WHEN_INVALID :
+                            return res.resize(phase_interval[0]),pinRobot
+                        elif cfg.WB_RETURN_INVALID : 
+                            return res.resize(k_t),pinRobot                         
             else : # no effector motions, phase always valid (or bypass the check)
                 phaseValid = True
                 if cfg.WB_VERBOSE :

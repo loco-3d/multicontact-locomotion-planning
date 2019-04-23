@@ -16,6 +16,10 @@ from mlp.utils import trajectories
 from mlp.utils.util import stdVecToMatrix
 import math
 
+def effectorCanRetry():
+    return False
+
+
 class Empty:
     None
     

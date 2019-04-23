@@ -9,13 +9,19 @@ if method == "smoothedFoot":
         if numTry > 0 :
             raise ValueError("SmoothedFootTrajectory will always produce the same trajectory, cannot be called with numTry > 0 ")        
         return SmoothedFootTrajectory(time_interval, [placement_init,placement_end]) 
+    def effectorCanRetry():
+        return False
 elif method == "bezierPredef":
     from .bezier_predef import generateSmoothBezierTraj as generateEndEffectorTraj
+    from .bezier_predef import effectorCanRetry
 elif method == "bezierConstrained":
     from .bezier_constrained import generateConstrainedBezierTraj as generateEndEffectorTraj
+    from .bezier_constrained import effectorCanRetry    
 elif method == "limbRRT":
     from .limb_rrt import generateLimbRRTTraj as generateEndEffectorTraj
+    from .limb_rrt import effectorCanRetry    
 elif method == "limbRRToptimized":
     from .limb_rrt import generateLimbRRTOptimizedTraj as generateEndEffectorTraj
+    from .limb_rrt import effectorCanRetry    
 else : 
     raise ValueError("method type "+str(method)+" doesn't exist for end-effector trajectory generation")

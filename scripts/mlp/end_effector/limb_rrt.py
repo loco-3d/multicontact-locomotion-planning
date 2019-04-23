@@ -30,7 +30,8 @@ recompute_rrt_at_tries=[1,4,7,10, 16,23,23+len(weights_vars),23+2*len(weights_va
 # store the last limbRRT path ID computed        
 current_limbRRT_id = None
 
-
+def effectorCanRetry():
+    return True
 
 #min (1/2)x' P x + q' x  
 #subject to  G x <= h
