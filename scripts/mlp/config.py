@@ -87,8 +87,6 @@ if contact_generation_method == "none" and centroidal_method != "load" :
     raise ValueError("Cannot skip contact_generation phase if centroidal trajectory is not loaded from file")
 if centroidal_method == "timeopt" and centroidal_initGuess_method != "geometric":
     raise ValueError("In current implementation of timeopt, the initGuess must be geometric (FIXME)")
-if (centroidal_method == "croc" or centroidal_initGuess_method == "croc") and contact_generation_method != "rbprm":
-    raise ValueError("In current implementation of CROC, contact generation method should be RBPRM (FIXME)")
 
 # skip useless ethod when loading motion from file: 
 if contact_generation_method == "load":
