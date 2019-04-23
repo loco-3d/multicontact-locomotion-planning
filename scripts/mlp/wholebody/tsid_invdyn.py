@@ -109,7 +109,7 @@ def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
     # FIXME : tsid robotWrapper don't have all the required methods, only pinocchio have them
     pinRobot  = pin.RobotWrapper.BuildFromURDF(urdf, pin.StdVec_StdString(), pin.JointModelFreeFlyer(), False)
 
-    q = cs.contact_phases[0].reference_configurations[0].copy()
+    q = cs.contact_phases[0].reference_configurations[0][:robot.nq].copy()
     v = np.matrix(np.zeros(robot.nv)).transpose()
     t = 0.0  # time
     # init states list with initial state (assume joint velocity is null for t=0)

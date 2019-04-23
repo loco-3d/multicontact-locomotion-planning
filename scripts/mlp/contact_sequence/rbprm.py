@@ -36,8 +36,6 @@ def contactSequenceFromRBPRMConfigs(fb,configs,beginId,endId):
     # config only contains the double support stance
     n_steps = n_double_support*2 -1 
     # Notice : what we call double support / simple support are in fact the state with all the contacts and the state without the next moving contact
-    extraDOF = int(fb.client.robot.getDimensionExtraConfigSpace())
-    configSize = fb.client.robot.getConfigSize() - extraDOF
     cs = ContactSequenceHumanoid(n_steps)
     unusedPatch = cs.contact_phases[0].LF_patch.copy()
     unusedPatch.placement = SE3.Identity()
@@ -156,7 +154,7 @@ def contactSequenceFromRBPRMConfigs(fb,configs,beginId,endId):
         #phase_d.time_trajectory.append((fb.getDurationForState(stateId))*cfg.DURATION_n_CONTACTS/cfg.SPEED)
         phase_d.init_state=init_state
         phase_d.final_state=final_state
-        phase_d.reference_configurations.append(np.matrix((configs[config_id][:configSize])).T)        
+        phase_d.reference_configurations.append(np.matrix((configs[config_id])).T)        
         #print "done for double support"
         
         if stateId < endId :
@@ -183,7 +181,7 @@ def contactSequenceFromRBPRMConfigs(fb,configs,beginId,endId):
                     phase_s.RH_patch.active = False
             # retrieve the COM position for init and final state 
              
-            phase_s.reference_configurations.append(np.matrix((configs[config_id][:configSize])).T)
+            phase_s.reference_configurations.append(np.matrix((configs[config_id])).T)
             init_state = phase_d.init_state.copy()
             final_state = phase_d.final_state.copy()
             fb.setCurrentConfig(configs[config_id+1])
