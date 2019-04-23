@@ -164,7 +164,7 @@ def generateLimbRRTOptimizedTraj(time_interval,placement_init,placement_end,numT
     if numTry == 0 :
         return generateSmoothBezierTraj(time_interval,placement_init,placement_end)
     else :
-        if not q_t or not phase_previous or not phase or not phase_next or not fullBody or not eeName :
+        if q_t is None or phase_previous is None or phase is None or phase_next is None or not fullBody or not eeName :
             raise ValueError("Cannot compute LimbRRTOptimizedTraj for try >= 1 without optionnal arguments")
         
     predef_curves = generatePredefLandingTakeoff(time_interval,placement_init,placement_end)

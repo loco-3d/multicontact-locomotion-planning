@@ -96,7 +96,7 @@ def generatePredefLandingTakeoff(time_interval,placement_init,placement_end):
     bezier_takeoff = buildPredefinedInitTraj(placement_init,t_total)
     bezier_landing = buildPredefinedFinalTraj(placement_end,t_total)
     t_middle =  (t_total - (2.*cfg.EFF_T_PREDEF))
-    
+    assert t_middle >= 0.1 and "Duration of swing phase too short for effector motion. Change the values of predef motion for effector or the duration of the contact phase. "
     curves = []
     # create polybezier with concatenation of the 3 (or 5) curves :    
     # create constant curve at the beginning and end for the delay : 
