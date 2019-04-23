@@ -8,9 +8,9 @@ wholebody_method_available = ["load", "tsid", "croccodyl"]
 end_effector_method_available = ["smoothedFoot", "bezierPredef", "bezierConstrained", "limbRRT", "limbRRToptimized"]
 
 ## methods setting : choose which method will be used to solve each subproblem : 
-contact_generation_method = "load" 
+contact_generation_method = "rbprm" 
 centroidal_initGuess_method = "geometric" 
-centroidal_method = "load" 
+centroidal_method = "timeopt" 
 wholebody_method = "tsid" 
 end_effector_method = "limbRRToptimized" 
 
