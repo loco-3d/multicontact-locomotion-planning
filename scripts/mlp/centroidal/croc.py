@@ -3,7 +3,7 @@ import mlp.config as cfg
 import multicontact_api 
 from multicontact_api import WrenchCone,SOC6,ContactPatch, ContactPhaseHumanoid, ContactSequenceHumanoid
 from hpp_spline import bezier
- 
+from mlp.utils.util import createStateFromPhase, phasesHaveSameConfig
 
 def initGuessForPhaseFromBezier(phase,c,current_t,start,end,append = False):
     from spline import bezier    

@@ -8,7 +8,7 @@ import numpy.linalg
 from multicontact_api import WrenchCone,SOC6,ContactSequenceHumanoid
 import numpy as np
 import math
-from mlp.utils.util import stdVecToMatrix
+from mlp.utils.util import stdVecToMatrix, createStateFromPhase,effectorPositionFromHPPPath
 import eigenpy
 import hpp_bezier_com_traj as bezier_com
 from hpp_spline import bezier
@@ -55,19 +55,6 @@ def quadprog_solve_qp(P, q, G=None, h=None, C=None, d=None):
 
 
 
-def createStateFromPhase(fullBody,q,phase):
-    contacts = []
-    if phase.RF_patch.active:
-        contacts += [cfg.Robot.rLegId]
-    if phase.LF_patch.active:
-        contacts += [cfg.Robot.lLegId]
-    if phase.RH_patch.active:
-        contacts += [cfg.Robot.rArmId]
-    if phase.LH_patch.active:
-        contacts += [cfg.Robot.lArmId]
-    return fullBody.createState(q,contacts)
-
-
 def generateLimbRRTPath(q_init,q_end,phase_previous,phase,phase_next,fullBody) :
     assert fullBody and "Cannot use limb-rrt method as fullBody object is not defined."
     extraDof = int(fullBody.client.robot.getDimensionExtraConfigSpace())
@@ -75,8 +62,8 @@ def generateLimbRRTPath(q_init,q_end,phase_previous,phase,phase_next,fullBody) :
     q_end = q_end.T.tolist()[0] + [0]*extraDof
 
     # create nex states in fullBody corresponding to given configuration and set of contacts 
-    s0 = createStateFromPhase(fullBody,q_init,phase_previous)
-    s1 = createStateFromPhase(fullBody,q_end,phase_next)
+    s0 = createStateFromPhase(fullBody,phase_previous,q_init)
+    s1 = createStateFromPhase(fullBody,phase_next,q_end)
     if VERBOSE > 1: 
         print "New state added, q_init = ",q_init
         print "New state added, q_end = ",q_end

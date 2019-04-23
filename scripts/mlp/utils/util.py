@@ -232,3 +232,33 @@ def copyPhaseContacts(phase_in,phase_out):
     phase_out.LF_patch = phase_in.LF_patch
     phase_out.RH_patch = phase_in.RH_patch
     phase_out.LH_patch = phase_in.LH_patch
+
+
+
+
+def createStateFromPhase(fullBody,phase,q = None):
+    if q is None:
+        q = hppConfigFromMatrice(fullBody.client.robot,phase.reference_configurations[0])
+    contacts = []
+    if phase.RF_patch.active:
+        contacts += [cfg.Robot.rLegId]
+    if phase.LF_patch.active:
+        contacts += [cfg.Robot.lLegId]
+    if phase.RH_patch.active:
+        contacts += [cfg.Robot.rArmId]
+    if phase.LH_patch.active:
+        contacts += [cfg.Robot.lArmId]
+    return fullBody.createState(q,contacts)
+
+def hppConfigFromMatrice(robot,q_matrix):
+    q = q_matrix.T.tolist()[0]
+    extraDof = robot.getConfigSize() - q_matrix.shape[0]
+    assert extraDof >= 0 , "Changes in the robot model happened."
+    if extraDof > 0:
+        q += [0]*extraDof
+    return q
+
+def phasesHaveSameConfig(p0,p1):
+    assert len(p0.reference_configurations) > 0 and "CS object given to croc method should store one reference_configuration in each contact_phase"
+    assert len(p1.reference_configurations) > 0 and "CS object given to croc method should store one reference_configuration in each contact_phase"
+    return np.array_equal(p0.reference_configurations[0],p1.reference_configurations[0])

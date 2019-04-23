@@ -5,7 +5,7 @@ import multicontact_api
 from multicontact_api import WrenchCone,SOC6,ContactPatch, ContactPhaseHumanoid, ContactSequenceHumanoid
 import numpy as np
 import time
-from mlp.utils.util import stdVecToMatrix,numpy2DToList
+from mlp.utils.util import stdVecToMatrix,numpy2DToList,hppConfigFromMatrice
 STONE_HEIGHT = 0.005
 STONE_GROUP = "stepping_stones"        
 TRAJ_GROUP = "com_traj"
@@ -141,12 +141,7 @@ def displaySE3Traj(traj,viewer,name,color,time_interval,offset=SE3.Identity()):
     viewer.client.gui.refresh()
     
 def displayWBconfig(viewer,q_matrix):
-  q = q_matrix.T.tolist()[0]
-  extraDof = viewer.robot.getConfigSize() - q_matrix.shape[0]
-  assert extraDof >= 0 , "Robot model used by the IK is not the same as during the planning"
-  if extraDof > 0:
-    q += [0]*extraDof
-  viewer(q)  
+  viewer(hppConfigFromMatrice(viewer.robot,q_matrix))  
     
 def displayWBmotion(viewer,q_t,dt,dt_display):
     id = 0
