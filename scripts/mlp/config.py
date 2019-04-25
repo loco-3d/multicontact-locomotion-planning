@@ -38,9 +38,9 @@ DISPLAY_COM_TRAJ = True
 DISPLAY_FEET_TRAJ = True
 DISPLAY_WB_MOTION = False
 DT_DISPLAY = 0.05 # dt used to display the wb motion
-PLOT = True
+PLOT = False
 DISPLAY_PLOT = PLOT and True
-SAVE_PLOT = PLOT and True
+SAVE_PLOT = PLOT and False
 
 ###  Settings for generate_contact_sequence
 FORCE_STRAIGHT_LINE = False # DEBUG ONLY should be false
