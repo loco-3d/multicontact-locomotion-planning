@@ -1,6 +1,8 @@
 TIMEOPT_CONFIG_FILE = "cfg_softConstraints_hyq.yaml"
 from common_hyq import *
 SCRIPT_PATH = "demos"
+ENV_NAME = "multicontact/darpa"
+
 DURATION_INIT = 1.5 # Time to init the motion
 DURATION_FINAL = 1.5 # Time to stop the robot
 DURATION_FINAL_SS = 1.

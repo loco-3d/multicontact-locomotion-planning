@@ -4,14 +4,16 @@ import multicontact_api
 from multicontact_api import WrenchCone,SOC6,ContactPatch, ContactPhaseHumanoid, ContactSequenceHumanoid
 
 ## straight line from the center of the support polygon of the current phase to the next one
-def generateCentroidalTrajectory(cs_origin):
-    cs = ContactSequenceHumanoid(cs_origin)
-    p0 = cs.contact_phases[0]
+def generateCentroidalTrajectory(cs,cs_initGuess = None, fullBody = None, viewer = None):
+    if cs_initGuess : 
+        print "WARNING : in centroidal.geometric, initial guess is ignored."
+    cs_result = ContactSequenceHumanoid(cs)
+    p0 = cs_result.contact_phases[0]
     com_z = p0.init_state[2,0]
     previous_phase = None
     # first, compute the new init/final position for each state : in the center of the support polygon
-    for pid in range(1,cs.size()-1):
-        phase = cs.contact_phases[pid] 
+    for pid in range(1,cs_result.size()-1):
+        phase = cs_result.contact_phases[pid] 
         state = phase.init_state
         com_x = 0.
         com_y = 0.
@@ -30,7 +32,7 @@ def generateCentroidalTrajectory(cs_origin):
         com_x /= phase.numActivePatches()   
         com_y /= phase.numActivePatches() 
         # test : take com height from config found from planning : 
-        com_z = cs.contact_phases[pid].init_state[2,0]
+        com_z = cs_result.contact_phases[pid].init_state[2,0]
         state[0] = com_x
         state[1] = com_y
         state[2] = com_z
@@ -38,12 +40,12 @@ def generateCentroidalTrajectory(cs_origin):
         #print "phase : "+str(pid)+" com Init = "+str(com_x)+","+str(com_y)+","+str(com_z)
         if previous_phase != None :
             previous_phase.final_state = phase.init_state.copy()
-        previous_phase = cs.contact_phases[pid]        
+        previous_phase = cs_result.contact_phases[pid]        
     
     # then, generate a straight line from init_state to final_state for each phase :
     t_total = 0.    
-    for pid in range(cs.size()):
-        phase = cs.contact_phases[pid] 
+    for pid in range(cs_result.size()):
+        phase = cs_result.contact_phases[pid] 
         duration = 0.
         if phase.numActivePatches() == 1:
             duration = cfg.DURATION_SS
@@ -57,7 +59,7 @@ def generateCentroidalTrajectory(cs_origin):
             raise Exception("Case not implemented")
         if pid == 0:
             duration = cfg.DURATION_INIT
-        if pid == (cs.size()-1):
+        if pid == (cs_result.size()-1):
             duration = cfg.DURATION_FINAL
         com0 = phase.init_state[0:3]
         com1 = phase.final_state[0:3]
@@ -80,4 +82,4 @@ def generateCentroidalTrajectory(cs_origin):
         state[6:9] = am
         phase.state_trajectory.append(state)
         phase.time_trajectory.append(t_total)      
-    return cs
+    return cs_result

@@ -3,6 +3,7 @@ TIMEOPT_CONFIG_FILE = "cfg_softConstraints_hrp2_eff85.yaml"
 
 from common_hrp2 import *
 SCRIPT_PATH = "sandbox"
+ENV_NAME = "multicontact/ground"
 
 DURATION_INIT = 1. # Time to init the motion
 DURATION_FINAL = 1.5 # Time to stop the robot

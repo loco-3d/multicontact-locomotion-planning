@@ -1,5 +1,5 @@
 import pinocchio as pin
-from pinocchio import SE3, Quaternion
+from pinocchio import SE3, Quaternion,Force
 import tsid
 import numpy as np
 from numpy.linalg import norm as norm
@@ -12,16 +12,12 @@ import mlp.config as cfg
 import multicontact_api
 from multicontact_api import WrenchCone,SOC6,ContactPatch, ContactPhaseHumanoid, ContactSequenceHumanoid
 from mlp.utils import trajectories
-import mlp.end_effector.bezier_predef as EETraj
+from mlp.utils.computation_tools import shiftZMPtoFloorAltitude
 import mlp.viewer.display_tools as display_tools
 import math
 from mlp.utils.wholebody_result import Result
 from mlp.utils.util import * 
-if cfg.USE_LIMB_RRT:
-    import mlp.end_effector.limb_rrt as limb_rrt
-if cfg.USE_CONSTRAINED_BEZIER:
-    import mlp.end_effector.bezier_constrained as bezier_constrained
-    
+from mlp.end_effector import generateEndEffectorTraj,effectorCanRetry
     
 def createContactForEffector(invdyn,robot,phase,eeName):
     size = cfg.IK_eff_size[eeName]
@@ -63,29 +59,6 @@ def createEffectorTasksDic(cs,robot):
             res.update({eeName:effectorTask})
     return res
 
-def generateEEReferenceTraj(robot,robotData,time_interval,phase,phase_next,eeName,viewer = None):   
-    placements = []
-    placement_init = robot.position(robotData, robot.model().getJointId(eeName))
-    placement_end = JointPlacementForEffector(phase_next,eeName)
-    placements.append(placement_init)
-    placements.append(placement_end)
-    if cfg.USE_BEZIER_EE :         
-        ref_traj = EETraj.generateBezierTraj(placement_init,placement_end,time_interval)
-    else : 
-        ref_traj = trajectories.SmoothedFootTrajectory(time_interval, placements) 
-    if cfg.WB_VERBOSE :
-        print "t interval : ",time_interval
-        print "positions : ",placements        
-    return ref_traj
-
-def generateEEReferenceTrajCollisionFree(fullBody,robot,robotData,time_interval,phase_previous,phase,phase_next,q_t,predefTraj,eeName,phaseId,viewer = None):
-    placements = []
-    placement_init = JointPlacementForEffector(phase_previous,eeName)
-    placement_end = JointPlacementForEffector(phase_next,eeName)
-    placements.append(placement_init)
-    placements.append(placement_end)    
-    ref_traj = bezier_constrained.generateConstrainedBezierTraj(time_interval,placement_init,placement_end,q_t,predefTraj,phase_previous,phase,phase_next,fullBody,phaseId,eeName,viewer)                    
-    return ref_traj
 
 def computeCOMRefFromPhase(phase,time_interval):
     #return trajectories.SmoothedCOMTrajectory("com_reference", phase, com_init, dt) # cubic interpolation from timeopt dt to tsid dt
@@ -120,7 +93,7 @@ def computeAMRefFromPhase(phase,time_interval):
     return am_ref
 
 
-def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
+def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
     if not viewer :
         print "No viewer linked, cannot display end_effector trajectories."
     print "Start TSID ... " 
@@ -132,9 +105,11 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
     #srdf = "package://" + package + '/srdf/' +  cfg.Robot.urdfName+cfg.Robot.srdfSuffix + '.srdf'
     robot = tsid.RobotWrapper(urdf, pin.StdVec_StdString(), pin.JointModelFreeFlyer(), False)
     if cfg.WB_VERBOSE:
-        print "robot loaded in tsid"
-        
-    q = cs.contact_phases[0].reference_configurations[0].copy()
+        print "robot loaded in tsid."
+    # FIXME : tsid robotWrapper don't have all the required methods, only pinocchio have them
+    pinRobot  = pin.RobotWrapper.BuildFromURDF(urdf, pin.StdVec_StdString(), pin.JointModelFreeFlyer(), False)
+
+    q = cs.contact_phases[0].reference_configurations[0][:robot.nq].copy()
     v = np.matrix(np.zeros(robot.nv)).transpose()
     t = 0.0  # time
     # init states list with initial state (assume joint velocity is null for t=0)
@@ -213,10 +188,9 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
         # store current state
         res.q_t[:,k_t] = q
         res.dq_t[:,k_t] = v                
-        res.ddq_t[:,k_t] = dv
-        tau = invdyn.getActuatorForces(sol)                                
-        res.tau_t[:,k_t] = tau
-        # store contact info (force and status)
+        res.ddq_t[:,k_t] = dv                             
+        res.tau_t[:,k_t] = invdyn.getActuatorForces(sol) # actuator forces, with external forces (contact forces)
+        #store contact info (force and status)
         if cfg.IK_store_contact_forces :
             for eeName,contact in dic_contacts.iteritems():
                 if invdyn.checkContact(contact.name, sol): 
@@ -225,25 +199,38 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
                     res.contact_activity[eeName][:,k_t] = 1
         # store centroidal info (real one and reference) :
         if cfg.IK_store_centroidal:
-            robot.computeAllTerms(invdyn.data(),q,v)
-            res.c_t[:,k_t] = robot.com(invdyn.data())
-            res.dc_t[:,k_t] = robot.com_vel(invdyn.data())
-            res.ddc_t[:,k_t] = robot.com_acc(invdyn.data())
-            res.L_t[:,k_t] = invdyn.data().hg.angular
-            # TODO : retrieve dL (no API yet, WIP from rohan)
+            pcom, vcom, acom = pinRobot.com(q,v,dv) 
+            res.c_t[:,k_t] = pcom
+            res.dc_t[:,k_t] = vcom
+            res.ddc_t[:,k_t] = acom
+            res.L_t[:,k_t] = pinRobot.centroidalMomentum(q,v).angular
+            #res.dL_t[:,k_t] = pinRobot.centroidalMomentumVariation(q,v,dv) # FIXME : in robot wrapper, use * instead of .dot() for np matrices            
+            pin.dccrba(pinRobot.model, pinRobot.data, q, v)
+            res.dL_t[:,k_t] = Force(pinRobot.data.Ag.dot(dv)+pinRobot.data.dAg.dot(v)).angular
+            # same for reference data : 
             res.c_reference[:,k_t] = com_desired
             res.dc_reference[:,k_t] = vcom_desired
             res.ddc_reference[:,k_t] = acom_desired
             res.L_reference[:,k_t] = L_desired
-            res.dL_reference[:,k_t] = dL_desired            
+            res.dL_reference[:,k_t] = dL_desired 
+            if cfg.IK_store_zmp : 
+                tau = pin.rnea(pinRobot.model,pinRobot.data,q,v,dv) # tau without external forces, only used for the 6 first
+                #res.tau_t[:6,k_t] = tau[:6]
+                phi0 = pinRobot.data.oMi[1].act(Force(tau[:6]))
+                res.wrench_t[:,k_t] = phi0.vector
+                res.zmp_t[:,k_t] = shiftZMPtoFloorAltitude(cs,res.t_t[k_t],phi0)
+                # same but from the 'reference' values : 
+                Mcom = SE3.Identity()
+                Mcom.translation = com_desired
+                Fcom = Force.Zero()
+                Fcom.linear = cfg.MASS*(acom_desired - cfg.GRAVITY)
+                Fcom.angular = dL_desired
+                F0 = Mcom.act(Fcom)
+                res.wrench_reference[:,k_t] = F0.vector 
+                res.zmp_reference[:,k_t] = shiftZMPtoFloorAltitude(cs,res.t_t[k_t],F0)
         if cfg.IK_store_effector: 
             for eeName in usedEffectors: # real position (not reference)
-                res.effector_trajectories[eeName][:,k_t] = SE3toVec(robot.position(invdyn.data(), robot.model().getJointId(eeName)))
-        # store tracking error : 
-        if cfg.IK_store_error : 
-            res.c_tracking_error[:,k_t] = comTask.position_error
-            for eeName,task in dic_effectors_tasks.iteritems():
-                res.effector_tracking_error[eeName][:,k_t] = task.position_error                  
+                res.effector_trajectories[eeName][:,k_t] = SE3toVec(robot.position(invdyn.data(), robot.model().getJointId(eeName)))        
         return res
         
     def printIntermediate(v,dv,invdyn,sol):
@@ -332,7 +319,12 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
                     print "add se3 task for "+eeName
                 invdyn.addMotionTask(task, cfg.w_eff, cfg.level_eff, 0.0)
                 #create reference trajectory for this task : 
-                ref_traj = generateEEReferenceTraj(robot,invdyn.data(),time_interval,phase,phase_next,eeName,viewer)  
+                placement_init = robot.position(invdyn.data(), robot.model().getJointId(eeName))
+                placement_end = JointPlacementForEffector(phase_next,eeName)                
+                ref_traj = generateEndEffectorTraj(time_interval,placement_init,placement_end,0)
+                if cfg.WB_VERBOSE :
+                    print "t interval : ",time_interval
+                    print "positions : ",placements                 
                 dic_effectors_trajs.update({eeName:ref_traj})
 
         # start removing the contact that will be broken in the next phase :
@@ -449,21 +441,33 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
                 
             # end while t \in phase_t (loop for the current contact phase) 
             if swingPhase and cfg.EFF_CHECK_COLLISION :
-                phaseValid,t_invalid = validator.check_motion(res.q_t[:,phase_interval[0]:k_t]) #FIXME
-                if iter_for_phase > 0:# FIXME : debug only, only allow 1 retry 
-                    phaseValid = True
+                phaseValid,t_invalid = validator.check_motion(res.q_t[:,phase_interval[0]:k_t])
+                #if iter_for_phase < 3 :# FIXME : debug only, force limb-rrt
+                #    phaseValid = False
                 if not phaseValid :
                     print "Phase "+str(pid)+" not valid at t = "+ str(t_invalid)
-                    if cfg.WB_ABORT_WHEN_INVALID :
-                        return res.resize(k_begin),robot
-                    elif cfg.WB_RETURN_INVALID : 
-                        return res.resize(k_t),robot                      
-                    else : 
+                    if effectorCanRetry() : 
                         print "Try new end effector trajectory."  
-                        for eeName,oldTraj in dic_effectors_trajs.iteritems():
-                            if oldTraj: # update the traj in the map
-                                ref_traj = generateEEReferenceTrajCollisionFree(fullBody,robot,invdyn.data(),time_interval,phase_prev,phase,phase_next,q_t_phase,oldTraj,eeName,pid,viewer)
-                                dic_effectors_trajs.update({eeName:ref_traj})
+                        try:
+                            for eeName,oldTraj in dic_effectors_trajs.iteritems():
+                                if oldTraj: # update the traj in the map
+                                    placement_init = JointPlacementForEffector(phase_prev,eeName)
+                                    placement_end = JointPlacementForEffector(phase_next,eeName)  
+                                    ref_traj = generateEndEffectorTraj(time_interval,placement_init,placement_end,iter_for_phase+1,res.q_t[:,phase_interval[0]:k_t],phase_prev,phase,phase_next,fullBody,eeName,viewer)
+                                    dic_effectors_trajs.update({eeName:ref_traj}) 
+                        except ValueError,e :
+                            print "ERROR in generateEndEffectorTraj :"
+                            print e.message
+                            if cfg.WB_ABORT_WHEN_INVALID :
+                                return res.resize(phase_interval[0]),pinRobot
+                            elif cfg.WB_RETURN_INVALID : 
+                                return res.resize(k_t),pinRobot                    
+                    else : 
+                        print "End effector method choosen do not allow retries, abort here."
+                        if cfg.WB_ABORT_WHEN_INVALID :
+                            return res.resize(phase_interval[0]),pinRobot
+                        elif cfg.WB_RETURN_INVALID : 
+                            return res.resize(k_t),pinRobot                         
             else : # no effector motions, phase always valid (or bypass the check)
                 phaseValid = True
                 if cfg.WB_VERBOSE :
@@ -491,10 +495,10 @@ def generateWholeBodyMotion(cs,viewer=None,fullBody=None):
 
     if cfg.PLOT:
         from mlp.utils import plot
-        plot.plotEffectorRef(stored_effectors_ref)            
+        plot.plotEffectorRef(stored_effectors_ref,dt)   # plot inside this file, as we have access to the real Bezier object and not only the discretization stored in 'res' struct         
     
     assert (k_t == res.N-1) and "res struct not fully filled."
-    return res,robot
+    return res,pinRobot
 
    
     

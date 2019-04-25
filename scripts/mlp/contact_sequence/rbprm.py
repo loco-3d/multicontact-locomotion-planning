@@ -7,9 +7,26 @@ import multicontact_api
 from multicontact_api import WrenchCone,SOC6,ContactPatch, ContactPhaseHumanoid, ContactSequenceHumanoid
 global i_sphere 
 from mlp.utils.util import quatFromConfig
+import importlib
 
+def runRBPRMScript():
+    #the following script must produce a sequence of configurations in contact (configs) 
+    # with exactly one contact change between each configurations
+    # It must also initialise a FullBody object name fullBody and optionnaly a Viewer object named V    
+    scriptName = 'scenarios.'+cfg.SCRIPT_PATH+'.'+cfg.DEMO_NAME
+    print "Run RBPRM script : ",scriptName
+    cp = importlib.import_module(scriptName)
+    if hasattr(cp,'beginId'):
+        beginId = cp.beginId
+    else :
+        beginId = 0
+    if hasattr(cp,'endId'):
+        endId = cp.endId
+    else :    
+        endId = len(cp.configs) - 1    
+    return cp.fullBody,cp.v,cp.configs,beginId,endId
 
-def generateContactSequence(fb,configs,beginId,endId):
+def contactSequenceFromRBPRMConfigs(fb,configs,beginId,endId):
     print "generate contact sequence from planning : "
     global i_sphere
     i_sphere = 0
@@ -19,8 +36,6 @@ def generateContactSequence(fb,configs,beginId,endId):
     # config only contains the double support stance
     n_steps = n_double_support*2 -1 
     # Notice : what we call double support / simple support are in fact the state with all the contacts and the state without the next moving contact
-    extraDOF = int(fb.client.robot.getDimensionExtraConfigSpace())
-    configSize = fb.client.robot.getConfigSize() - extraDOF
     cs = ContactSequenceHumanoid(n_steps)
     unusedPatch = cs.contact_phases[0].LF_patch.copy()
     unusedPatch.placement = SE3.Identity()
@@ -132,14 +147,14 @@ def generateContactSequence(fb,configs,beginId,endId):
                     phase_d.RH_patch.placement = MRH
                     
         # retrieve the COM position for init and final state (equal for double support phases)
-        init_state = phase_d.init_state.copy()
+        init_state = np.matrix(np.zeros(9)).T
         init_state[0:3] = np.matrix(fb.getCenterOfMass()).transpose()
         init_state[3:6] = np.matrix(configs[config_id][-6:-3]).transpose()
         final_state = init_state.copy()
         #phase_d.time_trajectory.append((fb.getDurationForState(stateId))*cfg.DURATION_n_CONTACTS/cfg.SPEED)
         phase_d.init_state=init_state
         phase_d.final_state=final_state
-        phase_d.reference_configurations.append(np.matrix((configs[config_id][:configSize])).T)        
+        phase_d.reference_configurations.append(np.matrix((configs[config_id])).T)        
         #print "done for double support"
         
         if stateId < endId :
@@ -166,7 +181,7 @@ def generateContactSequence(fb,configs,beginId,endId):
                     phase_s.RH_patch.active = False
             # retrieve the COM position for init and final state 
              
-            phase_s.reference_configurations.append(np.matrix((configs[config_id][:configSize])).T)
+            phase_s.reference_configurations.append(np.matrix((configs[config_id])).T)
             init_state = phase_d.init_state.copy()
             final_state = phase_d.final_state.copy()
             fb.setCurrentConfig(configs[config_id+1])
@@ -176,78 +191,7 @@ def generateContactSequence(fb,configs,beginId,endId):
             phase_s.init_state=init_state.copy()
             phase_s.final_state=final_state.copy()
             #print "done for single support"      
-    
-    """    
-    # add the final double support stance : 
-    phase_d = cs.contact_phases[n_steps-1]
-    fb.setCurrentConfig(configs[n_double_support - 1])
-    # compute MRF and MLF : the position of the contacts
-    q_rl = fb.getJointPosition(fb.rfoot)
-    q_ll = fb.getJointPosition(fb.lfoot)
-    q_rh = fb.getJointPosition(fb.rhand)
-    q_lh = fb.getJointPosition(fb.lhand)
 
-    # feets
-    MRF = SE3.Identity()
-    MLF = SE3.Identity()
-    MRF.translation = np.matrix(q_rl[0:3]).T
-    MLF.translation = np.matrix(q_ll[0:3]).T
-    if not cfg.FORCE_STRAIGHT_LINE :  
-        rot_rl = quatFromConfig(q_rl)
-        rot_ll = quatFromConfig(q_ll)
-        MRF.rotation = rot_rl.matrix()
-        MLF.rotation = rot_ll.matrix()
-    # apply the transform ankle -> center of contact
-    MRF *= fb.MRsole_offset
-    MLF *= fb.MLsole_offset
-
-    # hands
-    MRH = SE3()
-    MLH = SE3()
-    MRH.translation = np.matrix(q_rh[0:3]).T
-    MLH.translation = np.matrix(q_lh[0:3]).T
-    rot_rh = quatFromConfig(q_rh)
-    rot_lh = quatFromConfig(q_lh)
-    MRH.rotation = rot_rh.matrix()
-    MLH.rotation = rot_lh.matrix()   
-    
-    MRH *= fb.MRhand_offset
-    MLH *= fb.MLhand_offset    
-    
-    # we need to copy the unchanged patch from the last simple support phase (and not create a new one with the same placement
-    phase_d.RF_patch = phase_s.RF_patch
-    phase_d.RF_patch.active = fb.isLimbInContact(fb.rLegId,endId)
-    phase_d.LF_patch = phase_s.LF_patch
-    phase_d.LF_patch.active = fb.isLimbInContact(fb.lLegId,endId)
-    phase_d.RH_patch = phase_s.RH_patch
-    phase_d.RH_patch.active = fb.isLimbInContact(fb.rArmId,endId)
-    phase_d.LH_patch = phase_s.LH_patch
-    phase_d.LH_patch.active = fb.isLimbInContact(fb.lArmId,endId)
-    
-    # now we change the contacts that have moved : 
-    variations = fb.getContactsVariations(endId-1,endId)
-    #assert len(variations)==1, "Several changes of contacts in adjacent states, not implemented yet !"
-    for var in variations:     
-        # FIXME : for loop in variation ? how ?
-        if var == fb.lLegId:
-            phase_d.LF_patch.placement = MLF
-        if var == fb.rLegId:
-            phase_d.RF_patch.placement = MRF
-        if var == fb.lArmId:
-            phase_d.LH_patch.placement = MLH
-        if var == fb.rArmId:
-            phase_d.RH_patch.placement = MRH
-    # retrieve the COM position for init and final state (equal for double support phases)    
-    phase_d.reference_configurations.append(np.matrix((configs[-1][:configSize])).T)
-    init_state = phase_d.init_state
-    init_state[0:3] = np.matrix(fb.getCenterOfMass()).transpose()
-    init_state[3:9] = np.matrix(configs[-1][-6:]).transpose()
-    final_state = init_state.copy()
-    #phase_d.time_trajectory.append(0.)
-    phase_d.init_state=init_state
-    phase_d.final_state=final_state   
-    #print "done for last state"
-    """
     # assign contact models : 
     # only used by muscod ?? But we need to fill it otherwise the serialization fail
     for k,phase in enumerate(cs.contact_phases):
@@ -273,3 +217,8 @@ def generateContactSequence(fb,configs,beginId,endId):
         RH_patch.contactModelPlacement = SE3.Identity()    
         
     return cs
+
+def generateContactSequence():
+    fb,viewer,configs,beginId,endId = runRBPRMScript()
+    cs = contactSequenceFromRBPRMConfigs(fb,configs,beginId,endId)
+    return cs,fb,viewer

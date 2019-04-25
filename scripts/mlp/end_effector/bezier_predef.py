@@ -3,7 +3,7 @@ import time
 import os
 from mlp.utils.polyBezier import *
 import pinocchio as pin
-from pinocchio import SE3
+from pinocchio import SE3,Quaternion
 from pinocchio.utils import *
 import numpy.linalg
 from multicontact_api import WrenchCone,SOC6,ContactSequenceHumanoid
@@ -14,6 +14,10 @@ from hpp_spline import bezier
 import hpp_bezier_com_traj as bezier_com
 from mlp.utils import trajectories
 from mlp.utils.util import stdVecToMatrix
+import math
+
+def effectorCanRetry():
+    return False
 
 
 class Empty:
@@ -47,7 +51,7 @@ def buildPredefinedInitTraj(placement,t_total):
     #ddc1 = a_off * normal
     #create wp : 
     n = 4.
-    wps = np.matrix(np.zeros((3,int(n+1))))
+    wps = np.matrix(np.zeros(([3,int(n+1)])))
     T = cfg.EFF_T_PREDEF
     # constrained init pos and final pos. Init vel, acc and jerk = 0
     wps[:,0] = (c0); # c0
@@ -69,7 +73,7 @@ def buildPredefinedFinalTraj(placement,t_total):
     #ddc0 = a_off * normal
     #create wp : 
     n = 4.
-    wps = np.matrix(np.zeros((3,int(n+1))))
+    wps = np.matrix(np.zeros(([3,int(n+1)])))
     T = cfg.EFF_T_PREDEF
     # constrained init pos and final pos. final vel, acc and jerk = 0
     wps[:,0] = (c0); #c0
@@ -79,7 +83,9 @@ def buildPredefinedFinalTraj(placement,t_total):
     wps[:,4] = (c1); #c1
     return bezier(wps,T)
 
-def generateBezierTraj(placement_init,placement_end,time_interval):
+
+
+def generatePredefLandingTakeoff(time_interval,placement_init,placement_end):
     t_total = time_interval[1]-time_interval[0] - 2*cfg.EFF_T_DELAY
     #print "Generate Bezier Traj :"
     #print "placement Init = ",placement_init
@@ -89,6 +95,30 @@ def generateBezierTraj(placement_init,placement_end,time_interval):
     # generate a bezier curve for the middle part of the motion : 
     bezier_takeoff = buildPredefinedInitTraj(placement_init,t_total)
     bezier_landing = buildPredefinedFinalTraj(placement_end,t_total)
+    t_middle =  (t_total - (2.*cfg.EFF_T_PREDEF))
+    assert t_middle >= 0.1 and "Duration of swing phase too short for effector motion. Change the values of predef motion for effector or the duration of the contact phase. "
+    curves = []
+    # create polybezier with concatenation of the 3 (or 5) curves :    
+    # create constant curve at the beginning and end for the delay : 
+    if cfg.EFF_T_DELAY > 0 :
+        bezier_init_zero=bezier(bezier_takeoff(0),cfg.EFF_T_DELAY)
+        curves.append(bezier_init_zero)
+    curves.append(bezier_takeoff)
+    curves.append(bezier(np.matrix(np.zeros(3)).T,t_middle)) # placeholder only
+    curves.append(bezier_landing)
+    if cfg.EFF_T_DELAY > 0 :
+        curves.append(bezier(bezier_landing(bezier_landing.max()),cfg.EFF_T_DELAY))    
+    pBezier = PolyBezier(curves) 
+    return pBezier
+    
+def generateSmoothBezierTraj(time_interval,placement_init,placement_end,numTry=None,q_t=None,phase_previous=None,phase=None,phase_next=None,fullBody=None,eeName=None,viewer=None):
+    if numTry > 0 :
+        raise ValueError("generateSmoothBezierTraj will always produce the same trajectory, cannot be called with numTry > 0 ")
+    predef_curves = generatePredefLandingTakeoff(time_interval,placement_init,placement_end)
+    bezier_takeoff = predef_curves.curves[predef_curves.idFirstNonZero()]
+    bezier_landing = predef_curves.curves[predef_curves.idLastNonZero()]
+    id_middle = int(math.floor(len(predef_curves.curves)/2.))    
+    # update mid curve to minimize velocity along the curve:
     # set problem data for mid curve : 
     pData = bezier_com.ProblemData() 
     pData.c0_ = bezier_takeoff(bezier_takeoff.max())
@@ -100,22 +130,13 @@ def generateBezierTraj(placement_init,placement_end,time_interval):
     pData.ddc1_ = bezier_landing.derivate(0,2)
     pData.j1_ = bezier_landing.derivate(0,3)    
     pData.constraints_.flag_ = bezier_com.ConstraintFlag.INIT_POS | bezier_com.ConstraintFlag.INIT_VEL | bezier_com.ConstraintFlag.INIT_ACC | bezier_com.ConstraintFlag.END_ACC | bezier_com.ConstraintFlag.END_VEL | bezier_com.ConstraintFlag.END_POS | bezier_com.ConstraintFlag.INIT_JERK | bezier_com.ConstraintFlag.END_JERK
-    t_middle =  (t_total - (2.*cfg.EFF_T_PREDEF))
+    t_middle =  predef_curves.curves[id_middle].max()
     res = bezier_com.computeEndEffector(pData,t_middle)
     bezier_middle = res.c_of_t
-    curves = []
-    # create polybezier with concatenation of the 3 (or 5) curves :    
-    # create constant curve at the beginning and end for the delay : 
-    if cfg.EFF_T_DELAY > 0 :
-        bezier_init_zero=bezier(bezier_takeoff(0),cfg.EFF_T_DELAY)
-        curves.append(bezier_init_zero)
-    curves.append(bezier_takeoff)
-    curves.append(bezier_middle)
-    curves.append(bezier_landing)
-    if cfg.EFF_T_DELAY > 0 :
-        curves.append(bezier(bezier_landing(bezier_landing.max()),cfg.EFF_T_DELAY))    
-    pBezier = PolyBezier(curves)
     
+    curves = predef_curves.curves[::]
+    curves[id_middle] = bezier_middle
+    pBezier = PolyBezier(curves)
     ref_traj = trajectories.BezierTrajectory(pBezier,placement_init,placement_end,time_interval)    
     return ref_traj
 
