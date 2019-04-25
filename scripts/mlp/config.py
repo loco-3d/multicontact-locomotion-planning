@@ -19,6 +19,7 @@ PKG_PATH = os.environ['DEVEL_HPP_DIR']+"/src/multicontact-locomotion-planning"
 OUTPUT_DIR = PKG_PATH+"/res"
 CONTACT_SEQUENCE_PATH = OUTPUT_DIR + "/contact_sequences"
 TIME_OPT_CONFIG_PATH = PKG_PATH +'/timeOpt_configs'
+STATUS_FILENAME = "infos.log"
 SAVE_CS = True 
 SAVE_CS_COM = True
 EXPORT_GAZEBO = False
@@ -27,7 +28,7 @@ EXPORT_NPZ = True
 EXPORT_BLENDER = False
 openHRP_useZMPref = False
 EXPORT_PATH = OUTPUT_DIR+"/export"
-
+WRITE_STATUS = True
 ##DISPLAY settings : 
 DISPLAY_CS = False # display contact sequence from rbprm
 DISPLAY_CS_STONES = True # display stepping stones

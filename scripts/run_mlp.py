@@ -5,6 +5,11 @@ print "### MLP : contact sequence ###"
 from mlp.contact_sequence import generateContactSequence
 cs,fullBody,viewer = generateContactSequence()
 
+if cfg.WRITE_STATUS:
+    f = open(cfg.STATUS_FILENAME,"a")
+    f.write("gen_cs_success: True\n")
+    f.close()
+       
 if cfg.DISPLAY_CS:
     raw_input("Press Enter to display the contact sequence ...")
     display_tools.displayContactSequence(viewer,cs,step)    
@@ -30,6 +35,11 @@ print "### MLP : centroidal  ###"
 from mlp.centroidal import generateCentroidalTrajectory
 cs_com = generateCentroidalTrajectory(cs,cs_initGuess,fullBody,viewer)
 
+if cfg.WRITE_STATUS:
+    f = open(cfg.STATUS_FILENAME,"a")
+    f.write("centroidal_success: True\n")
+    f.close()
+
 if cfg.SAVE_CS_COM:
     filename = cfg.CONTACT_SEQUENCE_PATH + "/"+cfg.DEMO_NAME+"_COM.cs"
     print "Write contact sequence binary file with centroidal trajectory : ",filename
@@ -43,6 +53,16 @@ print "### MLP : whole-body  ###"
 from mlp.wholebody import generateWholeBodyMotion
 res,robot = generateWholeBodyMotion(cs_com,fullBody,viewer)
 
+if cfg.WRITE_STATUS:
+    f = open(cfg.STATUS_FILENAME,"a")
+    f.write("wholebody_success: True\n")
+    if res.N == (int(round(cs_com.contact_phases[-1].time_trajectory[-1]/cfg.IK_dt)) + 1):
+        f.write("wholebody_reach_goal: True\n")
+    else : 
+        f.write("wholebody_reach_goal: False\n")   
+    f.close()
+
+
 if cfg.CHECK_FINAL_MOTION :
     from mlp.utils import check_path
     print "## Begin validation of the final motion (collision and joint-limits)"
@@ -51,6 +71,10 @@ if cfg.CHECK_FINAL_MOTION :
     print "## Check final motion, valid = ",motion_valid
     if not motion_valid:
         print "## First invalid time : ",t_invalid
+    if cfg.WRITE_STATUS:
+        f = open(cfg.STATUS_FILENAME,"a")
+        f.write("motion_valid: "+str(motion_valid)+"\n")
+        f.close() 
 else :
     motion_valid = True
 if cfg.DISPLAY_WB_MOTION:
