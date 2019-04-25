@@ -1,5 +1,16 @@
 from hpp.corbaserver.rbprm.talos import Robot
 MASS = 90.27
+
+## predef duration of contact phases : 
+DURATION_INIT = 1.5 # Time to init the motion
+DURATION_FINAL = 1 # Time to stop the robot
+DURATION_FINAL_SS = 1.
+DURATION_SS =1.2
+DURATION_DS = 0.3
+DURATION_TS = 0.4
+DURATION_CONNECT_GOAL = 1.5
+
+
 ## weight and gains used by TSID
 fMin = 1.0                      # minimum normal force
 fMax = 1000.                   # maximum normal force
@@ -34,8 +45,8 @@ gain_vector = np.matrix(
     [ 10. ,  5.  , 5. , 1. ,  1. ,  10., # lleg  #low gain on axis along y and knee
     10. ,  5.  , 5. , 1. ,  1. ,  10., #rleg
     500. , 500.  , #chest
-    50.,   10.  , 10.,  10.,    10. ,  10. , 10. ,  10. , #larm
-    50.,   10.  , 10., 10.,    10. ,  10. ,  10. ,  10. , #rarm
+    50.,   100.  , 10.,  10.,    10. ,  10. , 10. ,  10. , #larm
+    50.,   100.  , 10., 10.,    10. ,  10. ,  10. ,  10. , #rarm
    100.,  100.] #head
     ).T   # gain vector for postural task :
 
