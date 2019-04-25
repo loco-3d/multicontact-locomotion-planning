@@ -31,11 +31,11 @@ EXPORT_PATH = OUTPUT_DIR+"/export"
 WRITE_STATUS = True
 ##DISPLAY settings : 
 DISPLAY_CS = False # display contact sequence from rbprm
-DISPLAY_CS_STONES = True # display stepping stones
+DISPLAY_CS_STONES = False # display stepping stones
 DISPLAY_INIT_GUESS_TRAJ = False 
-DISPLAY_WP_COST=True
-DISPLAY_COM_TRAJ = True
-DISPLAY_FEET_TRAJ = True
+DISPLAY_WP_COST=False
+DISPLAY_COM_TRAJ = False
+DISPLAY_FEET_TRAJ = False
 DISPLAY_WB_MOTION = False
 DT_DISPLAY = 0.05 # dt used to display the wb motion
 PLOT = False
