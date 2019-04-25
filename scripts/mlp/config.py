@@ -46,6 +46,7 @@ PLOT_CENTROIDAL = False # plot COM trajectory computed by the centroidal dynamic
 DISPLAY_PLOT = PLOT and True # display plot directly
 SAVE_PLOT = PLOT and True #save plot as svg in OUTPUT_DIR/plot/demo_name_*
 
+
 ###  Settings for generate_contact_sequence
 FORCE_STRAIGHT_LINE = False # DEBUG ONLY should be false
 
