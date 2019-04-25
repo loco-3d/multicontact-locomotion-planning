@@ -124,8 +124,10 @@ else :
     # Import the module
     try :
         demo_cfg = importlib.import_module('mlp.demo_configs.'+DEMO_NAME)
-    except ImportError:
-        raise NameError("No demo config file with the given name in mlp.demo_config")
+    except ImportError, e:
+        print "Cannot load config file '"+DEMO_NAME+"' from mlp.demo_config, error : "
+        print e.message
+        raise NameError("Cannot load config file '"+DEMO_NAME+"' from mlp.demo_config")
     # Determine a list of names to copy to the current name space
     names = getattr(demo_cfg, '__all__', [n for n in dir(demo_cfg) if not n.startswith('_')])
     # Copy those names into the current name space
