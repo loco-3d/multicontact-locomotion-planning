@@ -12,7 +12,7 @@ contact_generation_method = "rbprm"
 centroidal_initGuess_method = "geometric" 
 centroidal_method = "timeopt" 
 wholebody_method = "tsid" 
-end_effector_method = "limbRRToptimized" 
+end_effector_method = "bezierPredef" 
 
 ## PATHS settings : 
 PKG_PATH = os.environ['DEVEL_HPP_DIR']+"/src/multicontact-locomotion-planning"
