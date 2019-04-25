@@ -141,7 +141,10 @@ def displaySE3Traj(traj,viewer,name,color,time_interval,offset=SE3.Identity()):
     viewer.client.gui.refresh()
     
 def displayWBconfig(viewer,q_matrix):
-  viewer(hppConfigFromMatrice(viewer.robot,q_matrix))  
+  viewer(hppConfigFromMatrice(viewer.robot,q_matrix))
+  
+def displayWBatT(viewer,res,t):
+  viewer(hppConfigFromMatrice(viewer.robot,res.qAtT(t)))
     
 def displayWBmotion(viewer,q_t,dt,dt_display):
     id = 0

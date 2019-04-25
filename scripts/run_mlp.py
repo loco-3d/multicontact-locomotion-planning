@@ -101,9 +101,13 @@ if cfg.EXPORT_BLENDER:
 def dispCS(step = 0.2): 
     display_tools.displayContactSequence(viewer,cs,step)
     
-def dispWB():
-    display_tools.displayWBmotion(viewer,res.q_t,cfg.IK_dt,cfg.DT_DISPLAY)
- 
+def dispWB(t=None):
+    if t is None:
+        display_tools.displayWBmotion(viewer,res.q_t,cfg.IK_dt,cfg.DT_DISPLAY)
+    else:
+        display_tools.displayWBatT(viewer,res,t)
+
+    
 """
 #record gepetto-viewer 
 viewer.startCapture("capture/capture","png")

@@ -154,6 +154,11 @@ class Result:
                  contact_activity=self.contact_activity,phases_intervals=self.phases_intervals)
         
         print "Results exported to ",filename
+        
+    def qAtT(self,t):
+        k = int(round(t/self.dt))
+        assert self.t_t[k] == t and "Error in computation of time in Result struct."
+        return self.q_t[:,k]
 
 def loadFromNPZ(filename):
     f=np.load(filename)
