@@ -16,10 +16,10 @@ end_effector_method = "bezierPredef"
 
 ## PATHS settings : 
 PKG_PATH = os.environ['DEVEL_HPP_DIR']+"/src/multicontact-locomotion-planning"
-OUTPUT_DIR = PKG_PATH+"/res"
-CONTACT_SEQUENCE_PATH = OUTPUT_DIR + "/contact_sequences"
+OUTPUT_DIR = "/res"
+CONTACT_SEQUENCE_PATH = OUTPUT_DIR
 TIME_OPT_CONFIG_PATH = PKG_PATH +'/timeOpt_configs'
-STATUS_FILENAME = "infos.log"
+STATUS_FILENAME = OUTPUT_DIR+"/infos.log"
 SAVE_CS = True 
 SAVE_CS_COM = True
 EXPORT_GAZEBO = False
@@ -27,7 +27,7 @@ EXPORT_OPENHRP = False
 EXPORT_NPZ = True
 EXPORT_BLENDER = False
 openHRP_useZMPref = False
-EXPORT_PATH = OUTPUT_DIR+"/export"
+EXPORT_PATH = OUTPUT_DIR
 WRITE_STATUS = True
 ##DISPLAY settings : 
 DISPLAY_CS = False # display contact sequence from rbprm
