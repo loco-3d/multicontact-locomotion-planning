@@ -44,6 +44,8 @@ PLOT = False
 DISPLAY_PLOT = PLOT and True
 SAVE_PLOT = PLOT and True
 PLOT_CENTROIDAL = False
+
+
 ###  Settings for generate_contact_sequence
 FORCE_STRAIGHT_LINE = False # DEBUG ONLY should be false
 
