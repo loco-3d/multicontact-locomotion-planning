@@ -450,6 +450,9 @@ def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
                 #    phaseValid = False
                 if not phaseValid :
                     print "Phase "+str(pid)+" not valid at t = "+ str(t_invalid)
+                    if t_invalid <= cfg.EFF_T_PREDEF or t_invalid >= ((t_phase_end-t_phase_begin) - cfg.EFF_T_PREDEF):
+                        print "Motion is invalid during predefined phases, cannot change this."
+                        return stopHere()
                     if effectorCanRetry() : 
                         print "Try new end effector trajectory."  
                         try:
