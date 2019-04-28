@@ -73,34 +73,6 @@ IK_store_effector = True
 IK_store_contact_forces = True
 
 
-# check if method_type choosen are coherent : 
-if not(contact_generation_method in contact_generation_method_available):
-    raise ValueError("contact generation method must be choosed from : "+str(contact_generation_method_available))
-if not(centroidal_initGuess_method in centroidal_initGuess_method_available):
-    raise ValueError("centroidal initGuess method must be choosed from : "+str(centroidal_initGuess_method_available))
-if not(centroidal_method in centroidal_method_available):
-    raise ValueError("centroidal method must be choosed from : "+str(centroidal_method_available))
-if not(wholebody_method in wholebody_method_available):
-    raise ValueError("wholebody method must be choosed from : "+str(wholebody_method_available))
-if not(end_effector_method in end_effector_method_available):
-    raise ValueError("end effector method must be choosed from : "+str(end_effector_method_available))
-if contact_generation_method == "none" and centroidal_method != "load" :
-    raise ValueError("Cannot skip contact_generation phase if centroidal trajectory is not loaded from file")
-if centroidal_method == "timeopt" and centroidal_initGuess_method != "geometric":
-    raise ValueError("In current implementation of timeopt, the initGuess must be geometric (FIXME)")
-
-# skip useless ethod when loading motion from file: 
-if contact_generation_method == "load":
-    SAVE_CS = False
-if centroidal_method == "load":
-    centroidal_initGuess_method = "none"
-    SAVE_CS_COM = False
-if wholebody_method == "load":
-    contact_generation_method = "none"
-    centroidal_initGuess_method = "none"
-    centroidal_method= "load"
-    EXPORT_NPZ = False
-
 # import specific settings for the selected demo. This settings may override default ones.
 import importlib
 import sys
@@ -134,3 +106,33 @@ else :
     g = globals()
     for name in names:
         g[name] = getattr(demo_cfg, name)
+        
+
+
+# check if method_type choosen are coherent : 
+if not(contact_generation_method in contact_generation_method_available):
+    raise ValueError("contact generation method must be choosed from : "+str(contact_generation_method_available))
+if not(centroidal_initGuess_method in centroidal_initGuess_method_available):
+    raise ValueError("centroidal initGuess method must be choosed from : "+str(centroidal_initGuess_method_available))
+if not(centroidal_method in centroidal_method_available):
+    raise ValueError("centroidal method must be choosed from : "+str(centroidal_method_available))
+if not(wholebody_method in wholebody_method_available):
+    raise ValueError("wholebody method must be choosed from : "+str(wholebody_method_available))
+if not(end_effector_method in end_effector_method_available):
+    raise ValueError("end effector method must be choosed from : "+str(end_effector_method_available))
+if contact_generation_method == "none" and centroidal_method != "load" :
+    raise ValueError("Cannot skip contact_generation phase if centroidal trajectory is not loaded from file")
+if centroidal_method == "timeopt" and centroidal_initGuess_method != "geometric":
+    raise ValueError("In current implementation of timeopt, the initGuess must be geometric (FIXME)")
+
+# skip useless ethod when loading motion from file: 
+if contact_generation_method == "load":
+    SAVE_CS = False
+if centroidal_method == "load":
+    centroidal_initGuess_method = "none"
+    SAVE_CS_COM = False
+if wholebody_method == "load":
+    contact_generation_method = "none"
+    centroidal_initGuess_method = "none"
+    centroidal_method= "load"
+    EXPORT_NPZ = False
