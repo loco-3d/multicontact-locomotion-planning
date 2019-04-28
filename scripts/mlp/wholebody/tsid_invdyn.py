@@ -257,7 +257,11 @@ def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
             print "/!\ ABORT : nan   at t = "+str(t)+"  /!\ "
             print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"  
             raise ValueError("ABORT : controler unstable at t = "+str(t))            
-    
+    def stopHere():
+        if cfg.WB_ABORT_WHEN_INVALID :
+            return res.resize(phase_interval[0]),pinRobot
+        elif cfg.WB_RETURN_INVALID : 
+            return res.resize(k_t),pinRobot         
    
     # time check
     dt = cfg.IK_dt  
@@ -458,16 +462,10 @@ def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
                         except ValueError,e :
                             print "ERROR in generateEndEffectorTraj :"
                             print e.message
-                            if cfg.WB_ABORT_WHEN_INVALID :
-                                return res.resize(phase_interval[0]),pinRobot
-                            elif cfg.WB_RETURN_INVALID : 
-                                return res.resize(k_t),pinRobot                    
+                            return stopHere()                    
                     else : 
                         print "End effector method choosen do not allow retries, abort here."
-                        if cfg.WB_ABORT_WHEN_INVALID :
-                            return res.resize(phase_interval[0]),pinRobot
-                        elif cfg.WB_RETURN_INVALID : 
-                            return res.resize(k_t),pinRobot                         
+                        return stopHere()
             else : # no effector motions, phase always valid (or bypass the check)
                 phaseValid = True
                 if cfg.WB_VERBOSE :
