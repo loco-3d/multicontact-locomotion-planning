@@ -69,6 +69,8 @@ def isNewPhase(tp,k0,k1,cs_com,cs_initGuess,p_id):
 
 
 def connectFinalPhase(phase,duration = cfg.DURATION_CONNECT_GOAL):
+    if duration <= 0.:
+        return
     init_state = phase.state_trajectory[-1]
     final_state = phase.final_state
     init_control = phase.control_trajectory[-1]
