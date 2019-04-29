@@ -6,8 +6,8 @@ SCRIPT_PATH = "memmo"
 kp_am = 1.
 w_am = 0.5
 
-DURATION_INIT = 1. # Time to init the motion
-DURATION_FINAL = 1. # Time to stop the robot
+DURATION_INIT = 1.5 # Time to init the motion
+DURATION_FINAL = 1.5 # Time to stop the robot
 DURATION_CONNECT_GOAL = 0.
 
 
