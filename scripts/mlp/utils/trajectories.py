@@ -649,8 +649,14 @@ class BezierTrajectory(RefTrajectory):
       quat0 = Quaternion(self.placement_init.rotation)
       quat1 = Quaternion(self.placement_end.rotation)
       t_rot = t - self.t_mid_begin
+      """
+      print "t : ",t
+      print "t_mid_begin : ",self.t_mid_begin
+      print "t_rot : ",t_rot
+      print "t mid : ",self.t_mid
+      """
       assert t_rot >= 0 , "Error in the time intervals of the polybezier"
-      assert t_rot <= self.t_mid , "Error in the time intervals of the polybezier"
+      assert t_rot <= (self.t_mid + 1e-6) , "Error in the time intervals of the polybezier"
       u =  t_rot/self.t_mid
       # normalized time without the pre defined takeoff/landing phases
       self.M.rotation = (quat0.slerp(u,quat1)).matrix()
