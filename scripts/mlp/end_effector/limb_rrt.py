@@ -202,7 +202,7 @@ def generateLimbRRTOptimizedTraj(time_interval,placement_init,placement_end,numT
         if numTry >= offset:
             id = numTry - offset
             break
-    if id > len(weights_vars):
+    if id >= len(weights_vars)-1:
         raise ValueError("Max number of try allow to find a collision-end effector trajectory reached.")
     weight = weights_vars[id][0]
     varFlag = weights_vars[id][1]
