@@ -262,3 +262,38 @@ def phasesHaveSameConfig(p0,p1):
     assert len(p0.reference_configurations) > 0 and "CS object given to croc method should store one reference_configuration in each contact_phase"
     assert len(p1.reference_configurations) > 0 and "CS object given to croc method should store one reference_configuration in each contact_phase"
     return np.array_equal(p0.reference_configurations[0],p1.reference_configurations[0])
+
+
+# TODO : check if only one effector move and raise error
+def computeEffectorTranslationBetweenStates(contact_phase,next_phase):
+    d = 0
+    if(not contact_phase.RF_patch.active and next_phase.RF_patch.active):
+        d = next_phase.RF_patch.placement.translation - contact_phase.RF_patch.placement.translation       
+    if(not contact_phase.LF_patch.active and next_phase.LF_patch.active):
+        d = next_phase.LF_patch.placement.translation - contact_phase.LF_patch.placement.translation       
+    if(not contact_phase.LH_patch.active and next_phase.LH_patch.active):
+        d = next_phase.LH_patch.placement.translation - contact_phase.LH_patch.placement.translation       
+    if(not contact_phase.RH_patch.active and next_phase.RH_patch.active):
+        d = next_phase.RH_patch.placement.translation - contact_phase.RH_patch.placement.translation 
+    return norm(d)
+
+# TODO : check if only one effector move and raise error
+def computeEffectorRotationBetweenStates(contact_phase,next_phase):
+    P = np.matrix(np.identity(3))
+    Q = np.matrix(np.identity(3))
+    if(not contact_phase.RF_patch.active and next_phase.RF_patch.active):
+        P = next_phase.RF_patch.placement.rotation 
+        Q = contact_phase.RF_patch.placement.rotation       
+    if(not contact_phase.LF_patch.active and next_phase.LF_patch.active):
+        P = next_phase.LF_patch.placement.rotation 
+        Q = contact_phase.LF_patch.placement.rotation 
+    if(not contact_phase.LH_patch.active and next_phase.LH_patch.active):
+        P = next_phase.LH_patch.placement.rotation 
+        Q = contact_phase.LH_patch.placement.rotation 
+    if(not contact_phase.RH_patch.active and next_phase.RH_patch.active):
+        P = next_phase.RH_patch.placement.rotation 
+        Q = contact_phase.RH_patch.placement.rotation
+    
+    R = P.dot(Q.T)
+    tR = R.trace()
+    return abs(math.acos((tR-1.)/2.))

@@ -2,6 +2,47 @@ import numpy as np
 import mlp.config as cfg
 import multicontact_api
 from multicontact_api import WrenchCone,SOC6,ContactPatch, ContactPhaseHumanoid, ContactSequenceHumanoid
+import math 
+from mlp.utils.util import computeEffectorTranslationBetweenStates, computeEffectorRotationBetweenStates
+VERBOSE = False 
+
+def computePhaseDuration(cs,pid):
+    duration = 0 
+    phase = cs.contact_phases[pid]
+    if phase.numActivePatches() == 1:
+        duration = cfg.DURATION_SS
+    if phase.numActivePatches() == 2:
+        duration = cfg.DURATION_DS        
+    if phase.numActivePatches() == 3:
+        duration = cfg.DURATION_TS        
+    if phase.numActivePatches() == 4:
+        duration = cfg.DURATION_QS        
+    if phase.numActivePatches() > 4:
+        raise Exception("Case not implemented")
+    if pid == 0:
+        duration = cfg.DURATION_INIT
+    if pid == (cs.size()-1):
+        duration = cfg.DURATION_FINAL
+    # Adjust duration if needed to respect bound on effector velocity
+    duration_feet = 0.
+    if pid < cs.size()-1:
+        dist_feet = computeEffectorTranslationBetweenStates(phase,cs.contact_phases[pid+1])
+        if dist_feet > 0 :
+            duration_feet_trans = (2.*cfg.EFF_T_DELAY + 2.*cfg.EFF_T_PREDEF) + dist_feet/cfg.FEET_MAX_VEL
+            rot_feet = computeEffectorRotationBetweenStates(phase,cs.contact_phases[pid+1])
+            duration_feet_rot = (2.*cfg.EFF_T_DELAY + 2.*cfg.EFF_T_PREDEF) + rot_feet/cfg.FEET_MAX_ANG_VEL
+            duration_feet = max(duration_feet_trans,duration_feet_rot)
+            duration_feet = math.ceil(duration_feet/cfg.SOLVER_DT)*cfg.SOLVER_DT            
+            if VERBOSE :
+                print "for phase : ",pid
+                print "dist_feet            : ",dist_feet
+                print "duration translation : ",duration_feet_trans
+                print "rot_feet             : ",rot_feet
+                print "duration rotation    : ",duration_feet_rot
+                print "duration complete    : ",duration_feet
+    # FIXME : doesn't account for the possibles rotations ... 
+    # Make it a multiple of solver_dt : 
+    return max(duration,duration_feet)
 
 ## straight line from the center of the support polygon of the current phase to the next one
 def generateCentroidalTrajectory(cs,cs_initGuess = None, fullBody = None, viewer = None):
@@ -46,21 +87,7 @@ def generateCentroidalTrajectory(cs,cs_initGuess = None, fullBody = None, viewer
     t_total = 0.    
     for pid in range(cs_result.size()):
         phase = cs_result.contact_phases[pid] 
-        duration = 0.
-        if phase.numActivePatches() == 1:
-            duration = cfg.DURATION_SS
-        if phase.numActivePatches() == 2:
-            duration = cfg.DURATION_DS        
-        if phase.numActivePatches() == 3:
-            duration = cfg.DURATION_TS        
-        if phase.numActivePatches() == 4:
-            duration = cfg.DURATION_QS        
-        if phase.numActivePatches() > 4:
-            raise Exception("Case not implemented")
-        if pid == 0:
-            duration = cfg.DURATION_INIT
-        if pid == (cs_result.size()-1):
-            duration = cfg.DURATION_FINAL
+        duration = computePhaseDuration(cs_result,pid)
         com0 = phase.init_state[0:3]
         com1 = phase.final_state[0:3]
         vel = (com1-com0)/duration
