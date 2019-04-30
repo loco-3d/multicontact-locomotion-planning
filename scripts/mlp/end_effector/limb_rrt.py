@@ -61,7 +61,12 @@ def generateLimbRRTPath(q_init,q_end,phase_previous,phase,phase_next,fullBody) :
     extraDof = int(fullBody.client.robot.getDimensionExtraConfigSpace())
     q_init = q_init.T.tolist()[0] + [0]*extraDof    
     q_end = q_end.T.tolist()[0] + [0]*extraDof
-
+    if not fullBody.isConfigValid(q_init)[0]:
+        print "q_init in limb-rrt : ",q_end        
+        raise ValueError( "init config is invalid in limb-rrt.")
+    if not fullBody.isConfigValid(q_end)[0]:
+        print "q_end in limb-rrt : ",q_end
+        raise ValueError( "goal config is invalid in limb-rrt.")   
     # create nex states in fullBody corresponding to given configuration and set of contacts 
     s0 = createStateFromPhase(fullBody,phase_previous,q_init)
     s1 = createStateFromPhase(fullBody,phase_next,q_end)
@@ -199,7 +204,7 @@ def generateLimbRRTOptimizedTraj(time_interval,placement_init,placement_end,numT
         if numTry >= offset:
             id = numTry - offset
             break
-    if id > len(weights_vars):
+    if id >= len(weights_vars)-1:
         raise ValueError("Max number of try allow to find a collision-end effector trajectory reached.")
     weight = weights_vars[id][0]
     varFlag = weights_vars[id][1]
