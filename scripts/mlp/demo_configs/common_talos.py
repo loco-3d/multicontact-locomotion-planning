@@ -5,8 +5,8 @@ MASS = 90.27
 DURATION_INIT = 1.5 # Time to init the motion
 DURATION_FINAL = 1 # Time to stop the robot
 DURATION_FINAL_SS = 1.
-DURATION_SS =1.2
-DURATION_DS = 0.3
+DURATION_SS =1.
+DURATION_DS = 0.2
 DURATION_TS = 0.4
 DURATION_CONNECT_GOAL = 1.5
 
@@ -36,9 +36,11 @@ IK_dt = 0.001
 IK_eff_size = Robot.dict_size.copy()
 
 ## Settings for end effectors : 
-EFF_T_PREDEF = 0.3
+EFF_T_PREDEF = 0.2
 EFF_T_DELAY = 0.05
-p_max = 0.1
+FEET_MAX_VEL = 0.5
+FEET_MAX_ANG_VEL = 1.5
+p_max = 0.07
 
 import numpy as np
 gain_vector = np.matrix(
