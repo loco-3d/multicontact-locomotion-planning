@@ -61,7 +61,10 @@ def generateLimbRRTPath(q_init,q_end,phase_previous,phase,phase_next,fullBody) :
     extraDof = int(fullBody.client.robot.getDimensionExtraConfigSpace())
     q_init = q_init.T.tolist()[0] + [0]*extraDof    
     q_end = q_end.T.tolist()[0] + [0]*extraDof
-
+    if not fullBody.isConfigValid(q_init)[0]:
+        raise RuntimeError( "init config is invalid in limb-rrt.")
+    if not fullBody.isConfigValid(q_end)[0]:
+        raise RuntimeError( "goal config is invalid in limb-rrt.")   
     # create nex states in fullBody corresponding to given configuration and set of contacts 
     s0 = createStateFromPhase(fullBody,phase_previous,q_init)
     s1 = createStateFromPhase(fullBody,phase_next,q_end)
