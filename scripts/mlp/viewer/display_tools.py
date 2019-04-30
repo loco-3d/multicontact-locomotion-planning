@@ -189,6 +189,7 @@ def initScene(Robot,envName = "multicontact/ground"):
   from hpp.corbaserver.rbprm.rbprmfullbody import FullBody
   from hpp.corbaserver import ProblemSolver  
   fullBody = Robot ()
+  fullBody.client.robot.setDimensionExtraConfigSpace(6)
   fullBody.loadAllLimbs("static",nbSamples=1)
   ps = ProblemSolver(fullBody)
   vf = ViewerFactory (ps)
