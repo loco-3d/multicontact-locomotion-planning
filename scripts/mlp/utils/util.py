@@ -45,7 +45,17 @@ def SE3toVec(M):
         v[j + 9] = M.rotation[j, 2]
     return v
 
-# TODO : def SE3FromVec(s):
+def SE3FromVec(vect):
+    if vect.shape[0] != 12 or vect.shape[1] != 1 :
+        raise ValueError("SE3FromVect take as input a vector of size 12")
+    placement = SE3.Identity()
+    placement.translation=vect[0:3]
+    rot = placement.rotation
+    rot[:,0]=np.asarray(vect[3:6]).reshape(-1)
+    rot[:,1]=np.asarray(vect[6:9]).reshape(-1)
+    rot[:,2]=np.asarray(vect[9:12]).reshape(-1)
+    placement.rotation =rot
+    return placement
 
 def MotiontoVec(M):
     v = np.matrix(np.zeros((6, 1)))
