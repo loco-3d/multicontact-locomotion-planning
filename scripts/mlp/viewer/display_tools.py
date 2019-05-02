@@ -190,7 +190,10 @@ def initScene(Robot,envName = "multicontact/ground"):
   from hpp.corbaserver import ProblemSolver  
   fullBody = Robot ()
   fullBody.client.robot.setDimensionExtraConfigSpace(6)
-  fullBody.loadAllLimbs("static",nbSamples=1)
+  try :
+    fullBody.loadAllLimbs("static",nbSamples=1)
+  except AttributeError:
+    print "WARNING initScene : fullBody do not have loadAllLimbs, some scripts may fails."
   ps = ProblemSolver(fullBody)
   vf = ViewerFactory (ps)
   vf.loadObstacleModel ("hpp_environments", envName, "planning")
