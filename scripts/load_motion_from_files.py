@@ -7,6 +7,7 @@ import mlp.viewer.display_tools as display_tools
 from hpp.corbaserver.rbprm.rbprmfullbody import FullBody
 import time
 import os
+from mlp.utils.status import Status
 class Robot (FullBody):
     packageName = "talos_data"
     meshPackageName = "talos_data"
@@ -26,7 +27,7 @@ class Robot (FullBody):
 def loadMotionFromFiles(v,path,npzFilename,csFilename):
     # load cs from file : 
     cs = ContactSequenceHumanoid(0)
-    cs.loadFromXML(path+csFilename, "ContactSequence")  
+    cs.loadFromBinary(path+csFilename)  
     display_tools.displaySteppingStones(cs,v)
     colors = [v.color.blue, v.color.green]
     display_tools.displayCOMTrajectory(cs,v,colors) 
@@ -45,15 +46,17 @@ def loadMotionFromFiles(v,path,npzFilename,csFilename):
 os.system('killall gepetto-gui')
 os.system('killall hpp-rbprm-server')
 ## start new instances : 
-os.system('gepetto-gui &>/dev/null 2>&1')
-os.system('hpp-rbprm-server &>/dev/null 2>&1')
+os.system('gepetto-gui &> log-viewer.log &')
+os.system('hpp-rbprm-server &> log-rbprm.log &')
 time.sleep(2)
 
 fb,v = display_tools.initScene(Robot)
 path = "/local/dev_hpp/src/multicontact-locomotion-planning/res/"
-npzFile = "export/npz/talos_flatGround.npz"
-csFile = "contact_sequences/talos_flatGround_COM.xml"
+npzFile = "export/npz/talos_circle_oriented.npz"
+csFile = "contact_sequences/talos_circle_oriented_COM.cs"
 res,cs = loadMotionFromFiles(v,path,npzFile,csFile)
+status = Status(path+"/../scripts/infos.log")
+
 
 def dispCS(step = 0.2): 
     display_tools.displayContactSequence(v,cs,step)
