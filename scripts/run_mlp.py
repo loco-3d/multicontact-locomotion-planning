@@ -18,7 +18,7 @@ if cfg.SAVE_CS:
     print "Write contact sequence binary file : ",filename
     cs.saveAsBinary(filename)    
 if cfg.DISPLAY_CS_STONES :
-    display_tools.displaySteppingStones(cs,viewer)
+    display_tools.displaySteppingStones(cs,viewer.client.gui,viewer.sceneName)
     
 
 print "------------------------------"
@@ -28,7 +28,7 @@ cs_initGuess = generateCentroidalInitGuess(cs,fullBody=fullBody,viewer=viewer)
 
 if cfg.DISPLAY_INIT_GUESS_TRAJ and cs_initGuess:
     colors = [viewer.color.red, viewer.color.yellow]
-    display_tools.displayCOMTrajectory(cs_initGuess,viewer,colors,"_init")    
+    display_tools.displayCOMTrajectory(cs_initGuess,viewer.client.gui,viewer.sceneName,colors,"_init")    
 
 print "------------------------------"
 print "### MLP : centroidal  ###"
@@ -46,7 +46,7 @@ if cfg.SAVE_CS_COM:
     cs_com.saveAsBinary(filename) 
 if cfg.DISPLAY_COM_TRAJ:
     colors = [viewer.color.blue, viewer.color.green]
-    display_tools.displayCOMTrajectory(cs_com,viewer,colors)
+    display_tools.displayCOMTrajectory(cs_com,viewer.client.gui,viewer.sceneName,colors)
     
 print "------------------------------"
 print "### MLP : whole-body  ###"
