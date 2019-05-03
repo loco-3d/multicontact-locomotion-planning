@@ -24,8 +24,7 @@ This package rely on a lot of optionnal packages, see the section 'Available met
 Follow the instruction from https://github.com/loco-3d/multicontact-api
 
 ## Installation procedure : 
-
-Clone the repository
+Once the depencies are correctly installed, clone the repository :
 ``` 
 git clone https://github.com/loco-3d/multicontact-locomotion-planning.git
 ``` 
