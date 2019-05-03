@@ -168,7 +168,7 @@ def displayFeetTrajFromResult(gui,sceneName,res,Robot):
   for eeName in res.eeNames:
     name = "feet_traj_"+str(eeName)
     offset = Robot.dict_offset[eeName].translation    
-    traj = res.effector_references[eeName][:3,:]
+    traj = res.effector_references[eeName][:3,:].copy()
     for i in range(traj.shape[1]):
       traj[:,i] += offset
     traj = numpy2DToList(traj)
