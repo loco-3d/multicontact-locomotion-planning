@@ -1,4 +1,3 @@
-import mlp.config as cfg
 import pinocchio as pin
 from pinocchio import SE3, Quaternion
 import multicontact_api
@@ -46,15 +45,15 @@ def addContactLandmark(M,color,v):
     gui.addLandmark(name,0.03) 
     #print "contact altitude : "+str(p[2])
     
-def displayContactsLandmarkFromPhase(phase,viewer):
+def displayContactsLandmarkFromPhase(phase,viewer,Robot):
     if phase.LF_patch.active:
-        addContactLandmark(phase.LF_patch.placement*cfg.Robot.MLsole_display,cfg.Robot.dict_limb_color_traj[cfg.Robot.lfoot] ,viewer)
+        addContactLandmark(phase.LF_patch.plact*Robot.MLsole_display,Robot.dict_limb_color_traj[Robot.lfoot] ,viewer)
     if phase.RF_patch.active:
-        addContactLandmark(phase.RF_patch.placement*cfg.Robot.MRsole_display,cfg.Robot.dict_limb_color_traj[cfg.Robot.rfoot] ,viewer)  
+        addContactLandmark(phase.RF_patch.placement*Robot.MRsole_display,Robot.dict_limb_color_traj[Robot.rfoot] ,viewer)  
     if phase.LH_patch.active:
-        addContactLandmark(phase.LH_patch.placement*cfg.Robot.MLhand_display,cfg.Robot.dict_limb_color_traj[cfg.Robot.lhand] ,viewer)
+        addContactLandmark(phase.LH_patch.placement*Robot.MLhand_display,Robot.dict_limb_color_traj[Robot.lhand] ,viewer)
     if phase.RH_patch.active:
-        addContactLandmark(phase.RH_patch.placement*cfg.Robot.MRhand_display,cfg.Robot.dict_limb_color_traj[cfg.Robot.rhand] ,viewer)                 
+        addContactLandmark(phase.RH_patch.placement*Robot.MRhand_display,Robot.dict_limb_color_traj[Robot.rhand] ,viewer)                 
     viewer.client.gui.refresh() 
 
 def addSteppingStone(gui,placement,name,size,color):
@@ -63,7 +62,7 @@ def addSteppingStone(gui,placement,name,size,color):
     gui.applyConfiguration(name,SE3ToViewerConfig(placement))
     
     
-def displaySteppingStones(cs,gui,sceneName):
+def displaySteppingStones(cs,gui,sceneName,Robot):
     gui.createGroup(STONE_GROUP)
     name_RF = STONE_GROUP+"/stone_RF_"
     name_LF = STONE_GROUP+"/stone_LF_"
@@ -76,16 +75,16 @@ def displaySteppingStones(cs,gui,sceneName):
     
     for phase in cs.contact_phases:
         if phase.LF_patch.active:
-            addSteppingStone(gui,phase.LF_patch.placement*cfg.Robot.dict_display_offset[cfg.Robot.lfoot],name_LF+str(id_LF),cfg.Robot.dict_size[cfg.Robot.lfoot],cfg.Robot.dict_limb_color_traj[cfg.Robot.lfoot])
+            addSteppingStone(gui,phase.LF_patch.placement*Robot.dict_display_offset[Robot.lfoot],name_LF+str(id_LF),Robot.dict_size[Robot.lfoot],Robot.dict_limb_color_traj[Robot.lfoot])
             id_LF += 1
         if phase.RF_patch.active:
-            addSteppingStone(gui,phase.RF_patch.placement*cfg.Robot.dict_display_offset[cfg.Robot.rfoot],name_RF+str(id_RF),cfg.Robot.dict_size[cfg.Robot.rfoot],cfg.Robot.dict_limb_color_traj[cfg.Robot.rfoot])
+            addSteppingStone(gui,phase.RF_patch.placement*Robot.dict_display_offset[Robot.rfoot],name_RF+str(id_RF),Robot.dict_size[Robot.rfoot],Robot.dict_limb_color_traj[Robot.rfoot])
             id_RF += 1            
         if phase.LH_patch.active:
-            addSteppingStone(gui,phase.LH_patch.placement*cfg.Robot.dict_display_offset[cfg.Robot.lhand],name_LH+str(id_LH),cfg.Robot.dict_size[cfg.Robot.lhand],cfg.Robot.dict_limb_color_traj[cfg.Robot.lhand])
+            addSteppingStone(gui,phase.LH_patch.placement*Robot.dict_display_offset[Robot.lhand],name_LH+str(id_LH),Robot.dict_size[Robot.lhand],Robot.dict_limb_color_traj[Robot.lhand])
             id_LH += 1
         if phase.RH_patch.active:
-            addSteppingStone(gui,phase.RH_patch.placement*cfg.Robot.dict_display_offset[cfg.Robot.rhand],name_RH+str(id_RH),cfg.Robot.dict_size[cfg.Robot.rhand],cfg.Robot.dict_limb_color_traj[cfg.Robot.rhand])
+            addSteppingStone(gui,phase.RH_patch.placement*Robot.dict_display_offset[Robot.rhand],name_RH+str(id_RH),Robot.dict_size[Robot.rhand],Robot.dict_limb_color_traj[Robot.rhand])
             id_RH += 1
     
     gui.addToGroup(STONE_GROUP,sceneName)
@@ -165,15 +164,15 @@ def displayWBmotion(viewer,q_t,dt,dt_display):
     displayWBconfig(viewer,q_t[:,-1])
           
 
-def displayFeetTrajFromResult(gui,sceneName,dict_colors,dict_offset,res):
+def displayFeetTrajFromResult(gui,sceneName,res,Robot):
   for eeName in res.eeNames:
     name = "feet_traj_"+str(eeName)
-    offset = dict_offset[eeName].translation    
+    offset = Robot.dict_offset[eeName].translation    
     traj = res.effector_references[eeName][:3,:]
     for i in range(traj.shape[1]):
       traj[:,i] += offset
     traj = numpy2DToList(traj)
-    color = dict_colors[eeName]
+    color = Robot.dict_limb_color_traj[eeName]
     gui.addCurve(name,traj,color)
     gui.addToGroup(name,sceneName)    
     gui.refresh()    

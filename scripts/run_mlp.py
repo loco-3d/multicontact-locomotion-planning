@@ -18,7 +18,7 @@ if cfg.SAVE_CS:
     print "Write contact sequence binary file : ",filename
     cs.saveAsBinary(filename)    
 if cfg.DISPLAY_CS_STONES :
-    display_tools.displaySteppingStones(cs,viewer.client.gui,viewer.sceneName)
+    display_tools.displaySteppingStones(cs,viewer.client.gui,viewer.sceneName,cfg.Robot)
     
 
 print "------------------------------"
