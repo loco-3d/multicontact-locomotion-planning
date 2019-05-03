@@ -81,8 +81,8 @@ def loadMotionFromFiles(gui,path,npzFilename,csFilename):
 
 urdfName = "talos_reduced"
 packageName = "talos_data"
-envName = "multicontact/ground" 
-robot,gui = initScenePinocchio(urdfName,packageName,envName)
+#envName = "multicontact/ground" 
+robot,gui = initScenePinocchio(urdfName,packageName)
 
 
 path = "/local/dev_hpp/src/multicontact-locomotion-planning/res/"
