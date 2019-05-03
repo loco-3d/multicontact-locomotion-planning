@@ -1,4 +1,3 @@
-import mlp.config as cfg
 import pinocchio as pin
 from pinocchio import SE3, Quaternion
 import multicontact_api
@@ -46,25 +45,25 @@ def addContactLandmark(M,color,v):
     gui.addLandmark(name,0.03) 
     #print "contact altitude : "+str(p[2])
     
-def displayContactsLandmarkFromPhase(phase,viewer):
+def displayContactsLandmarkFromPhase(phase,viewer,Robot):
     if phase.LF_patch.active:
-        addContactLandmark(phase.LF_patch.placement*cfg.Robot.MLsole_display,cfg.Robot.dict_limb_color_traj[cfg.Robot.lfoot] ,viewer)
+        addContactLandmark(phase.LF_patch.plact*Robot.MLsole_display,Robot.dict_limb_color_traj[Robot.lfoot] ,viewer)
     if phase.RF_patch.active:
-        addContactLandmark(phase.RF_patch.placement*cfg.Robot.MRsole_display,cfg.Robot.dict_limb_color_traj[cfg.Robot.rfoot] ,viewer)  
+        addContactLandmark(phase.RF_patch.placement*Robot.MRsole_display,Robot.dict_limb_color_traj[Robot.rfoot] ,viewer)  
     if phase.LH_patch.active:
-        addContactLandmark(phase.LH_patch.placement*cfg.Robot.MLhand_display,cfg.Robot.dict_limb_color_traj[cfg.Robot.lhand] ,viewer)
+        addContactLandmark(phase.LH_patch.placement*Robot.MLhand_display,Robot.dict_limb_color_traj[Robot.lhand] ,viewer)
     if phase.RH_patch.active:
-        addContactLandmark(phase.RH_patch.placement*cfg.Robot.MRhand_display,cfg.Robot.dict_limb_color_traj[cfg.Robot.rhand] ,viewer)                 
+        addContactLandmark(phase.RH_patch.placement*Robot.MRhand_display,Robot.dict_limb_color_traj[Robot.rhand] ,viewer)                 
     viewer.client.gui.refresh() 
 
-def addSteppingStone(viewer,placement,name,size,color):
-    viewer.client.gui.addBox(name,size[0],size[1],STONE_HEIGHT,color)
-    viewer.client.gui.addToGroup(name,STONE_GROUP)
-    viewer.client.gui.applyConfiguration(name,SE3ToViewerConfig(placement))
+def addSteppingStone(gui,placement,name,size,color):
+    gui.addBox(name,size[0],size[1],STONE_HEIGHT,color)
+    gui.addToGroup(name,STONE_GROUP)
+    gui.applyConfiguration(name,SE3ToViewerConfig(placement))
     
     
-def displaySteppingStones(cs,viewer):
-    viewer.client.gui.createGroup(STONE_GROUP)
+def displaySteppingStones(cs,gui,sceneName,Robot):
+    gui.createGroup(STONE_GROUP)
     name_RF = STONE_GROUP+"/stone_RF_"
     name_LF = STONE_GROUP+"/stone_LF_"
     name_RH = STONE_GROUP+"/stone_RH_"
@@ -76,36 +75,36 @@ def displaySteppingStones(cs,viewer):
     
     for phase in cs.contact_phases:
         if phase.LF_patch.active:
-            addSteppingStone(viewer,phase.LF_patch.placement*cfg.Robot.dict_display_offset[cfg.Robot.lfoot],name_LF+str(id_LF),cfg.Robot.dict_size[cfg.Robot.lfoot],cfg.Robot.dict_limb_color_traj[cfg.Robot.lfoot])
+            addSteppingStone(gui,phase.LF_patch.placement*Robot.dict_display_offset[Robot.lfoot],name_LF+str(id_LF),Robot.dict_size[Robot.lfoot],Robot.dict_limb_color_traj[Robot.lfoot])
             id_LF += 1
         if phase.RF_patch.active:
-            addSteppingStone(viewer,phase.RF_patch.placement*cfg.Robot.dict_display_offset[cfg.Robot.rfoot],name_RF+str(id_RF),cfg.Robot.dict_size[cfg.Robot.rfoot],cfg.Robot.dict_limb_color_traj[cfg.Robot.rfoot])
+            addSteppingStone(gui,phase.RF_patch.placement*Robot.dict_display_offset[Robot.rfoot],name_RF+str(id_RF),Robot.dict_size[Robot.rfoot],Robot.dict_limb_color_traj[Robot.rfoot])
             id_RF += 1            
         if phase.LH_patch.active:
-            addSteppingStone(viewer,phase.LH_patch.placement*cfg.Robot.dict_display_offset[cfg.Robot.lhand],name_LH+str(id_LH),cfg.Robot.dict_size[cfg.Robot.lhand],cfg.Robot.dict_limb_color_traj[cfg.Robot.lhand])
+            addSteppingStone(gui,phase.LH_patch.placement*Robot.dict_display_offset[Robot.lhand],name_LH+str(id_LH),Robot.dict_size[Robot.lhand],Robot.dict_limb_color_traj[Robot.lhand])
             id_LH += 1
         if phase.RH_patch.active:
-            addSteppingStone(viewer,phase.RH_patch.placement*cfg.Robot.dict_display_offset[cfg.Robot.rhand],name_RH+str(id_RH),cfg.Robot.dict_size[cfg.Robot.rhand],cfg.Robot.dict_limb_color_traj[cfg.Robot.rhand])
+            addSteppingStone(gui,phase.RH_patch.placement*Robot.dict_display_offset[Robot.rhand],name_RH+str(id_RH),Robot.dict_size[Robot.rhand],Robot.dict_limb_color_traj[Robot.rhand])
             id_RH += 1
     
-    viewer.client.gui.addToGroup(STONE_GROUP,viewer.sceneName)
-    viewer.client.gui.refresh()
+    gui.addToGroup(STONE_GROUP,sceneName)
+    gui.refresh()
 
 def comPosListFromState(state_traj):
     state = stdVecToMatrix(state_traj)
     c =state[:3,:]
     return numpy2DToList(c)
 
-def displayCOMTrajForPhase(p,viewer,name,name_group,color):
+def displayCOMTrajForPhase(p,gui,name,name_group,color):
     c = comPosListFromState(p.state_trajectory)
-    viewer.client.gui.addCurve(name,c,color)
-    viewer.client.gui.addToGroup(name,name_group)
+    gui.addCurve(name,c,color)
+    gui.addToGroup(name,name_group)
     
     
 
-def displayCOMTrajectory(cs,viewer,colors=[0,0,0,1],nameGroup=""):
+def displayCOMTrajectory(cs,gui,sceneName,colors=[0,0,0,1],nameGroup=""):
     name_group = TRAJ_GROUP+nameGroup
-    viewer.client.gui.createGroup(name_group)
+    gui.createGroup(name_group)
     for pid in range(len(cs.contact_phases)):
         phase = cs.contact_phases[pid]
         if pid < len(cs.contact_phases)-1 :
@@ -114,16 +113,16 @@ def displayCOMTrajectory(cs,viewer,colors=[0,0,0,1],nameGroup=""):
             phase_next = None
         name = name_group+"/"+'%.2f' % phase.time_trajectory[0]+"-"+'%.2f' % phase.time_trajectory[-1]
         color = colors[pid%len(colors)]
-        displayCOMTrajForPhase(phase,viewer,name,name_group,color)
-    viewer.client.gui.addToGroup(name_group,viewer.sceneName)
-    viewer.client.gui.refresh()        
+        displayCOMTrajForPhase(phase,gui,name,name_group,color)
+    gui.addToGroup(name_group,sceneName)
+    gui.refresh()        
     
-def displaySE3Traj(traj,viewer,name,color,time_interval,offset=SE3.Identity()):
+def displaySE3Traj(traj,gui,sceneName,name,color,time_interval,offset=SE3.Identity()):
     if name==None:
         name="SE3_traj"
     rootName = name
     # add indices until the name is free
-    list = viewer.client.gui.getNodeList()
+    list = gui.getNodeList()
     i=0
     while list.count(name) > 0:
         name=rootName+"_"+str(i)
@@ -136,9 +135,9 @@ def displaySE3Traj(traj,viewer,name,color,time_interval,offset=SE3.Identity()):
         m = m.act(offset)
         path += m.translation.T.tolist()
         t += dt
-    viewer.client.gui.addCurve(name,path,color)
-    viewer.client.gui.addToGroup(name,viewer.sceneName)    
-    viewer.client.gui.refresh()
+    gui.addCurve(name,path,color)
+    gui.addToGroup(name,sceneName)    
+    gui.refresh()
     
 def displayWBconfig(viewer,q_matrix):
   viewer(hppConfigFromMatrice(viewer.robot,q_matrix))
@@ -165,18 +164,18 @@ def displayWBmotion(viewer,q_t,dt,dt_display):
     displayWBconfig(viewer,q_t[:,-1])
           
 
-def displayFeetTrajFromResult(viewer,res):
+def displayFeetTrajFromResult(gui,sceneName,res,Robot):
   for eeName in res.eeNames:
     name = "feet_traj_"+str(eeName)
-    offset = cfg.Robot.dict_offset[eeName].translation    
-    traj = res.effector_references[eeName][:3,:]
+    offset = Robot.dict_offset[eeName].translation    
+    traj = res.effector_references[eeName][:3,:].copy()
     for i in range(traj.shape[1]):
       traj[:,i] += offset
     traj = numpy2DToList(traj)
-    color = cfg.Robot.dict_limb_color_traj[eeName]
-    viewer.client.gui.addCurve(name,traj,color)
-    viewer.client.gui.addToGroup(name,viewer.sceneName)    
-    viewer.client.gui.refresh()    
+    color = Robot.dict_limb_color_traj[eeName]
+    gui.addCurve(name,traj,color)
+    gui.addToGroup(name,sceneName)    
+    gui.refresh()    
     
 def displayContactSequence(v,cs,step = 0.2):
   for p in cs.contact_phases:

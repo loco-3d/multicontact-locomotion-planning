@@ -119,7 +119,7 @@ def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
     
     if cfg.EFF_CHECK_COLLISION : # initialise object needed to check the motion
         from mlp.utils import check_path
-        validator = check_path.PathChecker(viewer,fullBody,cs,len(q),cfg.WB_VERBOSE)
+        validator = check_path.PathChecker(fullBody,cs,len(q),cfg.WB_VERBOSE)
         
     if cfg.WB_VERBOSE:
         print "initialize tasks : "   
@@ -478,7 +478,7 @@ def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
                 if viewer and cfg.DISPLAY_FEET_TRAJ :
                     for eeName,ref_traj in dic_effectors_trajs.iteritems():
                         if ref_traj :
-                            display_tools.displaySE3Traj(ref_traj,viewer,eeName+"_traj_"+str(pid),cfg.Robot.dict_limb_color_traj[eeName] ,time_interval ,cfg.Robot.dict_offset[eeName])                               
+                            display_tools.displaySE3Traj(ref_traj,viewer.client.gui,viewer.sceneName,eeName+"_traj_"+str(pid),cfg.Robot.dict_limb_color_traj[eeName] ,time_interval ,cfg.Robot.dict_offset[eeName])                               
                             viewer.client.gui.setVisibility(eeName+"_traj_"+str(pid),'ALWAYS_ON_TOP')                
                             if cfg.PLOT: # add current ref_traj to the list for plotting
                                 stored_effectors_ref[eeName] +=[ref_traj]
