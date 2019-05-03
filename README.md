@@ -29,7 +29,7 @@ Clone the repository
 ``` 
 git clone https://github.com/loco-3d/multicontact-locomotion-planning.git
 ``` 
-And add the directory `multicontact-locomotion-planning/script/mlp`  to your PYTHONPATH.
+And add the directory `multicontact-locomotion-planning/script`  to your PYTHONPATH.
 
 # Usage
 
