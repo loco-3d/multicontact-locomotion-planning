@@ -66,7 +66,7 @@ if cfg.WRITE_STATUS:
 if cfg.CHECK_FINAL_MOTION :
     from mlp.utils import check_path
     print "## Begin validation of the final motion (collision and joint-limits)"
-    validator = check_path.PathChecker(viewer,fullBody,cs_com,res.nq,True)
+    validator = check_path.PathChecker(fullBody,cs_com,res.nq,True)
     motion_valid,t_invalid = validator.check_motion(res.q_t)
     print "## Check final motion, valid = ",motion_valid
     if not motion_valid:

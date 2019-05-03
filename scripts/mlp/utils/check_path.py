@@ -6,8 +6,7 @@ import numpy as np
 
 class PathChecker():
     
-    def __init__(self,r,fullBody,cs,nq,verbose = False):
-        self.r = r
+    def __init__(self,fullBody,cs,nq,verbose = False):
         self.cs = cs
         self.fullBody = fullBody # with effector collision disabled
         self.nq = nq # without extradof, size of configs in q_t 

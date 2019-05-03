@@ -119,7 +119,7 @@ def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
     
     if cfg.EFF_CHECK_COLLISION : # initialise object needed to check the motion
         from mlp.utils import check_path
-        validator = check_path.PathChecker(viewer,fullBody,cs,len(q),cfg.WB_VERBOSE)
+        validator = check_path.PathChecker(fullBody,cs,len(q),cfg.WB_VERBOSE)
         
     if cfg.WB_VERBOSE:
         print "initialize tasks : "   
