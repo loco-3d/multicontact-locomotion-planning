@@ -287,7 +287,9 @@ def addInitAndGoalShift(cs_in):
     s_init[2] -= cfg.COM_SHIFT_Z
     phase.init_state = s_init
     phase.final_state = s_final
-    generateLinearInterpTraj(phase,cfg.TIME_SHIFT_COM,0)
+    phase.time_trajectory.append(0)
+    phase.time_trajectory.append(cfg.TIME_SHIFT_COM)
+    genSplinesForPhase(phase)
     copyPhaseContacts(cs.contact_phases[1],phase)
     phase.reference_configurations = cs.contact_phases[1].reference_configurations
     # add the new final phase
@@ -297,7 +299,9 @@ def addInitAndGoalShift(cs_in):
     s_final[2] -= cfg.COM_SHIFT_Z
     phase.init_state = s_init
     phase.final_state = s_final
-    generateLinearInterpTraj(phase,cfg.TIME_SHIFT_COM,cs.contact_phases[-2].time_trajectory[-1])
+    phase.time_trajectory.append(cs.contact_phases[-2].time_trajectory[-1])
+    phase.time_trajectory.append(cs.contact_phases[-2].time_trajectory[-1]+cfg.TIME_SHIFT_COM)    
+    genSplinesForPhase(phase)
     copyPhaseContacts(cs.contact_phases[-2],phase)   
     phase.reference_configurations = cs.contact_phases[-2].reference_configurations
     
