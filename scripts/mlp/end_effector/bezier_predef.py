@@ -32,7 +32,10 @@ def computeConstantsWithDDJerk(ddjerk,t):
 
 def computePosOffset(t_predef,t_total):
     timeMid= (t_total - (2.*t_predef))/2.
-    p = cfg.p_max / (1. + 4.*timeMid/t_predef + 6.*timeMid*timeMid/(t_predef*t_predef) - (timeMid*timeMid*timeMid)/(t_predef*t_predef*t_predef))
+    if t_predef > 0:
+        p = cfg.p_max / (1. + 4.*timeMid/t_predef + 6.*timeMid*timeMid/(t_predef*t_predef) - (timeMid*timeMid*timeMid)/(t_predef*t_predef*t_predef))
+    else : 
+        p = cfg.p_max
     return p,0.,0.
 
 def computePredefConstants(t):
@@ -111,9 +114,7 @@ def generatePredefLandingTakeoff(time_interval,placement_init,placement_end):
     pBezier = PolyBezier(curves) 
     return pBezier
     
-def generateSmoothBezierTraj(time_interval,placement_init,placement_end,numTry=None,q_t=None,phase_previous=None,phase=None,phase_next=None,fullBody=None,eeName=None,viewer=None):
-    if numTry > 0 :
-        raise ValueError("generateSmoothBezierTraj will always produce the same trajectory, cannot be called with numTry > 0 ")
+def generateSmoothBezierTrajWithPredef(time_interval,placement_init,placement_end):
     predef_curves = generatePredefLandingTakeoff(time_interval,placement_init,placement_end)
     bezier_takeoff = predef_curves.curves[predef_curves.idFirstNonZero()]
     bezier_landing = predef_curves.curves[predef_curves.idLastNonZero()]
@@ -139,8 +140,46 @@ def generateSmoothBezierTraj(time_interval,placement_init,placement_end,numTry=N
     pBezier = PolyBezier(curves)
     ref_traj = trajectories.BezierTrajectory(pBezier,placement_init,placement_end,time_interval)    
     return ref_traj
+"""
+def generateSmoothBezierTrajWithoutPredef(time_interval,placement_init,placement_end):
+    t_tot = time_interval[1]-time_interval[0]
+    pData = bezier_com.ProblemData() 
+    pData.c0_ = placement_init.translation.copy()
+    pData.dc0_ = np.matrix(np.zeros(3)).T
+    pData.ddc0_ = np.matrix(np.zeros(3)).T
+    pData.j0_ = np.matrix(np.zeros(3)).T
+    pData.c1_ = placement_end.translation.copy()
+    pData.dc1_ = np.matrix(np.zeros(3)).T
+    pData.ddc1_ = np.matrix(np.zeros(3)).T
+    pData.j1_ = np.matrix(np.zeros(3)).T    
+    pData.constraints_.flag_ = bezier_com.ConstraintFlag.INIT_POS | bezier_com.ConstraintFlag.INIT_VEL | bezier_com.ConstraintFlag.INIT_ACC | bezier_com.ConstraintFlag.END_ACC | bezier_com.ConstraintFlag.END_VEL | bezier_com.ConstraintFlag.END_POS | bezier_com.ConstraintFlag.INIT_JERK | bezier_com.ConstraintFlag.END_JERK    
+    res = bezier_com.computeEndEffector(pData,t_tot)
+    bezier_middle = res.c_of_t    
+    ref_traj = trajectories.BezierTrajectory(bezier_middle,placement_init,placement_end,time_interval)    
+    return ref_traj
+"""
+def generateSmoothBezierTrajWithoutPredef(time_interval,placement_init,placement_end):
+    t_tot = time_interval[1]-time_interval[0]
+    wps = np.matrix(np.zeros([3,9]))
+    for i in range(4): # init position. init vel,acc and jerk == 0
+        wps[:,i] = placement_init.translation.copy()  
+    # compute mid point (average and offset along z)
+    wps[:,4] = (placement_init.translation + placement_end.translation)/2.
+    wps[2,4] += cfg.p_max    
+    for i in range(5,9):# final position. final vel,acc and jerk == 0
+        wps[:,i] = placement_end.translation.copy()
+    pBezier = PolyBezier(bezier(wps,t_tot))
+    ref_traj = trajectories.BezierTrajectory(pBezier,placement_init,placement_end,time_interval)    
+    return ref_traj
 
-
+def generateSmoothBezierTraj(time_interval,placement_init,placement_end,numTry=None,q_t=None,phase_previous=None,phase=None,phase_next=None,fullBody=None,eeName=None,viewer=None):
+    if numTry > 0 :
+        raise ValueError("generateSmoothBezierTraj will always produce the same trajectory, cannot be called with numTry > 0 ")    
+    if cfg.EFF_T_PREDEF > 0 :
+        return generateSmoothBezierTrajWithPredef(time_interval,placement_init,placement_end)
+    else :
+        return generateSmoothBezierTrajWithoutPredef(time_interval,placement_init,placement_end)
+        
 """
 
 placement_init = SE3.Identity()
