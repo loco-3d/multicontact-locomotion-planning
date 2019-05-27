@@ -464,8 +464,10 @@ def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
 
                 if cfg.WB_VERBOSE and int(t/dt) % cfg.IK_PRINT_N == 0:
                     printIntermediate(v,dv,invdyn,sol)
-                checkDiverge(res,v,dv)
-                
+                try:
+                    checkDiverge(res,v,dv)
+                except ValueError:
+                    return stopHere()
                 
             # end while t \in phase_t (loop for the current contact phase) 
             if swingPhase and cfg.EFF_CHECK_COLLISION :
