@@ -12,7 +12,7 @@ if cfg.WRITE_STATUS:
        
 if cfg.DISPLAY_CS:
     raw_input("Press Enter to display the contact sequence ...")
-    display_tools.displayContactSequence(viewer,cs,step)    
+    display_tools.displayContactSequence(viewer,cs)    
 if cfg.SAVE_CS:
     filename = cfg.CONTACT_SEQUENCE_PATH + "/"+cfg.DEMO_NAME+".cs"
     print "Write contact sequence binary file : ",filename
