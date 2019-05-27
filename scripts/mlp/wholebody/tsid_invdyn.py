@@ -352,7 +352,12 @@ def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
                 ref_traj = generateEndEffectorTraj(time_interval,placement_init,placement_end,0)
                 if cfg.WB_VERBOSE :
                     print "t interval : ",time_interval
-                    print "positions : ",placements                 
+                    print "placement Init : ",placement_init 
+                    print "placement End  : ",placement_end 
+                    # display all the effector trajectories for this phase
+                if viewer and cfg.DISPLAY_ALL_FEET_TRAJ:
+                    display_tools.displaySE3Traj(ref_traj,viewer.client.gui,viewer.sceneName,eeName+"_traj_"+str(pid),cfg.Robot.dict_limb_color_traj[eeName] ,time_interval ,cfg.Robot.dict_offset[eeName])                               
+                    viewer.client.gui.setVisibility(eeName+"_traj_"+str(pid),'ALWAYS_ON_TOP')                           
                 dic_effectors_trajs.update({eeName:ref_traj})
 
         # start removing the contact that will be broken in the next phase :
@@ -488,6 +493,9 @@ def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
                                     placement_end = JointPlacementForEffector(phase_next,eeName)  
                                     ref_traj = generateEndEffectorTraj(time_interval,placement_init,placement_end,iter_for_phase+1,res.q_t[:,phase_interval[0]:k_t],phase_prev,phase,phase_next,fullBody,eeName,viewer)
                                     dic_effectors_trajs.update({eeName:ref_traj}) 
+                                    if viewer and cfg.DISPLAY_ALL_FEET_TRAJ:
+                                        display_tools.displaySE3Traj(ref_traj,viewer.client.gui,viewer.sceneName,eeName+"_traj_"+str(pid),cfg.Robot.dict_limb_color_traj[eeName] ,time_interval ,cfg.Robot.dict_offset[eeName])                               
+                                        viewer.client.gui.setVisibility(eeName+"_traj_"+str(pid),'ALWAYS_ON_TOP')                                                          
                         except ValueError,e :
                             print "ERROR in generateEndEffectorTraj :"
                             print e.message
@@ -501,7 +509,7 @@ def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
                     print "Phase "+str(pid)+" valid."
             if phaseValid:
                 # display all the effector trajectories for this phase
-                if viewer and cfg.DISPLAY_FEET_TRAJ :
+                if viewer and cfg.DISPLAY_FEET_TRAJ and not cfg.DISPLAY_ALL_FEET_TRAJ:
                     for eeName,ref_traj in dic_effectors_trajs.iteritems():
                         if ref_traj :
                             display_tools.displaySE3Traj(ref_traj,viewer.client.gui,viewer.sceneName,eeName+"_traj_"+str(pid),cfg.Robot.dict_limb_color_traj[eeName] ,time_interval ,cfg.Robot.dict_offset[eeName])                               
