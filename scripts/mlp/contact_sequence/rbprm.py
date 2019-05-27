@@ -6,8 +6,33 @@ import mlp.config as cfg
 import multicontact_api
 from multicontact_api import WrenchCone,SOC6,ContactPatch, ContactPhaseHumanoid, ContactSequenceHumanoid
 global i_sphere 
-from mlp.utils.util import quatFromConfig
+from mlp.utils.util import quatFromConfig,copyPhaseContacts,copyPhaseContactPlacements,contactPatchForEffector
 import importlib
+
+def setContactActivityFromRBRMState(phase,fb,stateId):
+    for limbId in fb.limbs_names:
+        eeName = fb.dict_limb_joint[limbId]
+        patch = contactPatchForEffector(phase,eeName)
+        patch.active = fb.isLimbInContact(limbId,stateId)
+        
+def setContactPlacementFromRBPRMState(phase,fb,stateId,limbs = None):
+    if limbs == None:
+        limbs = fb.limbs_names
+    for limbId in limbs:
+        eeName = fb.dict_limb_joint[limbId]
+        if fb.isLimbInContact(limbId,stateId):
+            [p,n] = fb.clientRbprm.rbprm.computeCenterOfContactAtStateForLimb(stateId,False,limbId)
+            placement = SE3.Identity()
+            placement.translation = np.matrix(p).T
+            if fb.cType == "_3_DOF":
+                normal = np.matrix(n).T
+                quat = Quaternion.FromTwoVectors(np.matrix(fb.dict_normal[eeName]).T,normal)
+            else :
+                q_r = fb.getJointPosition(eeName)
+                quat = quatFromConfig(q_r)
+            placement.rotation = quat.matrix()            
+            patch = contactPatchForEffector(phase,eeName) 
+            patch.placement = placement
 
 def runRBPRMScript():
     #the following script must produce a sequence of configurations in contact (configs) 
@@ -58,94 +83,18 @@ def contactSequenceFromRBPRMConfigs(fb,configs,beginId,endId):
             if init_guess_for_phase:
                 print "bezier curve provided for config id : "+str(config_id)
         """
-        
-        # compute MRF and MLF : the position of the contacts
-        q_rl = fb.getJointPosition(fb.rfoot)
-        q_ll = fb.getJointPosition(fb.lfoot)
-        q_rh = fb.getJointPosition(fb.rhand)
-        q_lh = fb.getJointPosition(fb.lhand)
-        
-        
-        # feets
-        MRF = SE3.Identity()
-        MLF = SE3.Identity()
-        MRF.translation = np.matrix(q_rl[0:3]).T
-        MLF.translation = np.matrix(q_ll[0:3]).T
-        if not cfg.FORCE_STRAIGHT_LINE : 
-            rot_rl = quatFromConfig(q_rl)
-            rot_ll = quatFromConfig(q_ll)
-            MRF.rotation = rot_rl.matrix()
-            MLF.rotation = rot_ll.matrix()
-        
-        # apply the transform ankle -> center of contact
-        MRF *= fb.MRsole_offset
-        MLF *= fb.MLsole_offset
-        
-        # hands
-        MRH = SE3()
-        MLH = SE3()
-        MRH.translation = np.matrix(q_rh[0:3]).T
-        MLH.translation = np.matrix(q_lh[0:3]).T
-        rot_rh = quatFromConfig(q_rh)
-        rot_lh = quatFromConfig(q_lh)
-        MRH.rotation = rot_rh.matrix()
-        MLH.rotation = rot_lh.matrix()   
-        
-        MRH *= fb.MRhand_offset
-        MLH *= fb.MLhand_offset    
-        
-        phase_d.RF_patch.placement = MRF
-        phase_d.LF_patch.placement = MLF
-        phase_d.RH_patch.placement = MRH
-        phase_d.LH_patch.placement = MLH
-        
-        
-        # initial state : Set all new contacts patch (either with placement computed below or unused)
+        setContactActivityFromRBRMState(phase_d,fb,stateId)
         if stateId==beginId:
-            # FIXME : for loop ? how ?
-            if fb.isLimbInContact(fb.rLegId,stateId):
-                phase_d.RF_patch.active = True
-            else:
-                phase_d.RF_patch.active = False
-            if fb.isLimbInContact(fb.lLegId,stateId):
-                phase_d.LF_patch.active = True
-            else:
-                phase_d.LF_patch.active = False
-            if fb.isLimbInContact(fb.rArmId,stateId):
-                phase_d.RH_patch.active = True
-            else:
-                phase_d.RH_patch.active = False
-            if fb.isLimbInContact(fb.lArmId,stateId):
-                phase_d.LH_patch.active = True
-            else:
-                phase_d.LH_patch.active = False
-        else:   
-            # we need to copy the unchanged patch from the last simple support phase (and not create a new one with the same placement)
-            phase_d.RF_patch = phase_s.RF_patch
-            phase_d.RF_patch.active = fb.isLimbInContact(fb.rLegId,stateId)
-            phase_d.LF_patch = phase_s.LF_patch
-            phase_d.LF_patch.active = fb.isLimbInContact(fb.lLegId,stateId)
-            phase_d.RH_patch = phase_s.RH_patch
-            phase_d.RH_patch.active = fb.isLimbInContact(fb.rArmId,stateId)
-            phase_d.LH_patch = phase_s.LH_patch
-            phase_d.LH_patch.active = fb.isLimbInContact(fb.lArmId,stateId)
-            
+            setContactPlacementFromRBPRMState(phase_d,fb,stateId)            
+        else :
+            copyPhaseContactPlacements(phase_s,phase_d)            
             # now we change the contacts that have moved : 
             variations = fb.getContactsVariations(stateId-1,stateId)
             if len(variations) != 1:
                 print "Several contact changes between states "+str(stateId-1)+" and "+str(stateId)+" : "+str(variations)
             assert len(variations)==1, "Several changes of contacts in adjacent states, not implemented yet !"
-            for var in variations:     
-                # FIXME : for loop in variation ? how ?
-                if var == fb.lLegId:
-                    phase_d.LF_patch.placement = MLF
-                if var == fb.rLegId:
-                    phase_d.RF_patch.placement = MRF
-                if var == fb.lArmId:
-                    phase_d.LH_patch.placement = MLH
-                if var == fb.rArmId:
-                    phase_d.RH_patch.placement = MRH
-                    
+            setContactPlacementFromRBPRMState(phase_d,fb,stateId,variations)            
+            
         # retrieve the COM position for init and final state (equal for double support phases)
         init_state = np.matrix(np.zeros(9)).T
         init_state[0:3] = np.matrix(fb.getCenterOfMass()).transpose()
@@ -161,26 +110,17 @@ def contactSequenceFromRBPRMConfigs(fb,configs,beginId,endId):
             # %%%%%% simple support : %%%%%%%% 
             phase_s = cs.contact_phases[cs_id + 1]
             # copy previous placement :
-            phase_s.RF_patch = phase_d.RF_patch
-            phase_s.LF_patch = phase_d.LF_patch
-            phase_s.RH_patch = phase_d.RH_patch
-            phase_s.LH_patch = phase_d.LH_patch 
+            copyPhaseContacts(phase_d,phase_s)
             # find the contact to break : 
             variations = fb.getContactsVariations(stateId,stateId+1)
             if len(variations) != 1:
                 print "Several contact changes between states "+str(stateId)+" and "+str(stateId+1)+" : "+str(variations)
             assert len(variations)==1, "Several changes of contacts in adjacent states, not implemented yet !"        
             for var in variations:
-                if var == fb.lLegId:
-                    phase_s.LF_patch.active = False
-                if var == fb.rLegId:
-                    phase_s.RF_patch.active = False
-                if var == fb.lArmId:
-                    phase_s.LH_patch.active = False
-                if var == fb.rArmId:
-                    phase_s.RH_patch.active = False
-            # retrieve the COM position for init and final state 
-             
+                patch = contactPatchForEffector(phase_s,fb.dict_limb_joint[var])
+                patch.active = False
+                
+            # retrieve the COM position for init and final state     
             phase_s.reference_configurations.append(np.matrix((configs[config_id])).T)
             init_state = phase_d.init_state.copy()
             final_state = phase_d.final_state.copy()

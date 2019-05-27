@@ -98,7 +98,19 @@ def SE3FromConfig(q):
     placement.rotation = r.matrix()
     return placement
 
-# cfg.Robot.MRsole_offset.actInv(p0.RF_patch.placement)
+def contactPatchForEffector(phase,eeName):
+    if eeName == cfg.Robot.rfoot :
+        patch = phase.RF_patch
+    elif eeName == cfg.Robot.lfoot :
+        patch = phase.LF_patch
+    elif eeName == cfg.Robot.rhand :
+        patch = phase.RH_patch
+    elif eeName == cfg.Robot.lhand :
+        patch = phase.LH_patch
+    else :
+        raise Exception("Unknown effector name")
+    return patch    
+
 # get the joint position for the given phase with the given effector name
 # Note that if the effector is not in contact the phase placement may be uninitialized (==Identity)
 def JointPatchForEffector(phase,eeName):
@@ -233,7 +245,6 @@ def genSplinesForPhase(phase,init_control = None, final_control = None):
         appendOrReplace(phase.state_trajectory,i ,state)
         appendOrReplace(phase.control_trajectory,i, control)
         appendOrReplace(phase.time_trajectory,i , t)
-        
     return phase
 
 
@@ -242,6 +253,14 @@ def copyPhaseContacts(phase_in,phase_out):
     phase_out.LF_patch = phase_in.LF_patch
     phase_out.RH_patch = phase_in.RH_patch
     phase_out.LH_patch = phase_in.LH_patch
+
+def copyPhaseContactPlacements(phase_in,phase_out):
+    phase_out.RF_patch.placement = phase_in.RF_patch.placement
+    phase_out.LF_patch.placement = phase_in.LF_patch.placement
+    phase_out.RH_patch.placement = phase_in.RH_patch.placement
+    phase_out.LH_patch.placement = phase_in.LH_patch.placement
+
+
 
 
 
