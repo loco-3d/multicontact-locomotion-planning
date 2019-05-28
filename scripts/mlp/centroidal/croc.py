@@ -3,7 +3,7 @@ import mlp.config as cfg
 import multicontact_api 
 from multicontact_api import WrenchCone,SOC6,ContactPatch, ContactPhaseHumanoid, ContactSequenceHumanoid
 from hpp_spline import bezier
-from mlp.utils.util import createStateFromPhase, phasesHaveSameConfig
+from mlp.utils.util import createStateFromPhase, phasesHaveSameConfig,createFullbodyStatesFromCS
 
 def writeTrajInPhase(phase,c,current_t,start,end,append = False):
     #print "start = ",start
@@ -50,17 +50,6 @@ def writeTrajInPhase(phase,c,current_t,start,end,append = False):
         if t > c.max():
             t = c.max() # may happend due to numerical imprecisions
 
-
-            
-def createFullbodyStatesFromCS(cs,fb):
-    phase_prev = cs.contact_phases[0]
-    beginId = createStateFromPhase(fb,phase_prev)
-    lastId = beginId
-    for phase in cs.contact_phases[1:] : 
-        if not phasesHaveSameConfig(phase_prev,phase):
-            lastId = createStateFromPhase(fb,phase)
-            phase_prev = phase
-    return beginId, lastId
 
 # Not generic .... assume that there is always 2 contact phases for each state in fullBody        
 def generateCentroidalTrajectory(cs,cs_initGuess = None, fb = None, viewer = None):

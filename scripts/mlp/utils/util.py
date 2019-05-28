@@ -326,3 +326,65 @@ def computeEffectorRotationBetweenStates(contact_phase,next_phase):
     R = P.dot(Q.T)
     tR = R.trace()
     return abs(math.acos((tR-1.)/2.))
+
+
+            
+def createFullbodyStatesFromCS(cs,fb):
+    phase_prev = cs.contact_phases[0]
+    beginId = createStateFromPhase(fb,phase_prev)
+    lastId = beginId
+    print "CreateFullbodyStateFromCS ##################"
+    print "beginId = ",beginId
+    for pid,phase in enumerate(cs.contact_phases[1:]) : 
+        if not phasesHaveSameConfig(phase_prev,phase):
+            lastId = createStateFromPhase(fb,phase)
+            print "add phase "+str(pid)+" at state index : "+str(lastId)            
+            phase_prev = phase
+    return beginId, lastId
+
+def connectPhaseTrajToFinalState(phase,duration):
+    if duration <= 0.:
+        return
+    init_state = phase.state_trajectory[-1]
+    final_state = phase.final_state
+    init_control = phase.control_trajectory[-1]
+    t_init = phase.time_trajectory[-1]
+    t_end = t_init + duration
+    com_traj = genCOMTrajFromPhaseStates(t_init,t_end,init_state,final_state,init_control)
+    am_traj = genAMTrajFromPhaseStates(t_init,t_end,init_state,final_state,init_control)
+    i = len(phase.time_trajectory)
+    
+    dt = cfg.SOLVER_DT
+    t = t_init + dt
+    while t < t_end + dt/2. :
+        if t > t_end: # may happen due to numerical imprecision
+            t = t_end
+        c,dc,ddc = com_traj(t)
+        L,dL = am_traj(t)
+        state = np.matrix(np.zeros(9)).T
+        control= np.matrix(np.zeros(6)).T
+        state[0:3] = c
+        state[3:6] = dc
+        control[0:3] = ddc
+        state[6:9] = L
+        control[3:6] = dL
+        phase.state_trajectory.append(state)
+        phase.control_trajectory.append(control)
+        phase.time_trajectory.append(t)
+        t += dt    
+
+# fill the given phase with a state, control and time trajectory such that the COM do not moe during all the phase (it stay at it's init_state position)        
+def fillPhaseTrajWithZeros(phase,current_t,duration):
+    dt = cfg.SOLVER_DT
+    state = np.matrix(np.zeros(9)).T
+    state[0:3] = phase.init_state[0:3]
+    control= np.matrix(np.zeros(6)).T
+    t = current_t
+    t_end = current_t + duration
+    while t < t_end + dt/2. :
+        if t > t_end: # may happen due to numerical imprecision
+            t = t_end
+        phase.state_trajectory.append(state)
+        phase.control_trajectory.append(control)
+        phase.time_trajectory.append(t)
+        t += dt        
