@@ -74,15 +74,7 @@ def contactSequenceFromRBPRMConfigs(fb,configs,beginId,endId):
         config_id=stateId-beginId
         phase_d = cs.contact_phases[cs_id]
         fb.setCurrentConfig(configs[config_id])
-        """
-        init_guess_for_phase = init_guess_provided
-        if init_guess_for_phase:
-            c_init_guess = curves_initGuess[config_id]
-            t_init_guess = timings_initGuess[config_id]
-            init_guess_for_phase = isinstance(c_init_guess,bezier)
-            if init_guess_for_phase:
-                print "bezier curve provided for config id : "+str(config_id)
-        """
+
         setContactActivityFromRBRMState(phase_d,fb,stateId)
         if stateId==beginId:
             setContactPlacementFromRBPRMState(phase_d,fb,stateId)            
