@@ -4,10 +4,11 @@ from pinocchio.utils import *
 import inspect
 import mlp.config as cfg
 import multicontact_api
-from multicontact_api import WrenchCone,SOC6,ContactPatch, ContactPhaseHumanoid, ContactSequenceHumanoid
-global i_sphere 
+from multicontact_api import ContactPhaseHumanoid, ContactSequenceHumanoid
 from mlp.utils.util import quatFromConfig,copyPhaseContacts,copyPhaseContactPlacements,contactPatchForEffector
 import importlib
+
+VERBOSE = True
 
 def setContactActivityFromRBRMState(phase,fb,stateId):
     for limbId in fb.limbs_names:
@@ -49,81 +50,111 @@ def runRBPRMScript():
         endId = cp.endId
     else :    
         endId = len(cp.configs) - 1    
-    return cp.fullBody,cp.v,cp.configs,beginId,endId
+    return cp.fullBody,cp.v,beginId,endId
 
-def contactSequenceFromRBPRMConfigs(fb,configs,beginId,endId):
+def contactSequenceFromRBPRMConfigs(fb,beginId,endId):
     print "generate contact sequence from planning : "
-    global i_sphere
-    i_sphere = 0
-    #print "MR offset",MRsole_offset
-    #print "ML offset",MLsole_offset  
-    n_double_support = len(configs)
-    # config only contains the double support stance
-    n_steps = n_double_support*2 -1 
-    # Notice : what we call double support / simple support are in fact the state with all the contacts and the state without the next moving contact
-    cs = ContactSequenceHumanoid(n_steps)
-    unusedPatch = cs.contact_phases[0].LF_patch.copy()
-    unusedPatch.placement = SE3.Identity()
-    unusedPatch.active= False
-
+    n_states = endId-beginId + 1 
+    # There could be either contact break, creation or repositionning between each adjacent states. 
+    # But there should be only contacts break or creation between each adjacent contactPhases
+    cs = ContactSequenceHumanoid(0)
+    prev_phase = None
+    phaseId = 0
     
     # for each contact state we must create 2 phase (one with all the contact and one with the next replaced contact(s) broken)
     for stateId in range(beginId,endId+1):
-        # %%%%%%%%%  all the contacts : %%%%%%%%%%%%%
-        cs_id = (stateId-beginId)*2
-        config_id=stateId-beginId
-        phase_d = cs.contact_phases[cs_id]
-        fb.setCurrentConfig(configs[config_id])
-
-        setContactActivityFromRBRMState(phase_d,fb,stateId)
-        if stateId==beginId:
-            setContactPlacementFromRBPRMState(phase_d,fb,stateId)            
-        else :
-            copyPhaseContactPlacements(phase_s,phase_d)            
-            # now we change the contacts that have moved : 
-            variations = fb.getContactsVariations(stateId-1,stateId)
-            if len(variations) != 1:
-                print "Several contact changes between states "+str(stateId-1)+" and "+str(stateId)+" : "+str(variations)
-            assert len(variations)==1, "Several changes of contacts in adjacent states, not implemented yet !"
-            setContactPlacementFromRBPRMState(phase_d,fb,stateId,variations)            
-            
-        # retrieve the COM position for init and final state (equal for double support phases)
-        init_state = np.matrix(np.zeros(9)).T
-        init_state[0:3] = np.matrix(fb.getCenterOfMass()).transpose()
-        init_state[3:6] = np.matrix(configs[config_id][-6:-3]).transpose()
-        final_state = init_state.copy()
-        #phase_d.time_trajectory.append((fb.getDurationForState(stateId))*cfg.DURATION_n_CONTACTS/cfg.SPEED)
-        phase_d.init_state=init_state
-        phase_d.final_state=final_state
-        phase_d.reference_configurations.append(np.matrix((configs[config_id])).T)        
-        #print "done for double support"
+        if VERBOSE :
+            print "current state id = ",stateId
+        # %%%%%%%%%  add phase with all the contacts in the rbprm State: %%%%%%%%%%%%%
+        phase = ContactPhaseHumanoid()
+        current_config = fb.getConfigAtState(stateId)        
+        fb.setCurrentConfig(current_config)
         
-        if stateId < endId :
-            # %%%%%% simple support : %%%%%%%% 
-            phase_s = cs.contact_phases[cs_id + 1]
-            # copy previous placement :
-            copyPhaseContacts(phase_d,phase_s)
-            # find the contact to break : 
-            variations = fb.getContactsVariations(stateId,stateId+1)
-            if len(variations) != 1:
-                print "Several contact changes between states "+str(stateId)+" and "+str(stateId+1)+" : "+str(variations)
-            assert len(variations)==1, "Several changes of contacts in adjacent states, not implemented yet !"        
-            for var in variations:
-                patch = contactPatchForEffector(phase_s,fb.dict_limb_joint[var])
-                patch.active = False
+        # Determine the contact changes which are going to occur : 
+        if stateId < endId:
+            next_variations = fb.getContactsVariations(stateId,stateId+1)
+        else :
+            next_variations = []
+        if VERBOSE :
+            print "variations : ",next_variations
+        assert len(next_variations) <= 1 , "Several changes of contacts in adjacent states, not implemented yet !"
+        if len(next_variations) == 0 :
+            if VERBOSE:
+                print "no variations !"
+            movingLimb = None
+            contact_break = False
+            contact_create=False
+        else:
+            movingLimb = next_variations[0]
+            contact_break = fb.isLimbInContact(movingLimb,stateId)
+            contact_create = fb.isLimbInContact(movingLimb,stateId+1)
+        if contact_break and contact_create:
+            contact_reposition = True
+        else:
+            contact_reposition = False
+        if VERBOSE : 
+            print "movingLimb = ",movingLimb
+            print "break = "+str(contact_break)+ " ; create = "+str(contact_create)+ " ; reposition = "+str(contact_reposition)
+        
+        if movingLimb or stateId == endId: # add a ContactPhase corresponding to the current state
+            # Build the phase contact patches (placement and activity)
+            setContactActivityFromRBRMState(phase,fb,stateId)
+            if not prev_phase:
+                setContactPlacementFromRBPRMState(phase,fb,stateId)            
+            else :
+                copyPhaseContactPlacements(prev_phase,phase)            
+                # now we change the contacts that have moved : 
+                previous_variations = fb.getContactsVariations(stateId-1,stateId)
+                setContactPlacementFromRBPRMState(phase,fb,stateId,previous_variations)            
                 
-            # retrieve the COM position for init and final state     
-            phase_s.reference_configurations.append(np.matrix((configs[config_id])).T)
-            init_state = phase_d.init_state.copy()
-            final_state = phase_d.final_state.copy()
-            fb.setCurrentConfig(configs[config_id+1])
-            final_state[0:3] = np.matrix(fb.getCenterOfMass()).transpose()
-            final_state[3:6] = np.matrix(configs[config_id+1][-6:-3]).transpose()              
-            #phase_s.time_trajectory.append((fb.getDurationForState(stateId))*(1-cfg.DURATION_n_CONTACTS)/cfg.SPEED) 
-            phase_s.init_state=init_state.copy()
-            phase_s.final_state=final_state.copy()
-            #print "done for single support"      
-
+            # assign current wholebody config as reference in phase : 
+            phase.reference_configurations.append(np.matrix((current_config)).T)                    
+            # retrieve the COM position for init and final state
+            init_state = np.matrix(np.zeros(9)).T
+            init_state[0:3] = np.matrix(fb.getCenterOfMass()).transpose()
+            init_state[3:6] = np.matrix(current_config[-6:-3]).transpose()
+            phase.init_state=init_state
+            final_state = init_state.copy()
+            if not contact_reposition and stateId < endId : # in the case of contact reposition, the CoM motion will take place in the next intermediate phase. For the current phase the init and final state are equals
+                current_config = fb.getConfigAtState(stateId+1) 
+                fb.setCurrentConfig(current_config)
+                final_state[0:3] = np.matrix(fb.getCenterOfMass()).transpose()
+                final_state[3:6] = np.matrix(current_config[-6:-3]).transpose()                 
+            phase.final_state=final_state
+            
+            # add phase to contactSequence :
+            cs.contact_phases.append(phase)
+            phaseId += 1
+            prev_phase = phase 
+            if VERBOSE:
+                print "add a phase at id : ",phaseId-1
+            if contact_reposition :
+                # %%%%%% create intermediate state, by removing the contact repositionned betwen stateId and stateId+1 %%%%%%%% 
+                phase = ContactPhaseHumanoid()
+                # copy previous placement :
+                copyPhaseContacts(prev_phase,phase)
+                # find the contact to break : 
+                patch = contactPatchForEffector(phase,fb.dict_limb_joint[movingLimb])
+                patch.active = False
+                # assign current wholebody config as reference in phase :
+                phase.reference_configurations.append(np.matrix((current_config)).T)                 
+                # retrieve the COM position for init and final state     
+                phase.init_state = prev_phase.final_state.copy()
+                final_state = phase.init_state.copy()
+                current_config = fb.getConfigAtState(stateId+1) 
+                fb.setCurrentConfig(current_config)
+                final_state[0:3] = np.matrix(fb.getCenterOfMass()).transpose()
+                final_state[3:6] = np.matrix(current_config[-6:-3]).transpose()              
+                phase.final_state=final_state.copy()
+                # add phase to contactSequence :
+                cs.contact_phases.append(phase)
+                phaseId += 1
+                prev_phase = phase 
+                if VERBOSE :
+                    print "add an intermediate contact phase at id : ",phaseId-1
+            # end adding intermediate contact phase
+        # end if movingLimb or stateId == endId
+    # end for each stateId
     # assign contact models : 
     # only used by muscod ?? But we need to fill it otherwise the serialization fail
     for k,phase in enumerate(cs.contact_phases):
@@ -151,6 +182,6 @@ def contactSequenceFromRBPRMConfigs(fb,configs,beginId,endId):
     return cs
 
 def generateContactSequence():
-    fb,viewer,configs,beginId,endId = runRBPRMScript()
-    cs = contactSequenceFromRBPRMConfigs(fb,configs,beginId,endId)
+    fb,viewer,beginId,endId = runRBPRMScript()
+    cs = contactSequenceFromRBPRMConfigs(fb,beginId,endId)
     return cs,fb,viewer
