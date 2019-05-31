@@ -1,4 +1,4 @@
-TIMEOPT_CONFIG_FILE = "cfg_softConstraints_talos.yaml"
+TIMEOPT_CONFIG_FILE = "cfg_softConstraints_talos_rarm.yaml"
 from common_talos import *
 SCRIPT_PATH = "sandbox.dynamic"
 
