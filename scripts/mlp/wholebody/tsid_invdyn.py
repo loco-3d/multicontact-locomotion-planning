@@ -34,7 +34,14 @@ def buildRectangularContactPoints(eeName):
     contact_Point[2, :] = [lz]*4
     return contact_Point
 
-    
+def getCurrentEffectorPosition(robot,data,eeName):
+    id = robot.model().getJointId(eeName)
+    if id < len(data.oMi):
+        return robot.position(data, id)
+    else : 
+        id = robot.model().getFrameId(eeName)   
+        return robot.framePosition(data, id)
+            
     
 def createContactForEffector(invdyn,robot,phase,eeName):             
     z_up = np.matrix([0., 0., 1.]).T  
@@ -247,7 +254,7 @@ def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
                 res.zmp_reference[:,k_t] = shiftZMPtoFloorAltitude(cs,res.t_t[k_t],F0)
         if cfg.IK_store_effector: 
             for eeName in usedEffectors: # real position (not reference)
-                res.effector_trajectories[eeName][:,k_t] = SE3toVec(getCurrentEffectorPosition(eeName))        
+                res.effector_trajectories[eeName][:,k_t] = SE3toVec(getCurrentEffectorPosition(robot,invdyn.data(),eeName))        
         return res
         
     def printIntermediate(v,dv,invdyn,sol):
@@ -279,14 +286,7 @@ def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
             return res.resize(phase_interval[0]),pinRobot
         elif cfg.WB_RETURN_INVALID : 
             return res.resize(k_t),pinRobot         
-    def getCurrentEffectorPosition(eeName):
-        id = robot.model().getJointId(eeName)
-        if id < len(invdyn.data().oMi):
-            return robot.position(invdyn.data(), id)
-        else : 
-            id = robot.model().getFrameId(eeName)   
-            return robot.framePosition(invdyn.data(), id)
-            
+    
     # time check
     dt = cfg.IK_dt  
     if cfg.WB_VERBOSE:
@@ -347,7 +347,7 @@ def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
                     print "add se3 task for "+eeName
                 invdyn.addMotionTask(task, cfg.w_eff, cfg.level_eff, 0.0)
                 #create reference trajectory for this task : 
-                placement_init = getCurrentEffectorPosition(eeName)
+                placement_init = getCurrentEffectorPosition(robot,invdyn.data(),eeName)
                 placement_end = JointPlacementForEffector(phase_next,eeName)                
                 ref_traj = generateEndEffectorTraj(time_interval,placement_init,placement_end,0)
                 if cfg.WB_VERBOSE :
@@ -449,7 +449,7 @@ def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
                             res.effector_references[eeName][:,k_t] = SE3toVec(traj(t)[0])
                     elif cfg.IK_store_effector:
                         if k_t == 0: 
-                            res.effector_references[eeName][:,k_t] = SE3toVec(getCurrentEffectorPosition(eeName))
+                            res.effector_references[eeName][:,k_t] = SE3toVec(getCurrentEffectorPosition(robot,invdyn.data(),eeName))
                         else:
                             res.effector_references[eeName][:,k_t] = res.effector_references[eeName][:,k_t-1]
             
