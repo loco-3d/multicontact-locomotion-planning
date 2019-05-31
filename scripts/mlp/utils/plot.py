@@ -162,9 +162,19 @@ def plotZMP(cs,ZMP_t,ZMP_ref,pcom_t):
             ax.add_artist(circle_r)     
         if p.LF_patch.active:   
             pos = p.LF_patch.placement.translation
-            plt.plot(pos[0], pos[1], marker="x", markersize=20, color='g')
-            circle_l = plt.Circle((pos[0], pos[1]), 0.01, color='g', fill=False)      
-            ax.add_artist(circle_l)
+            plt.plot(pos[0], pos[1], marker="x", markersize=20, color='r')
+            circle = plt.Circle((pos[0], pos[1]), 0.01, color='r', fill=False)      
+            ax.add_artist(circle)
+        if p.RH_patch.active:   
+            pos = p.RH_patch.placement.translation
+            plt.plot(pos[0], pos[1], marker="x", markersize=20, color='b')
+            circle = plt.Circle((pos[0], pos[1]), 0.01, color='b', fill=False)      
+            ax.add_artist(circle)   
+        if p.LH_patch.active:   
+            pos = p.LH_patch.placement.translation
+            plt.plot(pos[0], pos[1], marker="x", markersize=20, color='y')
+            circle = plt.Circle((pos[0], pos[1]), 0.01, color='y', fill=False)      
+            ax.add_artist(circle)                    
       
 def plotCOMTraj(timeline,p_intervals,ref_c,ref_dc,ref_ddc,c_t,dc_t,ddc_t):
     labels=["x (m)" , "y (m)" ,"z (m)", "dx (m/s)" , "dy (m/s)" ,"dz (m/s)","ddx (m/s^2)" , "ddy (m/s^2)" ,"ddz (m/s^2)"]
