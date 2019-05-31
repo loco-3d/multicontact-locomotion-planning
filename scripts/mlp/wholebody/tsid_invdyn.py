@@ -268,8 +268,13 @@ def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
                 print "\tnormal force %s: %.1f" % (contact.name.ljust(20, '.'), contact.getNormalForce(f))
     
         print "\ttracking err %s: %.3f" % (comTask.name.ljust(20, '.'), norm(comTask.position_error, 2))
-        for eeName,task in dic_effectors_tasks.iteritems():
-            print "\ttracking err %s: %.3f" % (task.name.ljust(20, '.'), norm(task.position_error, 2))
+        for eeName,traj in dic_effectors_trajs.iteritems():
+            if traj :
+                task = dic_effectors_tasks[eeName]
+                error = task.position_error
+                if cfg.Robot.cType == "_3_DOF":
+                    error = error[0:3]
+                print "\ttracking err %s: %.3f" % (task.name.ljust(20, '.'), norm(error, 2))
         print "\t||v||: %.3f\t ||dv||: %.3f" % (norm(v, 2), norm(dv))      
 
 
