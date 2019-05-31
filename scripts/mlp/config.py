@@ -130,10 +130,14 @@ if centroidal_method == "timeopt" and centroidal_initGuess_method != "geometric"
 if contact_generation_method == "load":
     SAVE_CS = False
 if centroidal_method == "load":
+    contact_generation_method = "load"
     centroidal_initGuess_method = "none"
+    SAVE_CS = False    
     SAVE_CS_COM = False
 if wholebody_method == "load":
-    contact_generation_method = "none"
+    contact_generation_method = "load"
     centroidal_initGuess_method = "none"
     centroidal_method= "load"
+    SAVE_CS = False    
+    SAVE_CS_COM = False    
     EXPORT_NPZ = False
