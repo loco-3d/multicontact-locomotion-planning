@@ -44,13 +44,11 @@ def generateCentroidalTrajectory(cs,cs_initGuess = None,fullBody=None, viewer =N
     print "beginid = ",beginId
     print "endId   = ",endId
     cs_result = ContactSequenceHumanoid(cs)
-    if (2*(endId - beginId)+1) != cs.size():
-        raise NotImplemented("Current implementation of QuasiStatic require to have 2 contact phases per States in fullBody")    
     def getPhaseDuration(sid,pid):
-        if sid == beginId:
-            duration = cfg.DURATION_INIT
-        elif sid == endId:
+        if sid == endId:
             duration = cfg.DURATION_FINAL
+        if pid == 0:
+            duration = cfg.DURATION_INIT
         elif cs.contact_phases[pid].numActivePatches() == 1 :
             duration = cfg.DURATION_SS     
         elif cs.contact_phases[pid].numActivePatches() == 2 :
