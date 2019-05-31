@@ -49,13 +49,16 @@ def createContactForEffector(invdyn,robot,phase,eeName):
     contactNormal = cfg.Robot.dict_offset[eeName].rotation * contactNormal # apply offset transform
     if cfg.Robot.cType == "_3_DOF":
         contact = tsid.ContactPoint("contact_"+eeName, robot, eeName, contactNormal, cfg.MU, cfg.fMin, cfg.fMax)
+        mask = np.matrix(np.ones(3)).transpose()
     else : 
-        contact_Point = buildRectangularContactPoints(eeName)
-        contact = tsid.Contact6d("contact_"+eeName, robot, eeName, contact_Point, contactNormal, cfg.MU, cfg.fMin, cfg.fMax)
-    contact.setKp(cfg.kp_contact * np.matrix(np.ones(6)).transpose())
-    contact.setKd(2.0 * np.sqrt(cfg.kp_contact) * np.matrix(np.ones(6)).transpose())        
-    ref = JointPlacementForEffector(phase,eeName)
+        contact_Points = buildRectangularContactPoints(eeName)
+        contact = tsid.Contact6d("contact_"+eeName, robot, eeName, contact_Points, contactNormal, cfg.MU, cfg.fMin, cfg.fMax)
+        mask = np.matrix(np.ones(6)).transpose()        
+    contact.setKp(cfg.kp_contact * mask)
+    contact.setKd(2.0 * np.sqrt(cfg.kp_contact) * mask)        
+    ref = getCurrentEffectorPosition(robot,invdyn.data(),eeName)
     contact.setReference(ref)
+    contact.useLocalFrame(False)
     invdyn.addRigidContact(contact,cfg.w_forceRef)    
     if cfg.WB_VERBOSE : 
         print "create contact for effector ",eeName
@@ -63,7 +66,7 @@ def createContactForEffector(invdyn,robot,phase,eeName):
             print "create contact point"
         else:
             print "create rectangular contact"
-            print "contact points : \n",contact_Point        
+            print "contact points : \n",contact_Points        
         print "contact placement : ",ref       
         print "contact_normal : ",contactNormal
     return contact
@@ -77,7 +80,7 @@ def createEffectorTasksDic(cs,robot):
             effectorTask = tsid.TaskSE3Equality("task-"+eeName, robot, eeName)
             mask = np.matrix(np.ones(6)).transpose()
             if cfg.Robot.cType == "_3_DOF":
-                mask[3:6] = 0      # ignore rotation for contact points  
+                mask[3:6] = np.matrix(np.zeros(3)).transpose()      # ignore rotation for contact points  
             effectorTask.setKp(cfg.kp_Eff * mask)
             effectorTask.setKd(2.0 * np.sqrt(cfg.kp_Eff) * mask)                 
             res.update({eeName:effectorTask})
