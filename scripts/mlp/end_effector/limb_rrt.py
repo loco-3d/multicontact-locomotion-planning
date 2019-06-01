@@ -16,7 +16,7 @@ from mlp.utils.polyBezier import PolyBezier
 import quadprog
 eigenpy.switchToNumpyArray()
 from mlp.utils import trajectories
-from mlp.end_effector.bezier_predef import generatePredefLandingTakeoff,generateSmoothBezierTraj
+from mlp.end_effector.bezier_predef import generatePredefBeziers,generateSmoothBezierTraj
 
 VERBOSE = 1
 DISPLAY_RRT_PATH = True
@@ -171,25 +171,29 @@ def generateLimbRRTOptimizedTraj(time_interval,placement_init,placement_end,numT
     else :
         if q_t is None or phase_previous is None or phase is None or phase_next is None or not fullBody or not eeName :
             raise ValueError("Cannot compute LimbRRTOptimizedTraj for try >= 1 without optionnal arguments")
-        
-    predef_curves = generatePredefLandingTakeoff(time_interval,placement_init,placement_end)
-    bezier_takeoff = predef_curves.curves[predef_curves.idFirstNonZero()]
-    bezier_landing = predef_curves.curves[predef_curves.idLastNonZero()]
+    if cfg.EFF_T_PREDEF > 0 : 
+        predef_curves = generatePredefBeziers(time_interval,placement_init,placement_end)
+    else :
+        predef_curves = generateSmoothBezierTraj(time_interval,placement_init,placement_end).curves
     id_middle = int(math.floor(len(predef_curves.curves)/2.))
-    pos_init = bezier_takeoff(bezier_takeoff.max())
-    pos_end = bezier_landing(0)
+    predef_middle = predef_curves.curves[id_middle]
+    pos_init = predef_middle(0)
+    pos_end = predef_middle(predef_middle.max())
     if VERBOSE :
         print "generateLimbRRTOptimizedTraj, try number "+str(numTry)
         print "bezier takeoff end : ",pos_init
         print "bezier landing init : ",pos_end
     t_begin = predef_curves.times[id_middle]
-    t_middle =  predef_curves.curves[id_middle].max()
+    t_middle =  predef_middle.max()
     t_end = t_begin + t_middle
     if VERBOSE : 
         print "t begin : ",t_begin
         print "t end   : ",t_end
-    q_init = q_t[:,int(t_begin/cfg.IK_dt)] # after the predef takeoff
-    q_end = q_t[:,int(t_end/cfg.IK_dt)]        
+    q_init = q_t[:,int(math.floor(t_begin/cfg.IK_dt))] # after the predef takeoff
+    id_end = int(math.ceil(t_end/cfg.IK_dt))-1
+    if id_end >= q_t.shape[1]: # FIXME : why does it happen ? usually it's == to the size when the bug occur
+        id_end = q_t.shape[1]-1
+    q_end = q_t[:,id_end]        
     global current_limbRRT_id
     # compute new limb-rrt path if needed:
     if not current_limbRRT_id or (numTry in recompute_rrt_at_tries):
@@ -213,14 +217,14 @@ def generateLimbRRTOptimizedTraj(time_interval,placement_init,placement_end,numT
         print "use weight "+str(weight)+" with num free var = "+str(numVars)
     # compute constraints for the end effector trajectories : 
     pData = bezier_com.ProblemData() 
-    pData.c0_ = bezier_takeoff(bezier_takeoff.max())
-    pData.dc0_ = bezier_takeoff.derivate(bezier_takeoff.max(),1)
-    pData.ddc0_ = bezier_takeoff.derivate(bezier_takeoff.max(),2)
-    pData.j0_ = bezier_takeoff.derivate(bezier_takeoff.max(),3)
-    pData.c1_ = bezier_landing(0)
-    pData.dc1_ = bezier_landing.derivate(0,1)
-    pData.ddc1_ = bezier_landing.derivate(0,2)
-    pData.j1_ = bezier_landing.derivate(0,3)    
+    pData.c0_ = predef_middle(0)
+    pData.dc0_ = predef_middle.derivate(0,1)
+    pData.ddc0_ = predef_middle.derivate(0,2)
+    pData.j0_ = predef_middle.derivate(0,3)
+    pData.c1_ = predef_middle(predef_middle.max())
+    pData.dc1_ = predef_middle.derivate(predef_middle.max(),1)
+    pData.ddc1_ = predef_middle.derivate(predef_middle.max(),2)
+    pData.j1_ = predef_middle.derivate(predef_middle.max(),3)    
     pData.constraints_.flag_ = bezier_com.ConstraintFlag.INIT_POS | bezier_com.ConstraintFlag.INIT_VEL | bezier_com.ConstraintFlag.INIT_ACC | bezier_com.ConstraintFlag.END_ACC | bezier_com.ConstraintFlag.END_VEL | bezier_com.ConstraintFlag.END_POS | bezier_com.ConstraintFlag.INIT_JERK | bezier_com.ConstraintFlag.END_JERK | varFlag
     Constraints = bezier_com.computeEndEffectorConstraints(pData,t_middle)
     Cost_smooth = bezier_com.computeEndEffectorVelocityCost(pData,t_middle)

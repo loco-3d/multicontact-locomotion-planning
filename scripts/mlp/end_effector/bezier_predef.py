@@ -86,9 +86,29 @@ def buildPredefinedFinalTraj(placement,t_total):
     wps[:,4] = (c1); #c1
     return bezier(wps,T)
 
-
-
-def generatePredefLandingTakeoff(time_interval,placement_init,placement_end):
+# build a bezier curve of degree 7 that connect exactly the two given bezier up to order 3
+def generatePredefMiddle(bezier_takeoff,bezier_landing,T):
+    c0 = bezier_takeoff(bezier_takeoff.max())
+    dc0 = bezier_takeoff.derivate(bezier_takeoff.max(),1)
+    ddc0 = bezier_takeoff.derivate(bezier_takeoff.max(),2)
+    j0 = bezier_takeoff.derivate(bezier_takeoff.max(),3)
+    c1 = bezier_landing(0)
+    dc1 = bezier_landing.derivate(0,1)
+    ddc1 = bezier_landing.derivate(0,2)
+    j1 = bezier_landing.derivate(0,3)
+    n = 7
+    wps = np.matrix(np.zeros(([3,int(n+1)])))
+    wps[:,0] = (c0); # c0
+    wps[:,1] =((dc0 * T / n )+  c0); #dc0
+    wps[:,2] =((n*n*c0 - n*c0 + 2.*n*dc0*T - 2.*dc0*T + ddc0*T*T)/(n*(n - 1.)));#ddc0 // * T because derivation make a T appear
+    wps[:,3] =((n*n*c0 - n*c0 + 3.*n*dc0*T - 3.*dc0*T + 3.*ddc0*T*T + j0*T*T*T/(n-2))/(n*(n - 1.))); #j0      
+    wps[:,4] = ((n*n*c1 - n*c1 - 3*n*dc1*T + 3*dc1*T + 3*ddc1*T*T - j1*T*T*T/(n-2))/(n*(n - 1))) ; # j1
+    wps[:,5] = ((n*n*c1 - n*c1 - 2*n*dc1*T + 2*dc1*T + ddc1*T*T)/(n*(n - 1))) ; #ddc1 * T ??
+    wps[:,6] = ((-dc1 * T / n) + c1); #dc1
+    wps[:,7] = (c1); #c1    
+    return bezier(wps,T)
+    
+def generatePredefBeziers(time_interval,placement_init,placement_end):
     t_total = time_interval[1]-time_interval[0] - 2*cfg.EFF_T_DELAY
     #print "Generate Bezier Traj :"
     #print "placement Init = ",placement_init
@@ -100,6 +120,7 @@ def generatePredefLandingTakeoff(time_interval,placement_init,placement_end):
     bezier_landing = buildPredefinedFinalTraj(placement_end,t_total)
     t_middle =  (t_total - (2.*cfg.EFF_T_PREDEF))
     assert t_middle >= 0.1 and "Duration of swing phase too short for effector motion. Change the values of predef motion for effector or the duration of the contact phase. "
+    bezier_middle = generatePredefMiddle(bezier_takeoff,bezier_landing,t_middle)
     curves = []
     # create polybezier with concatenation of the 3 (or 5) curves :    
     # create constant curve at the beginning and end for the delay : 
@@ -107,7 +128,7 @@ def generatePredefLandingTakeoff(time_interval,placement_init,placement_end):
         bezier_init_zero=bezier(bezier_takeoff(0),cfg.EFF_T_DELAY)
         curves.append(bezier_init_zero)
     curves.append(bezier_takeoff)
-    curves.append(bezier(np.matrix(np.zeros(3)).T,t_middle)) # placeholder only
+    curves.append(bezier_middle) 
     curves.append(bezier_landing)
     if cfg.EFF_T_DELAY > 0 :
         curves.append(bezier(bezier_landing(bezier_landing.max()),cfg.EFF_T_DELAY))    
@@ -115,7 +136,7 @@ def generatePredefLandingTakeoff(time_interval,placement_init,placement_end):
     return pBezier
     
 def generateSmoothBezierTrajWithPredef(time_interval,placement_init,placement_end):
-    predef_curves = generatePredefLandingTakeoff(time_interval,placement_init,placement_end)
+    predef_curves = generatePredefBeziers(time_interval,placement_init,placement_end)
     bezier_takeoff = predef_curves.curves[predef_curves.idFirstNonZero()]
     bezier_landing = predef_curves.curves[predef_curves.idLastNonZero()]
     id_middle = int(math.floor(len(predef_curves.curves)/2.))    
