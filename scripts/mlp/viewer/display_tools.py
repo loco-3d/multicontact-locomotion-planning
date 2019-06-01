@@ -189,8 +189,10 @@ def initScene(Robot,envName = "multicontact/ground"):
   from hpp.corbaserver import ProblemSolver  
   fullBody = Robot ()
   fullBody.client.robot.setDimensionExtraConfigSpace(6)
+  fullBody.setJointBounds ("root_joint",  [-100,100,-100,100,-100,100])
+  fullBody.client.robot.setExtraConfigSpaceBounds([-100,100,-100,100,-100,100,-100,100,-100,100,-100,100])
   try :
-    fullBody.loadAllLimbs("static",nbSamples=1)
+    fullBody.loadAllLimbs("static")
   except AttributeError:
     print "WARNING initScene : fullBody do not have loadAllLimbs, some scripts may fails."
   ps = ProblemSolver(fullBody)
