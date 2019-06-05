@@ -474,7 +474,11 @@ def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
                 # update state
                 v_mean = v + 0.5 * dt * dv
                 v += dt * dv
-                q = pin.integrate(robot.model(), q, dt * v_mean)    
+                q = pin.integrate(robot.model(), q, dt * v_mean) 
+                
+                if cfg.WB_VERBOSE == 2:
+                    print "v = ",v
+                    print "dv = ",dv
 
                 if cfg.WB_VERBOSE and int(t/dt) % cfg.IK_PRINT_N == 0:
                     printIntermediate(v,dv,invdyn,sol)
