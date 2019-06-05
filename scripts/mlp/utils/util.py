@@ -330,8 +330,13 @@ def computeEffectorRotationBetweenStates(contact_phase,next_phase):
     
     R = P.dot(Q.T)
     tR = R.trace()
-    return abs(math.acos((tR-1.)/2.))
-
+    try:
+        res = abs(math.acos((tR-1.)/2.))
+    except ValueError,e:
+        print "WARNING : when computing rotation between two contacts, got error : ",e.message
+        print "With trace value = ",tR
+        res = 0.
+    return res
 
             
 def createFullbodyStatesFromCS(cs,fb):
