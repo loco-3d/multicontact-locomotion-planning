@@ -46,6 +46,7 @@ Currently supported method for each subproblem, you need to install the packages
 
 * timeoptimization (https://git-amd.tuebingen.mpg.de/bponton/timeoptimization and it's wrapper https://github.com/ggory15/timeopt )
 * CROC (https://hal.archives-ouvertes.fr/hal-01726155), included in RBPRM
+* 2-PAC (quasi-static) (https://hal.archives-ouvertes.fr/hal-01609055) included in RBPRM
 
 ## Wholebody motion generation :
 
