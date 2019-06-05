@@ -245,7 +245,7 @@ def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
                 #res.tau_t[:6,k_t] = tau[:6]
                 phi0 = pinRobot.data.oMi[1].act(Force(tau[:6]))
                 res.wrench_t[:,k_t] = phi0.vector
-                res.zmp_t[:,k_t] = shiftZMPtoFloorAltitude(cs,res.t_t[k_t],phi0)
+                res.zmp_t[:,k_t] = shiftZMPtoFloorAltitude(cs,res.t_t[k_t],phi0,cfg.EXPORT_OPENHRP)
                 # same but from the 'reference' values : 
                 Mcom = SE3.Identity()
                 Mcom.translation = com_desired
@@ -254,7 +254,7 @@ def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
                 Fcom.angular = dL_desired
                 F0 = Mcom.act(Fcom)
                 res.wrench_reference[:,k_t] = F0.vector 
-                res.zmp_reference[:,k_t] = shiftZMPtoFloorAltitude(cs,res.t_t[k_t],F0)
+                res.zmp_reference[:,k_t] = shiftZMPtoFloorAltitude(cs,res.t_t[k_t],F0,cfg.EXPORT_OPENHRP)
         if cfg.IK_store_effector: 
             for eeName in usedEffectors: # real position (not reference)
                 res.effector_trajectories[eeName][:,k_t] = SE3toVec(getCurrentEffectorPosition(robot,invdyn.data(),eeName))        
