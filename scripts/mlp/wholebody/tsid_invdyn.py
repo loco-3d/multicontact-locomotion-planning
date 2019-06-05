@@ -50,6 +50,7 @@ def createContactForEffector(invdyn,robot,phase,eeName):
     if cfg.Robot.cType == "_3_DOF":
         contact = tsid.ContactPoint("contact_"+eeName, robot, eeName, contactNormal, cfg.MU, cfg.fMin, cfg.fMax)
         mask = np.matrix(np.ones(3)).transpose()
+        contact.useLocalFrame(False)        
     else : 
         contact_Points = buildRectangularContactPoints(eeName)
         contact = tsid.Contact6d("contact_"+eeName, robot, eeName, contact_Points, contactNormal, cfg.MU, cfg.fMin, cfg.fMax)
@@ -58,7 +59,6 @@ def createContactForEffector(invdyn,robot,phase,eeName):
     contact.setKd(2.0 * np.sqrt(cfg.kp_contact) * mask)        
     ref = getCurrentEffectorPosition(robot,invdyn.data(),eeName)
     contact.setReference(ref)
-    contact.useLocalFrame(False)
     invdyn.addRigidContact(contact,cfg.w_forceRef)    
     if cfg.WB_VERBOSE : 
         print "create contact for effector ",eeName
