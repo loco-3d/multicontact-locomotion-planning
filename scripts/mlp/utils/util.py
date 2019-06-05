@@ -51,9 +51,14 @@ def SE3FromVec(vect):
     placement = SE3.Identity()
     placement.translation=vect[0:3]
     rot = placement.rotation
-    rot[:,0]=np.asarray(vect[3:6]).reshape(-1)
-    rot[:,1]=np.asarray(vect[6:9]).reshape(-1)
-    rot[:,2]=np.asarray(vect[9:12]).reshape(-1)
+    if len(rot[:,0].shape) == 1 : # depend if eigenpy.switchToNumpyArray() have been called, FIXME : there should be a better way to check this
+        rot[:,0]=np.asarray(vect[3:6]).reshape(-1)
+        rot[:,1]=np.asarray(vect[6:9]).reshape(-1)
+        rot[:,2]=np.asarray(vect[9:12]).reshape(-1)
+    else : 
+        rot[:,0]=vect[3:6]
+        rot[:,1]=vect[6:9]
+        rot[:,2]=vect[9:12]
     placement.rotation =rot
     return placement
 
