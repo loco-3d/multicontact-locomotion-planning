@@ -26,6 +26,7 @@ EXPORT_GAZEBO = False
 EXPORT_OPENHRP = False
 EXPORT_NPZ = True
 EXPORT_BLENDER = False
+EXPORT_SOT = False
 openHRP_useZMPref = False
 EXPORT_PATH = OUTPUT_DIR+"/export"
 WRITE_STATUS = True
