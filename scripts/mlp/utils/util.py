@@ -338,8 +338,19 @@ def computeEffectorRotationBetweenStates(contact_phase,next_phase):
         res = 0.
     return res
 
+def fullBodyStatesExists(cs,fb):
+    lastId = fb.createState([0]*fb.getConfigSize(),[]) - 1 
+    if lastId <= 0 : 
+        return 0
+    else :
+        # TODO check with cs if all the states belong to the contact sequence and adjust lastId if necessary
+        return lastId
             
 def createFullbodyStatesFromCS(cs,fb):
+    lastId = fullBodyStatesExists(cs,fb)
+    if lastId > 0 :
+        print "States already exist in fullBody instance. endId = ",lastId
+        return 0,lastId
     phase_prev = cs.contact_phases[0]
     beginId = createStateFromPhase(fb,phase_prev)
     lastId = beginId
