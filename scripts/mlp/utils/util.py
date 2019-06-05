@@ -121,16 +121,16 @@ def contactPatchForEffector(phase,eeName):
 def JointPatchForEffector(phase,eeName):
     if eeName == cfg.Robot.rfoot :
         patch = phase.RF_patch.copy()
-        patch.placement = cfg.Robot.MRsole_offset.actInv(patch.placement)
+        patch.placement = patch.placement.act(cfg.Robot.MRsole_offset.inverse())
     elif eeName == cfg.Robot.lfoot :
         patch = phase.LF_patch.copy()
-        patch.placement = cfg.Robot.MLsole_offset.actInv(patch.placement)
+        patch.placement = patch.placement.act(cfg.Robot.MLsole_offset.inverse())
     elif eeName == cfg.Robot.rhand :
         patch = phase.RH_patch.copy()
-        patch.placement = cfg.Robot.MRhand_offset.actInv(patch.placement)
+        patch.placement = patch.placement.act(cfg.Robot.MRhand_offset.inverse())
     elif eeName == cfg.Robot.lhand :
         patch = phase.LH_patch.copy()
-        patch.placement = cfg.Robot.MLhand_offset.actInv(patch.placement)   
+        patch.placement = patch.placement.act(cfg.Robot.MLhand_offset.inverse())
     else :
         raise Exception("Unknown effector name")
     return patch
