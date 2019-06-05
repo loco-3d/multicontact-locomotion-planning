@@ -235,7 +235,6 @@ def plotContactForces(timeline,p_intervals,forces_dict,N):
         ax.plot(timeline.T, force[0,:].T, color=colors[i],label = eeName)
         sum_f += force[0,:]
         i += 1
-    sum_f /= float(i)
     ax.plot(timeline.T, sum_f[0,:].T, color="k",label = "sum")
     ax.legend()
 
