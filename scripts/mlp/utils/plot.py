@@ -56,7 +56,7 @@ def plotEffectorRef(dict_refs,dt):
                     id_traj += 1
                     traj = trajs[id_traj]
                     #print "new traj, t0 = ",traj.time_interval[0]
-                if t >= traj.time_interval[0] and t <= traj.time_interval[-1]:
+                if t >= traj.time_interval[0] and t < traj.time_interval[-1]:
                     values[0:3,i] = traj.curves(t-traj.time_interval[0])
                     values[3:6,i] = traj.curves.d(t-traj.time_interval[0])
                     values[6:9,i] = traj.curves.dd(t-traj.time_interval[0])
