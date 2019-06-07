@@ -106,14 +106,16 @@ def SE3FromConfig(q):
     placement.rotation = r.matrix()
     return placement
 
-def contactPatchForEffector(phase,eeName):
-    if eeName == cfg.Robot.rfoot :
+def contactPatchForEffector(phase,eeName,Robot = None):
+    if not Robot : 
+        Robot = cfg.Robot
+    if eeName == Robot.rfoot :
         patch = phase.RF_patch
-    elif eeName == cfg.Robot.lfoot :
+    elif eeName == Robot.lfoot :
         patch = phase.LF_patch
-    elif eeName == cfg.Robot.rhand :
+    elif eeName == Robot.rhand :
         patch = phase.RH_patch
-    elif eeName == cfg.Robot.lhand :
+    elif eeName == Robot.lhand :
         patch = phase.LH_patch
     else :
         raise Exception("Unknown effector name")
@@ -141,28 +143,32 @@ def JointPatchForEffector(phase,eeName):
 def JointPlacementForEffector(phase,eeName):
     return JointPatchForEffector(phase,eeName).placement
 
-def getContactPlacement(phase,eeName):
-    if eeName == cfg.Robot.rfoot :
+def getContactPlacement(phase,eeName,Robot = None):
+    if not Robot : 
+        Robot = cfg.Robot    
+    if eeName == Robot.rfoot :
         return phase.RF_patch.placement
-    elif eeName == cfg.Robot.lfoot :
+    elif eeName == Robot.lfoot :
         return phase.LF_patch.placement
-    elif eeName == cfg.Robot.rhand :
+    elif eeName == Robot.rhand :
         return phase.RH_patch.placement
-    elif eeName == cfg.Robot.lhand :
+    elif eeName == Robot.lhand :
         return phase.LH_patch.placement
     else :
         raise Exception("Unknown effector name")
     return patch
 
 
-def isContactActive(phase,eeName):
-    if eeName == cfg.Robot.rfoot :
+def isContactActive(phase,eeName,Robot=None):
+    if not Robot : 
+        Robot = cfg.Robot        
+    if eeName == Robot.rfoot :
         return phase.RF_patch.active
-    elif eeName == cfg.Robot.lfoot :
+    elif eeName == Robot.lfoot :
         return phase.LF_patch.active
-    elif eeName == cfg.Robot.rhand :
+    elif eeName == Robot.rhand :
         return phase.RH_patch.active
-    elif eeName == cfg.Robot.lhand :
+    elif eeName == Robot.lhand :
         return phase.LH_patch.active
     else :
         raise Exception("Unknown effector name") 
