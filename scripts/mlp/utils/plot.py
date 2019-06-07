@@ -56,7 +56,7 @@ def plotEffectorRef(dict_refs,dt):
                     id_traj += 1
                     traj = trajs[id_traj]
                     #print "new traj, t0 = ",traj.time_interval[0]
-                if t >= traj.time_interval[0] and t <= traj.time_interval[-1]:
+                if t >= traj.time_interval[0] and t < traj.time_interval[-1]:
                     values[0:3,i] = traj.curves(t-traj.time_interval[0])
                     values[3:6,i] = traj.curves.d(t-traj.time_interval[0])
                     values[6:9,i] = traj.curves.dd(t-traj.time_interval[0])
@@ -162,9 +162,19 @@ def plotZMP(cs,ZMP_t,ZMP_ref,pcom_t):
             ax.add_artist(circle_r)     
         if p.LF_patch.active:   
             pos = p.LF_patch.placement.translation
-            plt.plot(pos[0], pos[1], marker="x", markersize=20, color='g')
-            circle_l = plt.Circle((pos[0], pos[1]), 0.01, color='g', fill=False)      
-            ax.add_artist(circle_l)
+            plt.plot(pos[0], pos[1], marker="x", markersize=20, color='r')
+            circle = plt.Circle((pos[0], pos[1]), 0.01, color='r', fill=False)      
+            ax.add_artist(circle)
+        if p.RH_patch.active:   
+            pos = p.RH_patch.placement.translation
+            plt.plot(pos[0], pos[1], marker="x", markersize=20, color='b')
+            circle = plt.Circle((pos[0], pos[1]), 0.01, color='b', fill=False)      
+            ax.add_artist(circle)   
+        if p.LH_patch.active:   
+            pos = p.LH_patch.placement.translation
+            plt.plot(pos[0], pos[1], marker="x", markersize=20, color='y')
+            circle = plt.Circle((pos[0], pos[1]), 0.01, color='y', fill=False)      
+            ax.add_artist(circle)                    
       
 def plotCOMTraj(timeline,p_intervals,ref_c,ref_dc,ref_ddc,c_t,dc_t,ddc_t):
     labels=["x (m)" , "y (m)" ,"z (m)", "dx (m/s)" , "dy (m/s)" ,"dz (m/s)","ddx (m/s^2)" , "ddy (m/s^2)" ,"ddz (m/s^2)"]
@@ -225,7 +235,6 @@ def plotContactForces(timeline,p_intervals,forces_dict,N):
         ax.plot(timeline.T, force[0,:].T, color=colors[i],label = eeName)
         sum_f += force[0,:]
         i += 1
-    sum_f /= float(i)
     ax.plot(timeline.T, sum_f[0,:].T, color="k",label = "sum")
     ax.legend()
 

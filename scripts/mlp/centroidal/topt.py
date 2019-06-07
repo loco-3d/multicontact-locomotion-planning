@@ -66,39 +66,7 @@ def isNewPhase(tp,k0,k1,cs_com,cs_initGuess,p_id):
         return isNewPhaseFromCS(cs_com,cs_initGuess,p_id)
     else : 
         return isNewPhaseFromContact(tp,k0,k1)
-
-
-def connectFinalPhase(phase,duration = cfg.DURATION_CONNECT_GOAL):
-    if duration <= 0.:
-        return
-    init_state = phase.state_trajectory[-1]
-    final_state = phase.final_state
-    init_control = phase.control_trajectory[-1]
-    t_init = phase.time_trajectory[-1]
-    t_end = t_init + duration
-    com_traj = genCOMTrajFromPhaseStates(t_init,t_end,init_state,final_state,init_control)
-    am_traj = genAMTrajFromPhaseStates(t_init,t_end,init_state,final_state,init_control)
-    i = len(phase.time_trajectory)
-    
-    dt = cfg.SOLVER_DT
-    t = t_init + dt
-    while t < t_end + dt/2. :
-        if t > t_end: # may happen due to numerical imprecision
-            t = t_end
-        c,dc,ddc = com_traj(t)
-        L,dL = am_traj(t)
-        state = np.matrix(np.zeros(9)).T
-        control= np.matrix(np.zeros(6)).T
-        state[0:3] = c
-        state[3:6] = dc
-        control[0:3] = ddc
-        state[6:9] = L
-        control[3:6] = dL
-        phase.state_trajectory.append(state)
-        phase.control_trajectory.append(control)
-        phase.time_trajectory.append(t)
-        t += dt
-           
+ 
 def fillCSFromTimeopt(cs,cs_initGuess,tp):
     cs_com = ContactSequenceHumanoid(cs)
     
@@ -148,7 +116,7 @@ def fillCSFromTimeopt(cs,cs_initGuess,tp):
         k_id +=1
     # timeopt solution is not guarantee to end at the desired final state.
     # so we add a final phase here, with a smooth motion from the final state atteined by timeopt to the desired one      
-    connectFinalPhase(cs_com.contact_phases[-1])
+    connectPhaseTrajToFinalState(cs_com.contact_phases[-1],cfg.DURATION_CONNECT_GOAL)
     return cs_com
         
 # helper method to make the link between timeopt.EndEffector and cs.Patch        
@@ -270,9 +238,9 @@ def extractAllEffectorsPhasesFromCS(cs,cs_initGuess,ee_ids):
 
 
 # add an initial and final phase that only move the COM along z from the given distance
-def addInitAndGoalShift(cs_in):
-    cs = cs_com = ContactSequenceHumanoid(cs_in.size()+2)
-    # copy all phases but leave one phase at the beginning and at the end : 
+def addInitShift(cs_in):
+    cs = ContactSequenceHumanoid(cs_in.size()+1)
+    # copy all phases but leave one phase at the beginning : 
     for k in range(cs_in.size()):
         phase = cs_in.contact_phases[k].copy()
         # shift times to take in account the new phase : 
@@ -287,20 +255,9 @@ def addInitAndGoalShift(cs_in):
     s_init[2] -= cfg.COM_SHIFT_Z
     phase.init_state = s_init
     phase.final_state = s_final
-    generateLinearInterpTraj(phase,cfg.TIME_SHIFT_COM,0)
+    genSplinesForPhase(phase,0.,cfg.TIME_SHIFT_COM)
     copyPhaseContacts(cs.contact_phases[1],phase)
     phase.reference_configurations = cs.contact_phases[1].reference_configurations
-    # add the new final phase
-    phase = cs.contact_phases[-1]
-    s_init = cs.contact_phases[-2].final_state
-    s_final = s_init.copy()
-    s_final[2] -= cfg.COM_SHIFT_Z
-    phase.init_state = s_init
-    phase.final_state = s_final
-    generateLinearInterpTraj(phase,cfg.TIME_SHIFT_COM,cs.contact_phases[-2].time_trajectory[-1])
-    copyPhaseContacts(cs.contact_phases[-2],phase)   
-    phase.reference_configurations = cs.contact_phases[-2].reference_configurations
-    
     return cs
     
 
@@ -320,7 +277,6 @@ def generateCentroidalTrajectory(cs,cs_initGuess = None,fullBody=None, viewer =N
     vel_init = cs.contact_phases[0].init_state[3:6]
     com_end = cs.contact_phases[-1].final_state[:3]
     com_init[2] += cfg.COM_SHIFT_Z
-    com_end[2] += cfg.COM_SHIFT_Z
     tp.setInitialCOM(com_init)
     tp.setInitialLMOM(vel_init*cfg.MASS)
     tp.setFinalCOM(com_end)    
@@ -351,6 +307,6 @@ def generateCentroidalTrajectory(cs,cs_initGuess = None,fullBody=None, viewer =N
     
     cs_result = fillCSFromTimeopt(cs,cs_initGuess,tp)
     if cfg.TIME_SHIFT_COM > 0 :
-        cs_result = addInitAndGoalShift(cs_result)
+        cs_result = addInitShift(cs_result)
     
     return cs_result

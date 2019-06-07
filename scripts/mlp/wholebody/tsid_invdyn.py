@@ -19,32 +19,57 @@ from mlp.utils.wholebody_result import Result
 from mlp.utils.util import * 
 from mlp.end_effector import generateEndEffectorTraj,effectorCanRetry
     
-def createContactForEffector(invdyn,robot,phase,eeName):
+def buildRectangularContactPoints(eeName):
     size = cfg.IK_eff_size[eeName]
-    transform = cfg.Robot.dict_offset[eeName]          
+    transform = cfg.Robot.dict_offset[eeName]     
+    # build matrices with corners of the feet
     lxp = size[0]/2. + transform.translation[0,0]  # foot length in positive x direction
     lxn = size[0]/2. - transform.translation[0,0]  # foot length in negative x direction
     lyp = size[1]/2. + transform.translation[1,0]  # foot length in positive y direction
     lyn = size[1]/2. - transform.translation[1,0]  # foot length in negative y direction
     lz =  transform.translation[2,0]   # foot sole height with respect to ankle joint                                                    
-    contactNormal = np.matrix([0., 0., 1.]).T  # direction of the normal to the contact surface
-    contactNormal = transform.rotation * contactNormal
     contact_Point = np.matrix(np.ones((3, 4)))
     contact_Point[0, :] = [-lxn, -lxn, lxp, lxp]
     contact_Point[1, :] = [-lyn, lyp, -lyn, lyp]
     contact_Point[2, :] = [lz]*4
-    # build ContactConstraint object
-    contact = tsid.Contact6d("contact_"+eeName, robot, eeName, contact_Point, contactNormal, cfg.MU, cfg.fMin, cfg.fMax)
-    contact.setKp(cfg.kp_contact * np.matrix(np.ones(6)).transpose())
-    contact.setKd(2.0 * np.sqrt(cfg.kp_contact) * np.matrix(np.ones(6)).transpose())
-    ref = JointPlacementForEffector(phase,eeName)
+    return contact_Point
+
+def getCurrentEffectorPosition(robot,data,eeName):
+    id = robot.model().getJointId(eeName)
+    if id < len(data.oMi):
+        return robot.position(data, id)
+    else : 
+        id = robot.model().getFrameId(eeName)   
+        return robot.framePosition(data, id)
+            
+    
+def createContactForEffector(invdyn,robot,phase,eeName):             
+    z_up = np.matrix([0., 0., 1.]).T  
+    #contactNormal = getContactPlacement(phase,eeName).rotation * z_up # direction of the normal to the contact surface
+    contactNormal = np.matrix(cfg.Robot.dict_normal[eeName]).T
+    contactNormal = cfg.Robot.dict_offset[eeName].rotation * contactNormal # apply offset transform
+    if cfg.Robot.cType == "_3_DOF":
+        contact = tsid.ContactPoint("contact_"+eeName, robot, eeName, contactNormal, cfg.MU, cfg.fMin, cfg.fMax)
+        mask = np.matrix(np.ones(3)).transpose()
+        contact.useLocalFrame(False)        
+    else : 
+        contact_Points = buildRectangularContactPoints(eeName)
+        contact = tsid.Contact6d("contact_"+eeName, robot, eeName, contact_Points, contactNormal, cfg.MU, cfg.fMin, cfg.fMax)
+        mask = np.matrix(np.ones(6)).transpose()        
+    contact.setKp(cfg.kp_contact * mask)
+    contact.setKd(2.0 * np.sqrt(cfg.kp_contact) * mask)        
+    ref = getCurrentEffectorPosition(robot,invdyn.data(),eeName)
     contact.setReference(ref)
-    invdyn.addRigidContact(contact,cfg.w_forceRef)
-    if cfg.WB_VERBOSE :
+    invdyn.addRigidContact(contact,cfg.w_forceRef)    
+    if cfg.WB_VERBOSE : 
         print "create contact for effector ",eeName
+        if cfg.Robot.cType == "_3_DOF":
+            print "create contact point"
+        else:
+            print "create rectangular contact"
+            print "contact points : \n",contact_Points        
         print "contact placement : ",ref       
         print "contact_normal : ",contactNormal
-        print "contact points : \n",contact_Point        
     return contact
 
 # build a dic with keys = effector names used in the cs, value = Effector tasks objects
@@ -54,8 +79,11 @@ def createEffectorTasksDic(cs,robot):
         if isContactEverActive(cs,eeName):
             # build effector task object
             effectorTask = tsid.TaskSE3Equality("task-"+eeName, robot, eeName)
-            effectorTask.setKp(cfg.kp_Eff * np.matrix(np.ones(6)).transpose())
-            effectorTask.setKd(2.0 * np.sqrt(cfg.kp_Eff) * np.matrix(np.ones(6)).transpose()) 
+            mask = np.matrix(np.ones(6)).transpose()
+            if cfg.Robot.cType == "_3_DOF":
+                mask[3:6] = np.matrix(np.zeros(3)).transpose()      # ignore rotation for contact points  
+            effectorTask.setKp(cfg.kp_Eff * mask)
+            effectorTask.setKd(2.0 * np.sqrt(cfg.kp_Eff) * mask)                 
             res.update({eeName:effectorTask})
     return res
 
@@ -218,7 +246,7 @@ def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
                 #res.tau_t[:6,k_t] = tau[:6]
                 phi0 = pinRobot.data.oMi[1].act(Force(tau[:6]))
                 res.wrench_t[:,k_t] = phi0.vector
-                res.zmp_t[:,k_t] = shiftZMPtoFloorAltitude(cs,res.t_t[k_t],phi0)
+                res.zmp_t[:,k_t] = shiftZMPtoFloorAltitude(cs,res.t_t[k_t],phi0,cfg.EXPORT_OPENHRP)
                 # same but from the 'reference' values : 
                 Mcom = SE3.Identity()
                 Mcom.translation = com_desired
@@ -227,10 +255,10 @@ def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
                 Fcom.angular = dL_desired
                 F0 = Mcom.act(Fcom)
                 res.wrench_reference[:,k_t] = F0.vector 
-                res.zmp_reference[:,k_t] = shiftZMPtoFloorAltitude(cs,res.t_t[k_t],F0)
+                res.zmp_reference[:,k_t] = shiftZMPtoFloorAltitude(cs,res.t_t[k_t],F0,cfg.EXPORT_OPENHRP)
         if cfg.IK_store_effector: 
             for eeName in usedEffectors: # real position (not reference)
-                res.effector_trajectories[eeName][:,k_t] = SE3toVec(robot.position(invdyn.data(), robot.model().getJointId(eeName)))        
+                res.effector_trajectories[eeName][:,k_t] = SE3toVec(getCurrentEffectorPosition(robot,invdyn.data(),eeName))        
         return res
         
     def printIntermediate(v,dv,invdyn,sol):
@@ -241,8 +269,13 @@ def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
                 print "\tnormal force %s: %.1f" % (contact.name.ljust(20, '.'), contact.getNormalForce(f))
     
         print "\ttracking err %s: %.3f" % (comTask.name.ljust(20, '.'), norm(comTask.position_error, 2))
-        for eeName,task in dic_effectors_tasks.iteritems():
-            print "\ttracking err %s: %.3f" % (task.name.ljust(20, '.'), norm(task.position_error, 2))
+        for eeName,traj in dic_effectors_trajs.iteritems():
+            if traj :
+                task = dic_effectors_tasks[eeName]
+                error = task.position_error
+                if cfg.Robot.cType == "_3_DOF":
+                    error = error[0:3]
+                print "\ttracking err %s: %.3f" % (task.name.ljust(20, '.'), norm(error, 2))
         print "\t||v||: %.3f\t ||dv||: %.3f" % (norm(v, 2), norm(dv))      
 
 
@@ -256,13 +289,13 @@ def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
             print "!!!!!!    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
             print "/!\ ABORT : nan   at t = "+str(t)+"  /!\ "
             print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"  
-            raise ValueError("ABORT : controler unstable at t = "+str(t))            
+            raise ValueError("ABORT : controler unstable at t = "+str(t))
     def stopHere():
         if cfg.WB_ABORT_WHEN_INVALID :
             return res.resize(phase_interval[0]),pinRobot
         elif cfg.WB_RETURN_INVALID : 
             return res.resize(k_t),pinRobot         
-   
+    
     # time check
     dt = cfg.IK_dt  
     if cfg.WB_VERBOSE:
@@ -323,12 +356,17 @@ def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
                     print "add se3 task for "+eeName
                 invdyn.addMotionTask(task, cfg.w_eff, cfg.level_eff, 0.0)
                 #create reference trajectory for this task : 
-                placement_init = robot.position(invdyn.data(), robot.model().getJointId(eeName))
+                placement_init = getCurrentEffectorPosition(robot,invdyn.data(),eeName)
                 placement_end = JointPlacementForEffector(phase_next,eeName)                
                 ref_traj = generateEndEffectorTraj(time_interval,placement_init,placement_end,0)
                 if cfg.WB_VERBOSE :
                     print "t interval : ",time_interval
-                    print "positions : ",placements                 
+                    print "placement Init : ",placement_init 
+                    print "placement End  : ",placement_end 
+                    # display all the effector trajectories for this phase
+                if viewer and cfg.DISPLAY_ALL_FEET_TRAJ:
+                    display_tools.displaySE3Traj(ref_traj,viewer.client.gui,viewer.sceneName,eeName+"_traj_"+str(pid),cfg.Robot.dict_limb_color_traj[eeName] ,time_interval ,cfg.Robot.dict_offset[eeName])                               
+                    viewer.client.gui.setVisibility(eeName+"_traj_"+str(pid),'ALWAYS_ON_TOP')                           
                 dic_effectors_trajs.update({eeName:ref_traj})
 
         # start removing the contact that will be broken in the next phase :
@@ -420,7 +458,7 @@ def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
                             res.effector_references[eeName][:,k_t] = SE3toVec(traj(t)[0])
                     elif cfg.IK_store_effector:
                         if k_t == 0: 
-                            res.effector_references[eeName][:,k_t] = SE3toVec(robot.position(invdyn.data(), robot.model().getJointId(eeName)))
+                            res.effector_references[eeName][:,k_t] = SE3toVec(getCurrentEffectorPosition(robot,invdyn.data(),eeName))
                         else:
                             res.effector_references[eeName][:,k_t] = res.effector_references[eeName][:,k_t-1]
             
@@ -436,12 +474,18 @@ def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
                 # update state
                 v_mean = v + 0.5 * dt * dv
                 v += dt * dv
-                q = pin.integrate(robot.model(), q, dt * v_mean)    
+                q = pin.integrate(robot.model(), q, dt * v_mean) 
+                
+                if cfg.WB_VERBOSE == 2:
+                    print "v = ",v
+                    print "dv = ",dv
 
                 if cfg.WB_VERBOSE and int(t/dt) % cfg.IK_PRINT_N == 0:
                     printIntermediate(v,dv,invdyn,sol)
-                checkDiverge(res,v,dv)
-                
+                try:
+                    checkDiverge(res,v,dv)
+                except ValueError:
+                    return stopHere()
                 
             # end while t \in phase_t (loop for the current contact phase) 
             if swingPhase and cfg.EFF_CHECK_COLLISION :
@@ -462,6 +506,9 @@ def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
                                     placement_end = JointPlacementForEffector(phase_next,eeName)  
                                     ref_traj = generateEndEffectorTraj(time_interval,placement_init,placement_end,iter_for_phase+1,res.q_t[:,phase_interval[0]:k_t],phase_prev,phase,phase_next,fullBody,eeName,viewer)
                                     dic_effectors_trajs.update({eeName:ref_traj}) 
+                                    if viewer and cfg.DISPLAY_ALL_FEET_TRAJ:
+                                        display_tools.displaySE3Traj(ref_traj,viewer.client.gui,viewer.sceneName,eeName+"_traj_"+str(pid),cfg.Robot.dict_limb_color_traj[eeName] ,time_interval ,cfg.Robot.dict_offset[eeName])                               
+                                        viewer.client.gui.setVisibility(eeName+"_traj_"+str(pid),'ALWAYS_ON_TOP')                                                          
                         except ValueError,e :
                             print "ERROR in generateEndEffectorTraj :"
                             print e.message
@@ -475,7 +522,7 @@ def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
                     print "Phase "+str(pid)+" valid."
             if phaseValid:
                 # display all the effector trajectories for this phase
-                if viewer and cfg.DISPLAY_FEET_TRAJ :
+                if viewer and cfg.DISPLAY_FEET_TRAJ and not cfg.DISPLAY_ALL_FEET_TRAJ:
                     for eeName,ref_traj in dic_effectors_trajs.iteritems():
                         if ref_traj :
                             display_tools.displaySE3Traj(ref_traj,viewer.client.gui,viewer.sceneName,eeName+"_traj_"+str(pid),cfg.Robot.dict_limb_color_traj[eeName] ,time_interval ,cfg.Robot.dict_offset[eeName])                               

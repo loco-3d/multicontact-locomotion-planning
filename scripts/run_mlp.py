@@ -12,7 +12,7 @@ if cfg.WRITE_STATUS:
        
 if cfg.DISPLAY_CS:
     raw_input("Press Enter to display the contact sequence ...")
-    display_tools.displayContactSequence(viewer,cs,step)    
+    display_tools.displayContactSequence(viewer,cs)    
 if cfg.SAVE_CS:
     filename = cfg.CONTACT_SEQUENCE_PATH + "/"+cfg.DEMO_NAME+".cs"
     print "Write contact sequence binary file : ",filename
@@ -97,6 +97,9 @@ if cfg.EXPORT_NPZ and motion_valid :
 if cfg.EXPORT_BLENDER:
     from mlp.export import blender
     blender.export(res.q_t,viewer,cfg.IK_dt)
+if cfg.EXPORT_SOT:
+    from mlp.export import sotTalosBalance
+    sotTalosBalance.export(res)
 
 def dispCS(step = 0.2): 
     display_tools.displayContactSequence(viewer,cs,step)
