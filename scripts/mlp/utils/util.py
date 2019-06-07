@@ -6,6 +6,7 @@ from pinocchio import SE3, Quaternion
 import mlp.config as cfg
 from mlp.utils.trajectories import cubicSplineTrajectory,quinticSplineTrajectory
 import math
+import types
 
 def quatFromConfig(q):
     return Quaternion(q[6],q[3],q[4],q[5])
@@ -97,6 +98,8 @@ def numpy2DToList(m):
 
 # assume that q.size >= 7 with root pos and quaternion(x,y,z,w)
 def SE3FromConfig(q):
+    if isinstance(q,types.ListType):
+        q = np.matrix(q).T
     placement = SE3.Identity()
     placement.translation = q[0:3]
     r = Quaternion(q[6,0],q[3,0],q[4,0],q[5,0])
