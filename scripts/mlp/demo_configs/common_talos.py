@@ -2,14 +2,15 @@ from hpp.corbaserver.rbprm.talos import Robot
 MASS = 90.27
 
 ## predef duration of contact phases : 
-DURATION_INIT = 2. # Time to init the motion
-DURATION_FINAL = 1 # Time to stop the robot
+DURATION_INIT = 1.5 # Time to init the motion
+DURATION_FINAL = 1.5 # Time to stop the robot
 DURATION_FINAL_SS = 1.
 DURATION_SS =1.
 DURATION_DS = 0.2
 DURATION_TS = 0.4
-DURATION_CONNECT_GOAL = 1.5
-
+DURATION_CONNECT_GOAL = 2.
+COM_SHIFT_Z = -0.015
+TIME_SHIFT_COM = 1.5
 
 ## weight and gains used by TSID
 fMin = 1.0                      # minimum normal force
