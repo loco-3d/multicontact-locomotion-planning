@@ -238,9 +238,9 @@ def extractAllEffectorsPhasesFromCS(cs,cs_initGuess,ee_ids):
 
 
 # add an initial and final phase that only move the COM along z from the given distance
-def addInitAndGoalShift(cs_in):
-    cs = cs_com = ContactSequenceHumanoid(cs_in.size()+2)
-    # copy all phases but leave one phase at the beginning and at the end : 
+def addInitShift(cs_in):
+    cs = ContactSequenceHumanoid(cs_in.size()+1)
+    # copy all phases but leave one phase at the beginning : 
     for k in range(cs_in.size()):
         phase = cs_in.contact_phases[k].copy()
         # shift times to take in account the new phase : 
@@ -255,24 +255,9 @@ def addInitAndGoalShift(cs_in):
     s_init[2] -= cfg.COM_SHIFT_Z
     phase.init_state = s_init
     phase.final_state = s_final
-    phase.time_trajectory.append(0)
-    phase.time_trajectory.append(cfg.TIME_SHIFT_COM)
-    genSplinesForPhase(phase)
+    genSplinesForPhase(phase,0.,cfg.TIME_SHIFT_COM)
     copyPhaseContacts(cs.contact_phases[1],phase)
     phase.reference_configurations = cs.contact_phases[1].reference_configurations
-    # add the new final phase
-    phase = cs.contact_phases[-1]
-    s_init = cs.contact_phases[-2].final_state
-    s_final = s_init.copy()
-    s_final[2] -= cfg.COM_SHIFT_Z
-    phase.init_state = s_init
-    phase.final_state = s_final
-    phase.time_trajectory.append(cs.contact_phases[-2].time_trajectory[-1])
-    phase.time_trajectory.append(cs.contact_phases[-2].time_trajectory[-1]+cfg.TIME_SHIFT_COM)    
-    genSplinesForPhase(phase)
-    copyPhaseContacts(cs.contact_phases[-2],phase)   
-    phase.reference_configurations = cs.contact_phases[-2].reference_configurations
-    
     return cs
     
 
@@ -292,7 +277,6 @@ def generateCentroidalTrajectory(cs,cs_initGuess = None,fullBody=None, viewer =N
     vel_init = cs.contact_phases[0].init_state[3:6]
     com_end = cs.contact_phases[-1].final_state[:3]
     com_init[2] += cfg.COM_SHIFT_Z
-    com_end[2] += cfg.COM_SHIFT_Z
     tp.setInitialCOM(com_init)
     tp.setInitialLMOM(vel_init*cfg.MASS)
     tp.setFinalCOM(com_end)    
@@ -323,6 +307,6 @@ def generateCentroidalTrajectory(cs,cs_initGuess = None,fullBody=None, viewer =N
     
     cs_result = fillCSFromTimeopt(cs,cs_initGuess,tp)
     if cfg.TIME_SHIFT_COM > 0 :
-        cs_result = addInitAndGoalShift(cs_result)
+        cs_result = addInitShift(cs_result)
     
     return cs_result

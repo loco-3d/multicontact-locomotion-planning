@@ -219,23 +219,27 @@ def genCOMTrajFromPhaseStates(t_init,t_end,init_state,final_state,init_control =
         a_end = final_control[0:3]
     return quinticSplineTrajectory(t_init,t_end,p_init,v_init,a_init,p_end,v_end,a_end)
     
-# fill state_trajectory and control_trajectory in order to connect init_state and final_state of the phase
-# use quintic spline for the com position and cubic spline for the angular momentum
-# The state_trajectory and control_trajectory in phase should be empty
-# and the time_trajectory should start and end at the correct timings
-def genSplinesForPhase(phase,init_control = None, final_control = None):
-    init_state = phase.init_state
-    final_state = phase.final_state    
-    t_init = phase.time_trajectory[0]
-    t_end = phase.time_trajectory[-1]
-    com_traj = genCOMTrajFromPhaseStates(t_init,t_end,init_state,final_state,init_control,final_control)
-    am_traj = genAMTrajFromPhaseStates(t_init,t_end,init_state,final_state,init_control,final_control)
+def connectPhaseTrajToFinalState(phase,duration):
+    if duration <= 0.:
+        return
+    init_state = phase.state_trajectory[-1]
+    final_state = phase.final_state
+    init_control = phase.control_trajectory[-1]
+    t_init = phase.time_trajectory[-1]
+    t_end = t_init + duration
+    print "# call connectPhaseTrajToFinalState : "
+    print "init_state  : ",init_state
+    print "final_state : ",final_state
+    print "init_control: ",init_control
+    print "t_init : ",t_init
+    print "t_end  : ",t_end
+    com_traj = genCOMTrajFromPhaseStates(t_init,t_end,init_state,final_state,init_control)
+    am_traj = genAMTrajFromPhaseStates(t_init,t_end,init_state,final_state,init_control)
+    i = len(phase.time_trajectory)
     
-    # Iiterate from t_init to t_end and fill the trajectories : 
     dt = cfg.SOLVER_DT
-    numStep = int(round((t_end - t_init)/dt))
-    for i in range(numStep):
-        t = t_init + float(i)*dt
+    t = t_init + dt
+    while t < t_end + dt/2. :
         if t > t_end: # may happen due to numerical imprecision
             t = t_end
         c,dc,ddc = com_traj(t)
@@ -247,10 +251,28 @@ def genSplinesForPhase(phase,init_control = None, final_control = None):
         control[0:3] = ddc
         state[6:9] = L
         control[3:6] = dL
-        appendOrReplace(phase.state_trajectory,i ,state)
-        appendOrReplace(phase.control_trajectory,i, control)
-        appendOrReplace(phase.time_trajectory,i , t)
+        phase.state_trajectory.append(state)
+        phase.control_trajectory.append(control)
+        phase.time_trajectory.append(t)
+        t += dt    
     return phase
+
+# fill state_trajectory and control_trajectory in order to connect init_state and final_state of the phase
+# use quintic spline for the com position and cubic spline for the angular momentum
+# The state_trajectory and control_trajectory in phase should be empty
+# and the time_trajectory should start and end at the correct timings
+def genSplinesForPhase(phase,current_t,duration,init_control = None):
+    assert(len(phase.state_trajectory)) == 0 , "You should only call this method with a 'clean' phase, without any pre existing trajectory"
+    assert(len(phase.time_trajectory)) == 0 , "You should only call this method with a 'clean' phase, without any pre existing trajectory"
+    # fill the first dt of the trajectories : 
+    phase.state_trajectory.append(phase.init_state)
+    if init_control:
+        phase.control_trajectory.append(init_control)    
+    else :
+        phase.control_trajectory.append(np.matrix(np.zeros(6)).T)
+    phase.time_trajectory.append(current_t)
+    return  connectPhaseTrajToFinalState(phase,duration)
+
 
 
 def copyPhaseContacts(phase_in,phase_out):
@@ -363,36 +385,6 @@ def createFullbodyStatesFromCS(cs,fb):
             phase_prev = phase
     return beginId, lastId
 
-def connectPhaseTrajToFinalState(phase,duration):
-    if duration <= 0.:
-        return
-    init_state = phase.state_trajectory[-1]
-    final_state = phase.final_state
-    init_control = phase.control_trajectory[-1]
-    t_init = phase.time_trajectory[-1]
-    t_end = t_init + duration
-    com_traj = genCOMTrajFromPhaseStates(t_init,t_end,init_state,final_state,init_control)
-    am_traj = genAMTrajFromPhaseStates(t_init,t_end,init_state,final_state,init_control)
-    i = len(phase.time_trajectory)
-    
-    dt = cfg.SOLVER_DT
-    t = t_init + dt
-    while t < t_end + dt/2. :
-        if t > t_end: # may happen due to numerical imprecision
-            t = t_end
-        c,dc,ddc = com_traj(t)
-        L,dL = am_traj(t)
-        state = np.matrix(np.zeros(9)).T
-        control= np.matrix(np.zeros(6)).T
-        state[0:3] = c
-        state[3:6] = dc
-        control[0:3] = ddc
-        state[6:9] = L
-        control[3:6] = dL
-        phase.state_trajectory.append(state)
-        phase.control_trajectory.append(control)
-        phase.time_trajectory.append(t)
-        t += dt    
 
 # fill the given phase with a state, control and time trajectory such that the COM do not moe during all the phase (it stay at it's init_state position)        
 def fillPhaseTrajWithZeros(phase,current_t,duration):

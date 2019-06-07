@@ -1,7 +1,7 @@
 import numpy as np
 import mlp.config as cfg
 from multicontact_api import ContactPhaseHumanoid, ContactSequenceHumanoid
-from mlp.utils.util import connectPhaseTrajToFinalState,createFullbodyStatesFromCS,fillPhaseTrajWithZeros
+from mlp.utils.util import connectPhaseTrajToFinalState,createFullbodyStatesFromCS,fillPhaseTrajWithZeros,genSplinesForPhase
 
 ## Produce a centroidal trajectory where the CoM only move when the contact are fixed. 
 ## It is then fixed during the swing phase where one contact is repositionned.
@@ -28,12 +28,7 @@ def moveToCOMPosition(phase,c,current_t,duration):
     final_state = np.matrix(np.zeros(9)).T
     final_state[0:3] = c
     phase.final_state = final_state
-    # fill the first dt of the trajectories : 
-    phase.state_trajectory.append(phase.init_state)
-    phase.control_trajectory.append(np.matrix(np.zeros(6)).T)
-    phase.time_trajectory.append(current_t)
-    # build trajectory to connect the final state
-    connectPhaseTrajToFinalState(phase,duration)
+    genSplinesForPhase(phase,current_t,duration)
     
 def generateCentroidalTrajectory(cs,cs_initGuess = None,fullBody=None, viewer =None):
     if cs_initGuess :
