@@ -183,7 +183,7 @@ def displayContactSequence(v,cs,step = 0.2):
     time.sleep(step)  
     
 
-def initScene(Robot,envName = "multicontact/ground"):
+def initScene(Robot,envName = "multicontact/ground",genLimbsDB = True):
   from hpp.gepetto import Viewer,ViewerFactory
   from hpp.corbaserver.rbprm.rbprmfullbody import FullBody
   from hpp.corbaserver import ProblemSolver  
@@ -192,7 +192,10 @@ def initScene(Robot,envName = "multicontact/ground"):
   fullBody.setJointBounds ("root_joint",  [-100,100,-100,100,-100,100])
   fullBody.client.robot.setExtraConfigSpaceBounds([-100,100,-100,100,-100,100,-100,100,-100,100,-100,100])
   try :
-    fullBody.loadAllLimbs("static")
+    if genLimbsDB:
+      fullBody.loadAllLimbs("static")
+    else : 
+      fullBody.loadAllLimbs("static",nbSamples=1)
   except AttributeError:
     print "WARNING initScene : fullBody do not have loadAllLimbs, some scripts may fails."
   ps = ProblemSolver(fullBody)

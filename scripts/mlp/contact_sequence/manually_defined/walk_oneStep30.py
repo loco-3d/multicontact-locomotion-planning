@@ -7,7 +7,7 @@ import mlp.config as cfg
 from hpp.corbaserver.rbprm.talos import Robot # change robot here
 ENV_NAME = "multicontact/ground"
 
-fb,v = display_tools.initScene(Robot,ENV_NAME)
+fb,v = display_tools.initScene(Robot,ENV_NAME,False)
 cs = ContactSequenceHumanoid(0)
 
 
