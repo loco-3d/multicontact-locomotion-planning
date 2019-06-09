@@ -50,7 +50,7 @@ def exportCOM(path,c_t,dc_t,ddc_t):
                 line += str(dc_t[i,k])+" "
             for i in range(3):
                 line += str(ddc_t[i,k])+" "    
-            f.write(line+"\n")
+            f.write(line.rstrip(" ")+"\n")
     print "Motion exported to : ",filename
     return
 
@@ -65,7 +65,7 @@ def exportZMP(path,zmp_t):
             # TODO velocity and acceleration
             for i in range(6):
                 line += "0 "
-            f.write(line+"\n")
+            f.write(line.rstrip(" ")+"\n")
     print "Motion exported to : ",filename                
     return
 
@@ -86,7 +86,7 @@ def exportFoot(path,name,ref):
             # TODO : velocity and acceleration :
             for i in range(12):
                 line += "0 "
-            f.write(line+"\n")            
+            f.write(line.rstrip(" ")+"\n")            
     print "Motion exported to : ",filename                
     return
 
@@ -101,7 +101,7 @@ def exportWaist(path,waist_t):
                 line += str(rot[i,0]) + " "
             for i in range(6):
                 line += "0 "
-            f.write(line+"\n")
+            f.write(line.rstrip(" ")+"\n")
     print "Motion exported to : ",filename              
     return
 
@@ -115,7 +115,7 @@ def exportPhase(path,act_left,act_right):
                 phase = 0 # cannot do r - l as it's float and may not be exactly 0 ...
             else : 
                 phase = act_left[0,k] - act_right[0,k]
-            f.write(str(phase)+" 0 0 \n") 
+            f.write(str(phase)+" 0 0\n") 
     print "Motion exported to : ",filename     
     return
 
@@ -132,7 +132,7 @@ def exportRHO(path,f_left,f_right):
                 rho = 0
             else : 
                 rho = (f_left[0,k])/(f_left[0,k] + f_right[0,k])
-            f.write(str(rho)+" 0 0 \n") 
+            f.write(str(rho)+" 0 0\n") 
     print "Motion exported to : ",filename                     
     return
 
