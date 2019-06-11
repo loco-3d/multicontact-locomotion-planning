@@ -11,7 +11,7 @@ import math
 from mlp.utils.util import stdVecToMatrix, createStateFromPhase,effectorPositionFromHPPPath
 import eigenpy
 import hpp_bezier_com_traj as bezier_com
-from hpp_spline import bezier
+from curves import bezier3
 from mlp.utils.polyBezier import PolyBezier
 import quadprog
 eigenpy.switchToNumpyArray()
@@ -269,7 +269,7 @@ def generateLimbRRTOptimizedTraj(time_interval,placement_init,placement_end,numT
     for x in vars:
         wps[:,i] = x
         i +=1
-    bezier_middle = bezier(wps,t_middle)    
+    bezier_middle = bezier3(wps,t_middle)    
     # create concatenation with takeoff/landing 
     curves = predef_curves.curves[::]
     curves[id_middle] = bezier_middle

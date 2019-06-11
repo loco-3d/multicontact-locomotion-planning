@@ -9,8 +9,8 @@ import numpy.linalg
 from multicontact_api import WrenchCone,SOC6,ContactSequenceHumanoid
 import numpy as np
 from tools.disp_bezier import *
-import hpp_spline
-from hpp_spline import bezier
+import curves
+from curves import bezier3
 import hpp_bezier_com_traj as bezier_com
 from mlp.utils import trajectories
 from mlp.utils.util import stdVecToMatrix
@@ -62,7 +62,7 @@ def buildPredefinedInitTraj(placement,t_total):
     wps[:,2] =((n*n*c0 - n*c0 + 2.*n*dc0*T - 2.*dc0*T + ddc0*T*T)/(n*(n - 1.)));#ddc0 // * T because derivation make a T appear
     wps[:,3] =((n*n*c0 - n*c0 + 3.*n*dc0*T - 3.*dc0*T + 3.*ddc0*T*T)/(n*(n - 1.))); #j0 = 0 
     wps[:,4] =(c1); #c1 
-    return bezier(wps,T)
+    return bezier3(wps,T)
 
 def buildPredefinedFinalTraj(placement,t_total):
     p_off,v_off,a_off = computePredefConstants(t_total)
@@ -84,7 +84,7 @@ def buildPredefinedFinalTraj(placement,t_total):
     wps[:,2] = ((n*n*c1 - n*c1 - 2*n*dc1*T + 2*dc1*T + ddc1*T*T)/(n*(n - 1))) ; #ddc1 * T ??
     wps[:,3] = ((-dc1 * T / n) + c1); #dc1
     wps[:,4] = (c1); #c1
-    return bezier(wps,T)
+    return bezier3(wps,T)
 
 # build a bezier curve of degree 7 that connect exactly the two given bezier up to order 3
 def generatePredefMiddle(bezier_takeoff,bezier_landing,T):
@@ -125,13 +125,13 @@ def generatePredefBeziers(time_interval,placement_init,placement_end):
     # create polybezier with concatenation of the 3 (or 5) curves :    
     # create constant curve at the beginning and end for the delay : 
     if cfg.EFF_T_DELAY > 0 :
-        bezier_init_zero=bezier(bezier_takeoff(0),cfg.EFF_T_DELAY)
+        bezier_init_zero=bezier3(bezier_takeoff(0),cfg.EFF_T_DELAY)
         curves.append(bezier_init_zero)
     curves.append(bezier_takeoff)
     curves.append(bezier_middle) 
     curves.append(bezier_landing)
     if cfg.EFF_T_DELAY > 0 :
-        curves.append(bezier(bezier_landing(bezier_landing.max()),cfg.EFF_T_DELAY))    
+        curves.append(bezier3(bezier_landing(bezier_landing.max()),cfg.EFF_T_DELAY))    
     pBezier = PolyBezier(curves) 
     return pBezier
     
