@@ -106,7 +106,7 @@ def generatePredefMiddle(bezier_takeoff,bezier_landing,T):
     wps[:,5] = ((n*n*c1 - n*c1 - 2*n*dc1*T + 2*dc1*T + ddc1*T*T)/(n*(n - 1))) ; #ddc1 * T ??
     wps[:,6] = ((-dc1 * T / n) + c1); #dc1
     wps[:,7] = (c1); #c1    
-    return bezier(wps,T)
+    return bezier3(wps,T)
     
 def generatePredefBeziers(time_interval,placement_init,placement_end):
     t_total = time_interval[1]-time_interval[0] - 2*cfg.EFF_T_DELAY
@@ -189,7 +189,7 @@ def generateSmoothBezierTrajWithoutPredef(time_interval,placement_init,placement
     wps[2,4] += cfg.p_max    
     for i in range(5,9):# final position. final vel,acc and jerk == 0
         wps[:,i] = placement_end.translation.copy()
-    pBezier = PolyBezier(bezier(wps,t_tot))
+    pBezier = PolyBezier(bezier3(wps,t_tot))
     ref_traj = trajectories.BezierTrajectory(pBezier,placement_init,placement_end,time_interval)    
     return ref_traj
 
