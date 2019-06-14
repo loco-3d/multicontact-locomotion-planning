@@ -114,9 +114,10 @@ def fillCSFromTimeopt(cs,cs_initGuess,tp):
             appendOrReplace(cs_com.contact_phases[p_id].control_trajectory,k_id,np.matrix(u))
             appendOrReplace(cs_com.contact_phases[p_id].state_trajectory,k_id,np.matrix(x))                
         k_id +=1
-    # timeopt solution is not guarantee to end at the desired final state.
-    # so we add a final phase here, with a smooth motion from the final state atteined by timeopt to the desired one      
-    connectPhaseTrajToFinalState(cs_com.contact_phases[-1],cfg.DURATION_CONNECT_GOAL)
+    if cfg.DURATION_CONNECT_GOAL > 0 :
+        # timeopt solution is not guarantee to end at the desired final state.
+        # so we add a final phase here, with a smooth motion from the final state atteined by timeopt to the desired one      
+        connectPhaseTrajToFinalState(cs_com.contact_phases[-1],cfg.DURATION_CONNECT_GOAL)
     return cs_com
         
 # helper method to make the link between timeopt.EndEffector and cs.Patch        
