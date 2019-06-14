@@ -76,7 +76,8 @@ def plotEffectorRef(dict_refs,dt):
                     ax_sub.set_xlabel('time (s)')
                     ax_sub.set_ylabel(labels[i*3 + j])
                     ax_sub.grid(True)
-
+    plt.show(block = False)
+    
 def plotEffectorTraj(timeline,p_intervals,ref_dict,traj_dict):
     labels=["x (m)" , "y (m)" ,"z (m)"]
     colors = ['r','g','b']    
