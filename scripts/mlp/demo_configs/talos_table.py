@@ -2,12 +2,13 @@ TIMEOPT_CONFIG_FILE = "cfg_softConstraints_talos_rarm.yaml"
 from common_talos import *
 SCRIPT_PATH = "sandbox.dynamic"
 ENV_NAME = "multicontact/table_140_70_73"
-DURATION_INIT = 1.5 # Time to init the motion
-DURATION_FINAL = 2.9 # Time to stop the robot
+#DURATION_INIT = 1.5 # Time to init the motion
+#DURATION_FINAL = 2.9 # Time to stop the robot
 DURATION_FINAL_SS = 1.
 DURATION_SS =1.5
 DURATION_DS = 2.9
 DURATION_TS = 2.9
+DURATION_CONNECT_GOAL =0.
 
 FEET_MAX_VEL = 5
 FEET_MAX_ANG_VEL = 5

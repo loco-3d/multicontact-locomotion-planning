@@ -1,4 +1,4 @@
-from hpp.corbaserver.rbprm.talos import Robot
+from hpp.corbaserver.rbprm.talos_fixedUpper import Robot
 MASS = 90.27
 
 ## predef duration of contact phases : 
@@ -16,8 +16,8 @@ TIME_SHIFT_COM = 1.5
 fMin = 1.0                      # minimum normal force
 fMax = 1000.                   # maximum normal force
 w_com = 1.0           # weight of center of mass task
-w_am = 1.
-w_posture = 0.1                # weight of joint posture task
+w_am = 0.1
+w_posture = 1e-5                # weight of joint posture task
 w_rootOrientation = 1.       # weight of the root's orientation task
 w_forceRef = 1e-3               # weight of force regularization task
 w_eff = 1.0                     # weight of the effector motion task
@@ -48,11 +48,8 @@ import numpy as np
 gain_vector = np.matrix(
     [ 10. ,  5.  , 5. , 1. ,  1. ,  10., # lleg  #low gain on axis along y and knee
     10. ,  5.  , 5. , 1. ,  1. ,  10., #rleg
-    500. , 500.  , #chest
-    50.,   100.  , 10.,  10.,    10. ,  10. , 10. ,  10. , #larm
-    50.,   100.  , 10., 10.,    10. ,  10. ,  10. ,  10. , #rarm
-   100.,  100.] #head
+    ] 
     ).T   # gain vector for postural task :
 
-masks_posture = np.matrix(np.ones(32)).T
+masks_posture = np.matrix(np.ones(12)).T
 #masks_posture[:11] = 0
