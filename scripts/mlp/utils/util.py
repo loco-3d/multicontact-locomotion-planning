@@ -236,12 +236,14 @@ def connectPhaseTrajToFinalState(phase,duration):
     init_control = phase.control_trajectory[-1]
     t_init = phase.time_trajectory[-1]
     t_end = t_init + duration
+    """
     print "# call connectPhaseTrajToFinalState : "
     print "init_state  : ",init_state
     print "final_state : ",final_state
     print "init_control: ",init_control
     print "t_init : ",t_init
     print "t_end  : ",t_end
+    """
     com_traj = genCOMTrajFromPhaseStates(t_init,t_end,init_state,final_state,init_control)
     am_traj = genAMTrajFromPhaseStates(t_init,t_end,init_state,final_state,init_control)
     i = len(phase.time_trajectory)
@@ -313,6 +315,7 @@ def createStateFromPhase(fullBody,phase,q = None):
         contacts += [cfg.Robot.rArmId]
     if phase.LH_patch.active:
         contacts += [cfg.Robot.lArmId]
+    # FIXME : check if q is consistent with the contacts, and project it if not. 
     return fullBody.createState(q,contacts)
 
 def hppConfigFromMatrice(robot,q_matrix):
