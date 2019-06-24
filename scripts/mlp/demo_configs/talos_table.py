@@ -20,6 +20,9 @@ EFF_CHECK_COLLISION = False
 EFF_T_PREDEF = 0.3
 p_max = 0.1
 
+SOLVER_DT = 0.01 # hardcoded in timeOpt_configs files, must match this one ! 
+COM_SHIFT_Z = -0.04
+TIME_SHIFT_COM = 2.
 
 """
 centroidal_method = "quasistatic" 
