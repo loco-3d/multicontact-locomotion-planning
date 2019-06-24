@@ -191,6 +191,8 @@ def initScene(Robot,envName = "multicontact/ground",genLimbsDB = True):
   fullBody.client.robot.setDimensionExtraConfigSpace(6)
   fullBody.setJointBounds ("root_joint",  [-100,100,-100,100,-100,100])
   fullBody.client.robot.setExtraConfigSpaceBounds([-100,100,-100,100,-100,100,-100,100,-100,100,-100,100])
+  fullBody.setReferenceConfig(fullBody.referenceConfig[::] + [0]*6)
+  fullBody.setPostureWeights(fullBody.postureWeights[::]+[0]*6)  
   try :
     if genLimbsDB:
       fullBody.loadAllLimbs("static")

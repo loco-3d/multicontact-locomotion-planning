@@ -123,25 +123,27 @@ def contactPatchForEffector(phase,eeName,Robot = None):
 
 # get the joint position for the given phase with the given effector name
 # Note that if the effector is not in contact the phase placement may be uninitialized (==Identity)
-def JointPatchForEffector(phase,eeName):
-    if eeName == cfg.Robot.rfoot :
+def JointPatchForEffector(phase,eeName,Robot=None):
+    if not Robot:
+        Robot = cfg.Robot
+    if eeName == Robot.rfoot :
         patch = phase.RF_patch.copy()
-        patch.placement = patch.placement.act(cfg.Robot.MRsole_offset.inverse())
-    elif eeName == cfg.Robot.lfoot :
+        patch.placement = patch.placement.act(Robot.MRsole_offset.inverse())
+    elif eeName == Robot.lfoot :
         patch = phase.LF_patch.copy()
-        patch.placement = patch.placement.act(cfg.Robot.MLsole_offset.inverse())
-    elif eeName == cfg.Robot.rhand :
+        patch.placement = patch.placement.act(Robot.MLsole_offset.inverse())
+    elif eeName == Robot.rhand :
         patch = phase.RH_patch.copy()
-        patch.placement = patch.placement.act(cfg.Robot.MRhand_offset.inverse())
-    elif eeName == cfg.Robot.lhand :
+        patch.placement = patch.placement.act(Robot.MRhand_offset.inverse())
+    elif eeName == Robot.lhand :
         patch = phase.LH_patch.copy()
-        patch.placement = patch.placement.act(cfg.Robot.MLhand_offset.inverse())
+        patch.placement = patch.placement.act(Robot.MLhand_offset.inverse())
     else :
         raise Exception("Unknown effector name")
     return patch
 
-def JointPlacementForEffector(phase,eeName):
-    return JointPatchForEffector(phase,eeName).placement
+def JointPlacementForEffector(phase,eeName,Robot=None):
+    return JointPatchForEffector(phase,eeName,Robot).placement
 
 def getContactPlacement(phase,eeName,Robot = None):
     if not Robot : 
@@ -236,12 +238,14 @@ def connectPhaseTrajToFinalState(phase,duration):
     init_control = phase.control_trajectory[-1]
     t_init = phase.time_trajectory[-1]
     t_end = t_init + duration
+    """
     print "# call connectPhaseTrajToFinalState : "
     print "init_state  : ",init_state
     print "final_state : ",final_state
     print "init_control: ",init_control
     print "t_init : ",t_init
     print "t_end  : ",t_end
+    """
     com_traj = genCOMTrajFromPhaseStates(t_init,t_end,init_state,final_state,init_control)
     am_traj = genAMTrajFromPhaseStates(t_init,t_end,init_state,final_state,init_control)
     i = len(phase.time_trajectory)
@@ -300,19 +304,25 @@ def copyPhaseContactPlacements(phase_in,phase_out):
 
 
 
+def getActiveContactLimbs(phase,Robot=None):
+    if not Robot:
+        Robot = cfg.Robot
+    contacts = []
+    if phase.RF_patch.active:
+        contacts += [Robot.rLegId]
+    if phase.LF_patch.active:
+        contacts += [Robot.lLegId]
+    if phase.RH_patch.active:
+        contacts += [Robot.rArmId]
+    if phase.LH_patch.active:
+        contacts += [Robot.lArmId]
+    return contacts
 
 def createStateFromPhase(fullBody,phase,q = None):
     if q is None:
         q = hppConfigFromMatrice(fullBody.client.robot,phase.reference_configurations[0])
-    contacts = []
-    if phase.RF_patch.active:
-        contacts += [cfg.Robot.rLegId]
-    if phase.LF_patch.active:
-        contacts += [cfg.Robot.lLegId]
-    if phase.RH_patch.active:
-        contacts += [cfg.Robot.rArmId]
-    if phase.LH_patch.active:
-        contacts += [cfg.Robot.lArmId]
+    contacts = getActiveContactLimbs(phase)
+    # FIXME : check if q is consistent with the contacts, and project it if not. 
     return fullBody.createState(q,contacts)
 
 def hppConfigFromMatrice(robot,q_matrix):
@@ -410,3 +420,11 @@ def fillPhaseTrajWithZeros(phase,current_t,duration):
         phase.control_trajectory.append(control)
         phase.time_trajectory.append(t)
         t += dt        
+        
+def computeContactNormal(placement):
+    z_up = np.matrix([0., 0., 1.]).T  
+    contactNormal = placement.rotation * z_up     
+    return contactNormal
+    
+def computeContactNormalForPhase(phase,eeName):
+    return computeContactNormal(getContactPlacement(phase,eeName))

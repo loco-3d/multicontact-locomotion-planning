@@ -114,9 +114,10 @@ def fillCSFromTimeopt(cs,cs_initGuess,tp):
             appendOrReplace(cs_com.contact_phases[p_id].control_trajectory,k_id,np.matrix(u))
             appendOrReplace(cs_com.contact_phases[p_id].state_trajectory,k_id,np.matrix(x))                
         k_id +=1
-    # timeopt solution is not guarantee to end at the desired final state.
-    # so we add a final phase here, with a smooth motion from the final state atteined by timeopt to the desired one      
-    connectPhaseTrajToFinalState(cs_com.contact_phases[-1],cfg.DURATION_CONNECT_GOAL)
+    if cfg.DURATION_CONNECT_GOAL > 0 :
+        # timeopt solution is not guarantee to end at the desired final state.
+        # so we add a final phase here, with a smooth motion from the final state atteined by timeopt to the desired one      
+        connectPhaseTrajToFinalState(cs_com.contact_phases[-1],cfg.DURATION_CONNECT_GOAL)
     return cs_com
         
 # helper method to make the link between timeopt.EndEffector and cs.Patch        
@@ -238,26 +239,32 @@ def extractAllEffectorsPhasesFromCS(cs,cs_initGuess,ee_ids):
 
 
 # add an initial and final phase that only move the COM along z from the given distance
-def addInitShift(cs_in):
-    cs = ContactSequenceHumanoid(cs_in.size()+1)
-    # copy all phases but leave one phase at the beginning : 
-    for k in range(cs_in.size()):
-        phase = cs_in.contact_phases[k].copy()
-        # shift times to take in account the new phase : 
+def addInitShift(cs):
+    # shit all times of TIME_SHIFT_COM
+    for k in range(cs.size()):
+        phase = cs.contact_phases[k]
+        # shift times to take in account the new duration of init phase : 
         for i in range(len(phase.time_trajectory)):
             phase.time_trajectory[i] += cfg.TIME_SHIFT_COM
-        cs.contact_phases[k+1] = phase
         
     # now add new first phase :    
-    phase = cs.contact_phases[0]
-    s_final = cs.contact_phases[1].init_state
+    prev_phase_init = cs.contact_phases[0]
+    phase_init = ContactPhaseHumanoid()
+    copyPhaseContacts(prev_phase_init,phase_init)
+    phase_init.reference_configurations = prev_phase_init.reference_configurations
+    # generate trajectory for the 'shift' part : 
+    s_final = prev_phase_init.init_state.copy()
     s_init = s_final.copy()
     s_init[2] -= cfg.COM_SHIFT_Z
-    phase.init_state = s_init
-    phase.final_state = s_final
-    genSplinesForPhase(phase,0.,cfg.TIME_SHIFT_COM)
-    copyPhaseContacts(cs.contact_phases[1],phase)
-    phase.reference_configurations = cs.contact_phases[1].reference_configurations
+    phase_init.init_state = s_init
+    phase_init.final_state = s_final
+    genSplinesForPhase(phase_init,0.,cfg.TIME_SHIFT_COM)
+    # fill the rest of the phase with the trajectory in previous_phase
+    for i in range(len(prev_phase_init.time_trajectory)):
+        phase_init.time_trajectory.append(prev_phase_init.time_trajectory[i])
+        phase_init.state_trajectory.append(prev_phase_init.state_trajectory[i])
+        phase_init.control_trajectory.append(prev_phase_init.control_trajectory[i])
+    cs.contact_phases[0] = phase_init 
     return cs
     
 

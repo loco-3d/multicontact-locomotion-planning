@@ -1,9 +1,10 @@
 from multicontact_api import ContactSequenceHumanoid, ContactPhaseHumanoid
 from pinocchio import SE3, Quaternion
 import mlp.viewer.display_tools as display_tools
-from mlp.utils.util import SE3FromConfig,contactPatchForEffector,isContactActive,getContactPlacement
+from mlp.utils.util import SE3FromConfig,contactPatchForEffector,isContactActive,getContactPlacement,getActiveContactLimbs,computeContactNormal,JointPlacementForEffector
 import numpy as np 
 import types
+from hpp.corbaserver.rbprm.rbprmstate import State,StateHelper
 
 def addPhaseFromConfig(fb,v,cs,q,limbsInContact):
     phase = ContactPhaseHumanoid()
@@ -29,6 +30,31 @@ def addPhaseFromConfig(fb,v,cs,q,limbsInContact):
         
     cs.contact_phases.append(phase)
     display_tools.displaySteppingStones(cs,v.client.gui,v.sceneName,fb)
+    
+def generateConfigFromPhase(fb,phase):
+    contacts = getActiveContactLimbs(phase,fb)
+    q = phase.reference_configurations[0].T.tolist()[0] # should be the correct config for the previous phase, if used only from high level helper methods
+    # create state in fullBody : 
+    state = State(fb,q=q,limbsIncontact=contacts)
+    # check if q is consistent with the contact placement in the phase : 
+    fb.setCurrentConfig(q)    
+    for limbId in contacts : 
+        eeName = fb.dict_limb_joint[limbId]
+        placement_fb = SE3FromConfig(fb.getJointPosition(eeName))
+        placement_phase = JointPlacementForEffector(phase,eeName,fb)
+        if placement_fb != placement_phase: # add a threshold instead of 0 ? how ?
+            # need to project the new contact : 
+            placement = getContactPlacement(phase,eeName,fb)
+            p = placement.translation.T.tolist()[0]
+            n = computeContactNormal(placement).T.tolist()[0]
+            state, success = StateHelper.addNewContact(state,limbId,p,n,1000)
+            if not success :
+                print "Cannot project the configuration to contact, for effector : ",eeName
+                return phase
+    phase.reference_configurations[0] = np.matrix(state.q()).T
+    return phase
+            
+        
 
 def removeContact(Robot,cs,eeName):
     print "- Remove contact : ",eeName
@@ -38,33 +64,34 @@ def removeContact(Robot,cs,eeName):
 
 # add one or two contact phases to the sequence in order to move the effector eeName 
 # to the desired placement
-def moveEffectorToPlacement(Robot,v,cs,eeName,placement):
+def moveEffectorToPlacement(fb,v,cs,eeName,placement):
     print "## Move effector "+eeName+" to placement : "+str(placement.translation.T)
     prev_phase = cs.contact_phases[-1]
-    if isContactActive(prev_phase,eeName,Robot):
+    if isContactActive(prev_phase,eeName,fb):
         print "#Contact repositionning, add two new phases."
-        removeContact(Robot,cs,eeName)
+        removeContact(fb,cs,eeName)
     print "+ Contact creation : ",eeName
     phase = ContactPhaseHumanoid(cs.contact_phases[-1])
-    patch = contactPatchForEffector(phase,eeName,Robot)
+    patch = contactPatchForEffector(phase,eeName,fb)
     patch.placement = placement
     patch.active=True
+    generateConfigFromPhase(fb,phase)
     cs.contact_phases.append(phase)    
-    display_tools.displaySteppingStones(cs,v.client.gui,v.sceneName,Robot)
+    display_tools.displaySteppingStones(cs,v.client.gui,v.sceneName,fb)
     
 
 # add one or two contact phases to the sequence in order to move the effector eeName of
 #the value in translation
-def moveEffectorOf(Robot,v,cs,eeName,translation):
+def moveEffectorOf(fb,v,cs,eeName,translation):
     print "## Move effector "+eeName+" of : "+str(translation)
     prev_phase = cs.contact_phases[-1]
-    assert isContactActive(prev_phase,eeName,Robot), "Cannot use 'moveEffectorOf' if the effector is not in contact in the last phase."
-    placement = getContactPlacement(prev_phase,eeName,Robot).copy()
+    assert isContactActive(prev_phase,eeName,fb), "Cannot use 'moveEffectorOf' if the effector is not in contact in the last phase."
+    placement = getContactPlacement(prev_phase,eeName,fb).copy()
     if isinstance(translation,types.ListType):
         translation = np.matrix(translation).T
     assert translation.shape[0] == 3 ,"translation must be a 3D vector"
     placement.translation += translation
-    moveEffectorToPlacement(Robot,v,cs,eeName,placement)
+    moveEffectorToPlacement(fb,v,cs,eeName,placement)
 
 def setFinalState(cs,com = None,q=None):
     phase = cs.contact_phases[-1]
@@ -98,28 +125,37 @@ def setFinalState(cs,com = None,q=None):
 # generate a walking motion from the last phase in the contact sequence.
 # the contacts will be moved in the order of the 'gait' list. With the first one move only of half the stepLength
 # TODO : make it generic ! it's currently limited to motion in the x direction
-def walk(Robot,v,cs,distance,stepLength,gait):
+def walk(fb,v,cs,distance,stepLength,gait):
+    fb.usePosturalTaskContactCreation(True)
     prev_phase = cs.contact_phases[-1]
     for limb in gait : 
-        eeName = Robot.dict_limb_joint[limb]
-        assert isContactActive(prev_phase,eeName,Robot), "All limbs in gait should be in contact in the first phase"
+        eeName = fb.dict_limb_joint[limb]
+        assert isContactActive(prev_phase,eeName,fb), "All limbs in gait should be in contact in the first phase"
     isFirst = True
     reached = False
+    firstContactReachedGoal = False
     remainingDistance = distance
     while remainingDistance >= 0 :
-        for limb in gait : 
+        for k,limb in enumerate(gait) : 
             if isFirst:
                 length = stepLength/2.
                 isFirst = False
             else : 
                 length = stepLength
-            if length > remainingDistance:
-                length = remainingDistance
+            if k == 0 : 
+                if length > (remainingDistance+stepLength/2.):
+                    length = remainingDistance+stepLength/2.
+                    firstContactReachedGoal = True
+            else :
+                if length > remainingDistance:
+                    length = remainingDistance
             translation = [length,0,0]
-            moveEffectorOf(Robot,v,cs,Robot.dict_limb_joint[limb],translation)
+            moveEffectorOf(fb,v,cs,fb.dict_limb_joint[limb],translation)
         remainingDistance -= stepLength
-    translation = [stepLength/2.,0,0]    
-    moveEffectorOf(Robot,v,cs,Robot.dict_limb_joint[gait[0]],translation) 
-    q_end = Robot.referenceConfig[::]+[0]*6
+    if not firstContactReachedGoal :
+        translation = [stepLength/2.,0,0]    
+        moveEffectorOf(fb,v,cs,fb.dict_limb_joint[gait[0]],translation) 
+    q_end = fb.referenceConfig[::]+[0]*6
     q_end[0] += distance
     setFinalState(cs,q=q_end)
+    fb.usePosturalTaskContactCreation(False)
