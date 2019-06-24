@@ -123,25 +123,27 @@ def contactPatchForEffector(phase,eeName,Robot = None):
 
 # get the joint position for the given phase with the given effector name
 # Note that if the effector is not in contact the phase placement may be uninitialized (==Identity)
-def JointPatchForEffector(phase,eeName):
-    if eeName == cfg.Robot.rfoot :
+def JointPatchForEffector(phase,eeName,Robot=None):
+    if not Robot:
+        Robot = cfg.Robot
+    if eeName == Robot.rfoot :
         patch = phase.RF_patch.copy()
-        patch.placement = patch.placement.act(cfg.Robot.MRsole_offset.inverse())
-    elif eeName == cfg.Robot.lfoot :
+        patch.placement = patch.placement.act(Robot.MRsole_offset.inverse())
+    elif eeName == Robot.lfoot :
         patch = phase.LF_patch.copy()
-        patch.placement = patch.placement.act(cfg.Robot.MLsole_offset.inverse())
-    elif eeName == cfg.Robot.rhand :
+        patch.placement = patch.placement.act(Robot.MLsole_offset.inverse())
+    elif eeName == Robot.rhand :
         patch = phase.RH_patch.copy()
-        patch.placement = patch.placement.act(cfg.Robot.MRhand_offset.inverse())
-    elif eeName == cfg.Robot.lhand :
+        patch.placement = patch.placement.act(Robot.MRhand_offset.inverse())
+    elif eeName == Robot.lhand :
         patch = phase.LH_patch.copy()
-        patch.placement = patch.placement.act(cfg.Robot.MLhand_offset.inverse())
+        patch.placement = patch.placement.act(Robot.MLhand_offset.inverse())
     else :
         raise Exception("Unknown effector name")
     return patch
 
-def JointPlacementForEffector(phase,eeName):
-    return JointPatchForEffector(phase,eeName).placement
+def JointPlacementForEffector(phase,eeName,Robot=None):
+    return JointPatchForEffector(phase,eeName,Robot).placement
 
 def getContactPlacement(phase,eeName,Robot = None):
     if not Robot : 
