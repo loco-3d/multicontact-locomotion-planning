@@ -304,19 +304,24 @@ def copyPhaseContactPlacements(phase_in,phase_out):
 
 
 
+def getActiveContactLimbs(phase,Robot=None):
+    if not Robot:
+        Robot = cfg.Robot
+    contacts = []
+    if phase.RF_patch.active:
+        contacts += [Robot.rLegId]
+    if phase.LF_patch.active:
+        contacts += [Robot.lLegId]
+    if phase.RH_patch.active:
+        contacts += [Robot.rArmId]
+    if phase.LH_patch.active:
+        contacts += [Robot.lArmId]
+    return contacts
 
 def createStateFromPhase(fullBody,phase,q = None):
     if q is None:
         q = hppConfigFromMatrice(fullBody.client.robot,phase.reference_configurations[0])
-    contacts = []
-    if phase.RF_patch.active:
-        contacts += [cfg.Robot.rLegId]
-    if phase.LF_patch.active:
-        contacts += [cfg.Robot.lLegId]
-    if phase.RH_patch.active:
-        contacts += [cfg.Robot.rArmId]
-    if phase.LH_patch.active:
-        contacts += [cfg.Robot.lArmId]
+    contacts = getActiveContactLimbs(phase)
     # FIXME : check if q is consistent with the contacts, and project it if not. 
     return fullBody.createState(q,contacts)
 
