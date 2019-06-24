@@ -14,7 +14,7 @@ planner_variables:
 
   gravity: 9.81
   robot_mass: 90.27
-  friction_coeff: 0.3
+  friction_coeff: 0.1
   friction_cone: LinearCone  # Types: LinearCone, SocCone #
   torque_range: [-1000.0, 1000.0]
   eff_offset_rf: [ 0.00,  0.00,  0.00]
