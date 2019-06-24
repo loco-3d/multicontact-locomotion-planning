@@ -20,8 +20,8 @@ step_height = 0.1
 step_width = 0.3
 
 for i in range(num_steps):
-    moveEffectorOf(Robot,v,cs,fb.rfoot,[step_width,0,step_height])
-    moveEffectorOf(Robot,v,cs,fb.lfoot,[step_width,0,step_height])
+    moveEffectorOf(fb,v,cs,fb.rfoot,[step_width,0,step_height])
+    moveEffectorOf(fb,v,cs,fb.lfoot,[step_width,0,step_height])
 
 q_end = q_ref[::]
 q_end[0] += step_width*num_steps
