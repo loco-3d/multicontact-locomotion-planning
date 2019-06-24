@@ -420,3 +420,11 @@ def fillPhaseTrajWithZeros(phase,current_t,duration):
         phase.control_trajectory.append(control)
         phase.time_trajectory.append(t)
         t += dt        
+        
+def computeContactNormal(placement):
+    z_up = np.matrix([0., 0., 1.]).T  
+    contactNormal = placement.rotation * z_up     
+    return contactNormal
+    
+def computeContactNormalForPhase(phase,eeName):
+    return computeContactNormal(getContactPlacement(phase,eeName))
