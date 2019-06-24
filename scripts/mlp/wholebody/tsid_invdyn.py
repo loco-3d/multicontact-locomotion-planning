@@ -44,8 +44,6 @@ def getCurrentEffectorPosition(robot,data,eeName):
             
     
 def createContactForEffector(invdyn,robot,phase,eeName):             
-    z_up = np.matrix([0., 0., 1.]).T  
-    #contactNormal = getContactPlacement(phase,eeName).rotation * z_up # direction of the normal to the contact surface
     contactNormal = np.matrix(cfg.Robot.dict_normal[eeName]).T
     contactNormal = cfg.Robot.dict_offset[eeName].rotation * contactNormal # apply offset transform
     if cfg.Robot.cType == "_3_DOF":
