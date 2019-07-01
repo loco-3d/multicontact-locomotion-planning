@@ -80,7 +80,8 @@ def exportFoot(path,name,ref):
             for i in range(3):
                 line += str(placement.translation[i,0])+" "
             # orientation : 
-            rot = matrixToRpy(placement.rotation)
+            rot = matrixToRpy(placement.rotation) 
+            #rot = matrixToRpy(SE3.Identity().rotation) # DEBUG
             for i in range(3):
                 line += str(rot[i,0])+" "      
             # TODO : velocity and acceleration :
@@ -95,7 +96,8 @@ def exportWaist(path,waist_t):
     with open(filename,'w') as f:   
         for waist in waist_t.T:
             quat = Quaternion(waist[0,6],waist[0,3],waist[0,4],waist[0,5])
-            rot = matrixToRpy(quat.matrix())
+            #rot = matrixToRpy(quat.matrix()) # DEBUG
+            rot = matrixToRpy(SE3.Identity().rotation) # DEBUG
             line = ""
             for i in range(3):
                 line += str(rot[i,0]) + " "
@@ -147,8 +149,8 @@ def export(res):
     if not os.path.exists(path):
         os.makedirs(path)   
         
-    exportCOM(path,res.c_t,res.dc_t,res.ddc_t)
-    exportZMP(path,res.zmp_t)
+    exportCOM(path,res.c_reference,res.dc_reference,res.ddc_reference)
+    exportZMP(path,res.zmp_reference)
     exportFoot(path,"LeftFoot",res.effector_references[cfg.Robot.lfoot])
     exportFoot(path,"RightFoot",res.effector_references[cfg.Robot.rfoot])
     exportWaist(path,res.q_t[0:7,:])
