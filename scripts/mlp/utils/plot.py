@@ -21,7 +21,7 @@ def show_non_blocking(plt):
 
 def addVerticalLineContactSwitch(timeline,intervals,plt,linestyle="-.",color='k'):
     plt.axvline(timeline[intervals[0][0]],linestyle=linestyle,color=color)    
-    for interval in intervals:
+    for interval in intervals[:-1]:
         plt.axvline(timeline[interval[-1]],linestyle=linestyle,color=color)
 
 def plotEffectorRef(dict_refs,dt):
