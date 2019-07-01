@@ -60,10 +60,10 @@ def exportZMP(path,zmp_t):
     with open(filename,'w') as f:    
         for zmp in zmp_t.T:
             line = ""
-            for i in range(3):
+            for i in range(2):
                 line +=str(zmp[0,i])+" "
             # TODO velocity and acceleration
-            for i in range(6):
+            for i in range(7):
                 line += "0 "
             f.write(line.rstrip(" ")+"\n")
     print "Motion exported to : ",filename                
