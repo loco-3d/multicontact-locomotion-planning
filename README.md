@@ -1,14 +1,15 @@
-This project implement the framework for mulicontact locomotion planning proposed in the loco-3d project. 
-This framework decompose the global locomotion problem in several subproblems solved sequentially : 
+This project implement the framework for mulicontact locomotion planning proposed in the [loco-3d](https://hal.laas.fr/hal-01543060) project. 
+This framework decompose the global locomotion problem in several subproblems solved sequentially, as shown in the figure below:  
 
-* The contact planning
-* Centroidal trajectory optimization
-* Wholebody motion generation
 
-It contains wrapper for the different blocks of the framework and script to automatically formulate problems, retrieve and store solutions and connect every blocks together. 
+In details, this package implement the following architecture: 
+
+
+Where all the connections between the blocks are made with objects from the [multicontact-API](https://github.com/loco-3d/multicontact-api) package. Thanks to this, we can have a modular architecture with different methods for solving each blocks but with an unified API. The multicontact-locomotion-planning package doesn't implement any of the solvers/methods for any of the blocks but it contains wrapper for the different blocks of the framework and script to automatically formulate problems, retrieve and store solutions and connect every blocks together. 
 Along with a lot of helpers for visualization or exports. 
 
 The goal of this framework is to be modular, allowing the user to select a method for each of the subproblem or add a wrapper for any new method from the state-of-the-art solving one of this subproblem and connect it seamlessly to the rest of the framework. 
+This wrappers are python script that take a user input or an object from the  [multicontact-API](https://github.com/loco-3d/multicontact-api) package, generate a generic problem from the input and call the API of a specific solver. Then it retrieve the solution from the solver and correctly store it in a [multicontact-API](https://github.com/loco-3d/multicontact-api) object. 
 
 # Installation procedure :
 
