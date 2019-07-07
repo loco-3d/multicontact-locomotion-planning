@@ -51,6 +51,7 @@ Currently supported method for each subproblem, you need to install the packages
 ## Contact generation : 
 
 * RBPRM (https://github.com/humanoid-path-planner/hpp-rbprm-corba#installation-from-binary-package-repository)
+* Manually defined (helper methods are available to easily define a gait or a sequence of effector positions)
 
 ## Centroidal trajectory optimization : 
 
@@ -61,6 +62,7 @@ Currently supported method for each subproblem, you need to install the packages
 ## Wholebody motion generation :
 
 * TSID (https://github.com/stack-of-tasks/tsid)
+* CROCODDYL (Work in progress) (https://github.com/loco-3d/crocoddyl)
 
 ## Effector trajectories :
 
