@@ -40,7 +40,7 @@ DISPLAY_FEET_TRAJ = True # display the feet trajectories used in the final motio
 DISPLAY_ALL_FEET_TRAJ = False # display all the trajectory used as reference, even the invalid ones
 DISPLAY_WB_MOTION = False
 DT_DISPLAY = 0.05 # dt used to display the wb motion
-PLOT = True
+PLOT = False
 DISPLAY_PLOT = PLOT and True
 SAVE_PLOT = PLOT and True
 
@@ -59,8 +59,8 @@ USE_WP_COST = True # use wp from the contact sequence in the cost function of ti
 
 ## Settings for end effector :
 EFF_CHECK_COLLISION = True
-WB_ABORT_WHEN_INVALID = True # stop wb script when detecting a collision and return the VALID part (before the phase with collision
-WB_RETURN_INVALID = not WB_ABORT_WHEN_INVALID and False  # stop wb script when detecting a collision and return  the computed part of motion, incuding the last INVALID phase
+WB_ABORT_WHEN_INVALID = False # stop wb script when detecting a collision and return the VALID part (before the phase with collision
+WB_RETURN_INVALID = not WB_ABORT_WHEN_INVALID and True  # stop wb script when detecting a collision and return  the computed part of motion, incuding the last INVALID phase
 
 ##  Settings for whole body : 
 YAW_ROT_GAIN = 1.
