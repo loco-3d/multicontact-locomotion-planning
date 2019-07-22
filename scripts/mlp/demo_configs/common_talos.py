@@ -49,8 +49,8 @@ gain_vector = np.matrix(
     [ 10. ,  5.  , 5. , 1. ,  1. ,  10., # lleg  #low gain on axis along y and knee
     10. ,  5.  , 5. , 1. ,  1. ,  10., #rleg
     500. , 500.  , #chest
-    50.,   100.  , 10.,  10.,    10. ,  10. , 10. ,  10. , #larm
-    50.,   100.  , 10., 10.,    10. ,  10. ,  10. ,  10. , #rarm
+    50.,   100.  , 10.,  10.,    10. ,  10. , 100. ,  50. , #larm
+    50.,   100.  , 10., 10.,    10. ,  10. ,  100. ,  50. , #rarm
    100.,  100.] #head
     ).T   # gain vector for postural task :
 
