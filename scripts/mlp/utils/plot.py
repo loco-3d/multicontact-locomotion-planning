@@ -21,8 +21,9 @@ def show_non_blocking(plt):
 
 def addVerticalLineContactSwitch(timeline,intervals,plt,linestyle="-.",color='k'):
     plt.axvline(timeline[intervals[0][0]],linestyle=linestyle,color=color)    
-    for interval in intervals[:-1]:
-        plt.axvline(timeline[interval[-1]],linestyle=linestyle,color=color)
+    for interval in intervals:
+        if len(interval) > 0 and (interval[-1] < len(timeline)): # may happen when the motion generation did not succeed completely
+            plt.axvline(timeline[interval[-1]],linestyle=linestyle,color=color)
 
 def plotEffectorRef(dict_refs,dt):
     labels=["x (m)" , "y (m)" ,"z (m)", "dx (m/s)" , "dy (m/s)" ,"dz (m/s)","ddx (m/s^2)" , "ddy (m/s^2)" ,"ddz (m/s^2)"]
