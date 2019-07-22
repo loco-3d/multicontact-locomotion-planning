@@ -3,6 +3,7 @@ import numpy as np
 from numpy import cross
 from numpy.linalg import norm
 from pinocchio import SE3, Quaternion
+from pinocchio.utils import rpyToMatrix,rotate
 import mlp.config as cfg
 from mlp.utils.trajectories import cubicSplineTrajectory,quinticSplineTrajectory
 import math
@@ -105,6 +106,20 @@ def SE3FromConfig(q):
     r = Quaternion(q[6,0],q[3,0],q[4,0],q[5,0])
     placement.rotation = r.matrix()
     return placement
+
+# rotate the given placement of 'angle' (in radian) along axis 'axis'
+# axis : either 'x' , 'y' or 'z'
+def rotatePlacement(placement,axis,angle):
+    T = rotate(axis,angle)
+    placement.rotation = placement.rotation*T
+    return placement
+
+def rotateFromRPY(placement,rpy):
+    trans = SE3.Identity()
+    trans.rotation = rpyToMatrix(rpy)
+    return placement.act(trans)
+
+
 
 def contactPatchForEffector(phase,eeName,Robot = None):
     if not Robot : 
