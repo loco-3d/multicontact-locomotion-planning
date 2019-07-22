@@ -172,7 +172,7 @@ def getContactPlacement(phase,eeName,Robot = None):
     elif eeName == Robot.lhand :
         return phase.LH_patch.placement
     else :
-        raise Exception("Unknown effector name")
+        raise Exception("Unknown effector name : "+str(eeName))
     return patch
 
 
