@@ -56,3 +56,5 @@ gain_vector = np.matrix(
 
 masks_posture = np.matrix(np.ones(32)).T
 #masks_posture[:11] = 0
+
+IK_REFERENCE_CONFIG = np.matrix(Robot.referenceConfig).T

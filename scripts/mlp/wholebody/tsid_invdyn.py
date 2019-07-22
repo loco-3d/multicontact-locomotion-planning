@@ -168,7 +168,7 @@ def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
     postureTask.setKd(2.0 * np.sqrt(cfg.kp_posture* cfg.gain_vector) )
     postureTask.mask(cfg.masks_posture)         
     invdyn.addMotionTask(postureTask, cfg.w_posture,cfg.level_posture, 0.0)
-    q_ref = q
+    q_ref = cfg.IK_REFERENCE_CONFIG
     trajPosture = tsid.TrajectoryEuclidianConstant("traj_joint", q_ref[7:])    
     
     orientationRootTask = tsid.TaskSE3Equality("task-orientation-root", robot, 'root_joint')
