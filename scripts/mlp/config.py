@@ -64,6 +64,8 @@ WB_RETURN_INVALID = not WB_ABORT_WHEN_INVALID and False  # stop wb script when d
 
 ##  Settings for whole body : 
 YAW_ROT_GAIN = 1.
+USE_PLANNING_ROOT_ORIENTATION = True # if true, the reference for the root orientation is the one given by the planning
+# (stored in phase.reference_configurations) if false, use the one of q_init for all the motion.
 WB_VERBOSE = 0 # 0,1 or 2
 WB_STOP_AT_EACH_PHASE = False # wait for user input between each phase
 IK_dt = 0.001  # controler time step

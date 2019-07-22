@@ -427,8 +427,9 @@ def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
                 
                 # root orientation : 
                 sampleRoot = trajRoot.computeNext()
-                sampleRoot.pos(SE3toVec(root_traj(t)[0]))
-                sampleRoot.vel(MotiontoVec(root_traj(t)[1]))
+                if cfg.USE_PLANNING_ROOT_ORIENTATION :
+                    sampleRoot.pos(SE3toVec(root_traj(t)[0]))
+                    sampleRoot.vel(MotiontoVec(root_traj(t)[1]))
                 orientationRootTask.setReference(sampleRoot)
                 
                 if cfg.WB_VERBOSE == 2:
