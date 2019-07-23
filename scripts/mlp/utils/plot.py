@@ -8,6 +8,7 @@ import matplotlib
 matplotlib.use("Qt4agg")
 import matplotlib.pyplot as plt
 from multiprocessing import Process
+from mlp.utils.util import stdVecToMatrix
 from mlp.utils.computation_tools import computeZMP,computeZMPRef
 plt.ioff()
 
@@ -200,7 +201,36 @@ def plotCOMTraj(timeline,p_intervals,ref_c,ref_dc,ref_ddc,c_t,dc_t,ddc_t):
             ax_sub.set_ylabel(labels[i*3 + j])
             ax_sub.yaxis.grid()    
             addVerticalLineContactSwitch(timeline.T,p_intervals,ax_sub)
-            
+
+def plotCOMTrajFromCS(cs):
+    labels=["x (m)" , "y (m)" ,"z (m)", "dx (m/s)" , "dy (m/s)" ,"dz (m/s)","ddx (m/s^2)" , "ddy (m/s^2)" ,"ddz (m/s^2)"]
+    colors = ['r','g','b']
+    fig, ax = plt.subplots(3,3)
+    fig.canvas.set_window_title("COM trajectory reference")
+    fig.suptitle("COM trajectory reference", fontsize=20)
+    for p in cs.contact_phases:
+        states = stdVecToMatrix(p.state_trajectory)
+        controls = stdVecToMatrix(p.control_trajectory)
+        timeline = stdVecToMatrix(p.time_trajectory)
+        for i in range(3): # line = pos,vel,acc
+            for j in range(3): # col = x,y,z
+                ax_sub = ax[i,j]
+                if i == 0 :
+                    ax_sub.plot(timeline.T, states[j,:].T, color=colors[j])
+                elif i == 1 :
+                    ax_sub.plot(timeline.T, states[j+3,:].T, color=colors[j])
+                elif i == 2 :
+                    ax_sub.plot(timeline.T, controls[j,:].T, color=colors[j])
+                ax_sub.axvline(p.time_trajectory[-1], linestyle="-.", color='k')
+
+    for i in range(3):  # line = pos,vel,acc
+        for j in range(3):  # col = x,y,z
+            ax_sub = ax[i, j]
+            ax_sub.set_xlabel('time (s)')
+            ax_sub.set_ylabel(labels[i*3 + j])
+            ax_sub.yaxis.grid()
+    plt.show(block=False)
+
 def plotAMTraj(timeline,p_intervals,L_t,dL_t,L_reference,dL_reference):
     labels=["x" , "y" ,"z", "dx" , "dy" ,"dz"]
     colors = ['r','g','b']    
