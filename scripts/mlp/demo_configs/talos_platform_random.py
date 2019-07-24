@@ -1,4 +1,4 @@
-TIMEOPT_CONFIG_FILE = "cfg_softConstraints_talos.yaml"
+TIMEOPT_CONFIG_FILE = "cfg_softConstraints_talos_kinConstraints.yaml"
 from common_talos import *
 SCRIPT_PATH = "memmo"
 ENV_NAME = "multicontact/plateforme_not_flat"
@@ -16,5 +16,5 @@ w_am = 0.5
 EFF_T_PREDEF = 0.2
 p_max = 0.11
 
-COM_SHIFT_Z = -0.025
+COM_SHIFT_Z = -0.03
 TIME_SHIFT_COM = 2.
