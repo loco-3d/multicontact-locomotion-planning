@@ -33,11 +33,11 @@ openHRP_useZMPref = False # if true : in the export_openHRP, use the zmp compute
 WRITE_STATUS = True
 ##DISPLAY settings : 
 DISPLAY_CS = False # display contact sequence from rbprm
-DISPLAY_CS_STONES = True # display stepping stones
+DISPLAY_CS_STONES = False # display stepping stones
 DISPLAY_INIT_GUESS_TRAJ = False 
-DISPLAY_WP_COST=True # display waypoints found by the planner and used in the cost function of the centroidal dynamic solver
-DISPLAY_COM_TRAJ = True 
-DISPLAY_FEET_TRAJ = True # display the feet trajectories used in the final motion
+DISPLAY_WP_COST=False # display waypoints found by the planner and used in the cost function of the centroidal dynamic solver
+DISPLAY_COM_TRAJ = False
+DISPLAY_FEET_TRAJ = False # display the feet trajectories used in the final motion
 DISPLAY_ALL_FEET_TRAJ = False # display all the trajectory used as reference, even the invalid ones
 DISPLAY_WB_MOTION = False # display whole body motion automatically once it's computed
 DT_DISPLAY = 0.05 # dt used to display the wb motion (one configuration every dt is sent to the viewer) It have to be greater than IK_dt
