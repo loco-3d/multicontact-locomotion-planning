@@ -32,6 +32,8 @@ IK_eff_size[Robot.lfoot] = [0.5,0.8]
 ## Settings for end effectors : 
 EFF_T_PREDEF = 0.3
 EFF_T_DELAY = 0.05
+FEET_MAX_VEL = 0.5
+FEET_MAX_ANG_VEL = 1.5
 p_max = 0.1
 
 import numpy as np
@@ -50,3 +52,5 @@ gain_vector = np.matrix(
 masks_posture = np.matrix(np.ones(30)).T
 #masks_posture[-12:] = 0 # legID
 #print "mask postural task",masks_posture
+
+IK_REFERENCE_CONFIG = np.matrix(Robot.referenceConfig).T

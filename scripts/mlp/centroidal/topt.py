@@ -172,7 +172,7 @@ def extractEffectorPhasesFromCSWithoutInitGuess(cs,ee):
     #TODO : same as above but take hardcoded duration (depending on the type of phases instead of the one inside the trajectory)
     raise Exception("Not implemented yet.")
 
-def addCOMviapoints(tp,cs,viewer = None) : 
+def addCOMviapoints(tp,cs,cs_initGuess,viewer = None) :
     phase_previous =None
     for pid in range(1,cs.size()-1) : 
         phase = cs.contact_phases[pid]
@@ -180,7 +180,7 @@ def addCOMviapoints(tp,cs,viewer = None) :
         phase_next = cs.contact_phases[pid+1]
         if phase_previous and (phase_previous.numActivePatches() < phase.numActivePatches()) and phase_next and (phase_next.numActivePatches() < phase.numActivePatches()) : 
             com = phase.init_state[0 : 3]
-            tp.setViapoint(phase.time_trajectory[0],com)
+            tp.setViapoint(cs_initGuess.contact_phases[pid].time_trajectory[0],com)
             if viewer and cfg.DISPLAY_WP_COST :
                 display.displaySphere(viewer,com.T.tolist()[0])
 
@@ -301,7 +301,7 @@ def generateCentroidalTrajectory(cs,cs_initGuess = None,fullBody=None, viewer =N
             tp.setPhase(i, timeopt.phase(ee, phase[0],  phase[1],  phase[2].translation,  phase[2].rotation))
             i += 1
     if cfg.USE_WP_COST:
-        addCOMviapoints(tp,cs_initGuess,viewer)
+        addCOMviapoints(tp,cs,cs_initGuess,viewer)
     cfg_path=cfg.TIME_OPT_CONFIG_PATH + '/'+  cfg.TIMEOPT_CONFIG_FILE
     print "set configuration file for time-optimization : ",cfg_path
     tp.setConfigurationFile(cfg_path)
