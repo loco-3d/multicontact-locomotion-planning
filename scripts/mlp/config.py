@@ -40,10 +40,10 @@ DISPLAY_FEET_TRAJ = True # display the feet trajectories used in the final motio
 DISPLAY_ALL_FEET_TRAJ = False # display all the trajectory used as reference, even the invalid ones
 DISPLAY_WB_MOTION = False
 DT_DISPLAY = 0.05 # dt used to display the wb motion
-PLOT = True
+PLOT = False
 DISPLAY_PLOT = PLOT and True
 SAVE_PLOT = PLOT and True
-
+PLOT_CENTROIDAL = False
 ###  Settings for generate_contact_sequence
 FORCE_STRAIGHT_LINE = False # DEBUG ONLY should be false
 
@@ -59,11 +59,13 @@ USE_WP_COST = True # use wp from the contact sequence in the cost function of ti
 
 ## Settings for end effector :
 EFF_CHECK_COLLISION = True
-WB_ABORT_WHEN_INVALID = True # stop wb script when detecting a collision and return the VALID part (before the phase with collision
-WB_RETURN_INVALID = not WB_ABORT_WHEN_INVALID and False  # stop wb script when detecting a collision and return  the computed part of motion, incuding the last INVALID phase
+WB_ABORT_WHEN_INVALID = False # stop wb script when detecting a collision and return the VALID part (before the phase with collision
+WB_RETURN_INVALID = not WB_ABORT_WHEN_INVALID and True  # stop wb script when detecting a collision and return  the computed part of motion, incuding the last INVALID phase
 
 ##  Settings for whole body : 
 YAW_ROT_GAIN = 1.
+USE_PLANNING_ROOT_ORIENTATION = True # if true, the reference for the root orientation is the one given by the planning
+# (stored in phase.reference_configurations) if false, use the one of q_init for all the motion.
 WB_VERBOSE = 0 # 0,1 or 2
 WB_STOP_AT_EACH_PHASE = False # wait for user input between each phase
 IK_dt = 0.001  # controler time step

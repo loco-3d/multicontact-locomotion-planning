@@ -32,6 +32,7 @@ def addPhaseFromConfig(fb,v,cs,q,limbsInContact):
     display_tools.displaySteppingStones(cs,v.client.gui,v.sceneName,fb)
     
 def generateConfigFromPhase(fb,phase):
+    fb.usePosturalTaskContactCreation(False)
     contacts = getActiveContactLimbs(phase,fb)
     q = phase.reference_configurations[0].T.tolist()[0] # should be the correct config for the previous phase, if used only from high level helper methods
     # create state in fullBody : 
@@ -50,9 +51,9 @@ def generateConfigFromPhase(fb,phase):
             state, success = StateHelper.addNewContact(state,limbId,p,n,1000)
             if not success :
                 print "Cannot project the configuration to contact, for effector : ",eeName
-                return phase
+                return state.q()
     phase.reference_configurations[0] = np.matrix(state.q()).T
-    return phase
+    return state.q()
             
         
 
@@ -75,7 +76,12 @@ def moveEffectorToPlacement(fb,v,cs,eeName,placement):
     patch = contactPatchForEffector(phase,eeName,fb)
     patch.placement = placement
     patch.active=True
-    generateConfigFromPhase(fb,phase)
+    q = generateConfigFromPhase(fb,phase)
+    fb.setCurrentConfig(q)
+    state = np.matrix(np.zeros(9)).T
+    state[0:3] = np.matrix(fb.getCenterOfMass()).T
+    phase.init_state = state.copy()
+    prev_phase.final_state = state.copy()
     cs.contact_phases.append(phase)    
     display_tools.displaySteppingStones(cs,v.client.gui,v.sceneName,fb)
     

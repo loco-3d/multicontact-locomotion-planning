@@ -36,6 +36,8 @@ def computePosOffset(t_predef,t_total):
         p = cfg.p_max / (1. + 4.*timeMid/t_predef + 6.*timeMid*timeMid/(t_predef*t_predef) - (timeMid*timeMid*timeMid)/(t_predef*t_predef*t_predef))
     else : 
         p = cfg.p_max
+    if p < 0 : # FIXME : why/when does it happen ? eg. with t_total = 3.4 and t_predef = 0.2
+        p = abs(p)
     return p,0.,0.
 
 def computePredefConstants(t):
@@ -45,9 +47,13 @@ def computePredefConstants(t):
 def buildPredefinedInitTraj(placement,t_total):
     p_off,v_off,a_off = computePredefConstants(t_total)
     normal = placement.rotation * np.matrix([0,0,1]).T
+    #print "normal used for takeoff : ",normal.T
+    #print "offset used : ",p_off
     c0 = placement.translation.copy()
     c1 = placement.translation.copy()
     c1 += p_off * normal
+    #print "takeoff part, c0 : ",c0.T
+    #print "takeoff part, c1 : ",c1.T
     dc0 = np.matrix(np.zeros(3)).T
     #dc1 = v_off * normal
     ddc0 = np.matrix(np.zeros(3)).T
@@ -67,9 +73,13 @@ def buildPredefinedInitTraj(placement,t_total):
 def buildPredefinedFinalTraj(placement,t_total):
     p_off,v_off,a_off = computePredefConstants(t_total)
     normal = placement.rotation * np.matrix([0,0,1]).T
+    #print "normal used for landing : ",normal.T
+    #print "offset used : ",p_off
     c0 = placement.translation.copy()
     c1 = placement.translation.copy()
     c0 += p_off * normal
+    #print "landing part, c0 : ",c0.T
+    #print "landing part, c1 : ",c1.T
     dc1 = np.matrix(np.zeros(3)).T
     #dc0 = v_off * normal
     ddc1 = np.matrix(np.zeros(3)).T

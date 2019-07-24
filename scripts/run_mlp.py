@@ -47,6 +47,9 @@ if cfg.SAVE_CS_COM:
 if cfg.DISPLAY_COM_TRAJ:
     colors = [viewer.color.blue, viewer.color.green]
     display_tools.displayCOMTrajectory(cs_com,viewer.client.gui,viewer.sceneName,colors)
+if cfg.PLOT_CENTROIDAL:
+    from mlp.utils.plot import plotCOMTrajFromCS
+    plotCOMTrajFromCS(cs_com)
     
 print "------------------------------"
 print "### MLP : whole-body  ###"

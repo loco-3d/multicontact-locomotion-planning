@@ -25,23 +25,26 @@ def computePhaseDuration(cs,pid):
         duration = cfg.DURATION_FINAL
     # Adjust duration if needed to respect bound on effector velocity
     duration_feet = 0.
+    duration_feet_trans = 0.
+    duration_feet_rot = 0.
     if pid < cs.size()-1:
         dist_feet = computeEffectorTranslationBetweenStates(phase,cs.contact_phases[pid+1])
-        if dist_feet > 0 :
+        if dist_feet > 0. :
             duration_feet_trans = (2.*cfg.EFF_T_DELAY + 2.*cfg.EFF_T_PREDEF) + dist_feet/cfg.FEET_MAX_VEL
-            rot_feet = computeEffectorRotationBetweenStates(phase,cs.contact_phases[pid+1])
+        rot_feet = computeEffectorRotationBetweenStates(phase,cs.contact_phases[pid+1])
+        if rot_feet > 0.:
             duration_feet_rot = (2.*cfg.EFF_T_DELAY + 2.*cfg.EFF_T_PREDEF) + rot_feet/cfg.FEET_MAX_ANG_VEL
-            duration_feet = max(duration_feet_trans,duration_feet_rot)
-            duration_feet = math.ceil(duration_feet/cfg.SOLVER_DT)*cfg.SOLVER_DT            
-            if VERBOSE :
-                print "for phase : ",pid
-                print "dist_feet            : ",dist_feet
-                print "duration translation : ",duration_feet_trans
-                print "rot_feet             : ",rot_feet
-                print "duration rotation    : ",duration_feet_rot
-                print "duration complete    : ",duration_feet
-    # FIXME : doesn't account for the possibles rotations ... 
-    # Make it a multiple of solver_dt : 
+        duration_feet = max(duration_feet_trans,duration_feet_rot)
+        # Make it a multiple of solver_dt :
+        if duration_feet > 0.:
+            duration_feet = math.ceil(duration_feet/cfg.SOLVER_DT)*cfg.SOLVER_DT
+        if VERBOSE :
+            print "for phase : ",pid
+            print "dist_feet            : ",dist_feet
+            print "duration translation : ",duration_feet_trans
+            print "rot_feet             : ",rot_feet
+            print "duration rotation    : ",duration_feet_rot
+            print "duration complete    : ",duration_feet
     return max(duration,duration_feet)
 
 ## straight line from the center of the support polygon of the current phase to the next one
