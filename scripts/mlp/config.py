@@ -61,7 +61,7 @@ USE_WP_COST = True # use wp from the contact sequence in the cost function of ti
 
 ## Settings for end effector :
 EFF_CHECK_COLLISION = True
-WB_ABORT_WHEN_INVALID = False # stop wb script when detecting a collision and return the VALID part (before the phase with collision
+WB_ABORT_WHEN_INVALID = True # stop wb script when detecting a collision and return the VALID part (before the phase with collision
 WB_RETURN_INVALID = not WB_ABORT_WHEN_INVALID and True  # stop wb script when detecting a collision and return  the computed part of motion, incuding the last INVALID phase
 
 ##  Settings for whole body : 
