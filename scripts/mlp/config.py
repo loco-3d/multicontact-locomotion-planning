@@ -22,7 +22,7 @@ TIME_OPT_CONFIG_PATH = PKG_PATH +'/timeOpt_configs'
 STATUS_FILENAME = OUTPUT_DIR + "/infos.log"
 EXPORT_PATH = OUTPUT_DIR
 ## Export setting
-SAVE_CS = True 
+SAVE_CS = False
 SAVE_CS_COM = True
 EXPORT_GAZEBO = False
 EXPORT_NPZ = True
