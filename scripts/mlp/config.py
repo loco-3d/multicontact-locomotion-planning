@@ -62,8 +62,8 @@ USE_WP_COST = True # use wp from the contact sequence in the cost function of th
 
 ## Settings for end effector :
 EFF_CHECK_COLLISION = True # After generating of whole body motion for a phase with an effector motion, check collision and joints limits for this motion and retry if invalid and if choosen method allow it
-WB_ABORT_WHEN_INVALID = False # stop wb script when stuck with an invalid motion and return the VALID part (before the phase with collision)
-WB_RETURN_INVALID = not WB_ABORT_WHEN_INVALID and True  # stop wb script when stuck with an invalid motion and return  the computed part of motion, incuding the last INVALID phase
+WB_ABORT_WHEN_INVALID = True # stop wb script when stuck with an invalid motion and return the VALID part (before the phase with collision)
+WB_RETURN_INVALID = not WB_ABORT_WHEN_INVALID and False  # stop wb script when stuck with an invalid motion and return  the computed part of motion, incuding the last INVALID phase
 
 ##  Settings for whole body : 
 YAW_ROT_GAIN = 1. # gain for the orientation task of the root orientation, along the yaw axis (wrt to the other axis of the orientation task)
