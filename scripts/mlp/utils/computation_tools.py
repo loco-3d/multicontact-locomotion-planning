@@ -18,14 +18,18 @@ def pacthSameAltitude(M1,M2,eps=1e-3):
 #Only consider the feet : 
 # - if only one feet in contact, return it's z coordinate
 # - if both feet in contact, make a linear interp between both feet altitude wrt to which feet will move next
-def computeFloorAltitude(cs,t):
+def computeFloorAltitude(cs,t,useJointLevel = False):
     id_phase = findPhase(cs,t)
     phase = cs.contact_phases[id_phase]
     RF_patch = phase.RF_patch
     LF_patch = phase.LF_patch
-    Mrf = JointPlacementForEffector(phase,cfg.Robot.rfoot)
-    Mlf = JointPlacementForEffector(phase,cfg.Robot.lfoot)
-
+    if useJointLevel:
+        Mrf = JointPlacementForEffector(phase,cfg.Robot.rfoot)
+        Mlf = JointPlacementForEffector(phase,cfg.Robot.lfoot)
+    else : 
+        Mrf = RF_patch.placement
+        Mlf = LF_patch.placement
+        
     if RF_patch.active and LF_patch.active:
         if pacthSameAltitude(Mrf,Mlf):
             floor_altitude = 0.5*(Mrf.translation+Mlf.translation)[2]
@@ -70,10 +74,10 @@ def computeFloorAltitude(cs,t):
         assert "Must never happened"
     return floor_altitude
 
-def shiftZMPtoFloorAltitude(cs,t,phi0):
+def shiftZMPtoFloorAltitude(cs,t,phi0,useJointLevel = False):
     Mshift = SE3.Identity()
     shift = Mshift.translation  
-    floor_altitude = computeFloorAltitude(cs,t) 
+    floor_altitude = computeFloorAltitude(cs,t,useJointLevel) 
     shift[2] = floor_altitude
     Mshift.translation = shift
     #print "phi0",phi0

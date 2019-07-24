@@ -7,7 +7,8 @@ method = cfg.contact_generation_method
 if method == "none":
     from mlp.viewer.display_tools import initScene
     def generateContactSequence():
-        return None,initScene(cfg.Robot,cfg.ENV_NAME)
+        fb,v = initScene(cfg.Robot,cfg.ENV_NAME)
+        return None,fb,v
 elif method == "load":
     from .fromCSfile import generateContactSequence
 elif method == "rbprm":

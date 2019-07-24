@@ -26,6 +26,7 @@ EXPORT_GAZEBO = False
 EXPORT_OPENHRP = False
 EXPORT_NPZ = True
 EXPORT_BLENDER = False
+EXPORT_SOT = False
 openHRP_useZMPref = False
 EXPORT_PATH = OUTPUT_DIR+"/export"
 WRITE_STATUS = True
@@ -35,7 +36,8 @@ DISPLAY_CS_STONES = True # display stepping stones
 DISPLAY_INIT_GUESS_TRAJ = False 
 DISPLAY_WP_COST=True
 DISPLAY_COM_TRAJ = True
-DISPLAY_FEET_TRAJ = True
+DISPLAY_FEET_TRAJ = True # display the feet trajectories used in the final motion
+DISPLAY_ALL_FEET_TRAJ = False # display all the trajectory used as reference, even the invalid ones
 DISPLAY_WB_MOTION = False
 DT_DISPLAY = 0.05 # dt used to display the wb motion
 PLOT = True
@@ -129,10 +131,14 @@ if centroidal_method == "timeopt" and centroidal_initGuess_method != "geometric"
 if contact_generation_method == "load":
     SAVE_CS = False
 if centroidal_method == "load":
+    contact_generation_method = "load"
     centroidal_initGuess_method = "none"
+    SAVE_CS = False    
     SAVE_CS_COM = False
 if wholebody_method == "load":
-    contact_generation_method = "none"
+    contact_generation_method = "load"
     centroidal_initGuess_method = "none"
     centroidal_method= "load"
+    SAVE_CS = False    
+    SAVE_CS_COM = False    
     EXPORT_NPZ = False

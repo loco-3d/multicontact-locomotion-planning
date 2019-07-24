@@ -86,8 +86,8 @@ robot,gui = initScenePinocchio(urdfName,packageName)
 
 
 path = "/local/dev_hpp/src/multicontact-locomotion-planning/res/"
-npzFile = "export/npz/talos_circle_oriented.npz"
-csFile = "contact_sequences/talos_circle_oriented_COM.cs"
+npzFile = "export/npz/talos_circle.npz"
+csFile = "contact_sequences/talos_circle_COM.cs"
 res,cs = loadMotionFromFiles(gui,path,npzFile,csFile)
 robot.display(res.q_t[:,0])
 status = Status(path+"/../scripts/infos.log")

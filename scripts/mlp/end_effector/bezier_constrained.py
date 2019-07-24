@@ -19,7 +19,7 @@ import math
 from tools.disp_bezier import *
 import eigenpy
 import quadprog
-from mlp.end_effector.bezier_predef import generatePredefLandingTakeoff,generateSmoothBezierTraj
+from mlp.end_effector.bezier_predef import generatePredefBeziers,generateSmoothBezierTraj
 import limb_rrt
 from mlp.utils.util import  SE3FromConfig,distPointLine
 eigenpy.switchToNumpyArray()
@@ -652,7 +652,7 @@ def generateConstrainedBezierTraj(time_interval,placement_init,placement_end,num
         if not q_t or not phase_previous or not phase or not phase_next or not fullBody or not eeName :
             raise ValueError("Cannot compute LimbRRTOptimizedTraj for try >= 1 without optionnal arguments")
            
-    predef_curves = generatePredefLandingTakeoff(time_interval,placement_init,placement_end)
+    predef_curves = generatePredefBeziers(time_interval,placement_init,placement_end)
     bezier_takeoff = predef_curves.curves[predef_curves.idFirstNonZero()]
     bezier_landing = predef_curves.curves[predef_curves.idLastNonZero()]
     id_middle = int(math.floor(len(predef_curves.curves)/2.))
