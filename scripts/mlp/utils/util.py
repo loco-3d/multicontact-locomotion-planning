@@ -94,7 +94,11 @@ def appendOrReplace(vec,i,value):
 def numpy2DToList(m):
     l = []
     for i in range(m.shape[1]):
-        l += [m[:,i].T.tolist()[0]]
+        p = m[:, i]
+        if len(p.shape) == 1 : # array
+            l += [p.tolist()] # TODO : check this
+        else : # matrix
+            l += [p.T.tolist()[0]]
     return l    
 
 # assume that q.size >= 7 with root pos and quaternion(x,y,z,w)
