@@ -74,6 +74,8 @@ if cfg.CHECK_FINAL_MOTION :
     print "## Check final motion, valid = ",motion_valid
     if not motion_valid:
         print "## First invalid time : ",t_invalid
+        import sys
+        sys.exit(1)  
     if cfg.WRITE_STATUS:
         f = open(cfg.STATUS_FILENAME,"a")
         f.write("motion_valid: "+str(motion_valid)+"\n")
