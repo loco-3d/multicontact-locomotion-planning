@@ -15,7 +15,7 @@ wholebody_method = "tsid"
 end_effector_method = "limbRRToptimized" 
 
 ## PATHS settings : 
-PKG_PATH = os.environ['DEVEL_HPP_DIR']+"/src/multicontact-locomotion-planning"
+PKG_PATH = "/local/dev/multicontact-locomotion-planning"
 OUTPUT_DIR = PKG_PATH+"/res"
 CONTACT_SEQUENCE_PATH = OUTPUT_DIR + "/contact_sequences"
 TIME_OPT_CONFIG_PATH = PKG_PATH +'/timeOpt_configs'
