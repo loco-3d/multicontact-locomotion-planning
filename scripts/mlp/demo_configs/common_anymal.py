@@ -46,3 +46,4 @@ import numpy as np
 gain_vector = np.matrix(np.ones(12)).T
 masks_posture = np.matrix(np.zeros(12)).T
 
+IK_REFERENCE_CONFIG = np.matrix(Robot.referenceConfig).T
