@@ -42,7 +42,60 @@ And add the directory `multicontact-locomotion-planning/script`  to your PYTHONP
 
 # Usage
 
-**TODO**
+## Basic usage:
+
+### Start background process:
+
+* If you want a visualization of the motion, you have to start gepetto-gui server before launching any script of this package. Run `gepetto-gui` in a separate terminal. After execution of any script, you should kill this process and restart it. 
+
+* Most of the scripts require the hpp-rbprm server.  Run `hpp-rbprm-server` in a separate terminal. After execution of any script, you should kill this process and restart it. 
+
+### Launch the main script:
+
+The main script of this package is https://github.com/loco-3d/multicontact-locomotion-planning/blob/master/scripts/run_mlp.py .This script call all the required solver to compute the complete framework as shown in the figure above. You have to call this script with an additional argument `DEMO_NAME` : 
+
+```python
+python run_mlp.py DEMO_NAME
+```
+
+The value of `DEMO_NAME` can be the name of any file inside the folder script/mlp/demo_configs/ (without the extension and without the complete path). 
+
+
+### Understanding configuration files:
+
+The user should never modify the main script (run_mlp.py) but only the various configuration files. When launching the main script, it load three configuration files in the following order:
+
+* mlp/config.py : this is the main configuration file, it can be edited to change:
+  * The default method used to solve each subproblem https://github.com/loco-3d/multicontact-locomotion-planning/blob/master/scripts/mlp/config.py#L11-L15
+  * The various path for all the external files used https://github.com/loco-3d/multicontact-locomotion-planning/blob/master/scripts/mlp/config.py#L17-L3
+  * Enabling or disabling the various export https://github.com/loco-3d/multicontact-locomotion-planning/blob/master/scripts/mlp/config.py#L24-L33
+  * Enabling or disabling the display of several items https://github.com/loco-3d/multicontact-locomotion-planning/blob/master/scripts/mlp/config.py#L34-L47
+  * Various default setting for each specific methods
+* mlp/demo_configs/common_*.py : This file contains all the robot-specific settings:
+  * The rbprm Robot class related to this robot https://github.com/loco-3d/multicontact-locomotion-planning/blob/master/scripts/mlp/demo_configs/common_talos.py#L1
+  * The mass of the robot https://github.com/loco-3d/multicontact-locomotion-planning/blob/master/scripts/mlp/demo_configs/common_talos.py#L2
+  * Default duration of each contact phases https://github.com/loco-3d/multicontact-locomotion-planning/blob/master/scripts/mlp/demo_configs/common_talos.py#L5-L11
+  * Various gains value and task priority used by the wholeBody script https://github.com/loco-3d/multicontact-locomotion-planning/blob/master/scripts/mlp/demo_configs/common_talos.py#L17-L36
+  * Default setting for the end-effector trajectory generation https://github.com/loco-3d/multicontact-locomotion-planning/blob/master/scripts/mlp/demo_configs/common_talos.py#L43-L47
+* mlp/demo_configs/DEMO_NAME.py : This last file contains all the fine tuning specific to each scenario.
+  * Select the robot used https://github.com/loco-3d/multicontact-locomotion-planning/blob/master/scripts/mlp/demo_configs/talos_circle.py#L2
+  * If using rbprm to solver the contact planning, it should specify the folder inside hpp-rbprm-corba/script/scenario that contain the script https://github.com/loco-3d/multicontact-locomotion-planning/blob/master/scripts/mlp/demo_configs/talos_circle.py#L3
+  * Set the name of the environment file, inside the package hpp-environments https://github.com/loco-3d/multicontact-locomotion-planning/blob/master/scripts/mlp/demo_configs/talos_circle.py#L4
+  * Then, it can change the value of any the values defined in one of the previous configuration files
+  
+#### External configuration file for specific solvers:
+
+Some solvers called as external library by this package may require other configuration files, they are stored in specific folders (eg. timeOpt_configs for timeOpt solver). The file(s) used by this solvers are choosen inside the  mlp/demo_configs/DEMO_NAME.py configuration file (https://github.com/loco-3d/multicontact-locomotion-planning/blob/master/scripts/mlp/demo_configs/talos_circle.py#L1).
+
+## Load motion from files:
+
+The script https://github.com/loco-3d/multicontact-locomotion-planning/blob/master/scripts/load_motion_from_files.py can load a motion from a `*_COM.cs` and a `*.npz` file. 
+
+* Edit the variables `path`, `npzFile` and `csFile` inside the script
+* run `gepetto-gui` in a separate terminal
+* run python `load_motion_from_files.py`
+
+**This script currently have hardcoded values for the Talos robot.** This is done to avoid other depencies. One can remove the class `Robot` hardcoded in this script and instead load one of the various `Robot` classes found in HPP-RBPRM. 
 
 # Available methods :
 
@@ -80,3 +133,19 @@ Currently supported method for each subproblem, you need to install the packages
 * Gazebo (basic joint-trajectory export)
 * OpenHRP (only for HRP-2 robot)
 * npz numpy archive (containing all the datas of the wholebody motion)
+
+# Contributing
+
+## Package organization: 
+
+Inside scripts/mlp/ there is one folder for each of the block shown in the figure of the introduction. In each of the subfolder there is one script for each different method that we can use to solve this block. There is also an `__init__.py` file that choose the correct script to import according to the solver choosen in the configuration files. 
+
+## Adding new wrapper:
+
+If you want to use a new method to solve one of the subproblem of our proposed framework, you should add a new script in the coresponding folder. This script should implement the method used in the `__init__.py` file of this subfolder with the same prototype.
+
+Basically, this script should implement a wrapper between the multicontact-api structure and the solver that you want to use. It should call the API of the solver to generically formulate a problem from the given input, solve the problem and store the results in a multicontact-api object. 
+
+
+
+
