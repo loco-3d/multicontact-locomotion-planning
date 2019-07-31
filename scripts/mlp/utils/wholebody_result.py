@@ -39,13 +39,21 @@ class Result:
         self.contact_forces = {}
         self.contact_normal_force={}
         self.effector_trajectories = {}
+        self.d_effector_trajectories = {}
+        self.dd_effector_trajectories = {}
         self.effector_references = {}
+        self.d_effector_references = {}
+        self.dd_effector_references = {}
         self.contact_activity = {}
         for ee in self.eeNames : 
             self.contact_forces.update({ee:np.matrix(np.zeros([12,N]))}) 
             self.contact_normal_force.update({ee:np.matrix(np.zeros([1,N]))})              
-            self.effector_trajectories.update({ee:np.matrix(np.zeros([12,N]))}) 
+            self.effector_trajectories.update({ee:np.matrix(np.zeros([12,N]))})
+            self.d_effector_trajectories.update({ee:np.matrix(np.zeros([6,N]))})
+            self.dd_effector_trajectories.update({ee:np.matrix(np.zeros([6,N]))})
             self.effector_references.update({ee:np.matrix(np.zeros([12,N]))})
+            self.d_effector_references.update({ee:np.matrix(np.zeros([6,N]))})
+            self.dd_effector_references.update({ee:np.matrix(np.zeros([6,N]))})
             self.contact_activity.update({ee:np.matrix(np.zeros([1,N]))})
         if cs:
             self.phases_intervals = self.buildPhasesIntervals(cs)    
@@ -104,7 +112,11 @@ class Result:
             self.contact_forces[ee][:,k] =other.contact_forces[ee][:,k_other]
             self.contact_normal_force[ee][:,k] = other.contact_normal_force[ee][:,k_other]            
             self.effector_trajectories[ee][:,k] =other.effector_trajectories[ee][:,k_other]
+            self.d_effector_trajectories[ee][:,k] =other.d_effector_trajectories[ee][:,k_other]
+            self.dd_effector_trajectories[ee][:,k] =other.dd_effector_trajectories[ee][:,k_other]
             self.effector_references[ee][:,k] =other.effector_references[ee][:,k_other]
+            self.d_effector_references[ee][:,k] =other.d_effector_references[ee][:,k_other]
+            self.dd_effector_references[ee][:,k] =other.dd_effector_references[ee][:,k_other]
             self.contact_activity[ee][:,k] =other.contact_activity[ee][:,k_other]
     
             
@@ -132,8 +144,12 @@ class Result:
         for ee in self.eeNames : 
             self.contact_forces[ee] = self.contact_forces[ee][:,:N]     
             self.contact_normal_force[ee] = self.contact_normal_force[ee][:,:N]                            
-            self.effector_trajectories[ee] = self.effector_trajectories[ee][:,:N] 
-            self.effector_references[ee] = self.effector_references[ee][:,:N] 
+            self.effector_trajectories[ee] = self.effector_trajectories[ee][:,:N]
+            self.d_effector_trajectories[ee] = self.d_effector_trajectories[ee][:,:N]
+            self.dd_effector_trajectories[ee] = self.dd_effector_trajectories[ee][:,:N]
+            self.effector_references[ee] = self.effector_references[ee][:,:N]
+            self.d_effector_references[ee] = self.d_effector_references[ee][:,:N]
+            self.dd_effector_references[ee] = self.dd_effector_references[ee][:,:N]
             self.contact_activity[ee] = self.contact_activity[ee][:,:N]
         self.phases_intervals = self.resizePhasesIntervals(N)
         return self
@@ -150,7 +166,8 @@ class Result:
                  L_reference=self.L_reference,dL_reference=self.dL_reference,
                  wrench_t=self.wrench_t,zmp_t=self.zmp_t,wrench_reference=self.wrench_reference,zmp_reference=self.zmp_reference,
                  eeNames=self.eeNames,contact_forces=self.contact_forces,contact_normal_force=self.contact_normal_force,
-                 effector_trajectories=self.effector_trajectories,effector_references=self.effector_references,
+                 effector_trajectories=self.effector_trajectories,d_effector_trajectories=self.d_effector_trajectories,dd_effector_trajectories=self.dd_effector_trajectories,
+                 effector_references=self.effector_references,d_effector_references=self.d_effector_references,dd_effector_references=self.dd_effector_references,
                  contact_activity=self.contact_activity,phases_intervals=self.phases_intervals)
         
         print "Results exported to ",filename
@@ -191,7 +208,11 @@ def loadFromNPZ(filename):
     res.contact_forces =f['contact_forces'].tolist()
     res.contact_normal_force = f['contact_normal_force'].tolist()            
     res.effector_trajectories =f['effector_trajectories'].tolist()
+    res.d_effector_trajectories =f['d_effector_trajectories'].tolist()
+    res.dd_effector_trajectories =f['dd_effector_trajectories'].tolist()
     res.effector_references =f['effector_references'].tolist()
+    res.d_effector_references =f['d_effector_references'].tolist()
+    res.dd_effector_references =f['dd_effector_references'].tolist()
     res.contact_activity =f['contact_activity'].tolist()
     res.phases_intervals = f['phases_intervals'].tolist()
     f.close()
@@ -199,6 +220,10 @@ def loadFromNPZ(filename):
         res.contact_forces[ee] = np.asmatrix(res.contact_forces[ee])
         res.contact_normal_force[ee] = np.asmatrix(res.contact_normal_force[ee])                           
         res.effector_trajectories[ee] = np.asmatrix(res.effector_trajectories[ee])
+        res.d_effector_trajectories[ee] = np.asmatrix(res.d_effector_trajectories[ee])
+        res.dd_effector_trajectories[ee] = np.asmatrix(res.dd_effector_trajectories[ee])
         res.effector_references[ee] = np.asmatrix(res.effector_references[ee])
+        res.d_effector_references[ee] = np.asmatrix(res.d_effector_references[ee])
+        res.dd_effector_references[ee] = np.asmatrix(res.dd_effector_references[ee])
         res.contact_activity[ee] = np.asmatrix(res.contact_activity[ee])   
     return res
