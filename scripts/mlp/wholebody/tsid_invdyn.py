@@ -41,8 +41,26 @@ def getCurrentEffectorPosition(robot,data,eeName):
     else : 
         id = robot.model().getFrameId(eeName)   
         return robot.framePosition(data, id)
-            
-    
+
+
+def getCurrentEffectorVelocity(robot, data, eeName):
+    id = robot.model().getJointId(eeName)
+    if id < len(data.oMi):
+        return robot.velocity(data, id)
+    else:
+        id = robot.model().getFrameId(eeName)
+        return robot.frameVelocity(data, id)
+
+
+def getCurrentEffectorAcceleration(robot, data, eeName):
+    id = robot.model().getJointId(eeName)
+    if id < len(data.oMi):
+        return robot.acceleration(data, id)
+    else:
+        id = robot.model().getFrameId(eeName)
+        return robot.frameAcceleration(data, id)
+
+
 def createContactForEffector(invdyn,robot,phase,eeName):             
     contactNormal = np.matrix(cfg.Robot.dict_normal[eeName]).T
     contactNormal = cfg.Robot.dict_offset[eeName].rotation * contactNormal # apply offset transform
@@ -256,7 +274,10 @@ def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
                 res.zmp_reference[:,k_t] = shiftZMPtoFloorAltitude(cs,res.t_t[k_t],F0,cfg.EXPORT_OPENHRP)
         if cfg.IK_store_effector: 
             for eeName in usedEffectors: # real position (not reference)
-                res.effector_trajectories[eeName][:,k_t] = SE3toVec(getCurrentEffectorPosition(robot,invdyn.data(),eeName))        
+                res.effector_trajectories[eeName][:,k_t] = SE3toVec(getCurrentEffectorPosition(robot,invdyn.data(),eeName))
+                res.d_effector_trajectories[eeName][:,k_t] = MotiontoVec(getCurrentEffectorVelocity(robot,invdyn.data(),eeName))
+                res.dd_effector_trajectories[eeName][:,k_t] = MotiontoVec(getCurrentEffectorAcceleration(robot,invdyn.data(),eeName))
+
         return res
         
     def printIntermediate(v,dv,invdyn,sol):
@@ -447,19 +468,24 @@ def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
                     if traj:
                         swingPhase = True # there is an effector motion in this phase
                         sampleEff = effectorTraj.computeNext()
-                        sampleEff.pos(SE3toVec(traj(t)[0]))
-                        sampleEff.vel(MotiontoVec(traj(t)[1]))
+                        traj_t = traj(t)
+                        sampleEff.pos(SE3toVec(traj_t[0]))
+                        sampleEff.vel(MotiontoVec(traj_t[1]))
                         dic_effectors_tasks[eeName].setReference(sampleEff)
                         if cfg.WB_VERBOSE == 2:
                             print "effector "+str(eeName)+" pos : "+str(sampleEff.pos())
                             print "effector "+str(eeName)+" vel : "+str(sampleEff.vel()) 
                         if cfg.IK_store_effector:
-                            res.effector_references[eeName][:,k_t] = SE3toVec(traj(t)[0])
+                            res.effector_references[eeName][:,k_t] = SE3toVec(traj_t[0])
+                            res.d_effector_references[eeName][:,k_t] = MotiontoVec(traj_t[1])
+                            res.dd_effector_references[eeName][:,k_t] = MotiontoVec(traj_t[2])
                     elif cfg.IK_store_effector:
                         if k_t == 0: 
                             res.effector_references[eeName][:,k_t] = SE3toVec(getCurrentEffectorPosition(robot,invdyn.data(),eeName))
                         else:
                             res.effector_references[eeName][:,k_t] = res.effector_references[eeName][:,k_t-1]
+                        res.d_effector_references[eeName][:, k_t] = np.matrix(np.zeros(6)).T
+                        res.dd_effector_references[eeName][:, k_t] = np.matrix(np.zeros(6)).T
             
                 # solve HQP for the current time
                 HQPData = invdyn.computeProblemData(t, q, v)
