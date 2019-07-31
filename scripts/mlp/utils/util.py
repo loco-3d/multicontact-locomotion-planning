@@ -2,7 +2,7 @@ from pinocchio import SE3
 import numpy as np
 from numpy import cross
 from numpy.linalg import norm
-from pinocchio import SE3, Quaternion
+from pinocchio import SE3, Quaternion,Motion
 from pinocchio.utils import rpyToMatrix,rotate
 import mlp.config as cfg
 from mlp.utils.trajectories import cubicSplineTrajectory,quinticSplineTrajectory
@@ -47,6 +47,14 @@ def SE3toVec(M):
         v[j + 9] = M.rotation[j, 2]
     return v
 
+def MotiontoVec(M):
+    v = np.matrix(np.zeros((6, 1)))
+    for j in range(3):
+        v[j] = M.linear[j]
+        v[j + 3] = M.angular[j]
+    return v
+
+
 def SE3FromVec(vect):
     if vect.shape[0] != 12 or vect.shape[1] != 1 :
         raise ValueError("SE3FromVect take as input a vector of size 12")
@@ -57,20 +65,21 @@ def SE3FromVec(vect):
         rot[:,0]=np.asarray(vect[3:6]).reshape(-1)
         rot[:,1]=np.asarray(vect[6:9]).reshape(-1)
         rot[:,2]=np.asarray(vect[9:12]).reshape(-1)
-    else : 
+    else :
         rot[:,0]=vect[3:6]
         rot[:,1]=vect[6:9]
         rot[:,2]=vect[9:12]
     placement.rotation =rot
     return placement
 
-def MotiontoVec(M):
-    v = np.matrix(np.zeros((6, 1)))
-    for j in range(3):
-        v[j] = M.linear[j]
-        v[j + 3] = M.angular[j]
-    return v
 
+def MotionFromVec(vect):
+    if vect.shape[0] != 6 or vect.shape[1] != 1:
+        raise ValueError("MotionFromVec take as input a vector of size 6")
+    m = Motion.Zero()
+    m.linear= np.matrix(vect[0:3])
+    m.angular= np.matrix(vect[3:6])
+    return m
 
 def stdVecToMatrix(std_vector):
     if len(std_vector) == 0:

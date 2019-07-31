@@ -80,21 +80,22 @@ def plotEffectorRef(dict_refs,dt):
                     ax_sub.grid(True)
     plt.show(block = False)
     
-def plotEffectorTraj(timeline,p_intervals,ref_dict,traj_dict):
-    labels=["x (m)" , "y (m)" ,"z (m)"]
-    colors = ['r','g','b']    
-    for eeName,traj in traj_dict.iteritems():
-        fig, ax = plt.subplots(3,1)
+def plotEffectorTraj(timeline,p_intervals,ref_dicts,traj_dicts):
+    labels=["x (m)" , "y (m)" ,"z (m)", "dx (m/s)" , "dy (m/s)" ,"dz (m/s)","ddx (m/s^2)" , "ddy (m/s^2)" ,"ddz (m/s^2)"]
+    colors = ['r','g','b']
+    for eeName in traj_dicts[0].keys():
+        fig, ax = plt.subplots(3,3)
         fig.canvas.set_window_title("Effector trajectory (dashed = reference) : "+eeName)
         fig.suptitle("Effector trajectory (dashed = reference) : "+eeName, fontsize=20)    
-        for i in range(3): # line = x,y,z
-                ax_sub = ax[i]
-                ax_sub.plot(timeline.T, traj[i,:].T, color=colors[i])
-                ax_sub.plot(timeline.T, ref_dict[eeName][i,:].T, color=colors[i],linestyle=":")                
-                ax_sub.set_xlabel('time (s)')
-                ax_sub.set_ylabel(labels[i])
-                ax_sub.yaxis.grid()    
-                addVerticalLineContactSwitch(timeline.T,p_intervals,ax_sub)
+        for i in range(3): # line = pos,vel,acc
+                for j in range(3): # col = x,y,z
+                    ax_sub = ax[i,j]
+                    ax_sub.plot(timeline.T, traj_dicts[i][eeName][j,:].T, color=colors[j])
+                    ax_sub.plot(timeline.T, ref_dicts[i][eeName][j,:].T, color=colors[j],linestyle=":")
+                    ax_sub.set_xlabel('time (s)')
+                    ax_sub.set_ylabel(labels[i*3+j])
+                    ax_sub.yaxis.grid()
+                    addVerticalLineContactSwitch(timeline.T,p_intervals,ax_sub)
 
     
 
@@ -301,7 +302,7 @@ def plotALLFromWB(cs,res,display=True,save=False,path=None):
         plotAMTraj(res.t_t,res.phases_intervals,res.L_t,res.dL_t,res.L_reference,res.dL_reference) 
         plotAMError(res.t_t,res.phases_intervals,res.L_t - res.L_reference)                
     if res.effector_trajectories.values()[0].any():
-        plotEffectorTraj(res.t_t,res.phases_intervals,res.effector_references,res.effector_trajectories)    
+        plotEffectorTraj(res.t_t,res.phases_intervals,[res.effector_references,res.d_effector_references,res.d_effector_references],[res.effector_trajectories,res.d_effector_trajectories,res.dd_effector_trajectories])
         plotEffectorError(res.t_t,res.phases_intervals,res.effector_references,res.effector_trajectories)        
     plotContactForces(res.t_t,res.phases_intervals,res.contact_normal_force,res.N)
     # compute zmp from whole body or centroidal (only if it hasn't been computed already)
