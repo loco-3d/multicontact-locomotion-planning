@@ -1,7 +1,10 @@
 import numpy as np
 class Result:
     
-    
+    ### This class store discretized data points, the time step can be accessed with res.dt. 
+    # Each data in this struct is stored in a numpy matrix, with one discretized point per column.
+    # nq is the configuration size of the robot, nv the tangent vector size,  nu the control vector size : 
+
     def __init__(self,nq,nv,dt,eeNames,N=None,cs=None,t_begin = 0,nu = None):
         self.dt = dt
         if cs :
@@ -16,39 +19,40 @@ class Result:
         if not nu : 
             nu = nv -6 
         self.nu = nu
-        self.t_t = np.array([t_begin + i*self.dt for i in range(N)])
-        self.q_t = np.matrix(np.zeros([self.nq,N]))
-        self.dq_t = np.matrix(np.zeros([self.nv,N]))
-        self.ddq_t = np.matrix(np.zeros([self.nv,N]))
-        self.tau_t = np.matrix(np.zeros([self.nu,N]))
-        self.c_t = np.matrix(np.zeros([3,N]))  
-        self.dc_t = np.matrix(np.zeros([3,N]))
-        self.ddc_t = np.matrix(np.zeros([3,N]))
-        self.L_t = np.matrix(np.zeros([3,N]))
-        self.dL_t = np.matrix(np.zeros([3,N]))
-        self.c_reference = np.matrix(np.zeros([3,N]))
-        self.dc_reference = np.matrix(np.zeros([3,N]))
-        self.ddc_reference = np.matrix(np.zeros([3,N])) 
-        self.L_reference = np.matrix(np.zeros([3,N]))
-        self.dL_reference = np.matrix(np.zeros([3,N]))        
-        self.wrench_t = np.matrix(np.zeros([6,N]))
-        self.wrench_reference = np.matrix(np.zeros([6,N]))        
-        self.zmp_t = np.matrix(np.zeros([3,N]))
-        self.zmp_reference = np.matrix(np.zeros([3,N]))
-        self.eeNames = eeNames
-        self.contact_forces = {}
-        self.contact_normal_force={}
-        self.effector_trajectories = {}
-        self.d_effector_trajectories = {}
-        self.dd_effector_trajectories = {}
-        self.effector_references = {}
-        self.d_effector_references = {}
-        self.dd_effector_references = {}
-        self.contact_activity = {}
+        self.t_t = np.array([t_begin + i*self.dt for i in range(N)])  # timing vector (1 × N ) (time at each discretized point, from t=0 to t=dt*(N-1))
+        self.q_t = np.matrix(np.zeros([self.nq,N])) # matrix of joint configurations (nq × N )
+        self.dq_t = np.matrix(np.zeros([self.nv,N])) # matrix of joint velocities (nv × N )
+        self.ddq_t = np.matrix(np.zeros([self.nv,N])) # matrix of joint accelerations ( nv × N )
+        self.tau_t = np.matrix(np.zeros([self.nu,N])) # matrix of joint accelerations ( v × N )
+        self.c_t = np.matrix(np.zeros([3,N]))   # Center of Mass (CoM) positions at each time step (3 × N )
+        self.dc_t = np.matrix(np.zeros([3,N]))  # Center of Mass (CoM) velocities at each time step (3 × N )
+        self.ddc_t = np.matrix(np.zeros([3,N])) # Center of Mass (CoM) accelerations at each time step (3 × N )
+        self.L_t = np.matrix(np.zeros([3,N]))   # Angular momentum at each time step (3 × N )
+        self.dL_t = np.matrix(np.zeros([3,N]))  # Angular momentum rate at each time step (3 × N )
+        self.c_reference = np.matrix(np.zeros([3,N]))   # Center of Mass (CoM) positions at each time step (3×N ) as computed by the CoM trajectory optimization
+        self.dc_reference = np.matrix(np.zeros([3,N]))  # Center of Mass (CoM) velocities at each time step (3 × N ) as computed by the CoM trajectory optimization
+        self.ddc_reference = np.matrix(np.zeros([3,N])) # Center of Mass (CoM) accelerations at each time step (3 × N ) as computed by the CoM trajectory optimization
+        self.L_reference = np.matrix(np.zeros([3,N]))   # Angular momentum at each time step (3 × N ) as computed by the CoM trajectory optimization
+        self.dL_reference = np.matrix(np.zeros([3,N]))  # Angular momentum rate at each time step (3 × N ) as computed by the CoM trajectory optimization       
+        self.wrench_t = np.matrix(np.zeros([6,N])) #  Centroidal wrench at each time step (6 × N )
+        self.wrench_reference = np.matrix(np.zeros([6,N])) # Centroidal wrench at each time step (6 × N ) as computed by the CoM trajectory optimization       
+        self.zmp_t = np.matrix(np.zeros([3,N])) # Zero Moment Point location at each time step(3 × N )
+        self.zmp_reference = np.matrix(np.zeros([3,N])) # Zero Moment Point location at each time step(3 × N ) as computed by the CoM trajectory optimization
+        self.eeNames = eeNames # The list of all effector names used during the motion
+        # The following variables are maps with keys = effector name and value = numpy matrices :
+        self.contact_forces = {} #3d forces at each contact force generator/contact point of each end-effector. I.e., for a humanoid with rectangular contacts having four discrete contact points each this amounts to 12 × N per end-effector. (the order and position of the generator used can be found here https://github.com/loco-3d/multicontact-locomotion-planning/blob/master/scripts/mlp/wholebody/tsid_invdyn.py#L33)
+        self.contact_normal_force={} # the contact normal force at each end-effector (1 × N per end-effector).
+        self.effector_trajectories = {} # SE(3) trajectory of the effector (the real trajectory corresponding to the motion in q_t)  (12 × N per end-effector). This store a column representation of an SE(3) object, see mlp.utils.util.SE3FromVec to get back the SE3 object
+        self.d_effector_trajectories = {} # Velocity of the effector (the real trajectory corresponding to the motion in q_t) ) (6 × N per end-effector). This store a column representation of a Motion object, see mlp.utils.util.MotionFromVec to get back the Motion object
+        self.dd_effector_trajectories = {} # Acceleration of the effector (the real trajectory corresponding to the motion in q_t) (6 × N per end-effector). This store a column representation of a Motion object, see mlp.utils.util.MotionFromVec to get back the Motion object
+        self.effector_references = {} # Reference SE(3) trajectory of the end-effector tracked by the whole-body method (12 × N per end-effector). This store a column representation of an SE(3) object, see mlp.utils.util.SE3FromVec to get back the SE3 object
+        self.d_effector_references = {} # Reference velocity of the end-effector tracked by the whole-body method (6 × N per end-effector). This store a column representation of a Motion object, see mlp.utils.util.MotionFromVec to get back the Motion object
+        self.dd_effector_references = {} # Reference acceleration of the end-effector tracked by the whole-body method (6 × N per end-effector). This store a column representation of a Motion object, see mlp.utils.util.MotionFromVec to get back the Motion object
+        self.contact_activity = {} #binary indicator whether a contact is active (1 × N per end-effector)
         for ee in self.eeNames : 
             self.contact_forces.update({ee:np.matrix(np.zeros([12,N]))}) 
             self.contact_normal_force.update({ee:np.matrix(np.zeros([1,N]))})              
-            self.effector_trajectories.update({ee:np.matrix(np.zeros([12,N]))})
+            self.effector_trajectories.update({ee:np.matrix(np.zeros([12,N]))}) 
             self.d_effector_trajectories.update({ee:np.matrix(np.zeros([6,N]))})
             self.dd_effector_trajectories.update({ee:np.matrix(np.zeros([6,N]))})
             self.effector_references.update({ee:np.matrix(np.zeros([12,N]))})
@@ -56,7 +60,7 @@ class Result:
             self.dd_effector_references.update({ee:np.matrix(np.zeros([6,N]))})
             self.contact_activity.update({ee:np.matrix(np.zeros([1,N]))})
         if cs:
-            self.phases_intervals = self.buildPhasesIntervals(cs)    
+            self.phases_intervals = self.buildPhasesIntervals(cs) #Correspondence between the contact phases and the indexes of discretized points in phase_intervals. This field have the same length as the number of contact phases in the motion, and each element is a range of Id.    
         else :
             print "Result constructor called without contactSequence object, phase_interval member not initialized"
      
