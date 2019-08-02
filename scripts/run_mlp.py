@@ -104,6 +104,15 @@ if cfg.EXPORT_SOT:
     from mlp.export import sotTalosBalance
     sotTalosBalance.export(res)
 
+if cfg.EXPORT_EFF_IN_CS:
+    from mlp.utils.util import addEffectorTrajectoryInCS
+    cs_com = addEffectorTrajectoryInCS(cs_com,res)
+    filename = cfg.CONTACT_SEQUENCE_PATH + "/" + cfg.DEMO_NAME + "_COM.cs"
+    print "Write contact sequence binary file with effector trajectories : ", filename
+    cs_com.saveAsBinary(filename)
+
+
+
 def dispCS(step = 0.2): 
     display_tools.displayContactSequence(viewer,cs,step)
     

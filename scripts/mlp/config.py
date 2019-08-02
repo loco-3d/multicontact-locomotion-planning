@@ -29,6 +29,7 @@ EXPORT_NPZ = True
 EXPORT_BLENDER = False
 EXPORT_SOT = False
 EXPORT_OPENHRP = False
+EXPORT_EFF_IN_CS=True
 openHRP_useZMPref = False # if true : in the export_openHRP, use the zmp computed by the centroidal solver and the one computed from the wholebody
 WRITE_STATUS = True
 ##DISPLAY settings : 

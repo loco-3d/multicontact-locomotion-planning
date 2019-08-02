@@ -456,3 +456,31 @@ def computeContactNormal(placement):
     
 def computeContactNormalForPhase(phase,eeName):
     return computeContactNormal(getContactPlacement(phase,eeName))
+
+def effectorStatePositionFromWB(wb_result,id,eeName):
+    pos = wb_result.effector_references[eeName][0:3,id]
+    vel = wb_result.d_effector_references[eeName][0:3,id]
+    acc = wb_result.dd_effector_references[eeName][0:3,id]
+    return np.vstack([pos,vel,acc])
+
+def getPhaseEffTrajectoryByName(phase,eeName,Robot):
+    if eeName == Robot.rfoot:
+        return phase.RF_trajectory
+    if eeName == Robot.lfoot:
+        return phase.LF_trajectory
+    if eeName == Robot.rhand:
+        return phase.RH_trajectory
+    if eeName == Robot.lhand:
+        return phase.LH_trajectory
+    raise ValueError("Unknown effector name : "+eeName)
+
+
+def addEffectorTrajectoryInCS(cs,wb_result,Robot = None):
+    if not Robot:
+        Robot = cfg.Robot
+    for phase in cs.contact_phases:
+        for i_traj in range(len(phase.time_trajectory)):
+            id = int(phase.time_trajectory[i_traj] / wb_result.dt)
+            for eeName in wb_result.eeNames:
+                getPhaseEffTrajectoryByName(phase,eeName,Robot).append(effectorStatePositionFromWB(wb_result,id,eeName))
+    return cs
