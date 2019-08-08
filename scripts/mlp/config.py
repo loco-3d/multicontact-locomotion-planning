@@ -100,6 +100,7 @@ else :
     parser.add_argument('demo_name',type=str,help="The name of the demo configuration file to load")
     args = parser.parse_args()
     DEMO_NAME = args.demo_name
+    DEMO_NAME = DEMO_NAME.rstrip(".py") # remove extension if specified
     print "# Load demo config : ",DEMO_NAME
     # Import the module
     try :
