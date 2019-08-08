@@ -8,7 +8,7 @@ from multicontact_api import ContactPhaseHumanoid, ContactSequenceHumanoid
 from mlp.utils.util import quatFromConfig,copyPhaseContacts,copyPhaseContactPlacements,contactPatchForEffector
 import importlib
 
-VERBOSE = True
+VERBOSE = False
 
 def setContactActivityFromRBRMState(phase,fb,stateId):
     for limbId in fb.limbs_names:
