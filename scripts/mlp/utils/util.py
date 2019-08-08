@@ -481,6 +481,8 @@ def addEffectorTrajectoryInCS(cs,wb_result,Robot = None):
     for phase in cs.contact_phases:
         for i_traj in range(len(phase.time_trajectory)):
             id = int(phase.time_trajectory[i_traj] / wb_result.dt)
+            if id >= len(wb_result.t_t):
+                id = len(wb_result.t_t) -1
             for eeName in wb_result.eeNames:
                 getPhaseEffTrajectoryByName(phase,eeName,Robot).append(effectorStatePositionFromWB(wb_result,id,eeName))
     return cs
