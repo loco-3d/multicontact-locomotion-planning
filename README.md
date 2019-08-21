@@ -132,7 +132,7 @@ Currently supported method for each subproblem, you need to install the packages
 * Blender (with plugin https://github.com/Gepetto/gepetto-viewer-corba/tree/master/blender)
 * Gazebo (basic joint-trajectory export)
 * OpenHRP (only for HRP-2 robot)
-* npz numpy archive (containing all the datas of the wholebody motion)
+* npz numpy archive (containing all the datas of the wholebody motion) (see https://github.com/MeMory-of-MOtion/docker-loco3d#details-on-the-npz-archive  for details)
 
 # Contributing
 
