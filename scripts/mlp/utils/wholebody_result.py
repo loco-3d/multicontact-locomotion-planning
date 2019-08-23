@@ -145,8 +145,8 @@ class Result:
         self.dL_reference = self.dL_t[:,:N]        
         self.wrench_t = self.wrench_t[:,:N]
         self.zmp_t = self.zmp_t[:,:N] 
-        self.wrench_reference = self.wrench_t[:,:N]
-        self.zmp_reference = self.zmp_t[:,:N]   
+        self.wrench_reference = self.wrench_reference[:,:N]
+        self.zmp_reference = self.zmp_reference[:,:N]   
         self.waist_orientation_reference = self.waist_orientation_reference[:,:N]   
         for ee in self.eeNames : 
             self.contact_forces[ee] = self.contact_forces[ee][:,:N]     
