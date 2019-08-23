@@ -38,6 +38,7 @@ class Result:
         self.wrench_reference = np.matrix(np.zeros([6,N])) # Centroidal wrench at each time step (6 x N ) as computed by the CoM trajectory optimization       
         self.zmp_t = np.matrix(np.zeros([3,N])) # Zero Moment Point location at each time step(3 x N )
         self.zmp_reference = np.matrix(np.zeros([3,N])) # Zero Moment Point location at each time step(3 x N ) as computed by the CoM trajectory optimization
+        self.waist_orientation_reference = np.matrix(np.zeros([4,N])) # Reference used (from contact planning) of the waist orientation, stored as quaternion (x,y,z,w)        
         self.eeNames = eeNames # The list of all effector names used during the motion
         # The following variables are maps with keys = effector name and value = numpy matrices :
         self.contact_forces = {} #3d forces at each contact force generator/contact point of each end-effector. I.e., for a humanoid with rectangular contacts having four discrete contact points each this amounts to 12 x N per end-effector. (the order and position of the generator used can be found here https://github.com/loco-3d/multicontact-locomotion-planning/blob/master/scripts/mlp/wholebody/tsid_invdyn.py#L33)
@@ -111,7 +112,8 @@ class Result:
         self.wrench_t[:,k] =other.wrench_t[:,k_other]
         self.zmp_reference[:,k] =other.zmp_t[:,k_other]
         self.wrench_reference[:,k] =other.wrench_t[:,k_other]
-        self.zmp_t[:,k] =other.zmp_t[:,k_other]        
+        self.zmp_t[:,k] =other.zmp_t[:,k_other] 
+        self.waist_orientation_reference[:,k] =other.waist_orientation_reference[:,k_other]         
         for ee in self.eeNames : 
             self.contact_forces[ee][:,k] =other.contact_forces[ee][:,k_other]
             self.contact_normal_force[ee][:,k] = other.contact_normal_force[ee][:,k_other]            
@@ -144,7 +146,8 @@ class Result:
         self.wrench_t = self.wrench_t[:,:N]
         self.zmp_t = self.zmp_t[:,:N] 
         self.wrench_reference = self.wrench_t[:,:N]
-        self.zmp_reference = self.zmp_t[:,:N]        
+        self.zmp_reference = self.zmp_t[:,:N]   
+        self.waist_orientation_reference = self.waist_orientation_reference[:,:N]   
         for ee in self.eeNames : 
             self.contact_forces[ee] = self.contact_forces[ee][:,:N]     
             self.contact_normal_force[ee] = self.contact_normal_force[ee][:,:N]                            
@@ -168,7 +171,7 @@ class Result:
                  c_t=self.c_t,dc_t=self.dc_t,ddc_t=self.ddc_t,L_t=self.L_t,dL_t=self.dL_t,
                  c_reference=self.c_reference,dc_reference=self.dc_reference,ddc_reference=self.ddc_reference,
                  L_reference=self.L_reference,dL_reference=self.dL_reference,
-                 wrench_t=self.wrench_t,zmp_t=self.zmp_t,wrench_reference=self.wrench_reference,zmp_reference=self.zmp_reference,
+                 wrench_t=self.wrench_t,zmp_t=self.zmp_t,wrench_reference=self.wrench_reference,zmp_reference=self.zmp_reference,waist_orientation_reference=self.waist_orientation_reference,
                  eeNames=self.eeNames,contact_forces=self.contact_forces,contact_normal_force=self.contact_normal_force,
                  effector_trajectories=self.effector_trajectories,d_effector_trajectories=self.d_effector_trajectories,dd_effector_trajectories=self.dd_effector_trajectories,
                  effector_references=self.effector_references,d_effector_references=self.d_effector_references,dd_effector_references=self.dd_effector_references,
@@ -208,7 +211,9 @@ def loadFromNPZ(filename):
     res.wrench_t =np.asmatrix(f['wrench_t'])
     res.zmp_reference =np.asmatrix(f['zmp_t'])
     res.wrench_reference =np.asmatrix(f['wrench_t'])
-    res.zmp_t =np.asmatrix(f['zmp_t'])        
+    res.zmp_t =np.asmatrix(f['zmp_t']) 
+    res.waist_orientation_reference =np.asmatrix(f['waist_orientation_reference'])     
+    waist_orientation_reference
     res.contact_forces =f['contact_forces'].tolist()
     res.contact_normal_force = f['contact_normal_force'].tolist()            
     res.effector_trajectories =f['effector_trajectories'].tolist()
