@@ -375,7 +375,9 @@ def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
                     print "add se3 task for "+eeName
                 invdyn.addMotionTask(task, cfg.w_eff, cfg.level_eff, 0.0)
                 #create reference trajectory for this task : 
-                placement_init = getCurrentEffectorPosition(robot,invdyn.data(),eeName)
+                placement_init = getCurrentEffectorPosition(robot,invdyn.data(),eeName) #FIXME : adjust orientation in case of 3D contact ...
+                if cfg.Robot.cType == "_3_DOF":
+                    placement_init.rotation = JointPlacementForEffector(phase,eeName).rotation
                 placement_end = JointPlacementForEffector(phase_next,eeName)                
                 ref_traj = generateEndEffectorTraj(time_interval,placement_init,placement_end,0)
                 if cfg.WB_VERBOSE :
