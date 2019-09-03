@@ -457,8 +457,9 @@ def computeContactNormal(placement):
 def computeContactNormalForPhase(phase,eeName):
     return computeContactNormal(getContactPlacement(phase,eeName))
 
-def effectorStatePositionFromWB(wb_result,id,eeName):
-    pos = wb_result.effector_references[eeName][0:3,id]
+def effectorStatePositionFromWB(Robot,wb_result,id,eeName):
+    placement = SE3FromVec(wb_result.effector_references[eeName][:,id])
+    pos = placement.act(Robot.dict_offset[eeName]).translation
     vel = wb_result.d_effector_references[eeName][0:3,id]
     acc = wb_result.dd_effector_references[eeName][0:3,id]
     return np.vstack([pos,vel,acc])
@@ -484,5 +485,5 @@ def addEffectorTrajectoryInCS(cs,wb_result,Robot = None):
             if id >= len(wb_result.t_t):
                 id = len(wb_result.t_t) -1
             for eeName in wb_result.eeNames:
-                getPhaseEffTrajectoryByName(phase,eeName,Robot).append(effectorStatePositionFromWB(wb_result,id,eeName))
+                getPhaseEffTrajectoryByName(phase,eeName,Robot).append(effectorStatePositionFromWB(Robot,wb_result,id,eeName))
     return cs
