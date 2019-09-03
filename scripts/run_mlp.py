@@ -107,7 +107,7 @@ if cfg.EXPORT_SOT:
 if cfg.EXPORT_EFF_IN_CS:
     from mlp.utils.util import addEffectorTrajectoryInCS
     cs_com = addEffectorTrajectoryInCS(cs_com,res)
-    filename = cfg.CONTACT_SEQUENCE_PATH + "/" + cfg.DEMO_NAME + "_COM.cs"
+    filename = cfg.CONTACT_SEQUENCE_PATH + "/" + cfg.DEMO_NAME + "_COM_eff.cs"
     print "Write contact sequence binary file with effector trajectories : ", filename
     cs_com.saveAsBinary(filename)
 
