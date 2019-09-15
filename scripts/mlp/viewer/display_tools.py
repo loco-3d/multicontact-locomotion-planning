@@ -6,7 +6,11 @@ import numpy as np
 import time
 from mlp.utils.util import stdVecToMatrix,numpy2DToList,hppConfigFromMatrice
 STONE_HEIGHT = 0.005
-STONE_GROUP = "stepping_stones"        
+STONE_GROUP = "stepping_stones" 
+STONE_RF = STONE_GROUP+"/"+"RF" 
+STONE_LF = STONE_GROUP+"/"+"LF"        
+STONE_RH = STONE_GROUP+"/"+"RH" 
+STONE_LH = STONE_GROUP+"/"+"LH"       
 TRAJ_GROUP = "com_traj"
 
 def displaySphere(viewer,pos,size=0.01,color=[0,0,0,1]):
@@ -56,18 +60,22 @@ def displayContactsLandmarkFromPhase(phase,viewer,Robot):
         addContactLandmark(phase.RH_patch.placement*Robot.MRhand_display,Robot.dict_limb_color_traj[Robot.rhand] ,viewer)                 
     viewer.client.gui.refresh() 
 
-def addSteppingStone(gui,placement,name,size,color):
+def addSteppingStone(gui,placement,name,group,size,color):
     gui.addBox(name,size[0],size[1],STONE_HEIGHT,color)
-    gui.addToGroup(name,STONE_GROUP)
+    gui.addToGroup(name,group)
     gui.applyConfiguration(name,SE3ToViewerConfig(placement))
     
     
 def displaySteppingStones(cs,gui,sceneName,Robot):
     gui.createGroup(STONE_GROUP)
-    name_RF = STONE_GROUP+"/stone_RF_"
-    name_LF = STONE_GROUP+"/stone_LF_"
-    name_RH = STONE_GROUP+"/stone_RH_"
-    name_LH = STONE_GROUP+"/stone_LH_"
+    gui.createGroup(STONE_RF)
+    gui.createGroup(STONE_LF)
+    gui.createGroup(STONE_RH)
+    gui.createGroup(STONE_LH)
+    name_RF = STONE_RF+"/stone_"
+    name_LF = STONE_LF+"/stone_"
+    name_RH = STONE_RH+"/stone_"
+    name_LH = STONE_LH+"/stone_"
     id_RF = 0
     id_LF = 0
     id_RH = 0
@@ -75,18 +83,22 @@ def displaySteppingStones(cs,gui,sceneName,Robot):
     
     for phase in cs.contact_phases:
         if phase.LF_patch.active:
-            addSteppingStone(gui,phase.LF_patch.placement*Robot.dict_display_offset[Robot.lfoot],name_LF+str(id_LF),Robot.dict_size[Robot.lfoot],Robot.dict_limb_color_traj[Robot.lfoot])
+            addSteppingStone(gui,phase.LF_patch.placement*Robot.dict_display_offset[Robot.lfoot],name_LF+str(id_LF),STONE_LF,Robot.dict_size[Robot.lfoot],Robot.dict_limb_color_traj[Robot.lfoot])
             id_LF += 1
         if phase.RF_patch.active:
-            addSteppingStone(gui,phase.RF_patch.placement*Robot.dict_display_offset[Robot.rfoot],name_RF+str(id_RF),Robot.dict_size[Robot.rfoot],Robot.dict_limb_color_traj[Robot.rfoot])
+            addSteppingStone(gui,phase.RF_patch.placement*Robot.dict_display_offset[Robot.rfoot],name_RF+str(id_RF),STONE_RF,Robot.dict_size[Robot.rfoot],Robot.dict_limb_color_traj[Robot.rfoot])
             id_RF += 1            
         if phase.LH_patch.active:
-            addSteppingStone(gui,phase.LH_patch.placement*Robot.dict_display_offset[Robot.lhand],name_LH+str(id_LH),Robot.dict_size[Robot.lhand],Robot.dict_limb_color_traj[Robot.lhand])
+            addSteppingStone(gui,phase.LH_patch.placement*Robot.dict_display_offset[Robot.lhand],name_LH+str(id_LH),STONE_LH,Robot.dict_size[Robot.lhand],Robot.dict_limb_color_traj[Robot.lhand])
             id_LH += 1
         if phase.RH_patch.active:
-            addSteppingStone(gui,phase.RH_patch.placement*Robot.dict_display_offset[Robot.rhand],name_RH+str(id_RH),Robot.dict_size[Robot.rhand],Robot.dict_limb_color_traj[Robot.rhand])
+            addSteppingStone(gui,phase.RH_patch.placement*Robot.dict_display_offset[Robot.rhand],name_RH+str(id_RH),STONE_RH,Robot.dict_size[Robot.rhand],Robot.dict_limb_color_traj[Robot.rhand])
             id_RH += 1
     
+    gui.addToGroup(STONE_RF,STONE_GROUP)
+    gui.addToGroup(STONE_LF,STONE_GROUP)    
+    gui.addToGroup(STONE_RH,STONE_GROUP)    
+    gui.addToGroup(STONE_LH,STONE_GROUP)        
     gui.addToGroup(STONE_GROUP,sceneName)
     gui.refresh()
 
