@@ -136,6 +136,26 @@ def computeAMRefFromPhase(phase,time_interval):
     am_ref.computeFromPoints(timeline,L,dL)
     return am_ref
 
+def rootPlacementFromFeetPlacement(phase,phase_next):
+    #FIXME : extract only the yaw rotation
+    qr = Quaternion(phase.RF_patch.placement.rotation)
+    qr.x = 0 ; qr.y = 0 ; qr.normalize()
+    ql = Quaternion(phase.LF_patch.placement.rotation)
+    ql.x = 0 ; ql.y = 0 ; ql.normalize()
+    q_rot = qr.slerp(0.5, ql)
+    placement_init = SE3.Identity()
+    placement_init.rotation = q_rot.matrix()
+    if phase_next :
+        if not isContactActive(phase,cfg.Robot.rfoot)  and isContactActive(phase_next,cfg.Robot.rfoot):
+            qr = Quaternion(phase_next.RF_patch.placement.rotation)
+            qr.x = 0; qr.y = 0; qr.normalize()
+        if not isContactActive(phase, cfg.Robot.lfoot) and isContactActive(phase_next, cfg.Robot.lfoot):
+            ql = Quaternion(phase_next.LF_patch.placement.rotation)
+            ql.x = 0;ql.y = 0; ql.normalize()
+    q_rot = qr.slerp(0.5,ql)
+    placement_end = SE3.Identity()
+    placement_end.rotation = q_rot.matrix()
+    return placement_init,placement_end
 
 def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
     if not viewer :
@@ -352,12 +372,16 @@ def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
         com_traj = computeCOMRefFromPhase(phase,time_interval)
         
         am_traj = computeAMRefFromPhase(phase,time_interval)
-        # add root's orientation ref from reference config : 
-        if phase_next :
-            root_traj = trajectories.TrajectorySE3LinearInterp(SE3FromConfig(phase.reference_configurations[0]),SE3FromConfig(phase_next.reference_configurations[0]),time_interval)
-        else : 
-            root_traj = trajectories.TrajectorySE3LinearInterp(SE3FromConfig(phase.reference_configurations[0]),SE3FromConfig(phase.reference_configurations[0]),time_interval)
-            
+        # add root's orientation ref from reference config :
+        if cfg.USE_PLANNING_ROOT_ORIENTATION :
+            if phase_next :
+                root_traj = trajectories.TrajectorySE3LinearInterp(SE3FromConfig(phase.reference_configurations[0]),SE3FromConfig(phase_next.reference_configurations[0]),time_interval)
+            else :
+                root_traj = trajectories.TrajectorySE3LinearInterp(SE3FromConfig(phase.reference_configurations[0]),SE3FromConfig(phase.reference_configurations[0]),time_interval)
+        else:
+            # orientation such that the torso orientation is the mean between both feet yaw rotations:
+            placement_init,placement_end = rootPlacementFromFeetPlacement(phase, phase_next)
+            root_traj = trajectories.TrajectorySE3LinearInterp(placement_init,  placement_end,time_interval)
         # add newly created contacts : 
         for eeName in usedEffectors:
             if phase_prev and not isContactActive(phase_prev,eeName) and isContactActive(phase,eeName) :
@@ -450,9 +474,10 @@ def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
                 
                 # root orientation : 
                 sampleRoot = trajRoot.computeNext()
-                if cfg.USE_PLANNING_ROOT_ORIENTATION :
-                    sampleRoot.pos(SE3toVec(root_traj(t)[0]))
-                    sampleRoot.vel(MotiontoVec(root_traj(t)[1]))
+                sampleRoot.pos(SE3toVec(root_traj(t)[0]))
+                sampleRoot.vel(MotiontoVec(root_traj(t)[1]))
+
+
                 orientationRootTask.setReference(sampleRoot)
                 quat_waist = Quaternion(root_traj(t)[0].rotation)
                 res.waist_orientation_reference[:,k_t]=np.matrix([quat_waist.x,quat_waist.y,quat_waist.z,quat_waist.w]).T
