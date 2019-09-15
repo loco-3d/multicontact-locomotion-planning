@@ -24,5 +24,13 @@ def export(q_t,v,dt):
     display_tools.displayWBconfig(v,q_t[:,-1])
     v.client.gui.captureTransform()    
     print "motion exported to ",filename
-    
+
+def exportSteppingStones(v):
+    from mlp.viewer.display_tools import STONE_GROUP
+    path = cfg.EXPORT_PATH + "/blender/stepping_stones/"+cfg.DEMO_NAME
+    if not os.path.exists(path):
+        os.makedirs(path)
+    print "## export stl in : ",path
+    v.client.gui.writeNodeFile(STONE_GROUP, path+"/"+STONE_GROUP+".stl")
+
     

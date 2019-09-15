@@ -100,6 +100,7 @@ if cfg.EXPORT_NPZ and motion_valid :
 if cfg.EXPORT_BLENDER:
     from mlp.export import blender
     blender.export(res.q_t,viewer,cfg.IK_dt)
+    blender.exportSteppingStones(viewer)
 if cfg.EXPORT_SOT:
     from mlp.export import sotTalosBalance
     sotTalosBalance.export(res)
