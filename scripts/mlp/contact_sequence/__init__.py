@@ -13,5 +13,7 @@ elif method == "load":
     from .fromCSfile import generateContactSequence
 elif method == "rbprm":
     from .rbprm import generateContactSequence
+elif method == "lp":
+    from .lp import generateContactSequence
 else :
     raise ValueError("method type "+str(method)+" doesn't exist for contact generation")

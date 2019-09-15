@@ -1,7 +1,7 @@
 import numpy as np
 import os
 
-contact_generation_method_available = ["none","load", "rbprm"]
+contact_generation_method_available = ["none","load", "rbprm","lp"]
 centroidal_initGuess_method_available = ["none", "geometric", "croc", "timeopt", "quasistatic"]
 centroidal_method_available = ["load", "geometric", "croc", "timeopt", "quasistatic", "muscod"]
 wholebody_method_available = ["load", "tsid", "croccodyl"]
