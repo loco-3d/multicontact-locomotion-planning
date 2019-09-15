@@ -38,8 +38,11 @@ def setContactPlacementFromRBPRMState(phase,fb,stateId,limbs = None):
 def runRBPRMScript():
     #the following script must produce a sequence of configurations in contact (configs) 
     # with exactly one contact change between each configurations
-    # It must also initialise a FullBody object name fullBody and optionnaly a Viewer object named V    
-    scriptName = 'scenarios.'+cfg.SCRIPT_PATH+'.'+cfg.DEMO_NAME
+    # It must also initialise a FullBody object name fullBody and optionnaly a Viewer object named V
+    if hasattr(cfg, 'SCRIPT_ABSOLUTE_PATH'):
+        scriptName = cfg.SCRIPT_ABSOLUTE_PATH
+    else :
+        scriptName = 'scenarios.'+cfg.SCRIPT_PATH+'.'+cfg.DEMO_NAME
     print "Run RBPRM script : ",scriptName
     cp = importlib.import_module(scriptName)
     if hasattr(cp,'beginId'):
