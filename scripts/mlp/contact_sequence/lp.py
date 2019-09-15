@@ -10,9 +10,9 @@ import importlib
 from mlp.utils.cs_tools import *
 import numpy as np
 from numpy.linalg import norm
-from mlp.viewer.display_tools import initScene
+from mlp.viewer.display_tools import initScene, displaySteppingStones
 VERBOSE = False
-USE_ORIENTATION = False
+USE_ORIENTATION = True
 
 def normal(phase):
     s = phase["S"][0]
@@ -42,7 +42,8 @@ def runLPScript():
     print "Run LP script : ",scriptName
     cp = importlib.import_module(scriptName)
     pb, coms, footpos, allfeetpos, res = cp.solve()
-    return cp.RF,cp.root_init, pb, coms, footpos, allfeetpos, res
+    root_init = cp.root_init[0:7]
+    return cp.RF,root_init, pb, coms, footpos, allfeetpos, res
 
 def generateContactSequence():
     RF,root_init,pb, coms, footpos, allfeetpos, res = runLPScript()
@@ -51,6 +52,7 @@ def generateContactSequence():
     fb,v = initScene(cfg.Robot,cfg.ENV_NAME,False)
     q_init = fb.referenceConfig[::] + [0]*6
     q_init[0:7] = root_init
+    #q_init[2] += fb.referenceConfig[2] - 0.98 # 0.98 is in the _path script
     v(q_init)
 
     # init contact sequence with first phase : q_ref move at the right root pose and with both feet in contact
@@ -66,7 +68,8 @@ def generateContactSequence():
         movingID = fb.lfoot
         if moving == RF:
             movingID = fb.rfoot
-        pos = allfeetpos[pId]; # array, desired position for the feet movingID
+        pos = allfeetpos[pId] # array, desired position for the feet movingID
+        pos[2] += 0.005 # FIXME it shouldn't be required !! 
         # compute desired foot rotation :
         if USE_ORIENTATION:
             if pId < len(pb["phaseData"]) - 1:
@@ -88,6 +91,8 @@ def generateContactSequence():
     for i in range(3):
         q_end[i] += p_end[i]
     setFinalState(cs,q=q_end)
+
+    displaySteppingStones(cs,v.client.gui,v.sceneName,fb)
 
     return cs,fb,v
 
