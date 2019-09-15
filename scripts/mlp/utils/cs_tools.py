@@ -83,7 +83,7 @@ def moveEffectorToPlacement(fb,v,cs,eeName,placement):
     phase.init_state = state.copy()
     prev_phase.final_state = state.copy()
     cs.contact_phases.append(phase)    
-    display_tools.displaySteppingStones(cs,v.client.gui,v.sceneName,fb)
+    #display_tools.displaySteppingStones(cs,v.client.gui,v.sceneName,fb)
     
 
 # add one or two contact phases to the sequence in order to move the effector eeName of
