@@ -77,7 +77,13 @@ def projectCoMInSupportPolygon(s):
 def generateConfigFromPhase(fb,phase,projectCOM = False):
     fb.usePosturalTaskContactCreation(False)
     contacts = getActiveContactLimbs(phase,fb)
-    q = phase.reference_configurations[0].T.tolist()[0] # should be the correct config for the previous phase, if used only from high level helper methods
+    #q = phase.reference_configurations[0].T.tolist()[0] # should be the correct config for the previous phase, if used only from high level helper methods
+    q = fb.referenceConfig[::] + [0]*6 # FIXME : more generic !
+    root = computeCenterOfSupportPolygonFromPhase(phase,fb).T.tolist()[0]
+    q[0:2] = root[0:2]
+    q[2] += root[2] - fb.DEFAULT_COM_HEIGHT
+    quat = Quaternion(rootOrientationFromFeetPlacement(phase,None)[0].rotation)
+    q[3:7] = [quat.x, quat.y,quat.z,quat.w]
     # create state in fullBody : 
     state = State(fb,q=q,limbsIncontact=contacts)
     # check if q is consistent with the contact placement in the phase : 
