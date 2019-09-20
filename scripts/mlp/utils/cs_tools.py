@@ -133,7 +133,10 @@ def moveEffectorToPlacement(fb,v,cs,eeName,placement,initStateCenterSupportPolyg
     q = generateConfigFromPhase(fb,phase,projectCOM)
     fb.setCurrentConfig(q)
     state = np.matrix(np.zeros(9)).T
-    state[0:3] = np.matrix(fb.getCenterOfMass()).T
+    if initStateCenterSupportPolygon:
+        state[0:3] = computeCenterOfSupportPolygonFromPhase(phase,fb)
+    else:
+        state[0:3] = np.matrix(fb.getCenterOfMass()).T
     phase.init_state = state.copy()
     prev_phase.final_state = state.copy()
     cs.contact_phases.append(phase)    
