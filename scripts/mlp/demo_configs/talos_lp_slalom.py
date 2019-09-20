@@ -6,7 +6,7 @@ ENV_NAME = "multicontact/slalom_debris"
 
 
 DURATION_INIT = 2. # Time to init the motion
-DURATION_SS =1.6
+DURATION_SS =1.8
 DURATION_DS = 0.3
 DURATION_TS = 0.4
 DURATION_CONNECT_GOAL = 0.
@@ -16,8 +16,8 @@ USE_PLANNING_ROOT_ORIENTATION = False # if true, the reference for the root orie
 #USE_WP_COST = False # use wp from the contact sequence in the cost function of the centroidal solver
 
 
-EFF_T_PREDEF = 0.2
-p_max = 0.13
+EFF_T_PREDEF = 0.3
+p_max = 0.2
 
 IK_REFERENCE_CONFIG = np.matrix(Robot.referenceConfig_elbowsUp).T #Reference config used by the wholeBody script, may be different than the one used by the planning (default value is the same as planning)
 COM_SHIFT_Z = -0.04

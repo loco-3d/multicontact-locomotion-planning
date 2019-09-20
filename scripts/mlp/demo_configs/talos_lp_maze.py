@@ -2,7 +2,7 @@ TIMEOPT_CONFIG_FILE = "cfg_softConstraints_talos.yaml"
 from common_talos import *
 #SCRIPT_ABSOLUTE_PATH = "mpcroc.planner_scenarios.talos.lp_complex1"
 SCRIPT_ABSOLUTE_PATH = "mpcroc.planner_scenarios.talos.maze"
-ENV_NAME = "multicontact/maze_easy"
+ENV_NAME = "multicontact/maze_hard"
 contact_generation_method = "lp" 
 
 
@@ -27,5 +27,5 @@ USE_PLANNING_ROOT_ORIENTATION = False # if true, the reference for the root orie
 IK_REFERENCE_CONFIG = np.matrix(Robot.referenceConfig_elbowsUp).T #Reference config used by the wholeBody script, may be different than the one used by the planning (default value is the same as planning)
 
 
-FEET_MAX_VEL = 0.4 # maximal linear velocity of the effector, if the current duration of the phase lead to a greater velocity than this setting, the duration of the phase is increased
-FEET_MAX_ANG_VEL = 1. # maximal angular velocity of the effectors
+#FEET_MAX_VEL = 0.4 # maximal linear velocity of the effector, if the current duration of the phase lead to a greater velocity than this setting, the duration of the phase is increased
+#FEET_MAX_ANG_VEL = 1. # maximal angular velocity of the effectors
