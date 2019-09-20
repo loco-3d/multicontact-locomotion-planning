@@ -11,6 +11,7 @@ from mlp.utils.cs_tools import *
 import numpy as np
 from numpy.linalg import norm
 from mlp.viewer.display_tools import initScene, displaySteppingStones
+from pinocchio.utils import matrixToRpy
 VERBOSE = False
 USE_ORIENTATION = True
 
@@ -62,6 +63,7 @@ def generateContactSequence():
 
     # loop over all phases of pb and add them to the cs :
     for pId in range(2, len(pb["phaseData"])): # start at 2 because the first two ones are already done in the q_init
+        prev_contactPhase = cs.contact_phases[-1]
         #n = normal(pb["phaseData"][pId])
         phase = pb["phaseData"][pId]
         moving = phase["moving"]
@@ -76,6 +78,16 @@ def generateContactSequence():
                 quat0 = Quaternion(pb["phaseData"][pId]["rootOrientation"])
                 quat1 = Quaternion(pb["phaseData"][pId+1]["rootOrientation"])
                 rot = quat0.slerp(0.5,quat1)
+                # check if feets do not cross :
+                if moving == RF:
+                    qr = rot
+                    ql = Quaternion(prev_contactPhase.LF_patch.placement.rotation)
+                else:
+                    ql = rot
+                    qr = Quaternion(prev_contactPhase.RF_patch.placement.rotation)
+                rpy = matrixToRpy((qr * (ql.inverse())).matrix())  # rotation from the left foot pose to the right one
+                if rpy[2, 0] > 0: # yaw positive, feet are crossing
+                    rot = Quaternion(phase["rootOrientation"])  # rotation of the root, from the guide
             else:
                 rot = Quaternion(phase["rootOrientation"])  # rotation of the root, from the guide
         else:
@@ -83,7 +95,7 @@ def generateContactSequence():
         placement = SE3()
         placement.translation = np.matrix(pos).T
         placement.rotation = rot.matrix()
-        moveEffectorToPlacement(fb,v,cs,movingID,placement)
+        moveEffectorToPlacement(fb,v,cs,movingID,placement,initStateCenterSupportPolygon = True)
     # final phase :
     # fixme : assume root is in the middle of the last 2 feet pos ...
     q_end = fb.referenceConfig[::]+[0]*6
