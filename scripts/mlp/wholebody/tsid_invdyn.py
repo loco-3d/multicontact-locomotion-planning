@@ -136,27 +136,6 @@ def computeAMRefFromPhase(phase,time_interval):
     am_ref.computeFromPoints(timeline,L,dL)
     return am_ref
 
-def rootPlacementFromFeetPlacement(phase,phase_next):
-    #FIXME : extract only the yaw rotation
-    qr = Quaternion(phase.RF_patch.placement.rotation)
-    qr.x = 0 ; qr.y = 0 ; qr.normalize()
-    ql = Quaternion(phase.LF_patch.placement.rotation)
-    ql.x = 0 ; ql.y = 0 ; ql.normalize()
-    q_rot = qr.slerp(0.5, ql)
-    placement_init = SE3.Identity()
-    placement_init.rotation = q_rot.matrix()
-    if phase_next :
-        if not isContactActive(phase,cfg.Robot.rfoot)  and isContactActive(phase_next,cfg.Robot.rfoot):
-            qr = Quaternion(phase_next.RF_patch.placement.rotation)
-            qr.x = 0; qr.y = 0; qr.normalize()
-        if not isContactActive(phase, cfg.Robot.lfoot) and isContactActive(phase_next, cfg.Robot.lfoot):
-            ql = Quaternion(phase_next.LF_patch.placement.rotation)
-            ql.x = 0;ql.y = 0; ql.normalize()
-    q_rot = qr.slerp(0.5,ql)
-    placement_end = SE3.Identity()
-    placement_end.rotation = q_rot.matrix()
-    return placement_init,placement_end
-
 def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
     if not viewer :
         print "No viewer linked, cannot display end_effector trajectories."
@@ -333,8 +312,8 @@ def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
         if cfg.WB_ABORT_WHEN_INVALID :
             return res.resize(phase_interval[0]),pinRobot
         elif cfg.WB_RETURN_INVALID : 
-            return res.resize(k_t),pinRobot         
-    
+            return res.resize(k_t),pinRobot
+
     # time check
     dt = cfg.IK_dt  
     if cfg.WB_VERBOSE:
@@ -380,7 +359,7 @@ def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
                 root_traj = trajectories.TrajectorySE3LinearInterp(SE3FromConfig(phase.reference_configurations[0]),SE3FromConfig(phase.reference_configurations[0]),time_interval)
         else:
             # orientation such that the torso orientation is the mean between both feet yaw rotations:
-            placement_init,placement_end = rootPlacementFromFeetPlacement(phase, phase_next)
+            placement_init,placement_end = rootOrientationFromFeetPlacement(phase, phase_next)
             root_traj = trajectories.TrajectorySE3LinearInterp(placement_init,  placement_end,time_interval)
         # add newly created contacts : 
         for eeName in usedEffectors:
