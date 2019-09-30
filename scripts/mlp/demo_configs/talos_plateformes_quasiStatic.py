@@ -23,16 +23,16 @@ level_posture = 1
 level_rootOrientation = 1
 level_am = 1
 
-DURATION_INIT = 4. # Time to init the motion
-DURATION_FINAL = 4. # Time to stop the robot
+DURATION_INIT = 2. # Time to init the motion
+DURATION_FINAL = 2. # Time to stop the robot
 DURATION_FINAL_SS = 1.
-DURATION_SS =2.5
-DURATION_DS = 4.
+DURATION_SS =1.6
+DURATION_DS = 2.
 DURATION_TS = 0.4
 DURATION_CONNECT_GOAL = 2.
 
-COM_SHIFT_Z = -0.05
+COM_SHIFT_Z = -0.07
 
-EFF_T_PREDEF = 0.3
-p_max = 0.1
+EFF_T_PREDEF = 0.35
+p_max = 0.13
 

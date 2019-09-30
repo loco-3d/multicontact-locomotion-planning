@@ -100,9 +100,19 @@ if cfg.EXPORT_NPZ and motion_valid :
 if cfg.EXPORT_BLENDER:
     from mlp.export import blender
     blender.export(res.q_t,viewer,cfg.IK_dt)
+    blender.exportSteppingStones(viewer)
 if cfg.EXPORT_SOT:
     from mlp.export import sotTalosBalance
     sotTalosBalance.export(res)
+
+if cfg.EXPORT_EFF_IN_CS:
+    from mlp.utils.util import addEffectorTrajectoryInCS
+    cs_com = addEffectorTrajectoryInCS(cs_com,res)
+    filename = cfg.CONTACT_SEQUENCE_PATH + "/" + cfg.DEMO_NAME + "_COM_eff.cs"
+    print "Write contact sequence binary file with effector trajectories : ", filename
+    cs_com.saveAsBinary(filename)
+
+
 
 def dispCS(step = 0.2): 
     display_tools.displayContactSequence(viewer,cs,step)

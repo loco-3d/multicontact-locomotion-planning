@@ -1,7 +1,7 @@
 import numpy as np
 import os
 
-contact_generation_method_available = ["none","load", "rbprm"]
+contact_generation_method_available = ["none","load", "rbprm","lp"]
 centroidal_initGuess_method_available = ["none", "geometric", "croc", "timeopt", "quasistatic"]
 centroidal_method_available = ["load", "geometric", "croc", "timeopt", "quasistatic", "muscod"]
 wholebody_method_available = ["load", "tsid", "croccodyl"]
@@ -29,6 +29,7 @@ EXPORT_NPZ = True
 EXPORT_BLENDER = False
 EXPORT_SOT = False
 EXPORT_OPENHRP = False
+EXPORT_EFF_IN_CS=True
 openHRP_useZMPref = False # if true : in the export_openHRP, use the zmp computed by the centroidal solver and the one computed from the wholebody
 WRITE_STATUS = True
 ##DISPLAY settings : 
@@ -99,6 +100,7 @@ else :
     parser.add_argument('demo_name',type=str,help="The name of the demo configuration file to load")
     args = parser.parse_args()
     DEMO_NAME = args.demo_name
+    DEMO_NAME = DEMO_NAME.rstrip(".py") # remove extension if specified
     print "# Load demo config : ",DEMO_NAME
     # Import the module
     try :
