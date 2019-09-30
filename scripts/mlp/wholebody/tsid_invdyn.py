@@ -136,7 +136,6 @@ def computeAMRefFromPhase(phase,time_interval):
     am_ref.computeFromPoints(timeline,L,dL)
     return am_ref
 
-
 def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
     if not viewer :
         print "No viewer linked, cannot display end_effector trajectories."
@@ -313,8 +312,8 @@ def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
         if cfg.WB_ABORT_WHEN_INVALID :
             return res.resize(phase_interval[0]),pinRobot
         elif cfg.WB_RETURN_INVALID : 
-            return res.resize(k_t),pinRobot         
-    
+            return res.resize(k_t),pinRobot
+
     # time check
     dt = cfg.IK_dt  
     if cfg.WB_VERBOSE:
@@ -352,12 +351,16 @@ def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
         com_traj = computeCOMRefFromPhase(phase,time_interval)
         
         am_traj = computeAMRefFromPhase(phase,time_interval)
-        # add root's orientation ref from reference config : 
-        if phase_next :
-            root_traj = trajectories.TrajectorySE3LinearInterp(SE3FromConfig(phase.reference_configurations[0]),SE3FromConfig(phase_next.reference_configurations[0]),time_interval)
-        else : 
-            root_traj = trajectories.TrajectorySE3LinearInterp(SE3FromConfig(phase.reference_configurations[0]),SE3FromConfig(phase.reference_configurations[0]),time_interval)
-            
+        # add root's orientation ref from reference config :
+        if cfg.USE_PLANNING_ROOT_ORIENTATION :
+            if phase_next :
+                root_traj = trajectories.TrajectorySE3LinearInterp(SE3FromConfig(phase.reference_configurations[0]),SE3FromConfig(phase_next.reference_configurations[0]),time_interval)
+            else :
+                root_traj = trajectories.TrajectorySE3LinearInterp(SE3FromConfig(phase.reference_configurations[0]),SE3FromConfig(phase.reference_configurations[0]),time_interval)
+        else:
+            # orientation such that the torso orientation is the mean between both feet yaw rotations:
+            placement_init,placement_end = rootOrientationFromFeetPlacement(phase, phase_next)
+            root_traj = trajectories.TrajectorySE3LinearInterp(placement_init,  placement_end,time_interval)
         # add newly created contacts : 
         for eeName in usedEffectors:
             if phase_prev and not isContactActive(phase_prev,eeName) and isContactActive(phase,eeName) :
@@ -375,7 +378,9 @@ def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
                     print "add se3 task for "+eeName
                 invdyn.addMotionTask(task, cfg.w_eff, cfg.level_eff, 0.0)
                 #create reference trajectory for this task : 
-                placement_init = getCurrentEffectorPosition(robot,invdyn.data(),eeName)
+                placement_init = getCurrentEffectorPosition(robot,invdyn.data(),eeName) #FIXME : adjust orientation in case of 3D contact ...
+                if cfg.Robot.cType == "_3_DOF":
+                    placement_init.rotation = JointPlacementForEffector(phase,eeName).rotation
                 placement_end = JointPlacementForEffector(phase_next,eeName)                
                 ref_traj = generateEndEffectorTraj(time_interval,placement_init,placement_end,0)
                 if cfg.WB_VERBOSE :
@@ -448,11 +453,13 @@ def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
                 
                 # root orientation : 
                 sampleRoot = trajRoot.computeNext()
-                if cfg.USE_PLANNING_ROOT_ORIENTATION :
-                    sampleRoot.pos(SE3toVec(root_traj(t)[0]))
-                    sampleRoot.vel(MotiontoVec(root_traj(t)[1]))
+                sampleRoot.pos(SE3toVec(root_traj(t)[0]))
+                sampleRoot.vel(MotiontoVec(root_traj(t)[1]))
+
+
                 orientationRootTask.setReference(sampleRoot)
-                
+                quat_waist = Quaternion(root_traj(t)[0].rotation)
+                res.waist_orientation_reference[:,k_t]=np.matrix([quat_waist.x,quat_waist.y,quat_waist.z,quat_waist.w]).T
                 if cfg.WB_VERBOSE == 2:
                     print "### references given : ###"
                     print "com  pos : ",sampleCom.pos()

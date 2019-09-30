@@ -456,3 +456,55 @@ def computeContactNormal(placement):
     
 def computeContactNormalForPhase(phase,eeName):
     return computeContactNormal(getContactPlacement(phase,eeName))
+
+def effectorStatePositionFromWB(Robot,wb_result,id,eeName):
+    placement = SE3FromVec(wb_result.effector_references[eeName][:,id])
+    pos = placement.act(Robot.dict_offset[eeName]).translation
+    vel = wb_result.d_effector_references[eeName][0:3,id]
+    acc = wb_result.dd_effector_references[eeName][0:3,id]
+    return np.vstack([pos,vel,acc])
+
+def getPhaseEffTrajectoryByName(phase,eeName,Robot):
+    if eeName == Robot.rfoot:
+        return phase.RF_trajectory
+    if eeName == Robot.lfoot:
+        return phase.LF_trajectory
+    if eeName == Robot.rhand:
+        return phase.RH_trajectory
+    if eeName == Robot.lhand:
+        return phase.LH_trajectory
+    raise ValueError("Unknown effector name : "+eeName)
+
+
+def addEffectorTrajectoryInCS(cs,wb_result,Robot = None):
+    if not Robot:
+        Robot = cfg.Robot
+    for phase in cs.contact_phases:
+        for i_traj in range(len(phase.time_trajectory)):
+            id = int(phase.time_trajectory[i_traj] / wb_result.dt)
+            if id >= len(wb_result.t_t):
+                id = len(wb_result.t_t) -1
+            for eeName in wb_result.eeNames:
+                getPhaseEffTrajectoryByName(phase,eeName,Robot).append(effectorStatePositionFromWB(Robot,wb_result,id,eeName))
+    return cs
+
+def rootOrientationFromFeetPlacement(phase,phase_next):
+    #FIXME : extract only the yaw rotation
+    qr = Quaternion(phase.RF_patch.placement.rotation)
+    qr.x = 0 ; qr.y = 0 ; qr.normalize()
+    ql = Quaternion(phase.LF_patch.placement.rotation)
+    ql.x = 0 ; ql.y = 0 ; ql.normalize()
+    q_rot = qr.slerp(0.5, ql)
+    placement_init = SE3.Identity()
+    placement_init.rotation = q_rot.matrix()
+    if phase_next :
+        if not isContactActive(phase,cfg.Robot.rfoot)  and isContactActive(phase_next,cfg.Robot.rfoot):
+            qr = Quaternion(phase_next.RF_patch.placement.rotation)
+            qr.x = 0; qr.y = 0; qr.normalize()
+        if not isContactActive(phase, cfg.Robot.lfoot) and isContactActive(phase_next, cfg.Robot.lfoot):
+            ql = Quaternion(phase_next.LF_patch.placement.rotation)
+            ql.x = 0;ql.y = 0; ql.normalize()
+    q_rot = qr.slerp(0.5,ql)
+    placement_end = SE3.Identity()
+    placement_end.rotation = q_rot.matrix()
+    return placement_init,placement_end

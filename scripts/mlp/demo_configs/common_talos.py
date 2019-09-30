@@ -5,14 +5,14 @@ MASS = 90.27
 DURATION_INIT = 1. # Time to init the motion
 DURATION_FINAL = 1.5 # Time to stop the robot
 DURATION_FINAL_SS = 1. # duration of the final phase if it's a single support phase
-DURATION_SS =1. # duration of the single support phases
+DURATION_SS =1.4 # duration of the single support phases
 DURATION_DS = 0.2 # duration of the double support phases
 DURATION_TS = 0.4 # duration of the triple support phases
 DURATION_CONNECT_GOAL = 2. # duration to try to connect the last points in the CoM trajectory with the goal position given to planning
 # Hardcoded height change of the COM before the beginning of the motion (value in m and time allowed to make this motion)
 # This is used because for some robot, the reference configuration is really close to the kinematic limits of the robot. 
-COM_SHIFT_Z = -0.015
-TIME_SHIFT_COM = 1.5
+COM_SHIFT_Z = -0.03
+TIME_SHIFT_COM = 2.
 
 ## weight and gains used by TSID
 fMin = 1.0                      # minimum normal force
@@ -44,7 +44,7 @@ EFF_T_PREDEF = 0.2 # duration during which the motion of the end effector is for
 EFF_T_DELAY = 0.05 # duration at the beginning and the end of the phase where the effector don't move
 FEET_MAX_VEL = 0.5 # maximal linear velocity of the effector, if the current duration of the phase lead to a greater velocity than this setting, the duration of the phase is increased
 FEET_MAX_ANG_VEL = 1.5 # maximal angular velocity of the effectors
-p_max = 0.07 #setting used to compute the default height of the effector trajectory. end_effector/bezier_predef.py : computePosOffset()
+p_max = 0.1 #setting used to compute the default height of the effector trajectory. end_effector/bezier_predef.py : computePosOffset()
 
 import numpy as np
 gain_vector = np.matrix(  # gain vector for postural task

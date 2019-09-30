@@ -1,6 +1,6 @@
 planner_variables:
 
-  heuristic: SoftConstraint  # Types: TrustRegion, SoftConstraint, TimeOptimization #
+  heuristic: TrustRegion  # Types: TrustRegion, SoftConstraint, TimeOptimization #
   n_act_eefs: 2
   time_step: 0.05
   time_horizon: 9.5
@@ -8,7 +8,7 @@ planner_variables:
   com_displacement: [0., 0., 0.]
   num_com_viapoints: 0
   com_viapoints:
-  max_time_iterations: 100
+  max_time_iterations: 10000
   max_time_residual_tolerance: 1e-3
   min_time_residual_improvement: 1e-5
 
@@ -21,22 +21,22 @@ planner_variables:
   eff_offset_lf: [ 0.00,  0.00,  0.00]
   eff_offset_rh: [ 0.0,  -0.15,  0.45]
   eff_offset_lh: [ 0.0,  0.15,  0.45]
-  cop_range_rf: [-0.01,  0.01, -0.01,  0.01]
-  cop_range_lf: [-0.01,  0.01, -0.01,  0.01]
+  cop_range_rf: [-0.03,  0.03, -0.03,  0.03]
+  cop_range_lf: [-0.03,  0.03, -0.03,  0.03]
   cop_range_rh: [-0.01,  0.01, -0.01,  0.01]
   cop_range_lh: [-0.01,  0.01, -0.01,  0.01]
-  max_eef_lengths: [0.87,  0.87,  0.9,  0.9]
+  max_eef_lengths: [0.86,  0.86,  0.9,  0.9]
 
   w_trq_arm:       1.000
   w_trq_leg:       1.000
-  w_com:           [ 10000,  10000,  10000]
+  w_com:           [ 1000,  1000,  1000]
   w_amom:          [ 0.500,  0.500,  0.500]
   w_lmom:          [ 0.010,  0.001,  0.001]
   w_amomd:         [ 0.100,  0.400,  0.100]
   w_lmomd:         [ 0.015,  0.015,  0.015]
   w_amom_final:    [ 10.00,  10.00,  10.00]
   w_lmom_final:    [ 10.00,  10.00,  10.00]
-  w_com_via:       [ 0.2,  0.2,  100.000]
+  w_com_via:       [ 0.2,  0.2,  500.000]
   w_frc_arm:       [ 0.001,  0.001,  0.001]
   w_frc_leg:       [ 0.001,  0.001,  0.001]
   w_dfrc_arm:      [ 0.000,  0.000,  0.000]

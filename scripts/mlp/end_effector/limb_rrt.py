@@ -26,7 +26,9 @@ weights_vars = [[0.5,bezier_com.ConstraintFlag.ONE_FREE_VAR,1],[0.75,bezier_com.
               [0.5,bezier_com.ConstraintFlag.THREE_FREE_VAR,3],[0.75,bezier_com.ConstraintFlag.THREE_FREE_VAR,3],[0.85,bezier_com.ConstraintFlag.THREE_FREE_VAR,3],[0.90,bezier_com.ConstraintFlag.THREE_FREE_VAR,3],[0.95,bezier_com.ConstraintFlag.THREE_FREE_VAR,3],[1.,bezier_com.ConstraintFlag.THREE_FREE_VAR,3],
               [0.5,bezier_com.ConstraintFlag.FIVE_FREE_VAR,5],[0.75,bezier_com.ConstraintFlag.FIVE_FREE_VAR,5],[0.85,bezier_com.ConstraintFlag.FIVE_FREE_VAR,5],[0.90,bezier_com.ConstraintFlag.FIVE_FREE_VAR,5],[0.95,bezier_com.ConstraintFlag.FIVE_FREE_VAR,5],[1.,bezier_com.ConstraintFlag.FIVE_FREE_VAR,5]]
 # if numTry is equal to a number in this list, recompute the the limb-rrt path. This list is made such that low weight/num vars are tried for several limb-rrt path before trying higher weight/num variables
-recompute_rrt_at_tries=[1,4,7,10, 16,23,23+len(weights_vars),23+2*len(weights_vars),23+3*len(weights_vars),23+4*len(weights_vars),23+5*len(weights_vars),23+6*len(weights_vars),23+7*len(weights_vars),23+8*len(weights_vars)]
+recompute_rrt_at_tries=[1,4,7,10, 16,23]
+for i in range(20):
+    recompute_rrt_at_tries+=[23+i*len(weights_vars)]
 # store the last limbRRT path ID computed        
 current_limbRRT_id = None
 
@@ -208,7 +210,9 @@ def generateLimbRRTOptimizedTraj(time_interval,placement_init,placement_end,numT
         if numTry >= offset:
             id = numTry - offset
             break
-    if id >= len(weights_vars)-1:
+    if VERBOSE:
+        print "weights_var id = ",id
+    if id >= len(weights_vars):
         raise ValueError("Max number of try allow to find a collision-end effector trajectory reached.")
     weight = weights_vars[id][0]
     varFlag = weights_vars[id][1]
