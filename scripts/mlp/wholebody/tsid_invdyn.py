@@ -144,7 +144,8 @@ def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
     print "Start TSID ... " 
 
     rp = RosPack()
-    urdf = rp.get_path(cfg.Robot.packageName)+'/urdf/'+cfg.Robot.urdfName+cfg.Robot.urdfSuffix+'.urdf'
+    package_path = rp.get_path('talos_data')
+    urdf = package_path+'/urdf/'+cfg.Robot.urdfName+cfg.Robot.urdfSuffix+'.urdf'
     if cfg.WB_VERBOSE:
         print "load robot : " ,urdf    
     #srdf = "package://" + package + '/srdf/' +  cfg.Robot.urdfName+cfg.Robot.srdfSuffix + '.srdf'
@@ -152,8 +153,9 @@ def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
     if cfg.WB_VERBOSE:
         print "robot loaded in tsid."
     # FIXME : tsid robotWrapper don't have all the required methods, only pinocchio have them
-    pinRobot  = pin.RobotWrapper.BuildFromURDF(urdf, pin.StdVec_StdString(), pin.JointModelFreeFlyer(), False)
-
+    pinRobot  = pin.RobotWrapper.BuildFromURDF(urdf,package_path, pin.JointModelFreeFlyer(), cfg.WB_VERBOSE == 2)
+    if cfg.WB_VERBOSE:
+        print "pinocchio robot loaded from urdf."    
     q = cs.contact_phases[0].reference_configurations[0][:robot.nq].copy()
     v = np.matrix(np.zeros(robot.nv)).transpose()
     t = 0.0  # time
