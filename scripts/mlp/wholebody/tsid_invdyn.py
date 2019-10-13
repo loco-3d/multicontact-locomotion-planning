@@ -18,7 +18,9 @@ import math
 from mlp.utils.wholebody_result import Result
 from mlp.utils.util import * 
 from mlp.end_effector import generateEndEffectorTraj,effectorCanRetry
-    
+import eigenpy
+eigenpy.switchToNumpyMatrix() 
+
 def buildRectangularContactPoints(eeName):
     size = cfg.IK_eff_size[eeName]
     transform = cfg.Robot.dict_offset[eeName]     
