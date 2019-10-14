@@ -12,8 +12,23 @@ import numpy as np
 from numpy.linalg import norm
 from mlp.viewer.display_tools import initScene, displaySteppingStones
 from pinocchio.utils import matrixToRpy
+from tools.surfaces_from_path import getSurfacesFromPath,getSurfacesFromGuideContinuous,getAllSurfacesDict
+from tools.plot_surfaces import draw
+from mpcroc.constants_and_tools import *
+from mpcroc.planner import *
+
+from numpy import asmatrix, matrix, zeros, ones
+from numpy import array, dot, stack, vstack, hstack, asmatrix, identity, cross, concatenate
+from numpy.linalg import norm
+import random
+
+import eigenpy
+eigenpy.switchToNumpyMatrix()
+
+Z_AXIS = np.array([0,0,1]).T
 VERBOSE = False
 USE_ORIENTATION = True
+EPS_Z = 0.005 # offset added to feet z position, otherwise there is collisions with the ground
 
 def normal(phase):
     s = phase["S"][0]
@@ -27,11 +42,72 @@ def normal(phase):
 
 
 def quatConfigFromMatrix(m):
-  quat = Quaternion(m)
-  return quatToConfig(quat)
+    quat = Quaternion(m)
+    return quatToConfig(quat)
 
 def quatToConfig(quat):
-  return [quat.x,quat.y,quat.z,quat.w]
+    return [quat.x,quat.y,quat.z,quat.w]    
+
+# FIXME : HARDCODED stuff for talos in this method ! 
+def gen_pb(root_init,R, surfaces):
+    #~ kinematicConstraints = genKinematicConstraints(min_height = 0.6)
+    kinematicConstraints = genKinematicConstraintsTalos(min_height = None)
+    relativeConstraints = genFootRelativeConstraintsTalos()
+    nphases = len(surfaces)
+    lf_0 = array(root_init[0:3]) + array([0, 0.085,-0.98]) # values for talos ! 
+    rf_0 = array(root_init[0:3]) + array([0,-0.085,-0.98]) # values for talos ! 
+    p0 = [lf_0,rf_0];
+    print "p0 used : ",p0
+    res = { "p0" : p0, "c0" : None, "nphases": nphases}
+    #print "surfaces = ",surfaces
+    print "number of surfaces : ",len(surfaces)
+    #print "number of rotations values : ",len(R)
+    #print "R= ",R
+    #TODO in non planar cases, K must be rotated
+    phaseData = [ {"moving" : i%2, "fixed" : (i+1) % 2 , "K" : [genKinematicConstraints(index = i, transform = R, min_height = 0.3) for _ in range(len(surfaces[i]))], "relativeK" : [genFootRelativeConstraints(index = i, transform = R)[(i) % 2] for _ in range(len(surfaces[i]))], "rootOrientation" : R[i], "S" : surfaces[i] } for i in range(nphases)]
+    res ["phaseData"] = phaseData
+    return res 
+
+
+def solve(tp):
+    from mpcroc.fix_sparsity import solveL1
+    #surfaces_dict = getAllSurfacesDict(tp.afftool)         
+    success = False
+    maxIt = 50
+    it = 0
+    defaultStep = cfg.GUIDE_STEP_SIZE
+    step = defaultStep
+    variation = 0.4 # FIXME : put it in config file, +- bounds on the step size
+    while not success and it < maxIt:
+        if it > 0 :
+            step = defaultStep + random.uniform(-variation,variation)
+        #configs = getConfigsFromPath (tp.ps, tp.pathId, step)  
+        #getSurfacesFromPath(tp.rbprmBuilder, configs, surfaces_dict, tp.v, True, False)
+        R,surfaces = getSurfacesFromGuideContinuous(tp.rbprmBuilder,tp.ps,tp.afftool,tp.pathId,tp.v,step,useIntersection=True)
+        pb = gen_pb(tp.q_init,R,surfaces)
+        try:
+            pb, coms, footpos, allfeetpos, res = solveL1(pb, surfaces, None)
+            success = True
+        except :  
+            print "## Planner failed at iter : "+str(it)+" with step length = "+str(step)
+        it += 1
+    if not success :
+        raise RuntimeError("planner always fail.") 
+    return pb, coms, footpos, allfeetpos, res
+
+def runLPFromGuideScript():
+    #the following script must produce a
+    if hasattr(cfg, 'SCRIPT_ABSOLUTE_PATH'):
+        scriptName = cfg.SCRIPT_ABSOLUTE_PATH
+    else :
+        scriptName = 'scenarios.'+cfg.SCRIPT_PATH+'.'+cfg.DEMO_NAME
+    scriptName += "_path"
+    print "Run Guide script : ",scriptName
+    tp = importlib.import_module(scriptName)
+    # compute sequence of surfaces from guide path
+    pb, coms, footpos, allfeetpos, res = solve(tp)
+    root_init = tp.q_init[0:7]
+    return RF,root_init, pb, coms, footpos, allfeetpos, res    
 
 
 def runLPScript():
@@ -47,13 +123,15 @@ def runLPScript():
     return cp.RF,root_init, pb, coms, footpos, allfeetpos, res
 
 def generateContactSequence():
-    RF,root_init,pb, coms, footpos, allfeetpos, res = runLPScript()
+    #RF,root_init,pb, coms, footpos, allfeetpos, res = runLPScript()
+    RF,root_init,pb, coms, footpos, allfeetpos, res = runLPFromGuideScript()
 
     # load scene and robot
     fb,v = initScene(cfg.Robot,cfg.ENV_NAME,False)
     q_init = fb.referenceConfig[::] + [0]*6
     q_init[0:7] = root_init
-    #q_init[2] += fb.referenceConfig[2] - 0.98 # 0.98 is in the _path script
+    q_init[2] += EPS_Z
+    #q_init[2] = fb.referenceConfig[2] # 0.98 is in the _path script
     v(q_init)
 
     # init contact sequence with first phase : q_ref move at the right root pose and with both feet in contact
@@ -71,7 +149,7 @@ def generateContactSequence():
         if moving == RF:
             movingID = fb.rfoot
         pos = allfeetpos[pId] # array, desired position for the feet movingID
-        pos[2] += 0.005 # FIXME it shouldn't be required !! 
+        pos[2] += EPS_Z # FIXME it shouldn't be required !! 
         # compute desired foot rotation :
         if USE_ORIENTATION:
             if pId < len(pb["phaseData"]) - 1:
