@@ -14,8 +14,8 @@ from mlp.viewer.display_tools import initScene, displaySteppingStones
 from pinocchio.utils import matrixToRpy
 from tools.surfaces_from_path import getSurfacesFromPath,getSurfacesFromGuideContinuous,getAllSurfacesDict
 from tools.plot_surfaces import draw
-from mpcroc.constants_and_tools import *
-from mpcroc.planner import *
+from sl1m.constants_and_tools import *
+from sl1m.planner import *
 
 from numpy import asmatrix, matrix, zeros, ones
 from numpy import array, dot, stack, vstack, hstack, asmatrix, identity, cross, concatenate
@@ -70,7 +70,7 @@ def gen_pb(root_init,R, surfaces):
 
 
 def solve(tp):
-    from mpcroc.fix_sparsity import solveL1
+    from sl1m.fix_sparsity import solveL1
     #surfaces_dict = getAllSurfacesDict(tp.afftool)         
     success = False
     maxIt = 50
