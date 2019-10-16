@@ -110,7 +110,8 @@ def runLPFromGuideScript():
     # compute sequence of surfaces from guide path
     pb, coms, footpos, allfeetpos, res = solve(tp)
     root_init = tp.q_init[0:7]
-    return RF,root_init, pb, coms, footpos, allfeetpos, res    
+    root_end = tp.q_goal[0:7]
+    return RF,root_init,root_end, pb, coms, footpos, allfeetpos, res
 
 
 def runLPScript():
@@ -123,18 +124,19 @@ def runLPScript():
     cp = importlib.import_module(scriptName)
     pb, coms, footpos, allfeetpos, res = cp.solve()
     root_init = cp.root_init[0:7]
-    return cp.RF,root_init, pb, coms, footpos, allfeetpos, res
+    root_end = cp.root_end[0:7]
+    return cp.RF,root_init,root_end, pb, coms, footpos, allfeetpos, res
 
 def generateContactSequence():
     #RF,root_init,pb, coms, footpos, allfeetpos, res = runLPScript()
-    RF,root_init,pb, coms, footpos, allfeetpos, res = runLPFromGuideScript()
+    RF,root_init,root_end,pb, coms, footpos, allfeetpos, res = runLPFromGuideScript()
 
     # load scene and robot
     fb,v = initScene(cfg.Robot,cfg.ENV_NAME,False)
     q_init = fb.referenceConfig[::] + [0]*6
     q_init[0:7] = root_init
     feet_height_init = allfeetpos[0][2]
-    print "feet height = ",feet_height_init
+    print "feet height initial = ",feet_height_init
     q_init[2] = feet_height_init + fb.referenceConfig[2]
     q_init[2] += EPS_Z
     #q_init[2] = fb.referenceConfig[2] # 0.98 is in the _path script
@@ -183,9 +185,14 @@ def generateContactSequence():
     # final phase :
     # fixme : assume root is in the middle of the last 2 feet pos ...
     q_end = fb.referenceConfig[::]+[0]*6
-    p_end = (allfeetpos[-1] + allfeetpos[-2]) / 2.
-    for i in range(3):
-        q_end[i] += p_end[i]
+    #p_end = (allfeetpos[-1] + allfeetpos[-2]) / 2.
+    #for i in range(3):
+    #    q_end[i] += p_end[i]
+    q_end[0:7] = root_end
+    feet_height_end = allfeetpos[-1][2]
+    print "feet height final = ",feet_height_end
+    q_end[2] = feet_height_end + fb.referenceConfig[2]
+    q_end[2] += EPS_Z
     setFinalState(cs,q=q_end)
 
     displaySteppingStones(cs,v.client.gui,v.sceneName,fb)
