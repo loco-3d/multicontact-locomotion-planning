@@ -52,13 +52,11 @@ class PathChecker():
     def check_motion(self,q_t):
         always_valid = True
         first_invalid = None
-        print "q_t len : ",q_t.shape[1]
         i = -self.check_step
         while i < q_t.shape[1]-1 :
             i += self.check_step
             if i >= q_t.shape[1]:
                 i = q_t.shape[1]-1
-            print "i in check motion : ",i
             valid,mess = self.checkConfig(q_t[:,i])
             if not valid : 
                 if always_valid : # first invalid config
