@@ -52,8 +52,9 @@ def quatToConfig(quat):
 def gen_pb(root_init,R, surfaces):
     #kinematicConstraints = genKinematicConstraintsTalos(min_height = None)
     #relativeConstraints = genFootRelativeConstraintsTalos()
-    print "surfaces = ",surfaces
+    #print "surfaces = ",surfaces
     print "number of surfaces : ",len(surfaces)
+    print "number of rotation matrix for root : ",len(R)
     nphases = len(surfaces)
     lf_0 = array(root_init[0:3]) + array([0, 0.085,0]) # values for talos !
     rf_0 = array(root_init[0:3]) + array([0,-0.085,0]) # values for talos !
@@ -85,7 +86,7 @@ def solve(tp):
             step = defaultStep + random.uniform(-variation,variation)
         #configs = getConfigsFromPath (tp.ps, tp.pathId, step)  
         #getSurfacesFromPath(tp.rbprmBuilder, configs, surfaces_dict, tp.v, True, False)
-        R,surfaces = getSurfacesFromGuideContinuous(tp.rbprmBuilder,tp.ps,tp.afftool,tp.pathId,tp.v,step,useIntersection=True)
+        R,surfaces = getSurfacesFromGuideContinuous(tp.rbprmBuilder,tp.ps,tp.afftool,tp.pathId,tp.v,step,useIntersection=True,max_yaw=0.3)
         pb = gen_pb(tp.q_init,R,surfaces)
         try:
             pb, coms, footpos, allfeetpos, res = solveL1(pb, surfaces, None)
