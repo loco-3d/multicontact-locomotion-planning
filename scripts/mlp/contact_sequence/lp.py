@@ -50,17 +50,19 @@ def quatToConfig(quat):
 
 # FIXME : HARDCODED stuff for talos in this method ! 
 def gen_pb(root_init,R, surfaces):
-    #~ kinematicConstraints = genKinematicConstraints(min_height = 0.6)
-    kinematicConstraints = genKinematicConstraintsTalos(min_height = None)
-    relativeConstraints = genFootRelativeConstraintsTalos()
+    #kinematicConstraints = genKinematicConstraintsTalos(min_height = None)
+    #relativeConstraints = genFootRelativeConstraintsTalos()
+    print "surfaces = ",surfaces
+    print "number of surfaces : ",len(surfaces)
     nphases = len(surfaces)
-    lf_0 = array(root_init[0:3]) + array([0, 0.085,-0.98]) # values for talos ! 
-    rf_0 = array(root_init[0:3]) + array([0,-0.085,-0.98]) # values for talos ! 
+    lf_0 = array(root_init[0:3]) + array([0, 0.085,0]) # values for talos !
+    rf_0 = array(root_init[0:3]) + array([0,-0.085,0]) # values for talos !
+    init_floor_height = surfaces[0][0][2][0] # z value of the first surface in intersection with the rom in the initial configuration
+    lf_0[2] = init_floor_height
+    rf_0[2] = init_floor_height
     p0 = [lf_0,rf_0];
     print "p0 used : ",p0
     res = { "p0" : p0, "c0" : None, "nphases": nphases}
-    #print "surfaces = ",surfaces
-    print "number of surfaces : ",len(surfaces)
     #print "number of rotations values : ",len(R)
     #print "R= ",R
     #TODO in non planar cases, K must be rotated
@@ -130,6 +132,9 @@ def generateContactSequence():
     fb,v = initScene(cfg.Robot,cfg.ENV_NAME,False)
     q_init = fb.referenceConfig[::] + [0]*6
     q_init[0:7] = root_init
+    feet_height_init = allfeetpos[0][2]
+    print "feet height = ",feet_height_init
+    q_init[2] = feet_height_init + fb.referenceConfig[2]
     q_init[2] += EPS_Z
     #q_init[2] = fb.referenceConfig[2] # 0.98 is in the _path script
     v(q_init)
