@@ -8,14 +8,14 @@ wholebody_method_available = ["load", "tsid", "croccodyl"]
 end_effector_method_available = ["smoothedFoot", "bezierPredef", "bezierConstrained", "limbRRT", "limbRRToptimized"]
 
 ## methods setting : choose which method will be used to solve each subproblem : 
-contact_generation_method = "rbprm" 
+contact_generation_method = "lp" 
 centroidal_initGuess_method = "geometric" 
-centroidal_method = "timeopt" 
+centroidal_method = "timeopt"#"load"# 
 wholebody_method = "tsid" 
 end_effector_method = "limbRRToptimized" 
 
 ## PATHS settings : 
-PKG_PATH = "/local/dev/multicontact-locomotion-planning"
+PKG_PATH = "/local/dev_hpp/src/multicontact-locomotion-planning"
 OUTPUT_DIR = PKG_PATH+"/res"
 CONTACT_SEQUENCE_PATH = OUTPUT_DIR + "/contact_sequences"
 TIME_OPT_CONFIG_PATH = PKG_PATH +'/timeOpt_configs'
@@ -29,9 +29,9 @@ EXPORT_NPZ = True
 EXPORT_BLENDER = False
 EXPORT_SOT = False
 EXPORT_OPENHRP = False
-EXPORT_EFF_IN_CS=True
+EXPORT_EFF_IN_CS=False
 openHRP_useZMPref = False # if true : in the export_openHRP, use the zmp computed by the centroidal solver and the one computed from the wholebody
-WRITE_STATUS = True
+WRITE_STATUS = False
 ##DISPLAY settings : 
 DISPLAY_CS = False # display contact sequence from rbprm
 DISPLAY_CS_STONES = True # display stepping stones
@@ -69,7 +69,7 @@ WB_RETURN_INVALID = not WB_ABORT_WHEN_INVALID and True  # stop wb script when st
 ##  Settings for whole body : 
 YAW_ROT_GAIN = 1. # gain for the orientation task of the root orientation, along the yaw axis (wrt to the other axis of the orientation task)
 USE_PLANNING_ROOT_ORIENTATION = True # if true, the reference for the root orientation is the one given by the planning (stored in phase.reference_configurations) if false, use the one of q_init for all the motion.
-WB_VERBOSE = 0 # 0,1 or 2 Verbosity level for the output of the wholebody script
+WB_VERBOSE = 1 # 0,1 or 2 Verbosity level for the output of the wholebody script
 WB_STOP_AT_EACH_PHASE = False # wait for user input between each phase
 IK_dt = 0.001  # controler time step (in second)
 IK_PRINT_N = 500  # print state of the problem every IK_PRINT_N time steps (if verbose >= 1)
