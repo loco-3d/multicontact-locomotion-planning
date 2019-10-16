@@ -86,7 +86,7 @@ def solve(tp):
             step = defaultStep + random.uniform(-variation,variation)
         #configs = getConfigsFromPath (tp.ps, tp.pathId, step)  
         #getSurfacesFromPath(tp.rbprmBuilder, configs, surfaces_dict, tp.v, True, False)
-        R,surfaces = getSurfacesFromGuideContinuous(tp.rbprmBuilder,tp.ps,tp.afftool,tp.pathId,tp.v,step,useIntersection=True,max_yaw=0.3)
+        R,surfaces = getSurfacesFromGuideContinuous(tp.rbprmBuilder,tp.ps,tp.afftool,tp.pathId,tp.v,step,useIntersection=True,max_yaw=cfg.GUIDE_MAX_YAW)
         pb = gen_pb(tp.q_init,R,surfaces)
         try:
             pb, coms, footpos, allfeetpos, res = solveL1(pb, surfaces, None)

@@ -2,6 +2,7 @@ from hpp.corbaserver.rbprm.talos import Robot
 MASS = 90.27
 
 GUIDE_STEP_SIZE = 1.
+GUIDE_MAX_YAW = 1.
 
 ## predef duration of contact phases : 
 DURATION_INIT = 1. # Time to init the motion
