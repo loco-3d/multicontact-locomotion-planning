@@ -133,11 +133,11 @@ def generateContactSequence():
 
     # load scene and robot
     fb,v = initScene(cfg.Robot,cfg.ENV_NAME,False)
-    q_init = fb.referenceConfig[::] + [0]*6
+    q_init = cfg.IK_REFERENCE_CONFIG.T.tolist()[0] + [0]*6
     q_init[0:7] = root_init
     feet_height_init = allfeetpos[0][2]
     print "feet height initial = ",feet_height_init
-    q_init[2] = feet_height_init + fb.referenceConfig[2]
+    q_init[2] = feet_height_init + cfg.IK_REFERENCE_CONFIG[2,0]
     q_init[2] += EPS_Z
     #q_init[2] = fb.referenceConfig[2] # 0.98 is in the _path script
     v(q_init)
@@ -184,14 +184,14 @@ def generateContactSequence():
         moveEffectorToPlacement(fb,v,cs,movingID,placement,initStateCenterSupportPolygon = True)
     # final phase :
     # fixme : assume root is in the middle of the last 2 feet pos ...
-    q_end = fb.referenceConfig[::]+[0]*6
+    q_end = cfg.IK_REFERENCE_CONFIG.T.tolist()[0]+[0]*6
     #p_end = (allfeetpos[-1] + allfeetpos[-2]) / 2.
     #for i in range(3):
     #    q_end[i] += p_end[i]
     q_end[0:7] = root_end
     feet_height_end = allfeetpos[-1][2]
     print "feet height final = ",feet_height_end
-    q_end[2] = feet_height_end + fb.referenceConfig[2]
+    q_end[2] = feet_height_end + cfg.IK_REFERENCE_CONFIG[2,0]
     q_end[2] += EPS_Z
     setFinalState(cs,q=q_end)
 
