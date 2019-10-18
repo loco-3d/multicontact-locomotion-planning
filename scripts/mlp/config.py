@@ -49,6 +49,9 @@ SAVE_PLOT = PLOT and True #save plot as svg in OUTPUT_DIR/plot/demo_name_*
 
 ###  Settings for generate_contact_sequence
 FORCE_STRAIGHT_LINE = False # DEBUG ONLY should be false
+SL1M_USE_ORIENTATION = True  # sl1m method use the root orientation computed by the guide planning
+SL1M_USE_INTERPOLATED_ORIENTATION = True # Only matter if SL1M_USE_ORIENTATION=True, if false sl1m method use exactly the orientation from planning,
+# if False, it interpolate the orientation and adapt it depending if the feet is in the inside or outside of the turn
 
 ### Settings for centroidal script :
 GRAVITY = np.matrix([0,0,-9.81]).T

@@ -27,7 +27,6 @@ eigenpy.switchToNumpyMatrix()
 
 Z_AXIS = np.array([0,0,1]).T
 VERBOSE = False
-USE_ORIENTATION = True
 EPS_Z = 0.005 # offset added to feet z position, otherwise there is collisions with the ground
 
 def normal(phase):
@@ -159,8 +158,8 @@ def generateContactSequence():
         pos = allfeetpos[pId] # array, desired position for the feet movingID
         pos[2] += EPS_Z # FIXME it shouldn't be required !! 
         # compute desired foot rotation :
-        if USE_ORIENTATION:
-            if False and pId < len(pb["phaseData"]) - 1:
+        if cfg.SL1M_USE_ORIENTATION:
+            if cfg.SL1M_USE_INTERPOLATED_ORIENTATION and pId < len(pb["phaseData"]) - 1:
                 quat0 = Quaternion(pb["phaseData"][pId]["rootOrientation"])
                 quat1 = Quaternion(pb["phaseData"][pId+1]["rootOrientation"])
                 rot = quat0.slerp(0.5,quat1)
