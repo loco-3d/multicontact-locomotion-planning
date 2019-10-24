@@ -467,6 +467,8 @@ def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
                 orientationRootTask.setReference(sampleRoot)
                 quat_waist = Quaternion(root_traj(t)[0].rotation)
                 res.waist_orientation_reference[:,k_t]=np.matrix([quat_waist.x,quat_waist.y,quat_waist.z,quat_waist.w]).T
+                res.d_waist_orientation_reference[:,k_t]=np.matrix((root_traj(t)[1]).angular)
+                res.dd_waist_orientation_reference[:,k_t] = np.matrix([0,0,0]).T
                 if cfg.WB_VERBOSE == 2:
                     print "### references given : ###"
                     print "com  pos : ",sampleCom.pos()
