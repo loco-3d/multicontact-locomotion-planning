@@ -144,7 +144,7 @@ def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
     print "Start TSID ... " 
 
     rp = RosPack()
-    package_path = rp.get_path('talos_data')
+    package_path = rp.get_path(cfg.Robot.packageName)
     urdf = package_path+'/urdf/'+cfg.Robot.urdfName+cfg.Robot.urdfSuffix+'.urdf'
     if cfg.WB_VERBOSE:
         print "load robot : " ,urdf    
