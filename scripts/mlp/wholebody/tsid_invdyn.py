@@ -248,6 +248,21 @@ def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
                     res.contact_forces[eeName][:,k_t] = contact_forces
                     res.contact_normal_force[eeName][:,k_t] = contact.getNormalForce(res.contact_forces[eeName][:,k_t])
         # store centroidal info (real one and reference) :
+        if cfg.IK_store_reference_centroidal:
+            res.c_reference[:,k_t] = com_desired
+            res.dc_reference[:,k_t] = vcom_desired
+            res.ddc_reference[:,k_t] = acom_desired
+            res.L_reference[:,k_t] = L_desired
+            res.dL_reference[:,k_t] = dL_desired   
+            if cfg.IK_store_zmp : 
+                Mcom = SE3.Identity()
+                Mcom.translation = com_desired
+                Fcom = Force.Zero()
+                Fcom.linear = cfg.MASS*(acom_desired - cfg.GRAVITY)
+                Fcom.angular = dL_desired
+                F0 = Mcom.act(Fcom)
+                res.wrench_reference[:,k_t] = F0.vector 
+                res.zmp_reference[:,k_t] = shiftZMPtoFloorAltitude(cs,res.t_t[k_t],F0,cfg.EXPORT_OPENHRP)            
         if cfg.IK_store_centroidal:
             pcom, vcom, acom = pinRobot.com(q,v,dv) 
             res.c_t[:,k_t] = pcom
@@ -257,27 +272,12 @@ def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
             #res.dL_t[:,k_t] = pinRobot.centroidalMomentumVariation(q,v,dv) # FIXME : in robot wrapper, use * instead of .dot() for np matrices            
             pin.dccrba(pinRobot.model, pinRobot.data, q, v)
             res.dL_t[:,k_t] = Force(pinRobot.data.Ag.dot(dv)+pinRobot.data.dAg.dot(v)).angular
-            # same for reference data : 
-            res.c_reference[:,k_t] = com_desired
-            res.dc_reference[:,k_t] = vcom_desired
-            res.ddc_reference[:,k_t] = acom_desired
-            res.L_reference[:,k_t] = L_desired
-            res.dL_reference[:,k_t] = dL_desired 
             if cfg.IK_store_zmp : 
                 tau = pin.rnea(pinRobot.model,pinRobot.data,q,v,dv) # tau without external forces, only used for the 6 first
                 #res.tau_t[:6,k_t] = tau[:6]
                 phi0 = pinRobot.data.oMi[1].act(Force(tau[:6]))
                 res.wrench_t[:,k_t] = phi0.vector
-                res.zmp_t[:,k_t] = shiftZMPtoFloorAltitude(cs,res.t_t[k_t],phi0,cfg.EXPORT_OPENHRP)
-                # same but from the 'reference' values : 
-                Mcom = SE3.Identity()
-                Mcom.translation = com_desired
-                Fcom = Force.Zero()
-                Fcom.linear = cfg.MASS*(acom_desired - cfg.GRAVITY)
-                Fcom.angular = dL_desired
-                F0 = Mcom.act(Fcom)
-                res.wrench_reference[:,k_t] = F0.vector 
-                res.zmp_reference[:,k_t] = shiftZMPtoFloorAltitude(cs,res.t_t[k_t],F0,cfg.EXPORT_OPENHRP)
+                res.zmp_t[:,k_t] = shiftZMPtoFloorAltitude(cs,res.t_t[k_t],phi0,cfg.EXPORT_OPENHRP)                
         if cfg.IK_store_effector: 
             for eeName in usedEffectors: # real position (not reference)
                 res.effector_trajectories[eeName][:,k_t] = SE3toVec(getCurrentEffectorPosition(robot,invdyn.data(),eeName))
@@ -489,11 +489,11 @@ def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
                         if cfg.WB_VERBOSE == 2:
                             print "effector "+str(eeName)+" pos : "+str(sampleEff.pos())
                             print "effector "+str(eeName)+" vel : "+str(sampleEff.vel()) 
-                        if cfg.IK_store_effector:
+                        if cfg.IK_store_reference_effector:
                             res.effector_references[eeName][:,k_t] = SE3toVec(traj_t[0])
                             res.d_effector_references[eeName][:,k_t] = MotiontoVec(traj_t[1])
                             res.dd_effector_references[eeName][:,k_t] = MotiontoVec(traj_t[2])
-                    elif cfg.IK_store_effector:
+                    elif cfg.IK_store_reference_effector:
                         if k_t == 0: 
                             res.effector_references[eeName][:,k_t] = SE3toVec(getCurrentEffectorPosition(robot,invdyn.data(),eeName))
                         else:
