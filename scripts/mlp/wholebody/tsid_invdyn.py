@@ -238,12 +238,15 @@ def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
         res.ddq_t[:,k_t] = dv                             
         res.tau_t[:,k_t] = invdyn.getActuatorForces(sol) # actuator forces, with external forces (contact forces)
         #store contact info (force and status)
-        if cfg.IK_store_contact_forces :
-            for eeName,contact in dic_contacts.iteritems():
-                if invdyn.checkContact(contact.name, sol): 
-                    res.contact_forces[eeName][:,k_t] = invdyn.getContactForce(contact.name, sol)
+        for eeName,contact in dic_contacts.iteritems():
+            if invdyn.checkContact(contact.name, sol): 
+                res.contact_activity[eeName][:,k_t] = 1                
+                if cfg.IK_store_contact_forces :                
+                    contact_forces = invdyn.getContactForce(contact.name, sol)
+                    if cfg.Robot.cType == "_3_DOF":
+                        contact_forces = np.vstack([contact_forces]*4)
+                    res.contact_forces[eeName][:,k_t] = contact_forces
                     res.contact_normal_force[eeName][:,k_t] = contact.getNormalForce(res.contact_forces[eeName][:,k_t])
-                    res.contact_activity[eeName][:,k_t] = 1
         # store centroidal info (real one and reference) :
         if cfg.IK_store_centroidal:
             pcom, vcom, acom = pinRobot.com(q,v,dv) 
