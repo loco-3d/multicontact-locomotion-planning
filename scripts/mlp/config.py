@@ -72,7 +72,7 @@ WB_RETURN_INVALID = not WB_ABORT_WHEN_INVALID and True  # stop wb script when st
 ##  Settings for whole body : 
 YAW_ROT_GAIN = 1. # gain for the orientation task of the root orientation, along the yaw axis (wrt to the other axis of the orientation task)
 USE_PLANNING_ROOT_ORIENTATION = True # if true, the reference for the root orientation is the one given by the planning (stored in phase.reference_configurations) if false, use the one of q_init for all the motion.
-WB_VERBOSE = 1 # 0,1 or 2 Verbosity level for the output of the wholebody script
+WB_VERBOSE = 0 # 0,1 or 2 Verbosity level for the output of the wholebody script
 WB_STOP_AT_EACH_PHASE = False # wait for user input between each phase
 IK_dt = 0.001  # controler time step (in second)
 IK_PRINT_N = 500  # print state of the problem every IK_PRINT_N time steps (if verbose >= 1)
