@@ -1,25 +1,14 @@
-import pinocchio as pin
-from pinocchio import SE3, Quaternion
+from __future__ import absolute_import
 from pinocchio.utils import *
-import inspect
 import mlp.config as cfg
-import multicontact_api
-from multicontact_api import ContactPhaseHumanoid, ContactSequenceHumanoid
-from mlp.utils.util import quatFromConfig,copyPhaseContacts,copyPhaseContactPlacements,contactPatchForEffector
 import importlib
 from mlp.utils.cs_tools import *
-import numpy as np
-from numpy.linalg import norm
 from mlp.viewer.display_tools import initScene, displaySteppingStones
 from pinocchio.utils import matrixToRpy
-from tools.surfaces_from_path import getSurfacesFromGuide,getSurfacesFromGuideContinuous,getAllSurfacesDict
-from tools.plot_surfaces import draw
-from sl1m.constants_and_tools import *
-from sl1m.planner import *
-from numpy import asmatrix, matrix, zeros, ones
-from numpy import array, dot, stack, vstack, hstack, asmatrix, identity, cross, concatenate
-from numpy.linalg import norm
+from tools.surfaces_from_path import getSurfacesFromGuideContinuous
 import random
+from sl1m.planner import *
+
 
 import eigenpy
 eigenpy.switchToNumpyMatrix()
