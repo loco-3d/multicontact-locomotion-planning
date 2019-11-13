@@ -1,14 +1,14 @@
 import numpy as np
 import os
 
-contact_generation_method_available = ["none","load", "rbprm","lp"]
+contact_generation_method_available = ["none","load", "rbprm","sl1m"]
 centroidal_initGuess_method_available = ["none", "geometric", "croc", "timeopt", "quasistatic"]
 centroidal_method_available = ["load", "geometric", "croc", "timeopt", "quasistatic", "muscod"]
 wholebody_method_available = ["load", "tsid", "croccodyl"]
 end_effector_method_available = ["smoothedFoot", "bezierPredef", "bezierConstrained", "limbRRT", "limbRRToptimized"]
 
 ## methods setting : choose which method will be used to solve each subproblem : 
-contact_generation_method = "lp" 
+contact_generation_method = "sl1m"
 centroidal_initGuess_method = "geometric" 
 centroidal_method = "timeopt"#"load"# 
 wholebody_method = "tsid" 
