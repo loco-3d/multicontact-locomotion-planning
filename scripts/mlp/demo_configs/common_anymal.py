@@ -2,20 +2,20 @@ from hpp.corbaserver.rbprm.anymal import Robot
 MASS = 30.47 # cannot retrieve it from urdf because the file is not parsed here ... 
 
 ## weight and gains used by TSID
-
+IK_dt = 0.0025 # 400Hz
 fMin = 1.0                      # minimum normal force
-fMax = 1000.                  # maximum normal force
+fMax = 200.                  # maximum normal force
 w_com = 1.0           # weight of center of mass task
 w_am = 0.
 w_posture = 0.01               # weight of joint posture task
-w_rootOrientation = 1       # weight of the root's orientation task
+w_rootOrientation = 1.       # weight of the root's orientation task
 w_forceRef = 1e-3               # weight of force regularization task
 w_eff = 1.0                     # weight of the effector motion task
-kp_contact = 30.0               # proportional gain of contact constraint
-kp_com = 20.                 # proportional gain of center of mass task
+kp_contact = 50.0               # proportional gain of contact constraint
+kp_com = 30.                 # proportional gain of center of mass task
 kp_am = 20.
-kp_posture = 50.              # proportional gain of joint posture task
-kp_rootOrientation = 1000.     # proportional gain of the root's orientation task
+kp_posture = 70.              # proportional gain of joint posture task
+kp_rootOrientation = 5000.     # proportional gain of the root's orientation task
 kp_Eff = 100000.                   # proportional gain ofthe effectors motion task
 level_eff = 1
 level_com = 0
@@ -41,7 +41,7 @@ DURATION_CONNECT_GOAL = 0.
 EFF_T_DELAY = 0.
 FEET_MAX_VEL = 0.7
 FEET_MAX_ANG_VEL = 1.5
-p_max = 0.25
+p_max = 0.2
 EFF_T_PREDEF = 0.
 
 import numpy as np
