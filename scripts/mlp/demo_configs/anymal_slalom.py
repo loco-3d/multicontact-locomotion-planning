@@ -10,18 +10,15 @@ DURATION_FINAL = 2. # Time to stop the robot
 DURATION_FINAL_SS = 1.
 DURATION_SS = 2.
 DURATION_DS = 2.
-DURATION_TS = 0.5
-DURATION_QS = 0.1
+DURATION_TS = 0.3
+DURATION_QS = 0.05
 DURATION_CONNECT_GOAL = 0.
 
 #COM_SHIFT_Z = -0.02
 #TIME_SHIFT_COM = 1.
-w_posture = 0.0              # weight of joint posture task
-kp_com = 100.                 # proportional gain of center of mass task
-kp_rootOrientation = 5000.     # proportional gain of the root's orientation task
 YAW_ROT_GAIN = 1.
 
-p_max = 0.2
+p_max = 0.25
 
 
 ## Override default settings :
