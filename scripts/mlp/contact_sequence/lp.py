@@ -12,11 +12,10 @@ import numpy as np
 from numpy.linalg import norm
 from mlp.viewer.display_tools import initScene, displaySteppingStones
 from pinocchio.utils import matrixToRpy
-from tools.surfaces_from_path import getSurfacesFromPath,getSurfacesFromGuideContinuous,getAllSurfacesDict
+from tools.surfaces_from_path import getSurfacesFromGuide,getSurfacesFromGuideContinuous,getAllSurfacesDict
 from tools.plot_surfaces import draw
 from sl1m.constants_and_tools import *
 from sl1m.planner import *
-
 from numpy import asmatrix, matrix, zeros, ones
 from numpy import array, dot, stack, vstack, hstack, asmatrix, identity, cross, concatenate
 from numpy.linalg import norm
@@ -28,6 +27,68 @@ eigenpy.switchToNumpyMatrix()
 Z_AXIS = np.array([0,0,1]).T
 VERBOSE = False
 EPS_Z = 0.005 # offset added to feet z position, otherwise there is collisions with the ground
+
+
+##### MOVE the next methods to a robot-specific file : #####
+import os
+# load  constraints
+__ineq_right_foot = None
+__ineq_left_foot = None
+__ineq_right_foot_reduced = None
+__ineq_left_foot_reduced = None
+
+# add foot offset
+def right_foot_constraints(transform):
+    global __ineq_right_foot
+    if __ineq_right_foot is None:
+        filekin = os.environ["DEVEL_HPP_DIR"]+"/install/share/talos-rbprm/com_inequalities/feet_quasi_flat/talos_COM_constraints_in_RF_effector_frame_REDUCED.obj"
+        obj = load_obj(filekin)
+        __ineq_right_foot = as_inequalities(obj)
+    transform2 = transform.copy()
+    transform2[2, 3] += 0.105
+    ine = rotate_inequalities(__ineq_right_foot, transform2)
+    return (ine.A, ine.b)
+
+
+def left_foot_constraints(transform):
+    global __ineq_left_foot
+    if __ineq_left_foot is None:
+        filekin =os.environ["DEVEL_HPP_DIR"]+"/install/share/talos-rbprm/com_inequalities/feet_quasi_flat/talos_COM_constraints_in_LF_effector_frame_REDUCED.obj"
+        obj = load_obj(filekin)
+        __ineq_left_foot = as_inequalities(obj)
+    transform2 = transform.copy()
+    transform2[2, 3] += 0.105
+    ine = rotate_inequalities(__ineq_left_foot, transform2)
+    return (ine.A, ine.b)
+
+
+__ineq_rf_in_rl = None
+__ineq_lf_in_rf = None
+
+
+# add foot offset
+def right_foot_in_lf_frame_constraints(transform):
+    global __ineq_rf_in_rl
+    if __ineq_rf_in_rl is None:
+        filekin = os.environ["DEVEL_HPP_DIR"]+"/install/share/talos-rbprm/relative_effector_positions/talos_RF_constraints_in_LF_quasi_flat_REDUCED.obj"
+        obj = load_obj(filekin)
+        __ineq_rf_in_rl = as_inequalities(obj)
+    transform2 = transform.copy()
+    ine = rotate_inequalities(__ineq_rf_in_rl, transform2)
+    return (ine.A, ine.b)
+
+
+def left_foot_in_rf_frame_constraints(transform):
+    global __ineq_lf_in_rf
+    if __ineq_lf_in_rf is None:
+        filekin = os.environ["DEVEL_HPP_DIR"]+"/install/share/talos-rbprm/relative_effector_positions/talos_LF_constraints_in_RF_quasi_flat_REDUCED.obj"
+        obj = load_obj(filekin)
+        __ineq_lf_in_rf = as_inequalities(obj)
+    transform2 = transform.copy()
+    ine = rotate_inequalities(__ineq_lf_in_rf, transform2)
+    return (ine.A, ine.b)
+
+####################################
 
 def normal(phase):
     s = phase["S"][0]
@@ -49,8 +110,6 @@ def quatToConfig(quat):
 
 # FIXME : HARDCODED stuff for talos in this method ! 
 def gen_pb(root_init,R, surfaces):
-    #kinematicConstraints = genKinematicConstraintsTalos(min_height = None)
-    #relativeConstraints = genFootRelativeConstraintsTalos()
     #print "surfaces = ",surfaces
     print "number of surfaces : ",len(surfaces)
     print "number of rotation matrix for root : ",len(R)
@@ -67,7 +126,7 @@ def gen_pb(root_init,R, surfaces):
     #print "number of rotations values : ",len(R)
     #print "R= ",R
     #TODO in non planar cases, K must be rotated
-    phaseData = [ {"moving" : i%2, "fixed" : (i+1) % 2 , "K" : [genKinematicConstraints(index = i, transform = R, min_height = 0.3) for _ in range(len(surfaces[i]))], "relativeK" : [genFootRelativeConstraints(index = i, transform = R)[(i) % 2] for _ in range(len(surfaces[i]))], "rootOrientation" : R[i], "S" : surfaces[i] } for i in range(nphases)]
+    phaseData = [ {"moving" : i%2, "fixed" : (i+1) % 2 , "K" : [genKinematicConstraints(left_foot_constraints,right_foot_constraints,index = i, rotation = R, min_height = 0.3) for _ in range(len(surfaces[i]))], "relativeK" : [genFootRelativeConstraints(right_foot_in_lf_frame_constraints,left_foot_in_rf_frame_constraints,index = i, rotation = R)[(i) % 2] for _ in range(len(surfaces[i]))], "rootOrientation" : R[i], "S" : surfaces[i] } for i in range(nphases)]
     res ["phaseData"] = phaseData
     return res 
 
