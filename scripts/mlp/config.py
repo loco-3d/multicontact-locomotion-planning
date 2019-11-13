@@ -80,8 +80,10 @@ CHECK_FINAL_MOTION = True # After computation of the motion, check the complete 
 ### The following settings enable the computation of various values stored in the wholeBody_result struct. 
 # Enabling them increase the computation time of the wholeBody script
 IK_store_centroidal = False # c,dc,ddc,L,dL (of the computed wholebody motion)
+IK_store_reference_centroidal = False
 IK_store_zmp = False # need store_centroidal
-IK_store_effector = False
+IK_store_effector = False 
+IK_store_reference_effector = False
 IK_store_contact_forces = False
 
 
