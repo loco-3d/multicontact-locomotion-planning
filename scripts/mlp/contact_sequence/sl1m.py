@@ -30,7 +30,7 @@ __ineq_left_foot_reduced = None
 def right_foot_constraints(transform):
     global __ineq_right_foot
     if __ineq_right_foot is None:
-        filekin = os.environ["DEVEL_HPP_DIR"]+"/install/share/talos-rbprm/com_inequalities/feet_quasi_flat/talos_COM_constraints_in_RF_effector_frame_REDUCED.obj"
+        filekin = os.environ["INSTALL_HPP_DIR"]+"/share/talos-rbprm/com_inequalities/feet_quasi_flat/talos_COM_constraints_in_RF_effector_frame_REDUCED.obj"
         obj = load_obj(filekin)
         __ineq_right_foot = as_inequalities(obj)
     transform2 = transform.copy()
@@ -42,7 +42,7 @@ def right_foot_constraints(transform):
 def left_foot_constraints(transform):
     global __ineq_left_foot
     if __ineq_left_foot is None:
-        filekin =os.environ["DEVEL_HPP_DIR"]+"/install/share/talos-rbprm/com_inequalities/feet_quasi_flat/talos_COM_constraints_in_LF_effector_frame_REDUCED.obj"
+        filekin =os.environ["INSTALL_HPP_DIR"]+"/share/talos-rbprm/com_inequalities/feet_quasi_flat/talos_COM_constraints_in_LF_effector_frame_REDUCED.obj"
         obj = load_obj(filekin)
         __ineq_left_foot = as_inequalities(obj)
     transform2 = transform.copy()
@@ -59,7 +59,7 @@ __ineq_lf_in_rf = None
 def right_foot_in_lf_frame_constraints(transform):
     global __ineq_rf_in_rl
     if __ineq_rf_in_rl is None:
-        filekin = os.environ["DEVEL_HPP_DIR"]+"/install/share/talos-rbprm/relative_effector_positions/talos_RF_constraints_in_LF_quasi_flat_REDUCED.obj"
+        filekin = os.environ["INSTALL_HPP_DIR"]+"/share/talos-rbprm/relative_effector_positions/talos_RF_constraints_in_LF_quasi_flat_REDUCED.obj"
         obj = load_obj(filekin)
         __ineq_rf_in_rl = as_inequalities(obj)
     transform2 = transform.copy()
@@ -70,7 +70,7 @@ def right_foot_in_lf_frame_constraints(transform):
 def left_foot_in_rf_frame_constraints(transform):
     global __ineq_lf_in_rf
     if __ineq_lf_in_rf is None:
-        filekin = os.environ["DEVEL_HPP_DIR"]+"/install/share/talos-rbprm/relative_effector_positions/talos_LF_constraints_in_RF_quasi_flat_REDUCED.obj"
+        filekin = os.environ["INSTALL_HPP_DIR"]+"/share/talos-rbprm/relative_effector_positions/talos_LF_constraints_in_RF_quasi_flat_REDUCED.obj"
         obj = load_obj(filekin)
         __ineq_lf_in_rf = as_inequalities(obj)
     transform2 = transform.copy()
