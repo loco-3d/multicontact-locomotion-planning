@@ -388,7 +388,7 @@ def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
                 placement_init = getCurrentEffectorPosition(robot,invdyn.data(),eeName) #FIXME : adjust orientation in case of 3D contact ...
                 if cfg.Robot.cType == "_3_DOF":
                     placement_init.rotation = JointPlacementForEffector(phase,eeName).rotation
-                placement_end = JointPlacementForEffector(phase_next,eeName)                
+                placement_end = JointPlacementForEffector(phase_next,eeName).copy()                
                 ref_traj = generateEndEffectorTraj(time_interval,placement_init,placement_end,0)
                 if cfg.WB_VERBOSE :
                     print "t interval : ",time_interval
@@ -432,6 +432,8 @@ def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
                 phase_interval = res.phases_intervals[pid]
             else :
                 phase_interval = res.phases_intervals[pid][:-1]
+            if iter_for_phase == 0 :
+                first_q_t = np.matrix(np.zeros([robot.nq,phase_interval[-1] - phase_interval[0]+1]))
             for k_t in phase_interval :
                 t = res.t_t[k_t]
                 # set traj reference for current time : 
@@ -512,11 +514,13 @@ def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
                 sol = solver.solve(HQPData)
                 dv = invdyn.getAccelerations(sol)
                 res = storeData(k_t,res,q,v,dv,invdyn,sol)
+                if iter_for_phase == 0:
+                    first_q_t[:,k_t - phase_interval[0]] = q                
                 # update state
                 v_mean = v + 0.5 * dt * dv
                 v += dt * dv
                 q = pin.integrate(robot.model(), q, dt * v_mean) 
-                
+ 
                 if cfg.WB_VERBOSE == 2:
                     print "v = ",v
                     print "dv = ",dv
@@ -543,9 +547,9 @@ def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
                         try:
                             for eeName,oldTraj in dic_effectors_trajs.iteritems():
                                 if oldTraj: # update the traj in the map
-                                    placement_init = JointPlacementForEffector(phase_prev,eeName)
-                                    placement_end = JointPlacementForEffector(phase_next,eeName)  
-                                    ref_traj = generateEndEffectorTraj(time_interval,placement_init,placement_end,iter_for_phase+1,res.q_t[:,phase_interval[0]:k_t],phase_prev,phase,phase_next,fullBody,eeName,viewer)
+                                    placement_init = JointPlacementForEffector(phase_prev,eeName).copy()
+                                    placement_end = JointPlacementForEffector(phase_next,eeName).copy()
+                                    ref_traj = generateEndEffectorTraj(time_interval,placement_init,placement_end,iter_for_phase+1,first_q_t,phase_prev,phase,phase_next,fullBody,eeName,viewer)
                                     dic_effectors_trajs.update({eeName:ref_traj}) 
                                     if viewer and cfg.DISPLAY_ALL_FEET_TRAJ:
                                         display_tools.displaySE3Traj(ref_traj,viewer.client.gui,viewer.sceneName,eeName+"_traj_"+str(pid),cfg.Robot.dict_limb_color_traj[eeName] ,time_interval ,cfg.Robot.dict_offset[eeName])                               
