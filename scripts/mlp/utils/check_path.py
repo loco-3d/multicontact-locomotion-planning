@@ -12,6 +12,9 @@ class PathChecker():
         self.nq = nq # without extradof, size of configs in q_t 
         self.configSize = fullBody.getConfigSize()
         self.dt = cfg.IK_dt
+        self.check_step = int(cfg.CHECK_DT/cfg.IK_dt)
+        if self.check_step < 1 :
+            self.check_step = 1
         self.verbose = verbose
         self.extraDof =  int(fullBody.client.robot.getDimensionExtraConfigSpace())
     
@@ -49,7 +52,11 @@ class PathChecker():
     def check_motion(self,q_t):
         always_valid = True
         first_invalid = None
-        for i in range(q_t.shape[1]):
+        i = -self.check_step
+        while i < q_t.shape[1]-1 :
+            i += self.check_step
+            if i >= q_t.shape[1]:
+                i = q_t.shape[1]-1
             valid,mess = self.checkConfig(q_t[:,i])
             if not valid : 
                 if always_valid : # first invalid config

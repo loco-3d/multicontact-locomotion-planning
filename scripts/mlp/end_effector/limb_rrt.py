@@ -14,7 +14,7 @@ import hpp_bezier_com_traj as bezier_com
 from hpp_spline import bezier
 from mlp.utils.polyBezier import PolyBezier
 import quadprog
-eigenpy.switchToNumpyArray()
+eigenpy.switchToNumpyMatrix()
 from mlp.utils import trajectories
 from mlp.end_effector.bezier_predef import generatePredefBeziers,generateSmoothBezierTraj
 
@@ -54,6 +54,27 @@ def quadprog_solve_qp(P, q, G=None, h=None, C=None, d=None):
         qp_C = -G.T
         qp_b = -h
         meq = 0
+        
+    if VERBOSE > 1:
+        print "quadprog matrix size : "
+        print "G : ",qp_G.shape
+        print "a : ",qp_a.shape
+        print "C : ",qp_C.shape
+        print "b : ",qp_b.shape
+        print "meq = ",meq        
+        
+    qp_G = np.array(qp_G)
+    qp_a = np.array(qp_a).flatten()
+    qp_C = np.array(qp_C)
+    qp_b = np.array(qp_b).flatten()
+    if VERBOSE > 1:
+        print "quadprog array size : "
+        print "G : ",qp_G.shape
+        print "a : ",qp_a.shape
+        print "C : ",qp_C.shape
+        print "b : ",qp_b.shape
+        print "meq = ",meq
+        
     return quadprog.solve_qp(qp_G, qp_a, qp_C, qp_b, meq)[0]
 
 
@@ -246,15 +267,33 @@ def generateLimbRRTOptimizedTraj(time_interval,placement_init,placement_end,numT
         print "b = ",_b
         print "H = ",_H
         print "h = ",_g
+    """  
+    _A = np.array(_A)
+    _b = np.array(_b)
+    _H = np.array(_H)
+    _g = np.array(_g)
+    """
     
     # quadprog notation : 
     #min (1/2)x' P x + q' x  
     #subject to  G x <= h
     #subject to  C x  = d
     G = _A
-    h = _b.flatten()
+    h = _b.flatten().T # remove the transpose when working with array
     P = _H * 2.
-    q = (_g *2.).flatten()
+    q = (_g *2.).flatten().T
+    
+    if VERBOSE > 1:
+        print "G = ",G
+        print "h = ",h
+        print "P = ",P
+        print "q = ",q
+        print "Shapes : "
+        print "G : ",G.shape
+        print "h : ",h.shape
+        print "P : ",P.shape
+        print "q : ",q .shape       
+        
     # solve the QP :
     solved = False
     try :
@@ -264,15 +303,20 @@ def generateLimbRRTOptimizedTraj(time_interval,placement_init,placement_end,numT
         print "Quadprog error : "
         print e.message
         raise ValueError("Quadprog failed to solve QP for optimized limb-RRT end-effector trajectory, for try number "+str(numTry))              
-    
+    if VERBOSE:
+        print "Quadprog solved."
     # build a bezier curve from the result of quadprog : 
     vars = np.split(res,numVars) 
     wps = bezier_com.computeEndEffectorConstantWaypoints(pData,t_middle) # one wp per column 
+    if VERBOSE:
+        print "Constant waypoints computed."    
     id_firstVar = 4 # depend on the flag defined above, but for end effector we always use this ones ... 
     i=id_firstVar
     for x in vars:
-        wps[:,i] = x
+        wps[:,i] = np.matrix(x).T
         i +=1
+    if VERBOSE:
+        print "Variables waypoints replaced by quadprog results."      
     bezier_middle = bezier(wps,t_middle)    
     # create concatenation with takeoff/landing 
     curves = predef_curves.curves[::]
