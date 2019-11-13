@@ -134,7 +134,10 @@ def solve(tp):
             step = defaultStep + random.uniform(-variation,variation)
         #configs = getConfigsFromPath (tp.ps, tp.pathId, step)  
         #getSurfacesFromPath(tp.rbprmBuilder, configs, surfaces_dict, tp.v, True, False)
-        R,surfaces = getSurfacesFromGuideContinuous(tp.rbprmBuilder,tp.ps,tp.afftool,tp.pathId,tp.v,step,useIntersection=True,max_yaw=cfg.GUIDE_MAX_YAW)
+        viewer = tp.v
+        if not hasattr(viewer,"client"):
+            viewer = None
+        R,surfaces = getSurfacesFromGuideContinuous(tp.rbprmBuilder,tp.ps,tp.afftool,tp.pathId,viewer,step,useIntersection=True,max_yaw=cfg.GUIDE_MAX_YAW)
         pb = gen_pb(tp.q_init,R,surfaces)
         try:
             pb, coms, footpos, allfeetpos, res = solveL1(pb, surfaces, None)
@@ -188,7 +191,8 @@ def generateContactSequence():
     q_init[2] = feet_height_init + cfg.IK_REFERENCE_CONFIG[2,0]
     q_init[2] += EPS_Z
     #q_init[2] = fb.referenceConfig[2] # 0.98 is in the _path script
-    v(q_init)
+    if v:
+        v(q_init)
 
     # init contact sequence with first phase : q_ref move at the right root pose and with both feet in contact
     # FIXME : allow to customize that first phase
@@ -242,8 +246,8 @@ def generateContactSequence():
     q_end[2] = feet_height_end + cfg.IK_REFERENCE_CONFIG[2,0]
     q_end[2] += EPS_Z
     setFinalState(cs,q=q_end)
-
-    displaySteppingStones(cs,v.client.gui,v.sceneName,fb)
+    if cfg.DISPLAY_CS_STONES:
+        displaySteppingStones(cs,v.client.gui,v.sceneName,fb)
 
     return cs,fb,v
 
