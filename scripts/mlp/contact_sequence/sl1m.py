@@ -154,7 +154,7 @@ def solve(tp):
         it += 1
     if not success :
         raise RuntimeError("planner always fail.") 
-    return pb, coms, footpos, allfeetpos, res
+    return pathId,pb, coms, footpos, allfeetpos, res
 
 def runLPFromGuideScript():
     #the following script must produce a
@@ -166,9 +166,9 @@ def runLPFromGuideScript():
     print "Run Guide script : ",scriptName
     tp = importlib.import_module(scriptName)
     # compute sequence of surfaces from guide path
-    pb, coms, footpos, allfeetpos, res = solve(tp)
-    root_init = tp.q_init[0:7]
-    root_end = tp.q_goal[0:7]
+    pathId,pb, coms, footpos, allfeetpos, res = solve(tp)
+    root_init = tp.ps.configAtParam(pathId,0.001)[0:7]
+    root_end = tp.ps.configAtParam(pathId,tp.ps.pathLength(pathId)-0.001)[0:7]
     return RF,root_init,root_end, pb, coms, footpos, allfeetpos, res
 
 
