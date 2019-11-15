@@ -129,6 +129,13 @@ def solve(tp):
     defaultStep = cfg.GUIDE_STEP_SIZE
     step = defaultStep
     variation = 0.4 # FIXME : put it in config file, +- bounds on the step size
+    pathId = 0
+    if hasattr(tp,"pathId"):
+        pathId = tp.pathId
+    elif hasattr(tp,"pId"):
+        pathId = tp.pId
+    else:
+        pathId = tp.ps.numberPaths()-1
     while not success and it < maxIt:
         if it > 0 :
             step = defaultStep + random.uniform(-variation,variation)
@@ -137,7 +144,7 @@ def solve(tp):
         viewer = tp.v
         if not hasattr(viewer,"client"):
             viewer = None
-        R,surfaces = getSurfacesFromGuideContinuous(tp.rbprmBuilder,tp.ps,tp.afftool,tp.pathId,viewer,step,useIntersection=True,max_yaw=cfg.GUIDE_MAX_YAW)
+        R,surfaces = getSurfacesFromGuideContinuous(tp.rbprmBuilder,tp.ps,tp.afftool,pathId,viewer,step,useIntersection=True,max_yaw=cfg.GUIDE_MAX_YAW)
         pb = gen_pb(tp.q_init,R,surfaces)
         try:
             pb, coms, footpos, allfeetpos, res = solveL1(pb, surfaces, None)
