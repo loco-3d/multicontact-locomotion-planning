@@ -6,6 +6,9 @@ ENV_NAME = "multicontact/floor_bauzil"
 DURATION_SS =1.2
 DURATION_DS = 0.2
 
+kp_rootOrientation = 50000.     # proportional gain of the root's orientation task
+
+
 EFF_T_PREDEF = 0.2
 EFF_T_DELAY = 0.05
 FEET_MAX_VEL = 1.
