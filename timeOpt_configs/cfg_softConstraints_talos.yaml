@@ -1,6 +1,6 @@
 planner_variables:
 
-  heuristic: TrustRegion  # Types: TrustRegion, SoftConstraint, TimeOptimization #
+  heuristic: SoftConstraint  # Types: TrustRegion, SoftConstraint, TimeOptimization #
   n_act_eefs: 2
   time_step: 0.05
   time_horizon: 9.5
