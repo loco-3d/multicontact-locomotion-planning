@@ -190,7 +190,7 @@ def generateContactSequence():
     RF,root_init,root_end,pb, coms, footpos, allfeetpos, res = runLPFromGuideScript()
 
     # load scene and robot
-    fb,v = initScene(cfg.Robot,cfg.ENV_NAME,False)
+    fb,v = initScene(cfg.Robot,cfg.ENV_NAME,True)
     q_init = cfg.IK_REFERENCE_CONFIG.T.tolist()[0] + [0]*6
     q_init[0:7] = root_init
     feet_height_init = allfeetpos[0][2]
