@@ -18,7 +18,7 @@ This wrappers are python script that take a user input or an object from the  [m
 
 The goal of this framework is to be modular, allowing the user to select a method for each of the subproblem or add a wrapper for any new method from the state-of-the-art solving one of this subproblem and connect it seamlessly to the rest of the framework. 
 
-Slides of a presentation of this package: https://cloud.laas.fr/index.php/s/3GbEHLld94asr8H
+Slides of a presentation of this package: https://cloud.laas.fr/index.php/s/CFkJbxrC9SYQ34i
 
 Basic tutorials slides are availables: https://cloud.laas.fr/index.php/s/Y4xeJtY1gn3tFN8
 
