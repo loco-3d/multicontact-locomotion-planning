@@ -1,7 +1,7 @@
 TIMEOPT_CONFIG_FILE = "cfg_softConstraints_hrp2.yaml"
 TIMEOPT_CONFIG_FILE = "cfg_softConstraints_hrp2_eff85.yaml"
 
-from common_hrp2 import *
+from .common_hrp2 import *
 SCRIPT_PATH = "sandbox"
 ENV_NAME = "multicontact/ground"
 

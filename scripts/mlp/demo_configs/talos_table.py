@@ -1,5 +1,5 @@
 TIMEOPT_CONFIG_FILE = "cfg_softConstraints_talos_rarm.yaml"
-from common_talos import *
+from .common_talos import *
 SCRIPT_PATH = "sandbox.dynamic"
 ENV_NAME = "multicontact/table_140_70_73"
 #DURATION_INIT = 1.5 # Time to init the motion

@@ -1,5 +1,5 @@
 TIMEOPT_CONFIG_FILE = "cfg_softConstraints_anymal_sidesteps.yaml"
-from common_anymal import *
+from .common_anymal import *
 SCRIPT_PATH = "sandbox.ANYmal"
 ENV_NAME = "ori/slalom1"
 DEMO_NAME = "anymal_slalom1"

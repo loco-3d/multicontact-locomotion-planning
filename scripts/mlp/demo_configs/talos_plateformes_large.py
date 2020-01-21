@@ -1,5 +1,5 @@
 TIMEOPT_CONFIG_FILE = "cfg_softConstraints_talos_kinConstraints.yaml"
-from common_talos import *
+from .common_talos import *
 SCRIPT_PATH = "demos"
 ENV_NAME = "multicontact/plateforme_not_flat"
 

@@ -1,5 +1,5 @@
 TIMEOPT_CONFIG_FILE = "cfg_softConstraints_anymal_kinOrientation.yaml"
-from common_anymal import *
+from .common_anymal import *
 SCRIPT_PATH = "sandbox.ANYmal"
 #ENV_NAME = "ori/modular_palet_low_collision"
 ENV_NAME = "ori/modular_palet_flat"

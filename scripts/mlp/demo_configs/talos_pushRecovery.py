@@ -1,5 +1,5 @@
 TIMEOPT_CONFIG_FILE = "cfg_softConstraints_talos_dt001.yaml"
-from common_talos import *
+from .common_talos import *
 SCRIPT_PATH = "sandbox"
 ENV_NAME = "multicontact/ground"
 
