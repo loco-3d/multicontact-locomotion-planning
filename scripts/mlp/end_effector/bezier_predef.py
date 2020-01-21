@@ -8,8 +8,6 @@ from pinocchio.utils import *
 import numpy.linalg
 from multicontact_api import WrenchCone, SOC6, ContactSequenceHumanoid
 import numpy as np
-from tools.disp_bezier import *
-import curves
 from curves import bezier
 import hpp_bezier_com_traj as bezier_com
 from mlp.utils import trajectories

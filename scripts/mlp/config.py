@@ -7,12 +7,12 @@ centroidal_method_available = ["load", "geometric", "croc", "timeopt", "quasista
 wholebody_method_available = ["load", "tsid", "croccodyl", "none"]
 end_effector_method_available = ["smoothedFoot", "bezierPredef", "bezierConstrained", "limbRRT", "limbRRToptimized"]
 
-## methods setting : choose which method will be used to solve each subproblem :
-contact_generation_method = "sl1m"
-centroidal_initGuess_method = "geometric"
-centroidal_method = "timeopt"  #"load"#
-wholebody_method = "tsid"
-end_effector_method = "limbRRToptimized"
+## methods setting : choose which method will be used to solve each subproblem : 
+contact_generation_method = "rbprm"
+centroidal_initGuess_method = "geometric" 
+centroidal_method = "timeopt"#"load"# 
+wholebody_method = "tsid" 
+end_effector_method = "limbRRToptimized" 
 
 ## PATHS settings :
 PKG_PATH = os.path.dirname(os.path.realpath(__file__)).rstrip("/scripts/mlp")

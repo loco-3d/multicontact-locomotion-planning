@@ -1,4 +1,4 @@
-from curves import bezier, bezier6, polynom, exact_cubic, curve_constraints, spline_deriv_constraint, from_bezier
+from curves import bezier,bezier3
 import inspect
 
 
@@ -13,9 +13,9 @@ class PolyBezier:
         self.dd_curves = []
         self.jerk_curves = []
         for i in range(len(curves)):
-            if not isinstance(curves[i], bezier):
+            if not (isinstance(curves[i], bezier) or isinstance(curves[i], bezier3)):
                 raise TypeError("PolyBezier must be called with a list of bezier curves (or a single bezier curve)")
-            self.times += [curves[i].max() + self.times[-1]]
+            self.times += [curves[i].max() -curves[i].min() + self.times[-1]]
 
     def findInterval(self, t):
         if t > self.times[-1] or t < 0:
