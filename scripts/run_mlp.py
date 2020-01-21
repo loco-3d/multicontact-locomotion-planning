@@ -4,10 +4,10 @@ import os
 
 print("### MLP : contact sequence ###")
 from mlp.contact_sequence import generateContactSequence
-cs,fullBody,viewer = generateContactSequence()
+cs, fullBody, viewer = generateContactSequence()
 
 if cfg.WRITE_STATUS:
-    f = open(cfg.STATUS_FILENAME,"a")
+    f = open(cfg.STATUS_FILENAME, "a")
     f.write("gen_cs_success: True\n")
     f.close()
 
@@ -19,102 +19,100 @@ except NameError:
 
 if cfg.DISPLAY_CS:
     input("Press Enter to display the contact sequence ...")
-    display_tools.displayContactSequence(viewer,cs)    
+    display_tools.displayContactSequence(viewer, cs)
 if cfg.SAVE_CS:
     if not os.path.exists(cfg.CONTACT_SEQUENCE_PATH):
-        os.makedirs(cfg.CONTACT_SEQUENCE_PATH)    
-    filename = cfg.CONTACT_SEQUENCE_PATH + "/"+cfg.DEMO_NAME+".cs"
-    print("Write contact sequence binary file : ",filename)
-    cs.saveAsBinary(filename)    
-if cfg.DISPLAY_CS_STONES :
-    display_tools.displaySteppingStones(cs,viewer.client.gui,viewer.sceneName,cfg.Robot)
-    
+        os.makedirs(cfg.CONTACT_SEQUENCE_PATH)
+    filename = cfg.CONTACT_SEQUENCE_PATH + "/" + cfg.DEMO_NAME + ".cs"
+    print("Write contact sequence binary file : ", filename)
+    cs.saveAsBinary(filename)
+if cfg.DISPLAY_CS_STONES:
+    display_tools.displaySteppingStones(cs, viewer.client.gui, viewer.sceneName, cfg.Robot)
 
 print("------------------------------")
 print("### MLP : centroidal, initial Guess ###")
 from mlp.centroidal import generateCentroidalInitGuess
-cs_initGuess = generateCentroidalInitGuess(cs,fullBody=fullBody,viewer=viewer)
+cs_initGuess = generateCentroidalInitGuess(cs, fullBody=fullBody, viewer=viewer)
 
 if cfg.DISPLAY_INIT_GUESS_TRAJ and cs_initGuess:
     colors = [viewer.color.red, viewer.color.yellow]
-    display_tools.displayCOMTrajectory(cs_initGuess,viewer.client.gui,viewer.sceneName,colors,"_init")    
+    display_tools.displayCOMTrajectory(cs_initGuess, viewer.client.gui, viewer.sceneName, colors, "_init")
 
 print("------------------------------")
 print("### MLP : centroidal  ###")
 from mlp.centroidal import generateCentroidalTrajectory
-cs_com = generateCentroidalTrajectory(cs,cs_initGuess,fullBody,viewer)
+cs_com = generateCentroidalTrajectory(cs, cs_initGuess, fullBody, viewer)
 
 if cfg.WRITE_STATUS:
-    f = open(cfg.STATUS_FILENAME,"a")
+    f = open(cfg.STATUS_FILENAME, "a")
     f.write("centroidal_success: True\n")
     f.close()
 
 if cfg.SAVE_CS_COM:
     if not os.path.exists(cfg.CONTACT_SEQUENCE_PATH):
-        os.makedirs(cfg.CONTACT_SEQUENCE_PATH)     
-    filename = cfg.CONTACT_SEQUENCE_PATH + "/"+cfg.DEMO_NAME+"_COM.cs"
-    print("Write contact sequence binary file with centroidal trajectory : ",filename)
-    cs_com.saveAsBinary(filename) 
+        os.makedirs(cfg.CONTACT_SEQUENCE_PATH)
+    filename = cfg.CONTACT_SEQUENCE_PATH + "/" + cfg.DEMO_NAME + "_COM.cs"
+    print("Write contact sequence binary file with centroidal trajectory : ", filename)
+    cs_com.saveAsBinary(filename)
 if cfg.DISPLAY_COM_TRAJ:
     colors = [viewer.color.blue, viewer.color.green]
-    display_tools.displayCOMTrajectory(cs_com,viewer.client.gui,viewer.sceneName,colors)
+    display_tools.displayCOMTrajectory(cs_com, viewer.client.gui, viewer.sceneName, colors)
 if cfg.PLOT_CENTROIDAL:
     from mlp.utils.plot import plotCOMTrajFromCS
     plotCOMTrajFromCS(cs_com)
-    
+
 print("------------------------------")
 print("### MLP : whole-body  ###")
 from mlp.wholebody import generateWholeBodyMotion
-res,robot = generateWholeBodyMotion(cs_com,fullBody,viewer)
+res, robot = generateWholeBodyMotion(cs_com, fullBody, viewer)
 
 if cfg.WRITE_STATUS:
     if not os.path.exists(cfg.OUTPUT_DIR):
-        os.makedirs(cfg.OUTPUT_DIR)     
-    f = open(cfg.STATUS_FILENAME,"a")
+        os.makedirs(cfg.OUTPUT_DIR)
+    f = open(cfg.STATUS_FILENAME, "a")
     f.write("wholebody_success: True\n")
-    if res.N == (int(round(cs_com.contact_phases[-1].time_trajectory[-1]/cfg.IK_dt)) + 1):
+    if res.N == (int(round(cs_com.contact_phases[-1].time_trajectory[-1] / cfg.IK_dt)) + 1):
         f.write("wholebody_reach_goal: True\n")
-    else : 
-        f.write("wholebody_reach_goal: False\n")   
+    else:
+        f.write("wholebody_reach_goal: False\n")
     f.close()
 
-
-if cfg.CHECK_FINAL_MOTION :
+if cfg.CHECK_FINAL_MOTION:
     from mlp.utils import check_path
     print("## Begin validation of the final motion (collision and joint-limits)")
-    validator = check_path.PathChecker(fullBody,cs_com,res.nq,True)
-    motion_valid,t_invalid = validator.check_motion(res.q_t)
-    print("## Check final motion, valid = ",motion_valid)
+    validator = check_path.PathChecker(fullBody, cs_com, res.nq, True)
+    motion_valid, t_invalid = validator.check_motion(res.q_t)
+    print("## Check final motion, valid = ", motion_valid)
     if not motion_valid:
-        print("## First invalid time : ",t_invalid)
+        print("## First invalid time : ", t_invalid)
     if cfg.WRITE_STATUS:
-        f = open(cfg.STATUS_FILENAME,"a")
-        f.write("motion_valid: "+str(motion_valid)+"\n")
-        f.close() 
+        f = open(cfg.STATUS_FILENAME, "a")
+        f.write("motion_valid: " + str(motion_valid) + "\n")
+        f.close()
 elif res:
     motion_valid = True
-else :
+else:
     motion_valid = False
 if cfg.DISPLAY_WB_MOTION:
     input("Press Enter to display the whole body motion ...")
-    display_tools.displayWBmotion(viewer,res.q_t,cfg.IK_dt,cfg.DT_DISPLAY)
+    display_tools.displayWBmotion(viewer, res.q_t, cfg.IK_dt, cfg.DT_DISPLAY)
 
 if cfg.PLOT:
     from mlp.utils import plot
-    plot.plotKneeTorque(res.t_t,res.phases_intervals,res.tau_t,(res.nq - res.nu),cfg.Robot.kneeIds)    
-    plot.plotALLFromWB(cs_com,res,cfg.DISPLAY_PLOT,cfg.SAVE_PLOT,cfg.OUTPUT_DIR+"/plot/"+cfg.DEMO_NAME)
-    
+    plot.plotKneeTorque(res.t_t, res.phases_intervals, res.tau_t, (res.nq - res.nu), cfg.Robot.kneeIds)
+    plot.plotALLFromWB(cs_com, res, cfg.DISPLAY_PLOT, cfg.SAVE_PLOT, cfg.OUTPUT_DIR + "/plot/" + cfg.DEMO_NAME)
+
 if cfg.EXPORT_OPENHRP and motion_valid:
     from mlp.export import openHRP
-    openHRP.export(cs_com,res)
+    openHRP.export(cs_com, res)
 if cfg.EXPORT_GAZEBO and motion_valid:
     from mlp.export import gazebo
     gazebo.export(res.q_t)
-if cfg.EXPORT_NPZ and motion_valid :
-    res.exportNPZ(cfg.EXPORT_PATH+"/npz",cfg.DEMO_NAME+".npz")
+if cfg.EXPORT_NPZ and motion_valid:
+    res.exportNPZ(cfg.EXPORT_PATH + "/npz", cfg.DEMO_NAME + ".npz")
 if cfg.EXPORT_BLENDER:
     from mlp.export import blender
-    blender.export(res.q_t,viewer,cfg.IK_dt)
+    blender.export(res.q_t, viewer, cfg.IK_dt)
     blender.exportSteppingStones(viewer)
 if cfg.EXPORT_SOT:
     from mlp.export import sotTalosBalance
@@ -122,23 +120,23 @@ if cfg.EXPORT_SOT:
 
 if cfg.EXPORT_EFF_IN_CS:
     from mlp.utils.util import addEffectorTrajectoryInCS
-    cs_com = addEffectorTrajectoryInCS(cs_com,res)
+    cs_com = addEffectorTrajectoryInCS(cs_com, res)
     filename = cfg.CONTACT_SEQUENCE_PATH + "/" + cfg.DEMO_NAME + "_COM_eff.cs"
     print("Write contact sequence binary file with effector trajectories : ", filename)
     cs_com.saveAsBinary(filename)
 
 
+def dispCS(step=0.2):
+    display_tools.displayContactSequence(viewer, cs, step)
 
-def dispCS(step = 0.2): 
-    display_tools.displayContactSequence(viewer,cs,step)
-    
+
 def dispWB(t=None):
     if t is None:
-        display_tools.displayWBmotion(viewer,res.q_t,cfg.IK_dt,cfg.DT_DISPLAY)
+        display_tools.displayWBmotion(viewer, res.q_t, cfg.IK_dt, cfg.DT_DISPLAY)
     else:
-        display_tools.displayWBatT(viewer,res,t)
+        display_tools.displayWBatT(viewer, res, t)
 
-    
+
 """
 #record gepetto-viewer 
 viewer.startCapture("capture/capture","png")

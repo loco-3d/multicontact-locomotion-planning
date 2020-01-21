@@ -3,10 +3,8 @@ from .common_talos import *
 SCRIPT_PATH = "memmo"
 ENV_NAME = "multicontact/plateforme_not_flat"
 
-
-
-DURATION_INIT = 4. # Time to init the motion
-DURATION_SS =1.8
+DURATION_INIT = 4.  # Time to init the motion
+DURATION_SS = 1.8
 DURATION_DS = 0.3
 DURATION_TS = 0.4
 DURATION_CONNECT_GOAL = 2.
