@@ -68,17 +68,17 @@ def buildPredefinedInitTraj(placement, t_total):
     wps = np.matrix(np.zeros(([3, int(n + 1)])))
     T = cfg.EFF_T_PREDEF
     # constrained init pos and final pos. Init vel, acc and jerk = 0
-    wps[:, 0] = (c0)
     # c0
-    wps[:, 1] = ((dc0 * T / n) + c0)
+    wps[:, 0] = (c0)
     #dc0
-    wps[:, 2] = ((n * n * c0 - n * c0 + 2. * n * dc0 * T - 2. * dc0 * T + ddc0 * T * T) / (n * (n - 1.)))
+    wps[:, 1] = ((dc0 * T / n) + c0)
     #ddc0 // * T because derivation make a T appear
-    wps[:, 3] = ((n * n * c0 - n * c0 + 3. * n * dc0 * T - 3. * dc0 * T + 3. * ddc0 * T * T) / (n * (n - 1.)))
+    wps[:, 2] = ((n * n * c0 - n * c0 + 2. * n * dc0 * T - 2. * dc0 * T + ddc0 * T * T) / (n * (n - 1.)))
     #j0 = 0
-    wps[:, 4] = (c1)
+    wps[:, 3] = ((n * n * c0 - n * c0 + 3. * n * dc0 * T - 3. * dc0 * T + 3. * ddc0 * T * T) / (n * (n - 1.)))
     #c1
-    return bezier(wps, T)
+    wps[:, 4] = (c1)
+    return bezier(wps,0., T)
 
 
 def buildPredefinedFinalTraj(placement, t_total):
@@ -100,17 +100,17 @@ def buildPredefinedFinalTraj(placement, t_total):
     wps = np.matrix(np.zeros(([3, int(n + 1)])))
     T = cfg.EFF_T_PREDEF
     # constrained init pos and final pos. final vel, acc and jerk = 0
-    wps[:, 0] = (c0)
     #c0
-    wps[:, 1] = ((n * n * c1 - n * c1 - 3 * n * dc1 * T + 3 * dc1 * T + 3 * ddc1 * T * T) / (n * (n - 1)))
+    wps[:, 0] = (c0)
     # j1
-    wps[:, 2] = ((n * n * c1 - n * c1 - 2 * n * dc1 * T + 2 * dc1 * T + ddc1 * T * T) / (n * (n - 1)))
+    wps[:, 1] = ((n * n * c1 - n * c1 - 3 * n * dc1 * T + 3 * dc1 * T + 3 * ddc1 * T * T) / (n * (n - 1)))
     #ddc1 * T ??
-    wps[:, 3] = ((-dc1 * T / n) + c1)
+    wps[:, 2] = ((n * n * c1 - n * c1 - 2 * n * dc1 * T + 2 * dc1 * T + ddc1 * T * T) / (n * (n - 1)))
     #dc1
-    wps[:, 4] = (c1)
+    wps[:, 3] = ((-dc1 * T / n) + c1)
     #c1
-    return bezier(wps, T)
+    wps[:, 4] = (c1)
+    return bezier(wps,0., T)
 
 
 # build a bezier curve of degree 7 that connect exactly the two given bezier up to order 3
@@ -125,25 +125,25 @@ def generatePredefMiddle(bezier_takeoff, bezier_landing, T):
     j1 = bezier_landing.derivate(0, 3)
     n = 7
     wps = np.matrix(np.zeros(([3, int(n + 1)])))
-    wps[:, 0] = (c0)
     # c0
-    wps[:, 1] = ((dc0 * T / n) + c0)
+    wps[:, 0] = (c0)
     #dc0
-    wps[:, 2] = ((n * n * c0 - n * c0 + 2. * n * dc0 * T - 2. * dc0 * T + ddc0 * T * T) / (n * (n - 1.)))
+    wps[:, 1] = ((dc0 * T / n) + c0)
     #ddc0 // * T because derivation make a T appear
+    wps[:, 2] = ((n * n * c0 - n * c0 + 2. * n * dc0 * T - 2. * dc0 * T + ddc0 * T * T) / (n * (n - 1.)))
+    #j0
     wps[:, 3] = ((n * n * c0 - n * c0 + 3. * n * dc0 * T - 3. * dc0 * T + 3. * ddc0 * T * T + j0 * T * T * T /
                   (n - 2)) / (n * (n - 1.)))
-    #j0
+    # j1
     wps[:, 4] = ((n * n * c1 - n * c1 - 3 * n * dc1 * T + 3 * dc1 * T + 3 * ddc1 * T * T - j1 * T * T * T / (n - 2)) /
                  (n * (n - 1)))
-    # j1
-    wps[:, 5] = ((n * n * c1 - n * c1 - 2 * n * dc1 * T + 2 * dc1 * T + ddc1 * T * T) / (n * (n - 1)))
     #ddc1 * T ??
-    wps[:, 6] = ((-dc1 * T / n) + c1)
+    wps[:, 5] = ((n * n * c1 - n * c1 - 2 * n * dc1 * T + 2 * dc1 * T + ddc1 * T * T) / (n * (n - 1)))
     #dc1
-    wps[:, 7] = (c1)
+    wps[:, 6] = ((-dc1 * T / n) + c1)
     #c1
-    return bezier(wps, T)
+    wps[:, 7] = (c1)
+    return bezier(wps,0., T)
 
 
 def generatePredefBeziers(time_interval, placement_init, placement_end):
@@ -163,13 +163,13 @@ def generatePredefBeziers(time_interval, placement_init, placement_end):
     # create polybezier with concatenation of the 3 (or 5) curves :
     # create constant curve at the beginning and end for the delay :
     if cfg.EFF_T_DELAY > 0:
-        bezier_init_zero = bezier(bezier_takeoff(0), cfg.EFF_T_DELAY)
+        bezier_init_zero = bezier(bezier_takeoff(0), 0., cfg.EFF_T_DELAY)
         curves.append(bezier_init_zero)
     curves.append(bezier_takeoff)
     curves.append(bezier_middle)
     curves.append(bezier_landing)
     if cfg.EFF_T_DELAY > 0:
-        curves.append(bezier(bezier_landing(bezier_landing.max()), cfg.EFF_T_DELAY))
+        curves.append(bezier(bezier_landing(bezier_landing.max()), 0., cfg.EFF_T_DELAY))
     pBezier = PolyBezier(curves)
     return pBezier
 
@@ -232,7 +232,7 @@ def generateSmoothBezierTrajWithoutPredef(time_interval, placement_init, placeme
     wps[2, 4] += cfg.p_max
     for i in range(5, 9):  # final position. final vel,acc and jerk == 0
         wps[:, i] = placement_end.translation.copy()
-    pBezier = PolyBezier(bezier(wps, t_tot))
+    pBezier = PolyBezier(bezier(wps,0., t_tot))
     ref_traj = trajectories.BezierTrajectory(pBezier, placement_init, placement_end, time_interval)
     return ref_traj
 

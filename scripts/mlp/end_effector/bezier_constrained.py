@@ -864,7 +864,7 @@ def generateConstrainedBezierTraj(time_interval,
         wps[:, i] = x
         i += 1
 
-    bezier_middle = curves.bezier(wps, t_middle)
+    bezier_middle = curves.bezier(wps,0., t_middle)
     # create concatenation with takeoff/landing
     curves = predef_curves.curves[::]
     curves[id_middle] = bezier_middle

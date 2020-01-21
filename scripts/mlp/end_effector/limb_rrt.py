@@ -350,7 +350,7 @@ def generateLimbRRTOptimizedTraj(time_interval,
         i += 1
     if VERBOSE:
         print("Variables waypoints replaced by quadprog results.")
-    bezier_middle = bezier(wps, t_middle)
+    bezier_middle = bezier(wps,0., t_middle)
     # create concatenation with takeoff/landing
     curves = predef_curves.curves[::]
     curves[id_middle] = bezier_middle
