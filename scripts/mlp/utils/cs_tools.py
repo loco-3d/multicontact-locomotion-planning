@@ -152,7 +152,7 @@ def moveEffectorOf(fb,v,cs,eeName,translation):
     prev_phase = cs.contact_phases[-1]
     assert isContactActive(prev_phase,eeName,fb), "Cannot use 'moveEffectorOf' if the effector is not in contact in the last phase."
     placement = getContactPlacement(prev_phase,eeName,fb).copy()
-    if isinstance(translation,types.ListType):
+    if type(translation) is list:
         translation = np.matrix(translation).T
     assert translation.shape[0] == 3 ,"translation must be a 3D vector"
     placement.translation += translation
@@ -181,7 +181,7 @@ def setFinalState(cs,com = None,q=None):
         com_y /= phase.numActivePatches() 
         com_z = phase.init_state[2]
         com = np.matrix([com_x,com_y,com_z]).T
-    elif isinstance(com,types.ListType):
+    elif type(com) is list:
         com = np.matrix(com).T
     state = phase.init_state.copy()
     state[0:3] = com

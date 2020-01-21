@@ -112,7 +112,7 @@ def numpy2DToList(m):
 
 # assume that q.size >= 7 with root pos and quaternion(x,y,z,w)
 def SE3FromConfig(q):
-    if isinstance(q,types.ListType):
+    if type(q) is list:
         q = np.matrix(q).T
     placement = SE3.Identity()
     placement.translation = q[0:3]
