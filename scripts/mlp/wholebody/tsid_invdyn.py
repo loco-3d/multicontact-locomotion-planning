@@ -93,7 +93,7 @@ def createContactForEffector(invdyn,robot,phase,eeName):
 # build a dic with keys = effector names used in the cs, value = Effector tasks objects
 def createEffectorTasksDic(cs,robot):
     res = {}
-    for eeName in cfg.Robot.dict_limb_joint.values():
+    for eeName in list(cfg.Robot.dict_limb_joint.values()):
         if isContactEverActive(cs,eeName):
             # build effector task object
             effectorTask = tsid.TaskSE3Equality("task-"+eeName, robot, eeName)
@@ -203,7 +203,7 @@ def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
     trajRoot = tsid.TrajectorySE3Constant("traj-root", root_ref)
 
     usedEffectors = []
-    for eeName in cfg.Robot.dict_limb_joint.values() : 
+    for eeName in list(cfg.Robot.dict_limb_joint.values()) : 
         if isContactEverActive(cs,eeName):
             usedEffectors.append(eeName)
     # init effector task objects : 
@@ -238,7 +238,7 @@ def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
         res.ddq_t[:,k_t] = dv                             
         res.tau_t[:,k_t] = invdyn.getActuatorForces(sol) # actuator forces, with external forces (contact forces)
         #store contact info (force and status)
-        for eeName,contact in dic_contacts.iteritems():
+        for eeName,contact in dic_contacts.items():
             if invdyn.checkContact(contact.name, sol): 
                 res.contact_activity[eeName][:,k_t] = 1                
                 if cfg.IK_store_contact_forces :                
@@ -288,13 +288,13 @@ def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
         
     def printIntermediate(v,dv,invdyn,sol):
         print("Time %.3f" % (t))
-        for eeName,contact in dic_contacts.iteritems():
+        for eeName,contact in dic_contacts.items():
             if invdyn.checkContact(contact.name, sol):
                 f = invdyn.getContactForce(contact.name, sol)
                 print("\tnormal force %s: %.1f" % (contact.name.ljust(20, '.'), contact.getNormalForce(f)))
     
         print("\ttracking err %s: %.3f" % (comTask.name.ljust(20, '.'), norm(comTask.position_error, 2)))
-        for eeName,traj in dic_effectors_trajs.iteritems():
+        for eeName,traj in dic_effectors_trajs.items():
             if traj :
                 task = dic_effectors_tasks[eeName]
                 error = task.position_error
@@ -379,7 +379,7 @@ def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
                 dic_contacts.update({eeName:contact})
  
         # add se3 tasks for end effector not in contact that will be in contact next phase: 
-        for eeName,task in dic_effectors_tasks.iteritems() :        
+        for eeName,task in dic_effectors_tasks.items() :        
             if phase_next and not isContactActive(phase,eeName)  and isContactActive(phase_next,eeName): 
                 if cfg.WB_VERBOSE :
                     print("add se3 task for "+eeName)
@@ -402,7 +402,7 @@ def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
 
         # start removing the contact that will be broken in the next phase :
         # (This tell the solver that it should start minimzing the contact force on this contact, and ideally get to 0 at the given time)
-        for eeName,contact in dic_contacts.iteritems() :        
+        for eeName,contact in dic_contacts.items() :        
             if phase_next and isContactActive(phase,eeName) and not isContactActive(phase_next,eeName) : 
                 transition_time = t_phase_end - t - dt/2.
                 if cfg.WB_VERBOSE :
@@ -482,7 +482,7 @@ def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
                     print("root vel : ",sampleRoot.vel())
                 
                 # end effector (if they exists)
-                for eeName,traj in dic_effectors_trajs.iteritems():
+                for eeName,traj in dic_effectors_trajs.items():
                     if traj:
                         swingPhase = True # there is an effector motion in this phase
                         sampleEff = effectorTraj.computeNext()
@@ -545,7 +545,7 @@ def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
                     if effectorCanRetry() : 
                         print("Try new end effector trajectory.")  
                         try:
-                            for eeName,oldTraj in dic_effectors_trajs.iteritems():
+                            for eeName,oldTraj in dic_effectors_trajs.items():
                                 if oldTraj: # update the traj in the map
                                     placement_init = JointPlacementForEffector(phase_prev,eeName).copy()
                                     placement_end = JointPlacementForEffector(phase_next,eeName).copy()
@@ -568,7 +568,7 @@ def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
             if phaseValid:
                 # display all the effector trajectories for this phase
                 if viewer and cfg.DISPLAY_FEET_TRAJ and not cfg.DISPLAY_ALL_FEET_TRAJ:
-                    for eeName,ref_traj in dic_effectors_trajs.iteritems():
+                    for eeName,ref_traj in dic_effectors_trajs.items():
                         if ref_traj :
                             display_tools.displaySE3Traj(ref_traj,viewer.client.gui,viewer.sceneName,eeName+"_traj_"+str(pid),cfg.Robot.dict_limb_color_traj[eeName] ,time_interval ,cfg.Robot.dict_offset[eeName])                               
                             viewer.client.gui.setVisibility(eeName+"_traj_"+str(pid),'ALWAYS_ON_TOP')                
