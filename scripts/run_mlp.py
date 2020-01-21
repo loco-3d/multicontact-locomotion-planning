@@ -10,7 +10,13 @@ if cfg.WRITE_STATUS:
     f = open(cfg.STATUS_FILENAME,"a")
     f.write("gen_cs_success: True\n")
     f.close()
-       
+
+try:
+    #python2
+    input = raw_input
+except NameError:
+    pass
+
 if cfg.DISPLAY_CS:
     input("Press Enter to display the contact sequence ...")
     display_tools.displayContactSequence(viewer,cs)    
