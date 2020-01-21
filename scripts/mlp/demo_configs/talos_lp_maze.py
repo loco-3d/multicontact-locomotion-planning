@@ -1,8 +1,7 @@
 TIMEOPT_CONFIG_FILE = "cfg_softConstraints_talos.yaml"
 from common_talos import *
-#SCRIPT_ABSOLUTE_PATH = "mpcroc.planner_scenarios.talos.lp_complex1"
-SCRIPT_ABSOLUTE_PATH = "mpcroc.planner_scenarios.talos.maze"
-ENV_NAME = "multicontact/maze_hard"
+SCRIPT_ABSOLUTE_PATH = "scenarios.sandbox.talos_maze"
+ENV_NAME = "multicontact/maze_easy"
 contact_generation_method = "lp" 
 
 
@@ -14,6 +13,9 @@ DURATION_TS = 0.4
 DURATION_CONNECT_GOAL = 0.
 """
 DURATION_CONNECT_GOAL = 0.
+
+GUIDE_STEP_SIZE = 0.8
+GUIDE_MAX_YAW = 1.
 
 
 YAW_ROT_GAIN = 0.1

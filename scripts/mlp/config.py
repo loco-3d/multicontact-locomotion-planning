@@ -1,21 +1,21 @@
 import numpy as np
 import os
 
-contact_generation_method_available = ["none","load", "rbprm","lp"]
+contact_generation_method_available = ["none","load", "rbprm","sl1m"]
 centroidal_initGuess_method_available = ["none", "geometric", "croc", "timeopt", "quasistatic"]
-centroidal_method_available = ["load", "geometric", "croc", "timeopt", "quasistatic", "muscod"]
-wholebody_method_available = ["load", "tsid", "croccodyl"]
+centroidal_method_available = ["load", "geometric", "croc", "timeopt", "quasistatic", "muscod","none"]
+wholebody_method_available = ["load", "tsid", "croccodyl","none"]
 end_effector_method_available = ["smoothedFoot", "bezierPredef", "bezierConstrained", "limbRRT", "limbRRToptimized"]
 
 ## methods setting : choose which method will be used to solve each subproblem : 
-contact_generation_method = "rbprm" 
+contact_generation_method = "sl1m"
 centroidal_initGuess_method = "geometric" 
-centroidal_method = "timeopt" 
+centroidal_method = "timeopt"#"load"# 
 wholebody_method = "tsid" 
 end_effector_method = "limbRRToptimized" 
 
 ## PATHS settings : 
-PKG_PATH = "/local/dev/multicontact-locomotion-planning"
+PKG_PATH = os.environ["DEVEL_HPP_DIR"]+"/src/multicontact-locomotion-planning"
 OUTPUT_DIR = PKG_PATH+"/res"
 CONTACT_SEQUENCE_PATH = OUTPUT_DIR + "/contact_sequences"
 TIME_OPT_CONFIG_PATH = PKG_PATH +'/timeOpt_configs'
@@ -29,9 +29,9 @@ EXPORT_NPZ = True
 EXPORT_BLENDER = False
 EXPORT_SOT = False
 EXPORT_OPENHRP = False
-EXPORT_EFF_IN_CS=True
+EXPORT_EFF_IN_CS=False
 openHRP_useZMPref = False # if true : in the export_openHRP, use the zmp computed by the centroidal solver and the one computed from the wholebody
-WRITE_STATUS = True
+WRITE_STATUS = False
 ##DISPLAY settings : 
 DISPLAY_CS = False # display contact sequence from rbprm
 DISPLAY_CS_STONES = True # display stepping stones
@@ -49,6 +49,9 @@ SAVE_PLOT = PLOT and True #save plot as svg in OUTPUT_DIR/plot/demo_name_*
 
 ###  Settings for generate_contact_sequence
 FORCE_STRAIGHT_LINE = False # DEBUG ONLY should be false
+SL1M_USE_ORIENTATION = True  # sl1m method use the root orientation computed by the guide planning
+SL1M_USE_INTERPOLATED_ORIENTATION = True # Only matter if SL1M_USE_ORIENTATION=True, if false sl1m method use exactly the orientation from planning,
+# if False, it interpolate the orientation and adapt it depending if the feet is in the inside or outside of the turn
 
 ### Settings for centroidal script :
 GRAVITY = np.matrix([0,0,-9.81]).T
@@ -62,6 +65,7 @@ USE_WP_COST = True # use wp from the contact sequence in the cost function of th
 
 ## Settings for end effector :
 EFF_CHECK_COLLISION = True # After generating of whole body motion for a phase with an effector motion, check collision and joints limits for this motion and retry if invalid and if choosen method allow it
+CHECK_DT = 0.02 # time step (in seconds) at which the (self-)collision and joints limits are tested
 WB_ABORT_WHEN_INVALID = False # stop wb script when stuck with an invalid motion and return the VALID part (before the phase with collision)
 WB_RETURN_INVALID = not WB_ABORT_WHEN_INVALID and True  # stop wb script when stuck with an invalid motion and return  the computed part of motion, incuding the last INVALID phase
 
@@ -75,10 +79,12 @@ IK_PRINT_N = 500  # print state of the problem every IK_PRINT_N time steps (if v
 CHECK_FINAL_MOTION = True # After computation of the motion, check the complete motion for {self-}collision and joints limits
 ### The following settings enable the computation of various values stored in the wholeBody_result struct. 
 # Enabling them increase the computation time of the wholeBody script
-IK_store_centroidal = True # c,dc,ddc,L,dL (of the computed wholebody motion)
-IK_store_zmp = True # need store_centroidal
-IK_store_effector = True 
-IK_store_contact_forces = True
+IK_store_centroidal = False # c,dc,ddc,L,dL (of the computed wholebody motion)
+IK_store_reference_centroidal = False
+IK_store_zmp = False # need store_centroidal
+IK_store_effector = False 
+IK_store_reference_effector = False
+IK_store_contact_forces = False
 
 
 # import specific settings for the selected demo. This settings may override default ones.
@@ -149,3 +155,16 @@ if wholebody_method == "load":
     SAVE_CS = False    
     SAVE_CS_COM = False    
     EXPORT_NPZ = False
+
+if centroidal_method == "none":
+    wholebody_method = "none"
+    SAVE_CS = False
+    SAVE_CS_COM = False
+    DISPLAY_COM_TRAJ = False
+    PLOT_CENTROIDAL = False
+    WRITE_STATUS = False
+if wholebody_method == "none":
+    EXPORT_NPZ = False
+    CHECK_FINAL_MOTION = False
+    DISPLAY_WB_MOTION = False
+    PLOT = False
