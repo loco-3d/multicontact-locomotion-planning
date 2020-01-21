@@ -3,8 +3,8 @@ import os
 
 contact_generation_method_available = ["none","load", "rbprm","sl1m"]
 centroidal_initGuess_method_available = ["none", "geometric", "croc", "timeopt", "quasistatic"]
-centroidal_method_available = ["load", "geometric", "croc", "timeopt", "quasistatic", "muscod"]
-wholebody_method_available = ["load", "tsid", "croccodyl"]
+centroidal_method_available = ["load", "geometric", "croc", "timeopt", "quasistatic", "muscod","none"]
+wholebody_method_available = ["load", "tsid", "croccodyl","none"]
 end_effector_method_available = ["smoothedFoot", "bezierPredef", "bezierConstrained", "limbRRT", "limbRRToptimized"]
 
 ## methods setting : choose which method will be used to solve each subproblem : 
@@ -15,7 +15,7 @@ wholebody_method = "tsid"
 end_effector_method = "limbRRToptimized" 
 
 ## PATHS settings : 
-PKG_PATH = "/local/dev_hpp/src/multicontact-locomotion-planning"
+PKG_PATH = os.environ["DEVEL_HPP_DIR"]+"/src/multicontact-locomotion-planning"
 OUTPUT_DIR = PKG_PATH+"/res"
 CONTACT_SEQUENCE_PATH = OUTPUT_DIR + "/contact_sequences"
 TIME_OPT_CONFIG_PATH = PKG_PATH +'/timeOpt_configs'
@@ -155,3 +155,16 @@ if wholebody_method == "load":
     SAVE_CS = False    
     SAVE_CS_COM = False    
     EXPORT_NPZ = False
+
+if centroidal_method == "none":
+    wholebody_method = "none"
+    SAVE_CS = False
+    SAVE_CS_COM = False
+    DISPLAY_COM_TRAJ = False
+    PLOT_CENTROIDAL = False
+    WRITE_STATUS = False
+if wholebody_method == "none":
+    EXPORT_NPZ = False
+    CHECK_FINAL_MOTION = False
+    DISPLAY_WB_MOTION = False
+    PLOT = False

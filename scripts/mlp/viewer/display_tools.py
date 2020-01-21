@@ -215,6 +215,10 @@ def initScene(Robot,envName = "multicontact/ground",genLimbsDB = True):
   ps = ProblemSolver(fullBody)
   vf = ViewerFactory (ps)
   vf.loadObstacleModel ("hpp_environments", envName, "planning")
-  v = vf.createViewer( displayCoM = True)
-  v(fullBody.getCurrentConfig())
+  try:
+    v = vf.createViewer( displayCoM = True)
+    v(fullBody.getCurrentConfig())
+  except Exception:
+    print "In initScene : no Viewer started."
+    v = None
   return fullBody,v    

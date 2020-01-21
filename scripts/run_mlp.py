@@ -85,8 +85,10 @@ if cfg.CHECK_FINAL_MOTION :
         f = open(cfg.STATUS_FILENAME,"a")
         f.write("motion_valid: "+str(motion_valid)+"\n")
         f.close() 
-else :
+elif res:
     motion_valid = True
+else :
+    motion_valid = False
 if cfg.DISPLAY_WB_MOTION:
     raw_input("Press Enter to display the whole body motion ...")
     display_tools.displayWBmotion(viewer,res.q_t,cfg.IK_dt,cfg.DT_DISPLAY)

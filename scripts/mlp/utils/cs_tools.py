@@ -10,7 +10,8 @@ from math import isnan
 def addPhaseFromConfig(fb,v,cs,q,limbsInContact):
     phase = ContactPhaseHumanoid()
     phase.reference_configurations.append(np.matrix((q)).T)
-    v(q)
+    if v:
+        v(q)
     fb.setCurrentConfig(q)
     state = np.matrix(np.zeros(9)).T
     state[0:3] = np.matrix(fb.getCenterOfMass()).T
@@ -30,7 +31,8 @@ def addPhaseFromConfig(fb,v,cs,q,limbsInContact):
         patch.active= True
         
     cs.contact_phases.append(phase)
-    display_tools.displaySteppingStones(cs,v.client.gui,v.sceneName,fb)
+    if v:
+        display_tools.displaySteppingStones(cs,v.client.gui,v.sceneName,fb)
 
 def computeCenterOfSupportPolygonFromState(s):
     com = np.zeros(3)

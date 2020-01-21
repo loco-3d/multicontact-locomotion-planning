@@ -30,7 +30,7 @@ __ineq_left_foot_reduced = None
 def right_foot_constraints(transform):
     global __ineq_right_foot
     if __ineq_right_foot is None:
-        filekin = os.environ["DEVEL_HPP_DIR"]+"/install/share/talos-rbprm/com_inequalities/feet_quasi_flat/talos_COM_constraints_in_RF_effector_frame_REDUCED.obj"
+        filekin = os.environ["INSTALL_HPP_DIR"]+"/share/talos-rbprm/com_inequalities/feet_quasi_flat/talos_COM_constraints_in_RF_effector_frame_REDUCED.obj"
         obj = load_obj(filekin)
         __ineq_right_foot = as_inequalities(obj)
     transform2 = transform.copy()
@@ -42,7 +42,7 @@ def right_foot_constraints(transform):
 def left_foot_constraints(transform):
     global __ineq_left_foot
     if __ineq_left_foot is None:
-        filekin =os.environ["DEVEL_HPP_DIR"]+"/install/share/talos-rbprm/com_inequalities/feet_quasi_flat/talos_COM_constraints_in_LF_effector_frame_REDUCED.obj"
+        filekin =os.environ["INSTALL_HPP_DIR"]+"/share/talos-rbprm/com_inequalities/feet_quasi_flat/talos_COM_constraints_in_LF_effector_frame_REDUCED.obj"
         obj = load_obj(filekin)
         __ineq_left_foot = as_inequalities(obj)
     transform2 = transform.copy()
@@ -59,7 +59,7 @@ __ineq_lf_in_rf = None
 def right_foot_in_lf_frame_constraints(transform):
     global __ineq_rf_in_rl
     if __ineq_rf_in_rl is None:
-        filekin = os.environ["DEVEL_HPP_DIR"]+"/install/share/talos-rbprm/relative_effector_positions/talos_RF_constraints_in_LF_quasi_flat_REDUCED.obj"
+        filekin = os.environ["INSTALL_HPP_DIR"]+"/share/talos-rbprm/relative_effector_positions/talos_RF_constraints_in_LF_quasi_flat_REDUCED.obj"
         obj = load_obj(filekin)
         __ineq_rf_in_rl = as_inequalities(obj)
     transform2 = transform.copy()
@@ -70,7 +70,7 @@ def right_foot_in_lf_frame_constraints(transform):
 def left_foot_in_rf_frame_constraints(transform):
     global __ineq_lf_in_rf
     if __ineq_lf_in_rf is None:
-        filekin = os.environ["DEVEL_HPP_DIR"]+"/install/share/talos-rbprm/relative_effector_positions/talos_LF_constraints_in_RF_quasi_flat_REDUCED.obj"
+        filekin = os.environ["INSTALL_HPP_DIR"]+"/share/talos-rbprm/relative_effector_positions/talos_LF_constraints_in_RF_quasi_flat_REDUCED.obj"
         obj = load_obj(filekin)
         __ineq_lf_in_rf = as_inequalities(obj)
     transform2 = transform.copy()
@@ -129,12 +129,22 @@ def solve(tp):
     defaultStep = cfg.GUIDE_STEP_SIZE
     step = defaultStep
     variation = 0.4 # FIXME : put it in config file, +- bounds on the step size
+    pathId = 0
+    if hasattr(tp,"pathId"):
+        pathId = tp.pathId
+    elif hasattr(tp,"pId"):
+        pathId = tp.pId
+    else:
+        pathId = tp.ps.numberPaths()-1
     while not success and it < maxIt:
         if it > 0 :
             step = defaultStep + random.uniform(-variation,variation)
         #configs = getConfigsFromPath (tp.ps, tp.pathId, step)  
         #getSurfacesFromPath(tp.rbprmBuilder, configs, surfaces_dict, tp.v, True, False)
-        R,surfaces = getSurfacesFromGuideContinuous(tp.rbprmBuilder,tp.ps,tp.afftool,tp.pathId,tp.v,step,useIntersection=True,max_yaw=cfg.GUIDE_MAX_YAW)
+        viewer = tp.v
+        if not hasattr(viewer,"client"):
+            viewer = None
+        R,surfaces = getSurfacesFromGuideContinuous(tp.rbprmBuilder,tp.ps,tp.afftool,pathId,viewer,step,useIntersection=True,max_yaw=cfg.GUIDE_MAX_YAW)
         pb = gen_pb(tp.q_init,R,surfaces)
         try:
             pb, coms, footpos, allfeetpos, res = solveL1(pb, surfaces, None)
@@ -144,7 +154,7 @@ def solve(tp):
         it += 1
     if not success :
         raise RuntimeError("planner always fail.") 
-    return pb, coms, footpos, allfeetpos, res
+    return pathId,pb, coms, footpos, allfeetpos, res
 
 def runLPFromGuideScript():
     #the following script must produce a
@@ -156,9 +166,9 @@ def runLPFromGuideScript():
     print "Run Guide script : ",scriptName
     tp = importlib.import_module(scriptName)
     # compute sequence of surfaces from guide path
-    pb, coms, footpos, allfeetpos, res = solve(tp)
-    root_init = tp.q_init[0:7]
-    root_end = tp.q_goal[0:7]
+    pathId,pb, coms, footpos, allfeetpos, res = solve(tp)
+    root_init = tp.ps.configAtParam(pathId,0.001)[0:7]
+    root_end = tp.ps.configAtParam(pathId,tp.ps.pathLength(pathId)-0.001)[0:7]
     return RF,root_init,root_end, pb, coms, footpos, allfeetpos, res
 
 
@@ -180,7 +190,7 @@ def generateContactSequence():
     RF,root_init,root_end,pb, coms, footpos, allfeetpos, res = runLPFromGuideScript()
 
     # load scene and robot
-    fb,v = initScene(cfg.Robot,cfg.ENV_NAME,False)
+    fb,v = initScene(cfg.Robot,cfg.ENV_NAME,True)
     q_init = cfg.IK_REFERENCE_CONFIG.T.tolist()[0] + [0]*6
     q_init[0:7] = root_init
     feet_height_init = allfeetpos[0][2]
@@ -188,7 +198,8 @@ def generateContactSequence():
     q_init[2] = feet_height_init + cfg.IK_REFERENCE_CONFIG[2,0]
     q_init[2] += EPS_Z
     #q_init[2] = fb.referenceConfig[2] # 0.98 is in the _path script
-    v(q_init)
+    if v:
+        v(q_init)
 
     # init contact sequence with first phase : q_ref move at the right root pose and with both feet in contact
     # FIXME : allow to customize that first phase
@@ -242,8 +253,8 @@ def generateContactSequence():
     q_end[2] = feet_height_end + cfg.IK_REFERENCE_CONFIG[2,0]
     q_end[2] += EPS_Z
     setFinalState(cs,q=q_end)
-
-    displaySteppingStones(cs,v.client.gui,v.sceneName,fb)
+    if cfg.DISPLAY_CS_STONES:
+        displaySteppingStones(cs,v.client.gui,v.sceneName,fb)
 
     return cs,fb,v
 
