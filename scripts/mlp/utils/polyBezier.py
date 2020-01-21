@@ -1,4 +1,4 @@
-from hpp_spline import bezier, bezier6, polynom, exact_cubic, curve_constraints, spline_deriv_constraint, from_bezier
+from curves import bezier, bezier6, polynom, exact_cubic, curve_constraints, spline_deriv_constraint, from_bezier
 import inspect
 
 

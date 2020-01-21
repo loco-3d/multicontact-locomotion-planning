@@ -9,8 +9,8 @@ import numpy.linalg
 from multicontact_api import WrenchCone, SOC6, ContactSequenceHumanoid
 import numpy as np
 from tools.disp_bezier import *
-import hpp_spline
-from hpp_spline import bezier
+import curves
+from curves import bezier
 import hpp_bezier_com_traj as bezier_com
 from mlp.utils import trajectories
 from mlp.utils.util import stdVecToMatrix

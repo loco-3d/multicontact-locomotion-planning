@@ -11,7 +11,7 @@ import math
 from mlp.utils.util import stdVecToMatrix, createStateFromPhase, effectorPositionFromHPPPath
 import eigenpy
 import hpp_bezier_com_traj as bezier_com
-from hpp_spline import bezier
+from curves import bezier
 from mlp.utils.polyBezier import PolyBezier
 import quadprog
 eigenpy.switchToNumpyMatrix()

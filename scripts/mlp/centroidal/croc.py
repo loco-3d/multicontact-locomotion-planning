@@ -2,8 +2,9 @@ import numpy as np
 import mlp.config as cfg
 import multicontact_api
 from multicontact_api import WrenchCone, SOC6, ContactPatch, ContactPhaseHumanoid, ContactSequenceHumanoid
-from hpp_spline import bezier
+from curves import bezier
 from mlp.utils.util import createStateFromPhase, phasesHaveSameConfig, createFullbodyStatesFromCS
+
 
 
 def writeTrajInPhase(phase, c, current_t, start, end, append=False):
