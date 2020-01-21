@@ -1,4 +1,4 @@
-from hpp.corbaserver.rbprm.talos_fixedUpper import Robot
+from talos_rbprm.talos_fixedUpper import Robot
 MASS = 90.27
 
 ## predef duration of contact phases : 

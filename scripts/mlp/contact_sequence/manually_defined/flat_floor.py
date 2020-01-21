@@ -2,7 +2,7 @@ from mlp.utils.cs_tools import *
 import mlp.config as cfg
 
 
-from hpp.corbaserver.rbprm.talos import Robot # change robot here
+from talos_rbprm.talos import Robot # change robot here
 ENV_NAME = "multicontact/ground"
 
 # Build the robot object and the viewer

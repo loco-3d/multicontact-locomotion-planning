@@ -4,7 +4,7 @@ from mlp.utils.cs_tools import *
 import mlp.config as cfg
 from pinocchio import SE3
 from mlp.utils.util import rotatePlacement
-from hpp.corbaserver.rbprm.talos import Robot # change robot here
+from talos_rbprm.talos import Robot # change robot here
 from mlp.utils.cs_tools import moveEffectorToPlacement
 import numpy as np
 from hpp.corbaserver.rbprm.rbprmstate import State,StateHelper
