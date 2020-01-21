@@ -402,7 +402,7 @@ def computeEffectorRotationBetweenStates(contact_phase,next_phase):
     try:
         res = abs(math.acos((tR-1.)/2.))
     except ValueError as e:
-        print("WARNING : when computing rotation between two contacts, got error : ",e.message)
+        print("WARNING : when computing rotation between two contacts, got error : ",e)
         print("With trace value = ",tR)
         res = 0.
     return res

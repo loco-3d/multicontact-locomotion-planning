@@ -301,7 +301,7 @@ def generateLimbRRTOptimizedTraj(time_interval,placement_init,placement_end,numT
         solved = True
     except ValueError as e:
         print("Quadprog error : ")
-        print(e.message)
+        print(e)
         raise ValueError("Quadprog failed to solve QP for optimized limb-RRT end-effector trajectory, for try number "+str(numTry))              
     if VERBOSE:
         print("Quadprog solved.")

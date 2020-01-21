@@ -556,7 +556,7 @@ def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
                                         viewer.client.gui.setVisibility(eeName+"_traj_"+str(pid),'ALWAYS_ON_TOP')                                                          
                         except ValueError as e :
                             print("ERROR in generateEndEffectorTraj :")
-                            print(e.message)
+                            print(e)
                             return stopHere()                    
                     else : 
                         print("End effector method choosen do not allow retries, abort here.")
