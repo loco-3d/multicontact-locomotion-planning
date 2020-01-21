@@ -4,7 +4,7 @@ from mlp.utils.cs_tools import *
 import mlp.config as cfg
 
 
-from hpp.corbaserver.rbprm.talos_fixedUpper import Robot # change robot here
+from talos_rbprm.talos_fixedUpper import Robot # change robot here
 ENV_NAME = "multicontact/ground"
 
 fb,v = display_tools.initScene(Robot,ENV_NAME,False)

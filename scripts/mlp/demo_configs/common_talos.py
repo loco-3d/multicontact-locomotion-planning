@@ -1,4 +1,4 @@
-from hpp.corbaserver.rbprm.talos import Robot
+from talos_rbprm.talos import Robot
 MASS = 90.27
 
 GUIDE_STEP_SIZE = 1.
