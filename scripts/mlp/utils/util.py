@@ -402,8 +402,8 @@ def computeEffectorRotationBetweenStates(contact_phase,next_phase):
     try:
         res = abs(math.acos((tR-1.)/2.))
     except ValueError,e:
-        print "WARNING : when computing rotation between two contacts, got error : ",e.message
-        print "With trace value = ",tR
+        print("WARNING : when computing rotation between two contacts, got error : ",e.message)
+        print("With trace value = ",tR)
         res = 0.
     return res
 
@@ -418,17 +418,17 @@ def fullBodyStatesExists(cs,fb):
 def createFullbodyStatesFromCS(cs,fb):
     lastId = fullBodyStatesExists(cs,fb)
     if lastId > 0 :
-        print "States already exist in fullBody instance. endId = ",lastId
+        print("States already exist in fullBody instance. endId = ",lastId)
         return 0,lastId
     phase_prev = cs.contact_phases[0]
     beginId = createStateFromPhase(fb,phase_prev)
     lastId = beginId
-    print "CreateFullbodyStateFromCS ##################"
-    print "beginId = ",beginId
+    print("CreateFullbodyStateFromCS ##################")
+    print("beginId = ",beginId)
     for pid,phase in enumerate(cs.contact_phases[1:]) : 
         if not phasesHaveSameConfig(phase_prev,phase):
             lastId = createStateFromPhase(fb,phase)
-            print "add phase "+str(pid)+" at state index : "+str(lastId)            
+            print("add phase "+str(pid)+" at state index : "+str(lastId))            
             phase_prev = phase
     return beginId, lastId
 

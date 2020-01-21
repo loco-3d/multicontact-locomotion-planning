@@ -628,10 +628,10 @@ class BezierTrajectory(RefTrajectory):
   
   def compute_for_normalized_time(self,t):
     if t < 0:
-      print "Trajectory called with negative time."
+      print("Trajectory called with negative time.")
       return self.compute_for_normalized_time(0)
     elif t > self.t_total:
-      print "Trajectory called after final time."
+      print("Trajectory called after final time.")
       return self.compute_for_normalized_time(self.t_total)
     self.M = SE3.Identity()    
     self.v = Motion.Zero()
@@ -698,10 +698,10 @@ class TrajectorySE3LinearInterp(RefTrajectory):
   
   def compute_for_normalized_time(self,t):
     if t < 0:
-      print "Trajectory called with negative time."
+      print("Trajectory called with negative time.")
       return self.compute_for_normalized_time(0)
     elif t > self.length:
-      print "Trajectory called after final time."
+      print("Trajectory called after final time.")
       return self.compute_for_normalized_time(self.t_total)    
     u = t/self.length
     self.M = SE3.Identity()
@@ -723,10 +723,10 @@ class HPPEffectorTrajectory (RefTrajectory):
 
   def __call__ (self, t):
     if t < 0. : 
-      print "Trajectory called with negative time."
+      print("Trajectory called with negative time.")
       t = 0.
     elif t > self._length:
-      print "Trajectory called after final time."
+      print("Trajectory called after final time.")
       t = self._length    
     return effectorPositionFromHPPPath(self._fb,self._problem,self._eeName,self._pid,t)
 

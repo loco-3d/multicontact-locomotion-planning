@@ -39,18 +39,18 @@ def computePhaseDuration(cs,pid):
         if duration_feet > 0.:
             duration_feet = math.ceil(duration_feet/cfg.SOLVER_DT)*cfg.SOLVER_DT
         if VERBOSE :
-            print "for phase : ",pid
-            print "dist_feet            : ",dist_feet
-            print "duration translation : ",duration_feet_trans
-            print "rot_feet             : ",rot_feet
-            print "duration rotation    : ",duration_feet_rot
-            print "duration complete    : ",duration_feet
+            print("for phase : ",pid)
+            print("dist_feet            : ",dist_feet)
+            print("duration translation : ",duration_feet_trans)
+            print("rot_feet             : ",rot_feet)
+            print("duration rotation    : ",duration_feet_rot)
+            print("duration complete    : ",duration_feet)
     return max(duration,duration_feet)
 
 ## straight line from the center of the support polygon of the current phase to the next one
 def generateCentroidalTrajectory(cs,cs_initGuess = None, fullBody = None, viewer = None):
     if cs_initGuess : 
-        print "WARNING : in centroidal.geometric, initial guess is ignored."
+        print("WARNING : in centroidal.geometric, initial guess is ignored.")
     cs_result = ContactSequenceHumanoid(cs)
     p0 = cs_result.contact_phases[0]
     com_z = p0.init_state[2,0]

@@ -11,7 +11,7 @@ elif method == "croccodyl":
     from .croccodyl import generateWholeBodyMotion
 elif method == "none":
     def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
-        print "Whole body motion not computed !"
+        print("Whole body motion not computed !")
         return None,None
 else : 
     raise ValueError("method type "+str(method)+" doesn't exist for wholeBody motion generation")

@@ -65,7 +65,7 @@ class Result:
         if cs:
             self.phases_intervals = self.buildPhasesIntervals(cs) #Correspondence between the contact phases and the indexes of discretized points in phase_intervals. This field have the same length as the number of contact phases in the motion, and each element is a range of Id.    
         else :
-            print "Result constructor called without contactSequence object, phase_interval member not initialized"
+            print("Result constructor called without contactSequence object, phase_interval member not initialized")
      
     # By definition of a contact sequence, at the state at the transition time between two contact phases
     # belong to both contact phases
@@ -184,7 +184,7 @@ class Result:
                  effector_references=self.effector_references,d_effector_references=self.d_effector_references,dd_effector_references=self.dd_effector_references,
                  contact_activity=self.contact_activity,phases_intervals=self.phases_intervals)
         
-        print "Results exported to ",filename
+        print("Results exported to ",filename)
         
     def qAtT(self,t):
         k = int(round(t/self.dt))

@@ -106,7 +106,7 @@ def dispWB():
         id += step
         elapsed = time.time() - t_start
         if elapsed > dt_display :
-            print "Warning : display not real time ! choose a greater time step for the display."
+            print("Warning : display not real time ! choose a greater time step for the display.")
         else : 
             time.sleep(dt_display - elapsed)
     # display last config if the total duration is not a multiple of the dt

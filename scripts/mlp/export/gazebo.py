@@ -14,4 +14,4 @@ def export(q_t):
             for k in range(7,len(q)):
                 line +=str(q[k,0])+" "
             f.write(line+"\n")
-    print "Motion exported in : ",filename
+    print("Motion exported in : ",filename)

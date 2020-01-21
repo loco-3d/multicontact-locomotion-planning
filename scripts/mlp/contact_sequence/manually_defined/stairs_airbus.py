@@ -64,5 +64,5 @@ setFinalState(cs,q=q_end)
 
 DEMO_NAME = "talos_stairsAirbus"
 filename = cfg.CONTACT_SEQUENCE_PATH + "/"+DEMO_NAME+".cs"
-print "Write contact sequence binary file : ",filename
+print("Write contact sequence binary file : ",filename)
 cs.saveAsBinary(filename)

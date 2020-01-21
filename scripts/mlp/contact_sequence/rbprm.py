@@ -43,7 +43,7 @@ def runRBPRMScript():
         scriptName = cfg.SCRIPT_ABSOLUTE_PATH
     else :
         scriptName = 'scenarios.'+cfg.SCRIPT_PATH+'.'+cfg.DEMO_NAME
-    print "Run RBPRM script : ",scriptName
+    print("Run RBPRM script : ",scriptName)
     cp = importlib.import_module(scriptName)
     if hasattr(cp,'beginId'):
         beginId = cp.beginId
@@ -56,7 +56,7 @@ def runRBPRMScript():
     return cp.fullBody,cp.v,beginId,endId
 
 def contactSequenceFromRBPRMConfigs(fb,beginId,endId):
-    print "generate contact sequence from planning : "
+    print("generate contact sequence from planning : ")
     n_states = endId-beginId + 1 
     # There could be either contact break, creation or repositionning between each adjacent states. 
     # But there should be only contacts break or creation between each adjacent contactPhases
@@ -67,7 +67,7 @@ def contactSequenceFromRBPRMConfigs(fb,beginId,endId):
     # for each contact state we must create 2 phase (one with all the contact and one with the next replaced contact(s) broken)
     for stateId in range(beginId,endId+1):
         if VERBOSE :
-            print "current state id = ",stateId
+            print("current state id = ",stateId)
         # %%%%%%%%%  add phase with all the contacts in the rbprm State: %%%%%%%%%%%%%
         phase = ContactPhaseHumanoid()
         current_config = fb.getConfigAtState(stateId)        
@@ -79,11 +79,11 @@ def contactSequenceFromRBPRMConfigs(fb,beginId,endId):
         else :
             next_variations = []
         if VERBOSE :
-            print "variations : ",next_variations
+            print("variations : ",next_variations)
         assert len(next_variations) <= 1 , "Several changes of contacts in adjacent states, not implemented yet !"
         if len(next_variations) == 0 :
             if VERBOSE:
-                print "no variations !"
+                print("no variations !")
             movingLimb = None
             contact_break = False
             contact_create=False
@@ -96,8 +96,8 @@ def contactSequenceFromRBPRMConfigs(fb,beginId,endId):
         else:
             contact_reposition = False
         if VERBOSE : 
-            print "movingLimb = ",movingLimb
-            print "break = "+str(contact_break)+ " ; create = "+str(contact_create)+ " ; reposition = "+str(contact_reposition)
+            print("movingLimb = ",movingLimb)
+            print("break = "+str(contact_break)+ " ; create = "+str(contact_create)+ " ; reposition = "+str(contact_reposition))
         
         if movingLimb or stateId == endId: # add a ContactPhase corresponding to the current state
             # Build the phase contact patches (placement and activity)
@@ -130,7 +130,7 @@ def contactSequenceFromRBPRMConfigs(fb,beginId,endId):
             phaseId += 1
             prev_phase = phase 
             if VERBOSE:
-                print "add a phase at id : ",phaseId-1
+                print("add a phase at id : ",phaseId-1)
             if contact_reposition :
                 # %%%%%% create intermediate state, by removing the contact repositionned betwen stateId and stateId+1 %%%%%%%% 
                 phase = ContactPhaseHumanoid()
@@ -154,7 +154,7 @@ def contactSequenceFromRBPRMConfigs(fb,beginId,endId):
                 phaseId += 1
                 prev_phase = phase 
                 if VERBOSE :
-                    print "add an intermediate contact phase at id : ",phaseId-1
+                    print("add an intermediate contact phase at id : ",phaseId-1)
             # end adding intermediate contact phase
         # end if movingLimb or stateId == endId
     # end for each stateId

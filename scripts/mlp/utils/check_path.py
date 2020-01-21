@@ -63,8 +63,8 @@ class PathChecker():
                     always_valid = False
                     first_invalid = self.dt*(float(i))
                 if self.verbose:
-                    print "Invalid config at t= ",self.dt*(float(i))
-                    print mess                    
+                    print("Invalid config at t= ",self.dt*(float(i)))
+                    print(mess)                    
                 else:
                     return always_valid,first_invalid
         return always_valid,first_invalid

@@ -292,7 +292,7 @@ def saveAllFigures(path_dir):
         fig.savefig(path_dir+"/"+str(fig._suptitle.get_text())+".eps",dpi=600)
 
 def plotALLFromWB(cs,res,display=True,save=False,path=None):
-    print "Plotting ..."
+    print("Plotting ...")
     plt.rcParams['axes.linewidth'] = plt.rcParams['font.size'] / 30.
     plt.rcParams['lines.linewidth'] = plt.rcParams['font.size'] / 30.    
     if res.c_t.any():
@@ -311,4 +311,4 @@ def plotALLFromWB(cs,res,display=True,save=False,path=None):
         plt.show(block = False)
     if save and path:
         saveAllFigures(path)
-    print "Plotting Done."
+    print("Plotting Done.")
