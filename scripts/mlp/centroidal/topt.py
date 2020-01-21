@@ -296,7 +296,7 @@ def generateCentroidalTrajectory(cs,cs_initGuess = None,fullBody=None, viewer =N
     
     #add all effector phases to the problem : 
     i = 0
-    for ee in list(effectors_phases.keys()):
+    for ee in effectors_phases.keys():
         for phase in effectors_phases[ee]:
             tp.setPhase(i, timeopt.phase(ee, phase[0],  phase[1],  phase[2].translation,  phase[2].rotation))
             i += 1

@@ -83,7 +83,7 @@ def plotEffectorRef(dict_refs,dt):
 def plotEffectorTraj(timeline,p_intervals,ref_dicts,traj_dicts):
     labels=["x (m)" , "y (m)" ,"z (m)", "dx (m/s)" , "dy (m/s)" ,"dz (m/s)","ddx (m/s^2)" , "ddy (m/s^2)" ,"ddz (m/s^2)"]
     colors = ['r','g','b']
-    for eeName in list(traj_dicts[0].keys()):
+    for eeName in traj_dicts[0].keys():
         fig, ax = plt.subplots(3,3)
         fig.canvas.set_window_title("Effector trajectory (dashed = reference) : "+eeName)
         fig.suptitle("Effector trajectory (dashed = reference) : "+eeName, fontsize=20)    
