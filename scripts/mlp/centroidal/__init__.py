@@ -34,7 +34,7 @@ elif method == "muscod":
     from .muscod import generateCentroidalTrajectory
 elif method == "none":
     def generateCentroidalTrajectory(cs,cs_initGuess = None,fullBody=None, viewer =None):
-        print "Centroidal trajectory not computed !"
+        print("Centroidal trajectory not computed !")
         return None
 else : 
     raise ValueError("method type "+str(method)+" doesn't exist for centroidal trajectory generation")

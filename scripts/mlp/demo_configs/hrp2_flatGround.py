@@ -1,5 +1,5 @@
 TIMEOPT_CONFIG_FILE = "cfg_softConstraints_hrp2.yaml"
-from common_hrp2 import *
+from .common_hrp2 import *
 SCRIPT_PATH = "demos"
 ENV_NAME = "multicontact/ground"
 

@@ -31,7 +31,7 @@ def plotEffectorRef(dict_refs,dt):
     colors = ['r','g','b']    
     # look for the maximal time in the trajectories :
     t_max = 0.
-    for trajs in dict_refs.itervalues():
+    for trajs in dict_refs.values():
         if len(trajs) > 0:
             if trajs[-1].time_interval[-1] > t_max:
                 t_max = trajs[-1].time_interval[-1]
@@ -42,7 +42,7 @@ def plotEffectorRef(dict_refs,dt):
     #print "last timeline = ",timeline[-1]
     #print "len timeline : ",timeline.shape
     # One plot for each effector present in the dict :
-    for eeName,trajs in dict_refs.iteritems():
+    for eeName,trajs in dict_refs.items():
         if len(trajs) > 0 :
             # first build matrices of position, velocity and acceleration (each is 3D)  :
             values = np.matrix(np.zeros([9,N]))
@@ -83,7 +83,7 @@ def plotEffectorRef(dict_refs,dt):
 def plotEffectorTraj(timeline,p_intervals,ref_dicts,traj_dicts):
     labels=["x (m)" , "y (m)" ,"z (m)", "dx (m/s)" , "dy (m/s)" ,"dz (m/s)","ddx (m/s^2)" , "ddy (m/s^2)" ,"ddz (m/s^2)"]
     colors = ['r','g','b']
-    for eeName in traj_dicts[0].keys():
+    for eeName in list(traj_dicts[0].keys()):
         fig, ax = plt.subplots(3,3)
         fig.canvas.set_window_title("Effector trajectory (dashed = reference) : "+eeName)
         fig.suptitle("Effector trajectory (dashed = reference) : "+eeName, fontsize=20)    
@@ -102,7 +102,7 @@ def plotEffectorTraj(timeline,p_intervals,ref_dicts,traj_dicts):
 def plotEffectorError(timeline,p_intervals,ref_dict,traj_dict):
     labels=["x (m)" , "y (m)" ,"z (m)"]
     colors = ['r','g','b']    
-    for eeName,traj in traj_dict.iteritems():
+    for eeName,traj in traj_dict.items():
         ref = ref_dict[eeName]
         fig, ax = plt.subplots(3,1)
         fig.canvas.set_window_title("Effector tracking error : "+eeName)
@@ -264,7 +264,7 @@ def plotContactForces(timeline,p_intervals,forces_dict,N):
     i = 0
     sum_f = np.matrix(np.zeros([1,N]))
     
-    for eeName,force in forces_dict.iteritems():    
+    for eeName,force in forces_dict.items():    
         ax.plot(timeline.T, force[0,:].T, color=colors[i],label = eeName)
         sum_f += force[0,:]
         i += 1
@@ -292,7 +292,7 @@ def saveAllFigures(path_dir):
         fig.savefig(path_dir+"/"+str(fig._suptitle.get_text())+".eps",dpi=600)
 
 def plotALLFromWB(cs,res,display=True,save=False,path=None):
-    print "Plotting ..."
+    print("Plotting ...")
     plt.rcParams['axes.linewidth'] = plt.rcParams['font.size'] / 30.
     plt.rcParams['lines.linewidth'] = plt.rcParams['font.size'] / 30.    
     if res.c_t.any():
@@ -301,7 +301,7 @@ def plotALLFromWB(cs,res,display=True,save=False,path=None):
     if res.dL_t.any():
         plotAMTraj(res.t_t,res.phases_intervals,res.L_t,res.dL_t,res.L_reference,res.dL_reference) 
         plotAMError(res.t_t,res.phases_intervals,res.L_t - res.L_reference)                
-    if res.effector_trajectories.values()[0].any():
+    if list(res.effector_trajectories.values())[0].any():
         plotEffectorTraj(res.t_t,res.phases_intervals,[res.effector_references,res.d_effector_references,res.d_effector_references],[res.effector_trajectories,res.d_effector_trajectories,res.dd_effector_trajectories])
         plotEffectorError(res.t_t,res.phases_intervals,res.effector_references,res.effector_trajectories)        
     plotContactForces(res.t_t,res.phases_intervals,res.contact_normal_force,res.N)
@@ -311,4 +311,4 @@ def plotALLFromWB(cs,res,display=True,save=False,path=None):
         plt.show(block = False)
     if save and path:
         saveAllFigures(path)
-    print "Plotting Done."
+    print("Plotting Done.")

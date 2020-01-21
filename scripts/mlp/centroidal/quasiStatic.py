@@ -18,9 +18,9 @@ def getTargetCOMPosition(fullBody,id_state):
         c = (cBreak + cCreate)/2.
     else :
         c = np.matrix(tab[1:4]).T 
-    print "c before shift : ",c
+    print("c before shift : ",c)
     c[2] += cfg.COM_SHIFT_Z
-    print "c after  shift : ",c
+    print("c after  shift : ",c)
     return c
 
 def moveToCOMPosition(phase,c,current_t,duration):
@@ -32,12 +32,12 @@ def moveToCOMPosition(phase,c,current_t,duration):
     
 def generateCentroidalTrajectory(cs,cs_initGuess = None,fullBody=None, viewer =None):
     if cs_initGuess :
-        print "WARNING : in centroidal.quasiStatic, initial guess is ignored."
+        print("WARNING : in centroidal.quasiStatic, initial guess is ignored.")
     if not fullBody : 
         raise ValueError("quasiStatic called without fullBody object.")
     beginId,endId = createFullbodyStatesFromCS(cs,fullBody)
-    print "beginid = ",beginId
-    print "endId   = ",endId
+    print("beginid = ",beginId)
+    print("endId   = ",endId)
     cs_result = ContactSequenceHumanoid(cs)
     def getPhaseDuration(sid,pid):
         if sid == endId:
@@ -59,8 +59,8 @@ def generateCentroidalTrajectory(cs,cs_initGuess = None,fullBody=None, viewer =N
     # Make the assumption that the CS was created with the generateContactSequence method from the same fb object
     id_phase = 0 
     for id_state in range(beginId,endId+1):
-        print "id_state = ",str(id_state)
-        print "id_phase = ",str(id_phase)
+        print("id_state = ",str(id_state))
+        print("id_phase = ",str(id_phase))
         phase_fixed = cs_result.contact_phases[id_phase] # phase where the CoM move and the contacts are fixed
         # set initial state to be the final one of the previous phase : 
         if id_phase > 1 :

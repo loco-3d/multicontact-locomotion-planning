@@ -342,11 +342,11 @@ def large_col_free_box(client,a,b,maxX = 0.2,maxY = 0.05 ,maxZ = 0.05, sizeObjec
     maxs = [maxX,maxX,maxY,maxY,maxZ,maxZ]
     
     if VERBOSE : 
-        print "compute constraints for segment : "+str(a)+" -> "+str(b)
-        print "center = ",center
-        print "x init = ",x
-        print "direction : ",x_dir
-        print "maxs = ",maxs
+        print("compute constraints for segment : "+str(a)+" -> "+str(b))
+        print("center = ",center)
+        print("x init = ",x)
+        print("direction : ",x_dir)
+        print("maxs = ",maxs)
     x_max = maxs[0] # initial max bounds of dichotomy 
     y_max = maxs[2]
     z_max = maxs[4]
@@ -357,7 +357,7 @@ def large_col_free_box(client,a,b,maxX = 0.2,maxY = 0.05 ,maxZ = 0.05, sizeObjec
     collision = not client.isBoxAroundAxisCollisionFree(center.tolist(),x_dir.tolist(),[x,x,y_prev,y_prev,z_prev,z_prev],sizeObject,margin)
     #assert not collision and "initial box is already in collision, limb-rrt path cannot be approximated by a straight line."    
     if collision :
-        print "!! initial box is already in collision, limb-rrt path cannot be approximated by a straight line." 
+        print("!! initial box is already in collision, limb-rrt path cannot be approximated by a straight line.") 
         return computeBoxVertices(client,center,x_dir,[x,x,y_prev,y_prev,z_prev,z_prev],sizeObject)
     # By dichotomy : find the maximal value for y,z with a uniform scaling leading to a collision-free box
     it = 0
@@ -383,9 +383,9 @@ def large_col_free_box(client,a,b,maxX = 0.2,maxY = 0.05 ,maxZ = 0.05, sizeObjec
         it += 1
         
     if VERBOSE : 
-        print "after dichotomy for uniform scaling : "
-        print "y = ",y
-        print "z = ",z
+        print("after dichotomy for uniform scaling : ")
+        print("y = ",y)
+        print("z = ",z)
     
     #Now we do the same along x axis : 
     found = True
@@ -403,7 +403,7 @@ def large_col_free_box(client,a,b,maxX = 0.2,maxY = 0.05 ,maxZ = 0.05, sizeObjec
         it += 1
         
     if VERBOSE : 
-        print "x = ",x
+        print("x = ",x)
        
     # now we try iteratively in each direction (non symetric) :
     success = True
@@ -428,7 +428,7 @@ def large_col_free_box(client,a,b,maxX = 0.2,maxY = 0.05 ,maxZ = 0.05, sizeObjec
             step /= 10.
             
     if VERBOSE : 
-        print "dimensions after iterative resizing : ",dim
+        print("dimensions after iterative resizing : ",dim)
     """    
     # reduce dimensions according to sizeObject :
     for k in range(3):
@@ -446,7 +446,7 @@ def large_col_free_box(client,a,b,maxX = 0.2,maxY = 0.05 ,maxZ = 0.05, sizeObjec
     """    
     points = computeBoxVertices(client,center,x_dir,dim,sizeObject)
     if VERBOSE :
-        print "final points list : ",points
+        print("final points list : ",points)
     return points
 
 
@@ -544,7 +544,7 @@ def filterWPs(fullBody,eeName,wps,t):
     res_t += [t[-1]]
     
     if VERBOSE :
-        print "# filter waypoints, before : "+str(len(wps))+" after : "+str(len(res))
+        print("# filter waypoints, before : "+str(len(wps))+" after : "+str(len(res)))
     return res,res_t    
 """
 # filter wp : remove "useless" waypoint. 
@@ -615,14 +615,14 @@ def computeProblemConstraints(pData,fullBody,pathId,t,eeName,viewer):
             splits+= [ti]
             if len(splits) > 1:
                 if splits[-1] == splits[-2] :
-                    print "Error in bezier_constrained : two adjacent constrained have the same switch time !!"
+                    print("Error in bezier_constrained : two adjacent constrained have the same switch time !!")
         if VERBOSE:
-            print "number of switch between constraints : ",len(splits)
-            print "splits timings : ",splits
+            print("number of switch between constraints : ",len(splits))
+            print("splits timings : ",splits)
         pDef.splits = np.array([splits]).T       
     else : 
         if VERBOSE :
-            print "Only one constraint set for the whole trajectory."
+            print("Only one constraint set for the whole trajectory.")
     # compute constraints around each line of the limb-rrt solution : 
     q_from = wps[0]
     p_from = contactPlacementFromConfig(fullBody,q_from,eeName)
@@ -635,7 +635,7 @@ def computeProblemConstraints(pData,fullBody,pathId,t,eeName,viewer):
         #    p_from.translation = pData.c1_            
         A,b = computeInequalitiesAroundLine(fullBody,p_from,p_to,eeName,groupName,viewer)
         if VERBOSE :
-            print "Inequalities computed."
+            print("Inequalities computed.")
         pDef.addInequality(A,b)        
         p_from = p_to.copy()
     if DISPLAY_CONSTRAINTS :
@@ -659,14 +659,14 @@ def generateConstrainedBezierTraj(time_interval,placement_init,placement_end,num
     pos_init = bezier_takeoff(bezier_takeoff.max())
     pos_end = bezier_landing(0)
     if VERBOSE :
-        print "bezier takeoff end : ",pos_init
-        print "bezier landing init : ",pos_end
+        print("bezier takeoff end : ",pos_init)
+        print("bezier landing init : ",pos_end)
     t_begin = predef_curves.times[id_middle]
     t_middle =  predef_curves.curves[id_middle].max()
     t_end = t_begin + t_middle
     if VERBOSE : 
-        print "t begin : ",t_begin
-        print "t end   : ",t_end
+        print("t begin : ",t_begin)
+        print("t end   : ",t_end)
     q_init = q_t[:,int(t_begin/cfg.IK_dt)] # after the predef takeoff
     q_end = q_t[:,int(t_end/cfg.IK_dt)]
     # compute limb-rrt path : 
@@ -730,19 +730,19 @@ def generateConstrainedBezierTraj(time_interval,placement_init,placement_end,num
         q = (_g *2.).flatten()
         try :
             if VERBOSE:
-                print "try to solve quadprog with "+str(numVars)+" variable"
+                print("try to solve quadprog with "+str(numVars)+" variable")
             res = quadprog_solve_qp(P,q,G,h)
             solved = True
         except ValueError:
             if VERBOSE:
-                print "Failed."            
+                print("Failed.")            
             numVars += 2
     if solved :
         if VERBOSE : 
-            print "Succeed."
+            print("Succeed.")
     else :
-        print "Constrained End effector Bezier method failed for all numbers of variables control points."
-        print "Return predef trajectory (may be in collision)."
+        print("Constrained End effector Bezier method failed for all numbers of variables control points.")
+        print("Return predef trajectory (may be in collision).")
         return 
     
     # retrieve the result of quadprog and create a bezier curve : 
@@ -760,7 +760,7 @@ def generateConstrainedBezierTraj(time_interval,placement_init,placement_end,num
     curves[id_middle] = bezier_middle
     pBezier = PolyBezier(curves)
     if VERBOSE :
-        print "time interval     = ",time_interval[1]-time_interval[0]
-        print "polybezier length = ",pBezier.max()
+        print("time interval     = ",time_interval[1]-time_interval[0])
+        print("polybezier length = ",pBezier.max())
     ref_traj = trajectories.BezierTrajectory(pBezier,placement_init,placement_end,time_interval)    
     return ref_traj    

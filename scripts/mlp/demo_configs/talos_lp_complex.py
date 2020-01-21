@@ -1,5 +1,5 @@
 TIMEOPT_CONFIG_FILE = "cfg_softConstraints_talos.yaml"
-from common_talos import *
+from .common_talos import *
 #SCRIPT_ABSOLUTE_PATH = "mpcroc.planner_scenarios.talos.lp_complex1"
 SCRIPT_ABSOLUTE_PATH = "mpcroc.planner_scenarios.talos.rubble_stairs"
 ENV_NAME = "multicontact/bauzil_ramp_simplified"

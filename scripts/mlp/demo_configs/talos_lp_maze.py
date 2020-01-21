@@ -1,5 +1,5 @@
 TIMEOPT_CONFIG_FILE = "cfg_softConstraints_talos.yaml"
-from common_talos import *
+from .common_talos import *
 SCRIPT_ABSOLUTE_PATH = "scenarios.sandbox.talos_maze"
 ENV_NAME = "multicontact/maze_easy"
 contact_generation_method = "lp" 

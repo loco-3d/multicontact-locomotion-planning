@@ -106,7 +106,7 @@ class PolyBezier:
                 self.dd_curves += [c.compute_derivate(2)]  
                 self.jerk_curves +=[c.compute_derivate(3)]
         else:
-            print "Derivatives curves were already computed"
+            print("Derivatives curves were already computed")
     
     def d(self,t):
         id,t = self.findIntervalAdjustTime(t)  

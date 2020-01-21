@@ -1,5 +1,5 @@
 TIMEOPT_CONFIG_FILE = "cfg_softConstraints_talos.yaml"
-from common_talos import *
+from .common_talos import *
 SCRIPT_ABSOLUTE_PATH = "mpcroc.planner_scenarios.talos.lp_slalom_debris"
 ENV_NAME = "multicontact/slalom_debris"
 

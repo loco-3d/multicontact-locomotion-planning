@@ -609,11 +609,11 @@ class BezierTrajectory(RefTrajectory):
     self.t_total = curves.max()
     assert abs(self.t_total - (time_interval[1] - time_interval[0])) <= 1e-4, "time interval is not coherent with the length of the Bezier curves"
     assert len(curves.times)%2 == 0, "PolyBezier object contain an even number of curves, not implemented yet."
-    id_mid = len(curves.times)/2
+    id_mid = int(len(curves.times)/2)
     # retrieve the timings of the middle segment (duration and begin/end wrt to the other curves)
     self.t_mid_begin = curves.times[id_mid-1]
     self.t_mid_end = curves.times[id_mid]
-    self.t_mid = curves.curves[curves.numCurves()/2].max()
+    self.t_mid = curves.curves[int(curves.numCurves()/2)].max()
     
     curves.computeDerivates()
     
@@ -628,10 +628,10 @@ class BezierTrajectory(RefTrajectory):
   
   def compute_for_normalized_time(self,t):
     if t < 0:
-      print "Trajectory called with negative time."
+      print("Trajectory called with negative time.")
       return self.compute_for_normalized_time(0)
     elif t > self.t_total:
-      print "Trajectory called after final time."
+      print("Trajectory called after final time.")
       return self.compute_for_normalized_time(self.t_total)
     self.M = SE3.Identity()    
     self.v = Motion.Zero()
@@ -698,10 +698,10 @@ class TrajectorySE3LinearInterp(RefTrajectory):
   
   def compute_for_normalized_time(self,t):
     if t < 0:
-      print "Trajectory called with negative time."
+      print("Trajectory called with negative time.")
       return self.compute_for_normalized_time(0)
     elif t > self.length:
-      print "Trajectory called after final time."
+      print("Trajectory called after final time.")
       return self.compute_for_normalized_time(self.t_total)    
     u = t/self.length
     self.M = SE3.Identity()
@@ -723,10 +723,10 @@ class HPPEffectorTrajectory (RefTrajectory):
 
   def __call__ (self, t):
     if t < 0. : 
-      print "Trajectory called with negative time."
+      print("Trajectory called with negative time.")
       t = 0.
     elif t > self._length:
-      print "Trajectory called after final time."
+      print("Trajectory called after final time.")
       t = self._length    
     return effectorPositionFromHPPPath(self._fb,self._problem,self._eeName,self._pid,t)
 

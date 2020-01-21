@@ -169,7 +169,7 @@ def displayWBmotion(viewer,q_t,dt,dt_display):
         id += step
         elapsed = time.time() - t_start
         if elapsed > dt_display :
-            print "Warning : display not real time ! choose a greater time step for the display."
+            print("Warning : display not real time ! choose a greater time step for the display.")
         else : 
             time.sleep(dt_display - elapsed)
     # display last config if the total duration is not a multiple of the dt
@@ -211,7 +211,7 @@ def initScene(Robot,envName = "multicontact/ground",genLimbsDB = True):
     else : 
       fullBody.loadAllLimbs("static",nbSamples=1)
   except AttributeError:
-    print "WARNING initScene : fullBody do not have loadAllLimbs, some scripts may fails."
+    print("WARNING initScene : fullBody do not have loadAllLimbs, some scripts may fails.")
   ps = ProblemSolver(fullBody)
   vf = ViewerFactory (ps)
   vf.loadObstacleModel ("hpp_environments", envName, "planning")
@@ -219,6 +219,6 @@ def initScene(Robot,envName = "multicontact/ground",genLimbsDB = True):
     v = vf.createViewer( displayCoM = True)
     v(fullBody.getCurrentConfig())
   except Exception:
-    print "In initScene : no Viewer started."
+    print("In initScene : no Viewer started.")
     v = None
   return fullBody,v    

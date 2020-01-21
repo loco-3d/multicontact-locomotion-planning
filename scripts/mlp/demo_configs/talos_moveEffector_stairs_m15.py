@@ -1,5 +1,5 @@
 TIMEOPT_CONFIG_FILE = "cfg_softConstraints_talos_eff9.yaml"
-from common_talos import *
+from .common_talos import *
 SCRIPT_PATH = "memmo"
 #ENV_NAME = "multicontact/ground"
 

@@ -91,14 +91,14 @@ IK_store_contact_forces = False
 import importlib
 import sys
 if len(sys.argv)<2 : 
-    print "## WARNING : script called without specifying a demo config file (one of the file contained in mlp.demo_config)"
-    print "## Available demo files : "
+    print("## WARNING : script called without specifying a demo config file (one of the file contained in mlp.demo_config)")
+    print("## Available demo files : ")
     configs_path = PKG_PATH+"/scripts/mlp/demo_configs"
     demos_list = os.listdir(configs_path)
     for f in demos_list:
         if f.endswith(".py") and not f.startswith("__") and not f.startswith("common") : 
-            print f.rstrip(".py")
-    print "## Some data will be missing, scripts may fails. (cfg.Robot will not exist)"
+            print(f.rstrip(".py"))
+    print("## Some data will be missing, scripts may fails. (cfg.Robot will not exist)")
     #raise IOError("You must call this script with the name of the config file (one of the file contained in mlp.demo_config)")
 else :  
     import argparse
@@ -107,13 +107,13 @@ else :
     args = parser.parse_args()
     DEMO_NAME = args.demo_name
     DEMO_NAME = DEMO_NAME.rstrip(".py") # remove extension if specified
-    print "# Load demo config : ",DEMO_NAME
+    print("# Load demo config : ",DEMO_NAME)
     # Import the module
     try :
         demo_cfg = importlib.import_module('mlp.demo_configs.'+DEMO_NAME)
-    except ImportError, e:
-        print "Cannot load config file '"+DEMO_NAME+"' from mlp.demo_config, error : "
-        print e.message
+    except ImportError as e:
+        print("Cannot load config file '"+DEMO_NAME+"' from mlp.demo_config, error : ")
+        print(e)
         raise NameError("Cannot load config file '"+DEMO_NAME+"' from mlp.demo_config")
     # Determine a list of names to copy to the current name space
     names = getattr(demo_cfg, '__all__', [n for n in dir(demo_cfg) if not n.startswith('_')])

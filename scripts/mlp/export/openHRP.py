@@ -106,7 +106,7 @@ def generateOpenHRPMotion(res, path, project_name,useRefZMP = False):
         
     timeline = res.t_t
     N = len(timeline)
-    print "in generateOpenHRPMotion, N= ",N
+    print("in generateOpenHRPMotion, N= ",N)
     dt = DT
  
     delim = " "
@@ -129,7 +129,7 @@ def generateOpenHRPMotion(res, path, project_name,useRefZMP = False):
         file_zmp.write(line)
 
     file_zmp.close()
-    print "write file : ",filename_zmp
+    print("write file : ",filename_zmp)
     ## Posture trajectory ##
     filename_pos = filename_prefix + '.pos'
     file_pos = open(filename_pos, "w")
@@ -173,7 +173,7 @@ def generateOpenHRPMotion(res, path, project_name,useRefZMP = False):
         qout_l.append(np.matrix(np.concatenate(q_openhrp)))
 
     file_pos.close()
-    print "write file : ",filename_pos
+    print("write file : ",filename_pos)
 
     ## Waist orientation
     filename_hip = filename_prefix + '.hip'
@@ -187,7 +187,7 @@ def generateOpenHRPMotion(res, path, project_name,useRefZMP = False):
         line += eol
         file_hip.write(line)
     file_hip.close()
-    print "write file : ",filename_hip
+    print("write file : ",filename_hip)
 
     return qout_l
 
@@ -202,7 +202,7 @@ def writeKinematicsData(res, path, project_name):
 
     timeline = res.t_t
     N = len(timeline)
-    print "in write kinematic, number of points : ",N
+    print("in write kinematic, number of points : ",N)
     dt = DT
     delim = " "
     eol = "\n"
@@ -220,7 +220,7 @@ def writeKinematicsData(res, path, project_name):
         file_config.write(line)
 
     file_config.close()
-    print "write file : ",filename_config
+    print("write file : ",filename_config)
 
     ## Vel trajectory ##
     filename_vel = filename_prefix + '_vel.csv'
@@ -233,7 +233,7 @@ def writeKinematicsData(res, path, project_name):
         file_vel.write(line)
 
     file_vel.close()
-    print "write file : ",filename_vel
+    print("write file : ",filename_vel)
 
     ## Acc trajectory ##
     filename_acc = filename_prefix + '_acc.csv'
@@ -246,18 +246,18 @@ def writeKinematicsData(res, path, project_name):
         file_acc.write(line)
 
     file_acc.close()
-    print "write file : ",filename_acc
+    print("write file : ",filename_acc)
 
 
 def export(cs,res):
     rp = RosPack()
     urdf = rp.get_path(cfg.Robot.packageName)+'/urdf/'+cfg.Robot.urdfName+cfg.Robot.urdfSuffix+'.urdf'
     if cfg.WB_VERBOSE:
-        print "load robot : " ,urdf    
+        print("load robot : " ,urdf)    
     #srdf = "package://" + package + '/srdf/' +  cfg.Robot.urdfName+cfg.Robot.srdfSuffix + '.srdf'
     robot = RobotWrapper.BuildFromURDF(urdf, pin.StdVec_StdString(), pin.JointModelFreeFlyer(), False)
     if cfg.WB_VERBOSE:
-        print "robot loaded in export OpenHRP"    
+        print("robot loaded in export OpenHRP")    
   
     results = computeWaistData(robot,res)
     path = cfg.EXPORT_PATH+"/openHRP/"+cfg.DEMO_NAME

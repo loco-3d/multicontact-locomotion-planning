@@ -51,7 +51,7 @@ def exportCOM(path,c_t,dc_t,ddc_t):
             for i in range(3):
                 line += str(ddc_t[i,k])+" "    
             f.write(line.rstrip(" ")+"\n")
-    print "Motion exported to : ",filename
+    print("Motion exported to : ",filename)
     return
 
 def exportZMP(path,zmp_t):
@@ -66,7 +66,7 @@ def exportZMP(path,zmp_t):
             for i in range(7):
                 line += "0 "
             f.write(line.rstrip(" ")+"\n")
-    print "Motion exported to : ",filename                
+    print("Motion exported to : ",filename)                
     return
 
 def exportFoot(path,name,ref):
@@ -88,7 +88,7 @@ def exportFoot(path,name,ref):
             for i in range(12):
                 line += "0 "
             f.write(line.rstrip(" ")+"\n")            
-    print "Motion exported to : ",filename                
+    print("Motion exported to : ",filename)                
     return
 
 def exportWaist(path,waist_t):
@@ -104,7 +104,7 @@ def exportWaist(path,waist_t):
             for i in range(6):
                 line += "0 "
             f.write(line.rstrip(" ")+"\n")
-    print "Motion exported to : ",filename              
+    print("Motion exported to : ",filename)              
     return
 
 # phase : 0 for double support, +1 for left foot only, -1 for right foot only
@@ -118,7 +118,7 @@ def exportPhase(path,act_left,act_right):
             else : 
                 phase = act_left[0,k] - act_right[0,k]
             f.write(str(phase)+" 0 0\n") 
-    print "Motion exported to : ",filename     
+    print("Motion exported to : ",filename)     
     return
 
 # rho : 0 for single support, 
@@ -135,7 +135,7 @@ def exportRHO(path,f_left,f_right):
             else : 
                 rho = (f_left[0,k])/(f_left[0,k] + f_right[0,k])
             f.write(str(rho)+" 0 0\n") 
-    print "Motion exported to : ",filename                     
+    print("Motion exported to : ",filename)                     
     return
 
 

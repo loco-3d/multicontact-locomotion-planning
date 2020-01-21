@@ -56,24 +56,24 @@ def quadprog_solve_qp(P, q, G=None, h=None, C=None, d=None):
         meq = 0
         
     if VERBOSE > 1:
-        print "quadprog matrix size : "
-        print "G : ",qp_G.shape
-        print "a : ",qp_a.shape
-        print "C : ",qp_C.shape
-        print "b : ",qp_b.shape
-        print "meq = ",meq        
+        print("quadprog matrix size : ")
+        print("G : ",qp_G.shape)
+        print("a : ",qp_a.shape)
+        print("C : ",qp_C.shape)
+        print("b : ",qp_b.shape)
+        print("meq = ",meq)        
         
     qp_G = np.array(qp_G)
     qp_a = np.array(qp_a).flatten()
     qp_C = np.array(qp_C)
     qp_b = np.array(qp_b).flatten()
     if VERBOSE > 1:
-        print "quadprog array size : "
-        print "G : ",qp_G.shape
-        print "a : ",qp_a.shape
-        print "C : ",qp_C.shape
-        print "b : ",qp_b.shape
-        print "meq = ",meq
+        print("quadprog array size : ")
+        print("G : ",qp_G.shape)
+        print("a : ",qp_a.shape)
+        print("C : ",qp_C.shape)
+        print("b : ",qp_b.shape)
+        print("meq = ",meq)
         
     return quadprog.solve_qp(qp_G, qp_a, qp_C, qp_b, meq)[0]
 
@@ -88,26 +88,26 @@ def generateLimbRRTPath(q_init,q_end,phase_previous,phase,phase_next,fullBody) :
     s0 = createStateFromPhase(fullBody,phase_previous,q_init)
     s1 = createStateFromPhase(fullBody,phase_next,q_end)    
     if not fullBody.isConfigValid(q_init)[0]:
-        print "q_init invalid in limb-rrt : ",q_init        
+        print("q_init invalid in limb-rrt : ",q_init)        
         raise ValueError( "init config is invalid in limb-rrt.")
     if not fullBody.isConfigValid(q_end)[0]:
-        print "q_end invalid in limb-rrt : ",q_end
+        print("q_end invalid in limb-rrt : ",q_end)
         raise ValueError( "goal config is invalid in limb-rrt.")       
     if VERBOSE > 1: 
-        print "New state added, q_init = ",q_init
-        print "New state added, q_end = ",q_end
+        print("New state added, q_init = ",q_init)
+        print("New state added, q_end = ",q_end)
         contacts = fullBody.getAllLimbsInContact(s0)
         fullBody.setCurrentConfig(fullBody.getConfigAtState(s0))
-        print "contact at init state : ",contacts
+        print("contact at init state : ",contacts)
         for contact in contacts : 
             effName = cfg.Robot.dict_limb_joint[contact]
-            print "contact position for joint "+str(effName)+" = "+str(fullBody.getJointPosition(effName)[0:3])
+            print("contact position for joint "+str(effName)+" = "+str(fullBody.getJointPosition(effName)[0:3]))
         contacts = fullBody.getAllLimbsInContact(s1)
         fullBody.setCurrentConfig(fullBody.getConfigAtState(s1))        
-        print "contact at end  state : ",contacts
+        print("contact at end  state : ",contacts)
         for contact in contacts : 
             effName = cfg.Robot.dict_limb_joint[contact]
-            print "contact position for joint "+str(effName)+" = "+str(fullBody.getJointPosition(effName)[0:3])
+            print("contact position for joint "+str(effName)+" = "+str(fullBody.getJointPosition(effName)[0:3]))
 
     # create a path in hpp corresponding to the discretized trajectory in phase :
     dt = phase.time_trajectory[1] - phase.time_trajectory[0]
@@ -127,14 +127,14 @@ def generateLimbRRTPath(q_init,q_end,phase_previous,phase,phase_next,fullBody) :
     com0 = c_t.tolist()[0]
     com1 = c_t.tolist()[-1]      
     if VERBOSE > 1: 
-        print "init com : ",com0_fb
-        print "init ref : ",com0
-        print "end  com : ",com1_fb
-        print "end  ref : ",com1       
+        print("init com : ",com0_fb)
+        print("init ref : ",com0)
+        print("end  com : ",com1_fb)
+        print("end  ref : ",com1)       
     
     path_com_id = fullBody.generateComTraj(c_t.tolist(), v_t.tolist(), a_t.tolist(), dt)
     if VERBOSE :
-        print "add com reference as hpp path with id : ",path_com_id
+        print("add com reference as hpp path with id : ",path_com_id)
 
     # project this states to the new COM position in phase :
     """
@@ -154,10 +154,10 @@ def generateLimbRRTPath(q_init,q_end,phase_previous,phase,phase_next,fullBody) :
     
     # run limb-rrt in hpp : 
     if VERBOSE : 
-        print "start limb-rrt ... "
+        print("start limb-rrt ... ")
     paths_rrt_ids = fullBody.comRRTOnePhase(s0,s1,path_com_id,10)  
     if VERBOSE :
-        print "Limb-rrt returned path(s) : ",paths_rrt_ids
+        print("Limb-rrt returned path(s) : ",paths_rrt_ids)
     path_rrt_id= int(paths_rrt_ids[0])
     
     return path_rrt_id
@@ -203,15 +203,15 @@ def generateLimbRRTOptimizedTraj(time_interval,placement_init,placement_end,numT
     pos_init = predef_middle(0)
     pos_end = predef_middle(predef_middle.max())
     if VERBOSE :
-        print "generateLimbRRTOptimizedTraj, try number "+str(numTry)
-        print "bezier takeoff end : ",pos_init
-        print "bezier landing init : ",pos_end
+        print("generateLimbRRTOptimizedTraj, try number "+str(numTry))
+        print("bezier takeoff end : ",pos_init)
+        print("bezier landing init : ",pos_end)
     t_begin = predef_curves.times[id_middle]
     t_middle =  predef_middle.max()
     t_end = t_begin + t_middle
     if VERBOSE : 
-        print "t begin : ",t_begin
-        print "t end   : ",t_end
+        print("t begin : ",t_begin)
+        print("t end   : ",t_end)
     q_init = q_t[:,int(math.floor(t_begin/cfg.IK_dt))] # after the predef takeoff
     id_end = int(math.ceil(t_end/cfg.IK_dt))-1
     if id_end >= q_t.shape[1]: # FIXME : why does it happen ? usually it's == to the size when the bug occur
@@ -232,14 +232,14 @@ def generateLimbRRTOptimizedTraj(time_interval,placement_init,placement_end,numT
             id = numTry - offset
             break
     if VERBOSE:
-        print "weights_var id = ",id
+        print("weights_var id = ",id)
     if id >= len(weights_vars):
         raise ValueError("Max number of try allow to find a collision-end effector trajectory reached.")
     weight = weights_vars[id][0]
     varFlag = weights_vars[id][1]
     numVars = weights_vars[id][2]
     if VERBOSE : 
-        print "use weight "+str(weight)+" with num free var = "+str(numVars)
+        print("use weight "+str(weight)+" with num free var = "+str(numVars))
     # compute constraints for the end effector trajectories : 
     pData = bezier_com.ProblemData() 
     pData.c0_ = predef_middle(0)
@@ -263,10 +263,10 @@ def generateLimbRRTOptimizedTraj(time_interval,placement_init,placement_end,numT
     _H = ((1.-weight)*Cost_smooth.A + weight*Cost_distance.A)
     _g = ((1.-weight)*Cost_smooth.b + weight*Cost_distance.b) 
     if VERBOSE > 1:
-        print "A = ",_A
-        print "b = ",_b
-        print "H = ",_H
-        print "h = ",_g
+        print("A = ",_A)
+        print("b = ",_b)
+        print("H = ",_H)
+        print("h = ",_g)
     """  
     _A = np.array(_A)
     _b = np.array(_b)
@@ -284,46 +284,46 @@ def generateLimbRRTOptimizedTraj(time_interval,placement_init,placement_end,numT
     q = (_g *2.).flatten().T
     
     if VERBOSE > 1:
-        print "G = ",G
-        print "h = ",h
-        print "P = ",P
-        print "q = ",q
-        print "Shapes : "
-        print "G : ",G.shape
-        print "h : ",h.shape
-        print "P : ",P.shape
-        print "q : ",q .shape       
+        print("G = ",G)
+        print("h = ",h)
+        print("P = ",P)
+        print("q = ",q)
+        print("Shapes : ")
+        print("G : ",G.shape)
+        print("h : ",h.shape)
+        print("P : ",P.shape)
+        print("q : ",q .shape)       
         
     # solve the QP :
     solved = False
     try :
         res = quadprog_solve_qp(P,q,G,h)
         solved = True
-    except ValueError, e:
-        print "Quadprog error : "
-        print e.message
+    except ValueError as e:
+        print("Quadprog error : ")
+        print(e)
         raise ValueError("Quadprog failed to solve QP for optimized limb-RRT end-effector trajectory, for try number "+str(numTry))              
     if VERBOSE:
-        print "Quadprog solved."
+        print("Quadprog solved.")
     # build a bezier curve from the result of quadprog : 
     vars = np.split(res,numVars) 
     wps = bezier_com.computeEndEffectorConstantWaypoints(pData,t_middle) # one wp per column 
     if VERBOSE:
-        print "Constant waypoints computed."    
+        print("Constant waypoints computed.")    
     id_firstVar = 4 # depend on the flag defined above, but for end effector we always use this ones ... 
     i=id_firstVar
     for x in vars:
         wps[:,i] = np.matrix(x).T
         i +=1
     if VERBOSE:
-        print "Variables waypoints replaced by quadprog results."      
+        print("Variables waypoints replaced by quadprog results.")      
     bezier_middle = bezier(wps,t_middle)    
     # create concatenation with takeoff/landing 
     curves = predef_curves.curves[::]
     curves[id_middle] = bezier_middle
     pBezier = PolyBezier(curves)
     if VERBOSE :
-        print "time interval     = ",time_interval[1]-time_interval[0]
-        print "polybezier length = ",pBezier.max()
+        print("time interval     = ",time_interval[1]-time_interval[0])
+        print("polybezier length = ",pBezier.max())
     ref_traj = trajectories.BezierTrajectory(pBezier,placement_init,placement_end,time_interval)    
     return ref_traj        

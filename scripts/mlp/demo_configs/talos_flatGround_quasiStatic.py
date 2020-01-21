@@ -1,5 +1,5 @@
 TIMEOPT_CONFIG_FILE = "cfg_softConstraints_talos.yaml"
-from common_talos_fixedUpper import *
+from .common_talos_fixedUpper import *
 SCRIPT_PATH = "demos"
 ENV_NAME = "multicontact/ground"
 DEMO_NAME = "talos_flatGround"

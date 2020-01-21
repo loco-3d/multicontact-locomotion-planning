@@ -2,7 +2,7 @@ import mlp.config as cfg
 import mlp.viewer.display_tools as display_tools
 import os
 
-print "### MLP : contact sequence ###"
+print("### MLP : contact sequence ###")
 from mlp.contact_sequence import generateContactSequence
 cs,fullBody,viewer = generateContactSequence()
 
@@ -12,20 +12,20 @@ if cfg.WRITE_STATUS:
     f.close()
        
 if cfg.DISPLAY_CS:
-    raw_input("Press Enter to display the contact sequence ...")
+    input("Press Enter to display the contact sequence ...")
     display_tools.displayContactSequence(viewer,cs)    
 if cfg.SAVE_CS:
     if not os.path.exists(cfg.CONTACT_SEQUENCE_PATH):
         os.makedirs(cfg.CONTACT_SEQUENCE_PATH)    
     filename = cfg.CONTACT_SEQUENCE_PATH + "/"+cfg.DEMO_NAME+".cs"
-    print "Write contact sequence binary file : ",filename
+    print("Write contact sequence binary file : ",filename)
     cs.saveAsBinary(filename)    
 if cfg.DISPLAY_CS_STONES :
     display_tools.displaySteppingStones(cs,viewer.client.gui,viewer.sceneName,cfg.Robot)
     
 
-print "------------------------------"
-print "### MLP : centroidal, initial Guess ###"
+print("------------------------------")
+print("### MLP : centroidal, initial Guess ###")
 from mlp.centroidal import generateCentroidalInitGuess
 cs_initGuess = generateCentroidalInitGuess(cs,fullBody=fullBody,viewer=viewer)
 
@@ -33,8 +33,8 @@ if cfg.DISPLAY_INIT_GUESS_TRAJ and cs_initGuess:
     colors = [viewer.color.red, viewer.color.yellow]
     display_tools.displayCOMTrajectory(cs_initGuess,viewer.client.gui,viewer.sceneName,colors,"_init")    
 
-print "------------------------------"
-print "### MLP : centroidal  ###"
+print("------------------------------")
+print("### MLP : centroidal  ###")
 from mlp.centroidal import generateCentroidalTrajectory
 cs_com = generateCentroidalTrajectory(cs,cs_initGuess,fullBody,viewer)
 
@@ -47,7 +47,7 @@ if cfg.SAVE_CS_COM:
     if not os.path.exists(cfg.CONTACT_SEQUENCE_PATH):
         os.makedirs(cfg.CONTACT_SEQUENCE_PATH)     
     filename = cfg.CONTACT_SEQUENCE_PATH + "/"+cfg.DEMO_NAME+"_COM.cs"
-    print "Write contact sequence binary file with centroidal trajectory : ",filename
+    print("Write contact sequence binary file with centroidal trajectory : ",filename)
     cs_com.saveAsBinary(filename) 
 if cfg.DISPLAY_COM_TRAJ:
     colors = [viewer.color.blue, viewer.color.green]
@@ -56,8 +56,8 @@ if cfg.PLOT_CENTROIDAL:
     from mlp.utils.plot import plotCOMTrajFromCS
     plotCOMTrajFromCS(cs_com)
     
-print "------------------------------"
-print "### MLP : whole-body  ###"
+print("------------------------------")
+print("### MLP : whole-body  ###")
 from mlp.wholebody import generateWholeBodyMotion
 res,robot = generateWholeBodyMotion(cs_com,fullBody,viewer)
 
@@ -75,12 +75,12 @@ if cfg.WRITE_STATUS:
 
 if cfg.CHECK_FINAL_MOTION :
     from mlp.utils import check_path
-    print "## Begin validation of the final motion (collision and joint-limits)"
+    print("## Begin validation of the final motion (collision and joint-limits)")
     validator = check_path.PathChecker(fullBody,cs_com,res.nq,True)
     motion_valid,t_invalid = validator.check_motion(res.q_t)
-    print "## Check final motion, valid = ",motion_valid
+    print("## Check final motion, valid = ",motion_valid)
     if not motion_valid:
-        print "## First invalid time : ",t_invalid
+        print("## First invalid time : ",t_invalid)
     if cfg.WRITE_STATUS:
         f = open(cfg.STATUS_FILENAME,"a")
         f.write("motion_valid: "+str(motion_valid)+"\n")
@@ -90,7 +90,7 @@ elif res:
 else :
     motion_valid = False
 if cfg.DISPLAY_WB_MOTION:
-    raw_input("Press Enter to display the whole body motion ...")
+    input("Press Enter to display the whole body motion ...")
     display_tools.displayWBmotion(viewer,res.q_t,cfg.IK_dt,cfg.DT_DISPLAY)
 
 if cfg.PLOT:
@@ -118,7 +118,7 @@ if cfg.EXPORT_EFF_IN_CS:
     from mlp.utils.util import addEffectorTrajectoryInCS
     cs_com = addEffectorTrajectoryInCS(cs_com,res)
     filename = cfg.CONTACT_SEQUENCE_PATH + "/" + cfg.DEMO_NAME + "_COM_eff.cs"
-    print "Write contact sequence binary file with effector trajectories : ", filename
+    print("Write contact sequence binary file with effector trajectories : ", filename)
     cs_com.saveAsBinary(filename)
 
 

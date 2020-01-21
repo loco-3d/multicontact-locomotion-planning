@@ -270,14 +270,14 @@ def addInitShift(cs):
 
 def generateCentroidalTrajectory(cs,cs_initGuess = None,fullBody=None, viewer =None):
     if cs_initGuess:
-        print "WARNING : in current implementation of timeopt.generateCentroidalTrajectory the initial guess is ignored. (TODO)"
+        print("WARNING : in current implementation of timeopt.generateCentroidalTrajectory the initial guess is ignored. (TODO)")
     q_init = cs.contact_phases[0].reference_configurations[0].copy()
     num_phases = cs.size()
     ee_ids = [timeopt.EndeffectorID.RF, timeopt.EndeffectorID.LF,timeopt.EndeffectorID.RH,timeopt.EndeffectorID.LH]
     
     effectors_phases,size = extractAllEffectorsPhasesFromCS(cs,cs_initGuess,ee_ids)
     #print "final dic : ",effectors_phases
-    print "final number of phases : ", size    
+    print("final number of phases : ", size)    
     # initialize timeopt problem : 
     tp = timeopt.problem(size)
     com_init = cs.contact_phases[0].init_state[:3]
@@ -296,21 +296,21 @@ def generateCentroidalTrajectory(cs,cs_initGuess = None,fullBody=None, viewer =N
     
     #add all effector phases to the problem : 
     i = 0
-    for ee in effectors_phases.keys():
+    for ee in list(effectors_phases.keys()):
         for phase in effectors_phases[ee]:
             tp.setPhase(i, timeopt.phase(ee, phase[0],  phase[1],  phase[2].translation,  phase[2].rotation))
             i += 1
     if cfg.USE_WP_COST:
         addCOMviapoints(tp,cs,cs_initGuess,viewer)
     cfg_path=cfg.TIME_OPT_CONFIG_PATH + '/'+  cfg.TIMEOPT_CONFIG_FILE
-    print "set configuration file for time-optimization : ",cfg_path
+    print("set configuration file for time-optimization : ",cfg_path)
     tp.setConfigurationFile(cfg_path)
     tp.setTimeoptSolver(cfg_path)
     tStart = time.time()
     tp.solve()
     tTimeOpt = time.time() - tStart
-    print "timeopt problem solved in : "+str(tTimeOpt)+" s"
-    print "write results in cs"
+    print("timeopt problem solved in : "+str(tTimeOpt)+" s")
+    print("write results in cs")
     
     cs_result = fillCSFromTimeopt(cs,cs_initGuess,tp)
     if cfg.TIME_SHIFT_COM > 0 :

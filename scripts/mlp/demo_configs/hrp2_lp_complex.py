@@ -1,5 +1,5 @@
 TIMEOPT_CONFIG_FILE = "cfg_softConstraints_hrp2.yaml"
-from common_hrp2 import *
+from .common_hrp2 import *
 SCRIPT_ABSOLUTE_PATH = "mpcroc.planner_scenarios.lp_complex"
 ENV_NAME = "multicontact/bauzil_ramp"
 

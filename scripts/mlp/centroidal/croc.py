@@ -54,12 +54,12 @@ def writeTrajInPhase(phase,c,current_t,start,end,append = False):
 # Not generic .... assume that there is always 2 contact phases for each state in fullBody        
 def generateCentroidalTrajectory(cs,cs_initGuess = None, fb = None, viewer = None):
     if cs_initGuess :
-        print "WARNING : in centroidal.croc, initial guess is ignored."
+        print("WARNING : in centroidal.croc, initial guess is ignored.")
     if not fb : 
         raise ValueError("CROC called without fullBody object.")
     beginId,endId = createFullbodyStatesFromCS(cs,fb)
-    print "beginid = ",beginId
-    print "endId   = ",endId
+    print("beginid = ",beginId)
+    print("endId   = ",endId)
     cs_result = ContactSequenceHumanoid(cs)
     if (2*(endId - beginId)+1) != cs.size():
         raise NotImplemented("Current implementation of CROC require to have 2 contact phases per States in fullBody")
@@ -68,12 +68,12 @@ def generateCentroidalTrajectory(cs,cs_initGuess = None, fb = None, viewer = Non
     # Make the assumption that the CS was created with the generateContactSequence method from the same fb object
     id_phase = 0 
     for id_state in range(beginId,endId):
-        print "id_state = ",str(id_state)
-        print "id_phase = ",str(id_phase)
+        print("id_state = ",str(id_state))
+        print("id_phase = ",str(id_phase))
         # First, compute the bezier curves between the states : 
         pid = fb.isDynamicallyReachableFromState(id_state,id_state+1,True,numPointsPerPhases=0)
         if len(pid) != 4:
-            print "# ERROR : Cannot compute CROC between states "+str(id_state)+" , "+str(id_state+1)
+            print("# ERROR : Cannot compute CROC between states "+str(id_state)+" , "+str(id_state+1))
             return cs
         c = fb.getPathAsBezier(int(pid[0]))
         # Now split and write the results in the correct contactPhases

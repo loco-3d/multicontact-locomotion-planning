@@ -1,5 +1,5 @@
 TIMEOPT_CONFIG_FILE = "cfg_softConstraints_hyq.yaml"
-from common_hyq import *
+from .common_hyq import *
 SCRIPT_PATH = "demos"
 ENV_NAME = "multicontact/slalom_debris"
 

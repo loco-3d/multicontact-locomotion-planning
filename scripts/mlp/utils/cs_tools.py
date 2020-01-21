@@ -101,12 +101,12 @@ def generateConfigFromPhase(fb,phase,projectCOM = False):
             n = computeContactNormal(placement).T.tolist()[0]
             state, success = StateHelper.addNewContact(state,limbId,p,n,1000)
             if not success :
-                print "Cannot project the configuration to contact, for effector : ",eeName
+                print("Cannot project the configuration to contact, for effector : ",eeName)
                 return state.q()
             if projectCOM:
                 success = projectCoMInSupportPolygon(state)
                 if not success :
-                    print "cannot project com to the middle of the support polygon."
+                    print("cannot project com to the middle of the support polygon.")
     phase.reference_configurations[0] = np.matrix(state.q()).T
 
     return state.q()
@@ -114,7 +114,7 @@ def generateConfigFromPhase(fb,phase,projectCOM = False):
         
 
 def removeContact(Robot,cs,eeName):
-    print "- Remove contact : ",eeName
+    print("- Remove contact : ",eeName)
     phase = ContactPhaseHumanoid(cs.contact_phases[-1])
     contactPatchForEffector(phase,eeName,Robot).active = False
     cs.contact_phases.append(phase)    
@@ -122,12 +122,12 @@ def removeContact(Robot,cs,eeName):
 # add one or two contact phases to the sequence in order to move the effector eeName 
 # to the desired placement
 def moveEffectorToPlacement(fb,v,cs,eeName,placement,initStateCenterSupportPolygon = True,projectCOM = False):
-    print "## Move effector "+eeName+" to placement : "+str(placement.translation.T)
+    print("## Move effector "+eeName+" to placement : "+str(placement.translation.T))
     prev_phase = cs.contact_phases[-1]
     if isContactActive(prev_phase,eeName,fb):
-        print "#Contact repositionning, add two new phases."
+        print("#Contact repositionning, add two new phases.")
         removeContact(fb,cs,eeName)
-    print "+ Contact creation : ",eeName
+    print("+ Contact creation : ",eeName)
     phase = ContactPhaseHumanoid(cs.contact_phases[-1])
     patch = contactPatchForEffector(phase,eeName,fb)
     patch.placement = placement
@@ -148,11 +148,11 @@ def moveEffectorToPlacement(fb,v,cs,eeName,placement,initStateCenterSupportPolyg
 # add one or two contact phases to the sequence in order to move the effector eeName of
 #the value in translation
 def moveEffectorOf(fb,v,cs,eeName,translation):
-    print "## Move effector "+eeName+" of : "+str(translation)
+    print("## Move effector "+eeName+" of : "+str(translation))
     prev_phase = cs.contact_phases[-1]
     assert isContactActive(prev_phase,eeName,fb), "Cannot use 'moveEffectorOf' if the effector is not in contact in the last phase."
     placement = getContactPlacement(prev_phase,eeName,fb).copy()
-    if isinstance(translation,types.ListType):
+    if type(translation) is list:
         translation = np.matrix(translation).T
     assert translation.shape[0] == 3 ,"translation must be a 3D vector"
     placement.translation += translation
@@ -181,7 +181,7 @@ def setFinalState(cs,com = None,q=None):
         com_y /= phase.numActivePatches() 
         com_z = phase.init_state[2]
         com = np.matrix([com_x,com_y,com_z]).T
-    elif isinstance(com,types.ListType):
+    elif type(com) is list:
         com = np.matrix(com).T
     state = phase.init_state.copy()
     state[0:3] = com

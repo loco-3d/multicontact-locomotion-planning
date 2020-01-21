@@ -204,7 +204,7 @@ def generateSmoothBezierTrajWithoutPredef(time_interval,placement_init,placement
     return ref_traj
 
 def generateSmoothBezierTraj(time_interval,placement_init,placement_end,numTry=None,q_t=None,phase_previous=None,phase=None,phase_next=None,fullBody=None,eeName=None,viewer=None):
-    if numTry > 0 :
+    if numTry and numTry > 0 :
         raise ValueError("generateSmoothBezierTraj will always produce the same trajectory, cannot be called with numTry > 0 ")    
     if cfg.EFF_T_PREDEF > 0 :
         return generateSmoothBezierTrajWithPredef(time_interval,placement_init,placement_end)

@@ -5,5 +5,5 @@ def generateCentroidalTrajectory(cs,cs_initGuess = None, fullBody = None, viewer
     cs_res = ContactSequenceHumanoid(0)
     filename = cfg.CONTACT_SEQUENCE_PATH + "/"+cfg.DEMO_NAME+"_COM.cs"
     cs_res.loadFromBinary(filename) 
-    print "Import contact sequence binary file : ",filename    
+    print("Import contact sequence binary file : ",filename)    
     return cs_res
