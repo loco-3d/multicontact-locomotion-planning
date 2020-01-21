@@ -111,7 +111,7 @@ else :
     # Import the module
     try :
         demo_cfg = importlib.import_module('mlp.demo_configs.'+DEMO_NAME)
-    except ImportError, e:
+    except ImportError as e:
         print("Cannot load config file '"+DEMO_NAME+"' from mlp.demo_config, error : ")
         print(e.message)
         raise NameError("Cannot load config file '"+DEMO_NAME+"' from mlp.demo_config")

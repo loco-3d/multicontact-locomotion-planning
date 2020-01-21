@@ -554,7 +554,7 @@ def generateWholeBodyMotion(cs,fullBody=None,viewer=None):
                                     if viewer and cfg.DISPLAY_ALL_FEET_TRAJ:
                                         display_tools.displaySE3Traj(ref_traj,viewer.client.gui,viewer.sceneName,eeName+"_traj_"+str(pid),cfg.Robot.dict_limb_color_traj[eeName] ,time_interval ,cfg.Robot.dict_offset[eeName])                               
                                         viewer.client.gui.setVisibility(eeName+"_traj_"+str(pid),'ALWAYS_ON_TOP')                                                          
-                        except ValueError,e :
+                        except ValueError as e :
                             print("ERROR in generateEndEffectorTraj :")
                             print(e.message)
                             return stopHere()                    
