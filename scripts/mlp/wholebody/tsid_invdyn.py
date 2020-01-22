@@ -560,8 +560,8 @@ def generateWholeBodyMotion(cs, fullBody=None, viewer=None):
                 #    phaseValid = False
                 if not phaseValid:
                     print("Phase " + str(pid) + " not valid at t = " + str(t_invalid))
-                    if t_invalid <= cfg.EFF_T_PREDEF or t_invalid >= (
-                        (t_phase_end - t_phase_begin) - cfg.EFF_T_PREDEF):
+                    if t_invalid <= cfg.EFF_T_PREDEF \
+                            or t_invalid >= ((t_phase_end - t_phase_begin) - cfg.EFF_T_PREDEF):
                         print("Motion is invalid during predefined phases, cannot change this.")
                         return stopHere()
                     if effectorCanRetry():
@@ -617,9 +617,9 @@ def generateWholeBodyMotion(cs, fullBody=None, viewer=None):
 
     if cfg.PLOT:
         from mlp.utils import plot
-        plot.plotEffectorRef(
-            stored_effectors_ref, dt
-        )  # plot inside this file, as we have access to the real Bezier object and not only the discretization stored in 'res' struct
+        # plot inside this file,
+        # as we have access to the real Bezier object and not only the discretization stored in 'res' struct
+        plot.plotEffectorRef(stored_effectors_ref, dt)
 
     assert (k_t == res.N - 1) and "res struct not fully filled."
     return res, pinRobot

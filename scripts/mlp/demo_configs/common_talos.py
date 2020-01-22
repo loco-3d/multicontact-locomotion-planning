@@ -90,6 +90,7 @@ gain_vector = np.matrix(  # gain vector for postural task
 masks_posture = np.matrix(np.ones(32)).T
 #masks_posture[:11] = 0
 
+# Reference config used by the wholeBody script, may be different than the one used by the planning (default value is the same as planning)
 IK_REFERENCE_CONFIG = np.matrix(
     Robot.referenceConfig
-).T  #Reference config used by the wholeBody script, may be different than the one used by the planning (default value is the same as planning)
+).T

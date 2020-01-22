@@ -34,9 +34,8 @@ placement = cs.contact_phases[0].RF_patch.placement.copy()  # take the previous 
 pos = placement.translation
 pos[0] += 0.15  # move of 15cm in the x direction
 placement.translation = pos
-moveEffectorToPlacement(
-    fb, v, cs, fb.rfoot,
-    placement)  # add a new contact phase, with a contact created for the right feet at the given placement
+# add a new contact phase, with a contact created for the right feet at the given placement :
+moveEffectorToPlacement(fb, v, cs, fb.rfoot, placement)
 
 print("number of contact phases in the contact sequence : ", cs.size())
 # There is now 3 contact phases (corresponding to one step)

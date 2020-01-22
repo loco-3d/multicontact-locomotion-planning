@@ -271,8 +271,8 @@ def addInitShift(cs):
     phase_init.final_state = s_final
     genSplinesForPhase(phase_init, 0., cfg.TIME_SHIFT_COM)
     # fill the rest of the phase with the trajectory in previous_phase
-    for i in range(1, len(prev_phase_init.time_trajectory)
-                   ):  # values for id = 0 are aready the last point in the trajectory computed by genSplinesForPhase
+    for i in range(1, len(prev_phase_init.time_trajectory)):
+        # values for id = 0 are aready the last point in the trajectory computed by genSplinesForPhase
         phase_init.time_trajectory.append(prev_phase_init.time_trajectory[i])
         phase_init.state_trajectory.append(prev_phase_init.state_trajectory[i])
         phase_init.control_trajectory.append(prev_phase_init.control_trajectory[i])

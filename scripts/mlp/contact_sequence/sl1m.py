@@ -30,7 +30,8 @@ def right_foot_constraints(transform):
     global __ineq_right_foot
     if __ineq_right_foot is None:
         filekin = os.environ[
-            "INSTALL_HPP_DIR"] + "/share/talos-rbprm/com_inequalities/feet_quasi_flat/talos_COM_constraints_in_RF_effector_frame_REDUCED.obj"
+            "INSTALL_HPP_DIR"] \
+            + "/share/talos-rbprm/com_inequalities/feet_quasi_flat/talos_COM_constraints_in_RF_effector_frame_REDUCED.obj"
         obj = load_obj(filekin)
         __ineq_right_foot = as_inequalities(obj)
     transform2 = transform.copy()
@@ -43,7 +44,8 @@ def left_foot_constraints(transform):
     global __ineq_left_foot
     if __ineq_left_foot is None:
         filekin = os.environ[
-            "INSTALL_HPP_DIR"] + "/share/talos-rbprm/com_inequalities/feet_quasi_flat/talos_COM_constraints_in_LF_effector_frame_REDUCED.obj"
+            "INSTALL_HPP_DIR"] \
+            + "/share/talos-rbprm/com_inequalities/feet_quasi_flat/talos_COM_constraints_in_LF_effector_frame_REDUCED.obj"
         obj = load_obj(filekin)
         __ineq_left_foot = as_inequalities(obj)
     transform2 = transform.copy()
@@ -61,7 +63,8 @@ def right_foot_in_lf_frame_constraints(transform):
     global __ineq_rf_in_rl
     if __ineq_rf_in_rl is None:
         filekin = os.environ[
-            "INSTALL_HPP_DIR"] + "/share/talos-rbprm/relative_effector_positions/talos_RF_constraints_in_LF_quasi_flat_REDUCED.obj"
+            "INSTALL_HPP_DIR"] \
+            + "/share/talos-rbprm/relative_effector_positions/talos_RF_constraints_in_LF_quasi_flat_REDUCED.obj"
         obj = load_obj(filekin)
         __ineq_rf_in_rl = as_inequalities(obj)
     transform2 = transform.copy()
@@ -73,7 +76,8 @@ def left_foot_in_rf_frame_constraints(transform):
     global __ineq_lf_in_rf
     if __ineq_lf_in_rf is None:
         filekin = os.environ[
-            "INSTALL_HPP_DIR"] + "/share/talos-rbprm/relative_effector_positions/talos_LF_constraints_in_RF_quasi_flat_REDUCED.obj"
+            "INSTALL_HPP_DIR"] \
+            + "/share/talos-rbprm/relative_effector_positions/talos_LF_constraints_in_RF_quasi_flat_REDUCED.obj"
         obj = load_obj(filekin)
         __ineq_lf_in_rf = as_inequalities(obj)
     transform2 = transform.copy()
@@ -113,7 +117,8 @@ def gen_pb(root_init, R, surfaces):
     ref_root_height = cfg.IK_REFERENCE_CONFIG[2, 0]
     lf_0 = array(root_init[0:3]) + array([0, 0.085, -ref_root_height])  # values for talos !
     rf_0 = array(root_init[0:3]) + array([0, -0.085, -ref_root_height])  # values for talos !
-    #init_floor_height = surfaces[0][0][2][0] # z value of the first surface in intersection with the rom in the initial configuration
+    #init_floor_height = surfaces[0][0][2][0]
+    # z value of the first surface in intersection with the rom in the initial configuration
     #lf_0[2] = init_floor_height
     #rf_0[2] = init_floor_height
     p0 = [lf_0, rf_0]

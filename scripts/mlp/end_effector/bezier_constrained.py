@@ -698,8 +698,8 @@ def computeProblemConstraints(pData, fullBody, pathId, t, eeName, viewer):
     # approximate the switching times (infos from limb-rrt)
     if len(t_paths) > 2:
         splits = []
-        t_ratio = t / t_paths[
-            -1]  # ratio between the imposed time of the bezier curve (t) and the "time" (a pseudo distance) of the solution of the rrt
+        # ratio between the imposed time of the bezier curve (t) and the "time" (a pseudo distance) of the solution of the rrt
+        t_ratio = t / t_paths[-1]
         for i in range(1, len(t_paths) - 1):
             ti = t_paths[i] * t_ratio
             if ti > t:
