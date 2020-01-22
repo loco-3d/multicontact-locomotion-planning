@@ -3,9 +3,8 @@ from .common_anymal import *
 SCRIPT_PATH = "memmo"
 ENV_NAME = "multicontact/ground"
 
-
-DURATION_INIT = 2. # Time to init the motion
-DURATION_FINAL = 2. # Time to stop the robot
+DURATION_INIT = 2.  # Time to init the motion
+DURATION_FINAL = 2.  # Time to stop the robot
 DURATION_FINAL_SS = 1.
 DURATION_SS = 2.
 DURATION_DS = 2.

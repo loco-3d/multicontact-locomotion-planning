@@ -4,73 +4,66 @@
 import mlp.config as cfg
 import numpy as np
 
+
 class PathChecker():
-    
-    def __init__(self,fullBody,cs,nq,verbose = False):
+    def __init__(self, fullBody, cs, nq, verbose=False):
         self.cs = cs
-        self.fullBody = fullBody # with effector collision disabled
-        self.nq = nq # without extradof, size of configs in q_t 
+        self.fullBody = fullBody  # with effector collision disabled
+        self.nq = nq  # without extradof, size of configs in q_t
         self.configSize = fullBody.getConfigSize()
         self.dt = cfg.IK_dt
-        self.check_step = int(cfg.CHECK_DT/cfg.IK_dt)
-        if self.check_step < 1 :
+        self.check_step = int(cfg.CHECK_DT / cfg.IK_dt)
+        if self.check_step < 1:
             self.check_step = 1
         self.verbose = verbose
-        self.extraDof =  int(fullBody.client.robot.getDimensionExtraConfigSpace())
-    
+        self.extraDof = int(fullBody.client.robot.getDimensionExtraConfigSpace())
+
     # convert to correct format for hpp, add extra dof if necessary
     # return valid,message  : valid = bool, message = string
-    def checkConfig(self,q_m):
-        q = [0]*self.configSize
+    def checkConfig(self, q_m):
+        q = [0] * self.configSize
         q[:self.nq] = q_m.T.tolist()[0]
         res = self.fullBody.isConfigValid(q)
-        return res[0],res[1]
-    
-    
-    
-    def qAtT(self,t,q_t):
-        for it in range(1,len(q_t)-1):
-            if t>(self.dt*(it-0.5)) and t<=(self.dt*(it+0.5)):
-                return q_t[it]    
-    
-    
-  
-    def phaseOfT(self,t_switch):
+        return res[0], res[1]
+
+    def qAtT(self, t, q_t):
+        for it in range(1, len(q_t) - 1):
+            if t > (self.dt * (it - 0.5)) and t <= (self.dt * (it + 0.5)):
+                return q_t[it]
+
+    def phaseOfT(self, t_switch):
         for i in range(self.cs.size()):
             p = self.cs.contact_phases[i]
-            if t_switch>=p.time_trajectory[0] and t_switch<=p.time_trajectory[-1]:
+            if t_switch >= p.time_trajectory[0] and t_switch <= p.time_trajectory[-1]:
                 return i
-        
-    
-    def phaseOfId(self,id):
-        t_switch = self.dt*float(id)
+
+    def phaseOfId(self, id):
+        t_switch = self.dt * float(id)
         return self.phaseOfT(t_switch)
-        
-    # return a bool (true = valid) and the time of the first invalid q (None if always valid): 
+
+    # return a bool (true = valid) and the time of the first invalid q (None if always valid):
     # if Verbose = True : check the complete motion before returning,
     # if False stop at the first invalid
-    def check_motion(self,q_t):
+    def check_motion(self, q_t):
         always_valid = True
         first_invalid = None
         i = -self.check_step
-        while i < q_t.shape[1]-1 :
+        while i < q_t.shape[1] - 1:
             i += self.check_step
             if i >= q_t.shape[1]:
-                i = q_t.shape[1]-1
-            valid,mess = self.checkConfig(q_t[:,i])
-            if not valid : 
-                if always_valid : # first invalid config
+                i = q_t.shape[1] - 1
+            valid, mess = self.checkConfig(q_t[:, i])
+            if not valid:
+                if always_valid:  # first invalid config
                     always_valid = False
-                    first_invalid = self.dt*(float(i))
+                    first_invalid = self.dt * (float(i))
                 if self.verbose:
-                    print("Invalid config at t= ",self.dt*(float(i)))
-                    print(mess)                    
+                    print("Invalid config at t= ", self.dt * (float(i)))
+                    print(mess)
                 else:
-                    return always_valid,first_invalid
-        return always_valid,first_invalid
-    
-    
-    
+                    return always_valid, first_invalid
+        return always_valid, first_invalid
+
     ############# old stuffs (need to be updated if necessary : #############
     """
     def check_postures(self,verbose = True):
