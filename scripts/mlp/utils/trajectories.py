@@ -5,6 +5,7 @@ from numpy.polynomial.polynomial import polyval
 from numpy.linalg import pinv
 import pinocchio as pin
 from pinocchio import SE3, log3, exp3, Motion, Quaternion
+from curves import SO3Linear
 from pinocchio.utils import zero as mat_zeros
 
 
@@ -611,8 +612,6 @@ class BezierTrajectory(RefTrajectory):
         self.curves = curves
         self.time_interval = time_interval
         self.t_total = curves.max() - curves.min()
-        print ("num curves : ",curves.num_curves())
-        print ("defined in "+str(curves.min())+" ; "+str(curves.max()))
         assert abs(self.t_total -
                    (time_interval[1] -
                     time_interval[0])) <= 1e-4, "time interval is not coherent with the length of the Bezier curves"
@@ -629,6 +628,9 @@ class BezierTrajectory(RefTrajectory):
         # derivates the piecewise, as it is faster to compute the derivates than evaluate the derivative at every iterations
         self.curves_d = self.curves.compute_derivate(1)
         self.curves_dd = self.curves.compute_derivate(2)
+
+        # create the orientation curve :
+        self.curve_rotation = SO3Linear(placement_init.rotation,placement_end.rotation,self.t_mid_begin,self.t_mid_end)
 
         self.M = SE3.Identity()
         self.v = Motion.Zero()
@@ -653,32 +655,9 @@ class BezierTrajectory(RefTrajectory):
         elif t >= self.t_mid_end:
             self.M.rotation = self.placement_end.rotation.copy()
         else:
-            # make a slerp between self.effector_placement[id][0] and [1] :
-            quat0 = Quaternion(self.placement_init.rotation)
-            quat1 = Quaternion(self.placement_end.rotation)
-            t_rot = t - self.t_mid_begin
-            """
-            print "t : ",t
-            print "t_mid_begin : ",self.t_mid_begin
-            print "t_rot : ",t_rot
-            print "t mid : ",self.t_mid
-            """
-            assert t_rot >= 0, "Error in the time intervals of the piecewise"
-            assert t_rot <= (self.t_mid + 1e-6), "Error in the time intervals of the piecewise"
-            u = t_rot / self.t_mid
-            # normalized time without the pre defined takeoff/landing phases
-            self.M.rotation = (quat0.slerp(u, quat1)).matrix()
-            # angular velocity :
-            dt = 0.001
-            u_dt = dt / self.t_mid
-            r_plus_dt = (quat0.slerp(u + u_dt, quat1)).matrix()
-            self.v.angular = pin.log3(self.M.rotation.T * r_plus_dt) / dt
-            r_plus2_dt = (quat0.slerp(u + (2. * u_dt), quat1)).matrix()
-            next_angular_velocity = pin.log3(r_plus_dt.T * r_plus2_dt) / dt
-            self.a.angular = (next_angular_velocity - self.v.angular) / dt
-            #r_plus_dt = (quat0.slerp(u+u_dt,quat1)).matrix()
-            #next_angular_vel = (pin.log3(self.M.rotation.T * r_plus_dt)/dt)
-            #self.a.angular = (next_angular_vel - self.v.angular)/dt
+            self.M.rotation = self.curve_rotation(t)
+            self.v.angular = self.curve_rotation.derivate(t,1)
+            self.a.angular = self.curve_rotation.derivate(t,2)
         return self.M, self.v, self.a
 
 
