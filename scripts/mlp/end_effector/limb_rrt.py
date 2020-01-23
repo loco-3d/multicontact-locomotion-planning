@@ -11,8 +11,7 @@ import math
 from mlp.utils.util import stdVecToMatrix, createStateFromPhase, effectorPositionFromHPPPath
 import eigenpy
 import hpp_bezier_com_traj as bezier_com
-from curves import bezier
-from mlp.utils.polyBezier import PolyBezier
+from curves import bezier, piecewise_bezier
 import quadprog
 eigenpy.switchToNumpyMatrix()
 from mlp.utils import trajectories
@@ -226,23 +225,23 @@ def generateLimbRRTOptimizedTraj(time_interval,
     if cfg.EFF_T_PREDEF > 0:
         predef_curves = generatePredefBeziers(time_interval, placement_init, placement_end)
     else:
-        predef_curves = generateSmoothBezierTraj(time_interval, placement_init, placement_end).curves
-    id_middle = int(math.floor(len(predef_curves.curves) / 2.))
-    predef_middle = predef_curves.curves[id_middle]
-    pos_init = predef_middle(0)
+        predef_curves = generateSmoothBezierTraj(time_interval, placement_init, placement_end)
+    id_middle = int(math.floor(predef_curves.num_curves() / 2.))
+    predef_middle = predef_curves.curve_at_index(id_middle)
+    pos_init = predef_middle(predef_middle.min())
     pos_end = predef_middle(predef_middle.max())
     if VERBOSE:
         print("generateLimbRRTOptimizedTraj, try number " + str(numTry))
         print("bezier takeoff end : ", pos_init)
         print("bezier landing init : ", pos_end)
-    t_begin = predef_curves.times[id_middle]
-    t_middle = predef_middle.max()
-    t_end = t_begin + t_middle
+    t_begin = predef_middle.min()
+    t_end = predef_middle.max()
+    t_middle = t_end - t_begin
     if VERBOSE:
         print("t begin : ", t_begin)
         print("t end   : ", t_end)
-    q_init = q_t[:, int(math.floor(t_begin / cfg.IK_dt))]  # after the predef takeoff
-    id_end = int(math.ceil(t_end / cfg.IK_dt)) - 1
+    q_init = q_t[:, int(math.floor( (t_begin - predef_curves.min() )/ cfg.IK_dt))]  # after the predef takeoff
+    id_end = int(math.ceil((t_end - predef_curves.min() ) / cfg.IK_dt)) - 1
     if id_end >= q_t.shape[1]:  # FIXME : why does it happen ? usually it's == to the size when the bug occur
         id_end = q_t.shape[1] - 1
     q_end = q_t[:, id_end]
@@ -273,15 +272,23 @@ def generateLimbRRTOptimizedTraj(time_interval,
         print("use weight " + str(weight) + " with num free var = " + str(numVars))
     # compute constraints for the end effector trajectories :
     pData = bezier_com.ProblemData()
-    pData.c0_ = predef_middle(0)
-    pData.dc0_ = predef_middle.derivate(0, 1)
-    pData.ddc0_ = predef_middle.derivate(0, 2)
-    pData.j0_ = predef_middle.derivate(0, 3)
+    pData.c0_ = predef_middle(predef_middle.min())
+    pData.dc0_ = predef_middle.derivate(predef_middle.min(), 1)
+    pData.ddc0_ = predef_middle.derivate(predef_middle.min(), 2)
+    pData.j0_ = predef_middle.derivate(predef_middle.min(), 3)
     pData.c1_ = predef_middle(predef_middle.max())
     pData.dc1_ = predef_middle.derivate(predef_middle.max(), 1)
     pData.ddc1_ = predef_middle.derivate(predef_middle.max(), 2)
     pData.j1_ = predef_middle.derivate(predef_middle.max(), 3)
-    pData.constraints_.flag_ = bezier_com.ConstraintFlag.INIT_POS | bezier_com.ConstraintFlag.INIT_VEL | bezier_com.ConstraintFlag.INIT_ACC | bezier_com.ConstraintFlag.END_ACC | bezier_com.ConstraintFlag.END_VEL | bezier_com.ConstraintFlag.END_POS | bezier_com.ConstraintFlag.INIT_JERK | bezier_com.ConstraintFlag.END_JERK | varFlag
+    pData.constraints_.flag_ = bezier_com.ConstraintFlag.INIT_POS \
+                               | bezier_com.ConstraintFlag.INIT_VEL \
+                               | bezier_com.ConstraintFlag.INIT_ACC \
+                               | bezier_com.ConstraintFlag.END_ACC \
+                               | bezier_com.ConstraintFlag.END_VEL \
+                               | bezier_com.ConstraintFlag.END_POS \
+                               | bezier_com.ConstraintFlag.INIT_JERK \
+                               | bezier_com.ConstraintFlag.END_JERK \
+                               | varFlag
     Constraints = bezier_com.computeEndEffectorConstraints(pData, t_middle)
     Cost_smooth = bezier_com.computeEndEffectorVelocityCost(pData, t_middle)
     Cost_distance = computeDistanceCostMatrices(fullBody, current_limbRRT_id, pData, t_middle, eeName)
@@ -350,13 +357,16 @@ def generateLimbRRTOptimizedTraj(time_interval,
         i += 1
     if VERBOSE:
         print("Variables waypoints replaced by quadprog results.")
-    bezier_middle = bezier(wps,0., t_middle)
+    bezier_middle = bezier(wps,t_begin, t_end)
     # create concatenation with takeoff/landing
-    curves = predef_curves.curves[::]
-    curves[id_middle] = bezier_middle
-    pBezier = PolyBezier(curves)
+    pBezier = piecewise_bezier()
+    for ci in range(predef_curves.num_curves()):
+        if ci == id_middle:
+            pBezier.append(bezier_middle)
+        else:
+            pBezier.append(predef_curves.curve_at_index(ci))
+
     if VERBOSE:
         print("time interval     = ", time_interval[1] - time_interval[0])
-        print("polybezier length = ", pBezier.max())
     ref_traj = trajectories.BezierTrajectory(pBezier, placement_init, placement_end, time_interval)
     return ref_traj
