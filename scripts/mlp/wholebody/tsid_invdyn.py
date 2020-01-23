@@ -12,6 +12,7 @@ import mlp.config as cfg
 import multicontact_api
 from multicontact_api import WrenchCone, SOC6, ContactPatch, ContactPhaseHumanoid, ContactSequenceHumanoid
 from mlp.utils import trajectories
+from curves import SE3Curve
 from mlp.utils.computation_tools import shiftZMPtoFloorAltitude
 import mlp.viewer.display_tools as display_tools
 import math
@@ -371,18 +372,16 @@ def generateWholeBodyMotion(cs, fullBody=None, viewer=None):
         am_traj = computeAMRefFromPhase(phase, time_interval)
         # add root's orientation ref from reference config :
         if cfg.USE_PLANNING_ROOT_ORIENTATION:
+            q_0 = SE3FromConfig(phase.reference_configurations[0])
             if phase_next:
-                root_traj = trajectories.TrajectorySE3LinearInterp(
-                    SE3FromConfig(phase.reference_configurations[0]),
-                    SE3FromConfig(phase_next.reference_configurations[0]), time_interval)
+                q_1 = SE3FromConfig(phase_next.reference_configurations[0])
             else:
-                root_traj = trajectories.TrajectorySE3LinearInterp(SE3FromConfig(phase.reference_configurations[0]),
-                                                                   SE3FromConfig(phase.reference_configurations[0]),
-                                                                   time_interval)
+                q_1 = SE3FromConfig(phase.reference_configurations[0])
+            root_traj = SE3Curve(q_0, q_1, time_interval[0], time_interval[1])
         else:
             # orientation such that the torso orientation is the mean between both feet yaw rotations:
             placement_init, placement_end = rootOrientationFromFeetPlacement(phase, phase_next)
-            root_traj = trajectories.TrajectorySE3LinearInterp(placement_init, placement_end, time_interval)
+            root_traj = SE3Curve(placement_init, placement_end, time_interval[0],time_interval[1])
         # add newly created contacts :
         for eeName in usedEffectors:
             if phase_prev and not isContactActive(phase_prev, eeName) and isContactActive(phase, eeName):
@@ -480,14 +479,14 @@ def generateWholeBodyMotion(cs, fullBody=None, viewer=None):
 
                 # root orientation :
                 sampleRoot = trajRoot.computeNext()
-                sampleRoot.pos(SE3toVec(root_traj(t)[0]))
-                sampleRoot.vel(MotiontoVec(root_traj(t)[1]))
+                sampleRoot.pos(SE3toVec(root_traj.evaluateAsSE3(t)))
+                sampleRoot.vel(MotiontoVec(root_traj.derivateAsMotion(t, 1)))
 
                 orientationRootTask.setReference(sampleRoot)
-                quat_waist = Quaternion(root_traj(t)[0].rotation)
+                quat_waist = Quaternion(root_traj.rotation(t))
                 res.waist_orientation_reference[:, k_t] = np.matrix(
                     [quat_waist.x, quat_waist.y, quat_waist.z, quat_waist.w]).T
-                res.d_waist_orientation_reference[:, k_t] = np.matrix((root_traj(t)[1]).angular)
+                res.d_waist_orientation_reference[:, k_t] = np.matrix(root_traj.derivateAsMotion(t, 1).angular)
                 res.dd_waist_orientation_reference[:, k_t] = np.matrix([0, 0, 0]).T
                 if cfg.WB_VERBOSE == 2:
                     print("### references given : ###")
