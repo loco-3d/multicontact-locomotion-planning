@@ -111,7 +111,6 @@ def createEffectorTasksDic(cs, robot):
 
 
 def computeCOMRefFromPhase(phase, time_interval):
-    #return trajectories.SmoothedCOMTrajectory("com_reference", phase, com_init, dt) # cubic interpolation from timeopt dt to tsid dt
     com_ref = trajectories.TwiceDifferentiableEuclidianTrajectory("com_reference")
     # rearrange discretized points from phase to numpy matrices :
     N = len(phase.time_trajectory)
@@ -129,7 +128,6 @@ def computeCOMRefFromPhase(phase, time_interval):
 
 
 def computeAMRefFromPhase(phase, time_interval):
-    #return trajectories.SmoothedCOMTrajectory("com_reference", phase, com_init, dt) # cubic interpolation from timeopt dt to tsid dt
     am_ref = trajectories.DifferentiableEuclidianTrajectory("am_reference")
     # rearrange discretized points from phase to numpy matrices :
     N = len(phase.time_trajectory)
