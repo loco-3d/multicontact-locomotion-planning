@@ -594,49 +594,63 @@ class TwiceDifferentiableEuclidianTrajectory(RefTrajectory):
 
 
 class BezierTrajectory(RefTrajectory):
+    """
+    Wrap piecewise-bezier curves from Curves package
+    """
     def __init__(self, curves, placement_init, placement_end, time_interval):
+        """
+        Constructor
+        :param curves: a piecewise curve
+        :param placement_init: SE3 object at the beginning of the motion
+        :param placement_end:  SE3 object at the end of the motion
+        :param time_interval: a tuple [t_min, t_max], the piecewise curve must be defined on this time interval
+        """
         RefTrajectory.__init__(self, "BezierTrajectory")
         self.placement_init = placement_init
         self.placement_end = placement_end
         self.curves = curves
         self.time_interval = time_interval
-        self.t_total = curves.max()
+        self.t_total = curves.max() - curves.min()
+        print ("num curves : ",curves.num_curves())
+        print ("defined in "+str(curves.min())+" ; "+str(curves.max()))
         assert abs(self.t_total -
                    (time_interval[1] -
                     time_interval[0])) <= 1e-4, "time interval is not coherent with the length of the Bezier curves"
-        assert len(curves.times) % 2 == 0, "PolyBezier object contain an even number of curves, not implemented yet."
-        id_mid = len(curves.times) // 2
-        # retrieve the timings of the middle segment (duration and begin/end wrt to the other curves)
-        self.t_mid_begin = curves.times[id_mid - 1]
-        self.t_mid_end = curves.times[id_mid]
-        self.t_mid = curves.curves[curves.numCurves() // 2].max()
+        assert curves.num_curves() % 2 == 1, "piecewise object contain an even number of curves, not implemented yet."
+        assert (curves.min() == time_interval[0] , "Piecewise curve must begin at t_min")
+        assert (curves.max() == time_interval[1] , "Piecewise curve must end at t_max")
 
-        curves.computeDerivates()
+        id_mid = curves.num_curves() // 2
+        # retrieve the timings of the middle segment (duration and begin/end wrt to the other curves)
+        self.t_mid_begin = curves.curve_at_index(id_mid).min()
+        self.t_mid_end = curves.curve_at_index(id_mid).max()
+        self.t_mid = self.t_mid_end - self.t_mid_begin
+
+        # derivates the piecewise, as it is faster to compute the derivates than evaluate the derivative at every iterations
+        self.curves_d = self.curves.compute_derivate(1)
+        self.curves_dd = self.curves.compute_derivate(2)
 
         self.M = SE3.Identity()
         self.v = Motion.Zero()
         self.a = Motion.Zero()
 
     def __call__(self, t):
-        return self.compute_for_normalized_time(t - self.time_interval[0])
-
-    def compute_for_normalized_time(self, t):
-        if t < 0:
-            print("Trajectory called with negative time.")
-            return self.compute_for_normalized_time(0)
-        elif t > self.t_total:
+        if t < self.time_interval[0]:
+            print("Trajectory called before initial time")
+            t = self.time_interval[0]
+        elif t > self.time_interval[1]:
             print("Trajectory called after final time.")
-            return self.compute_for_normalized_time(self.t_total)
+            t = self.time_interval[1]
         self.M = SE3.Identity()
         self.v = Motion.Zero()
         self.a = Motion.Zero()
         self.M.translation = self.curves(t)
-        self.v.linear = self.curves.d(t)
-        self.a.linear = self.curves.dd(t)
+        self.v.linear = self.curves_d(t)
+        self.a.linear = self.curves_dd(t)
         #rotation :
-        if self.curves.isInFirstNonZero(t):
+        if t <= self.t_mid_begin:
             self.M.rotation = self.placement_init.rotation.copy()
-        elif self.curves.isInLastNonZero(t):
+        elif t >= self.t_mid_end:
             self.M.rotation = self.placement_end.rotation.copy()
         else:
             # make a slerp between self.effector_placement[id][0] and [1] :
@@ -644,13 +658,13 @@ class BezierTrajectory(RefTrajectory):
             quat1 = Quaternion(self.placement_end.rotation)
             t_rot = t - self.t_mid_begin
             """
-      print "t : ",t
-      print "t_mid_begin : ",self.t_mid_begin
-      print "t_rot : ",t_rot
-      print "t mid : ",self.t_mid
-      """
-            assert t_rot >= 0, "Error in the time intervals of the polybezier"
-            assert t_rot <= (self.t_mid + 1e-6), "Error in the time intervals of the polybezier"
+            print "t : ",t
+            print "t_mid_begin : ",self.t_mid_begin
+            print "t_rot : ",t_rot
+            print "t mid : ",self.t_mid
+            """
+            assert t_rot >= 0, "Error in the time intervals of the piecewise"
+            assert t_rot <= (self.t_mid + 1e-6), "Error in the time intervals of the piecewise"
             u = t_rot / self.t_mid
             # normalized time without the pre defined takeoff/landing phases
             self.M.rotation = (quat0.slerp(u, quat1)).matrix()
