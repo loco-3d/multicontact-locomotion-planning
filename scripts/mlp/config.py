@@ -5,7 +5,7 @@ contact_generation_method_available = ["none", "load", "rbprm", "sl1m"]
 centroidal_initGuess_method_available = ["none", "geometric", "croc", "timeopt", "quasistatic"]
 centroidal_method_available = ["load", "geometric", "croc", "timeopt", "quasistatic", "muscod", "none"]
 wholebody_method_available = ["load", "tsid", "croccodyl", "none"]
-end_effector_method_available = ["smoothedFoot", "bezierPredef", "bezierConstrained", "limbRRT", "limbRRToptimized"]
+end_effector_method_available = ["smoothedFoot", "bezierPredef", "limbRRT", "limbRRToptimized"]
 
 ## methods setting : choose which method will be used to solve each subproblem : 
 contact_generation_method = "rbprm"

@@ -1,3 +1,4 @@
+# DEPRECATED
 import mlp.config as cfg
 import time
 import os
