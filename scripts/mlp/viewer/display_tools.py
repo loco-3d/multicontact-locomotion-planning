@@ -33,10 +33,10 @@ def displaySphere(viewer, pos, size=0.01, color=[0, 0, 0, 1]):
 
 def SE3ToViewerConfig(placement):
     q = [0] * 7
-    q[0:3] = placement.translation.T.tolist()[0]
+    q[0:3] = placement.translation.tolist()
     r = Quaternion(placement.rotation)
     q[6] = r.w
-    q[3:6] = r.coeffs().transpose().tolist()[0][0:3]
+    q[3:6] = r.coeffs().tolist()[0:3]
     return q
 
 

@@ -41,7 +41,7 @@ def findPhase(cs, t):
 
 
 def SE3toVec(M):
-    v = np.matrix(np.zeros((12, 1)))
+    v = np.zeros(12, 1)
     for j in range(3):
         v[j] = M.translation[j]
         v[j + 3] = M.rotation[j, 0]
@@ -51,7 +51,7 @@ def SE3toVec(M):
 
 
 def MotiontoVec(M):
-    v = np.matrix(np.zeros((6, 1)))
+    v = np.zeros(6, 1)
     for j in range(3):
         v[j] = M.linear[j]
         v[j + 3] = M.angular[j]
@@ -81,8 +81,8 @@ def MotionFromVec(vect):
     if vect.shape[0] != 6 or vect.shape[1] != 1:
         raise ValueError("MotionFromVec take as input a vector of size 6")
     m = Motion.Zero()
-    m.linear = np.matrix(vect[0:3])
-    m.angular = np.matrix(vect[3:6])
+    m.linear = np.array(vect[0:3])
+    m.angular = np.array(vect[3:6])
     return m
 
 
@@ -93,7 +93,7 @@ def stdVecToMatrix(std_vector):
     for vec in std_vector:
         vec_l.append(vec)
 
-    res = np.hstack(tuple(vec_l))
+    res = np.vstack(tuple(vec_l)).T
     return res
 
 
@@ -114,17 +114,17 @@ def numpy2DToList(m):
         if len(p.shape) == 1:  # array
             l += [p.tolist()]  # TODO : check this
         else:  # matrix
-            l += [p.T.tolist()[0]]
+            l += [p.tolist()]
     return l
 
 
 # assume that q.size >= 7 with root pos and quaternion(x,y,z,w)
 def SE3FromConfig(q):
     if isinstance(q, list):
-        q = np.matrix(q).T
+        q = np.array(q)
     placement = SE3.Identity()
     placement.translation = q[0:3]
-    r = Quaternion(q[6, 0], q[3, 0], q[4, 0], q[5, 0])
+    r = Quaternion(q[6], q[3], q[4], q[5])
     placement.rotation = r.matrix()
     return placement
 
@@ -240,7 +240,7 @@ def effectorPositionFromHPPPath(fb, problem, eeName, pid, t):
     # compute effector pos from q :
     fb.setCurrentConfig(q)
     p = fb.getJointPosition(eeName)[0:3]
-    return np.matrix(p).T
+    return np.array(p)
 
 
 def genAMTrajFromPhaseStates(t_init, t_end, init_state, final_state, init_control=None, final_control=None):
@@ -248,11 +248,11 @@ def genAMTrajFromPhaseStates(t_init, t_end, init_state, final_state, init_contro
     am_init = init_state[6:9]
     am_end = final_state[6:9]
     if init_control is None:
-        dAm_init = np.zeros([3, 1])
+        dAm_init = np.zeros([3])
     else:
         dAm_init = init_control[3:6]
     if final_control is None:
-        dAm_end = np.zeros([3, 1])
+        dAm_end = np.zeros([3])
     else:
         dAm_end = final_control[3:6]
     am_traj =  polynomial(am_init, dAm_init, am_end, dAm_end,t_init,t_end)
@@ -267,11 +267,11 @@ def genCOMTrajFromPhaseStates(t_init, t_end, init_state, final_state, init_contr
     v_init = init_state[3:6]
     v_end = final_state[3:6]
     if init_control is None:
-        a_init = np.zeros([3, 1])
+        a_init = np.zeros([3])
     else:
         a_init = init_control[0:3]
     if final_control is None:
-        a_end = np.zeros([3, 1])
+        a_end = np.zeros([3])
     else:
         a_end = final_control[0:3]
     com_traj = polynomial(p_init, v_init, a_init, p_end, v_end, a_end,t_init, t_end)
@@ -305,8 +305,8 @@ def connectPhaseTrajToFinalState(phase, duration):
     while t < t_end + dt / 2.:
         if t > t_end:  # may happen due to numerical imprecision
             t = t_end
-        state = np.matrix(np.zeros(9)).T
-        control = np.matrix(np.zeros(6)).T
+        state = np.zeros(9)
+        control = np.zeros(6)
         state[0:3] = com_traj(t)
         state[3:6] = vel_traj(t)
         control[0:3] = acc_traj(t)
@@ -333,7 +333,7 @@ def genSplinesForPhase(phase, current_t, duration, init_control=None):
     if init_control:
         phase.control_trajectory.append(init_control)
     else:
-        phase.control_trajectory.append(np.matrix(np.zeros(6)).T)
+        phase.control_trajectory.append(np.zeros(6))
     phase.time_trajectory.append(current_t)
     return connectPhaseTrajToFinalState(phase, duration)
 
@@ -376,7 +376,7 @@ def createStateFromPhase(fullBody, phase, q=None):
 
 
 def hppConfigFromMatrice(robot, q_matrix):
-    q = q_matrix.T.tolist()[0]
+    q = q_matrix.tolist()
     extraDof = robot.getConfigSize() - q_matrix.shape[0]
     assert extraDof >= 0, "Changes in the robot model happened."
     if extraDof > 0:
@@ -410,8 +410,8 @@ def computeEffectorTranslationBetweenStates(contact_phase, next_phase):
 
 # TODO : check if only one effector move and raise error
 def computeEffectorRotationBetweenStates(contact_phase, next_phase):
-    P = np.matrix(np.identity(3))
-    Q = np.matrix(np.identity(3))
+    P = np.identity(3)
+    Q = np.identity(3)
     if (not contact_phase.RF_patch.active and next_phase.RF_patch.active):
         P = next_phase.RF_patch.placement.rotation
         Q = contact_phase.RF_patch.placement.rotation
@@ -466,9 +466,9 @@ def createFullbodyStatesFromCS(cs, fb):
 # fill the given phase with a state, control and time trajectory such that the COM do not moe during all the phase (it stay at it's init_state position)
 def fillPhaseTrajWithZeros(phase, current_t, duration):
     dt = cfg.SOLVER_DT
-    state = np.matrix(np.zeros(9)).T
+    state = np.zeros(9)
     state[0:3] = phase.init_state[0:3]
-    control = np.matrix(np.zeros(6)).T
+    control = np.zeros(6)
     t = current_t
     t_end = current_t + duration
     while t < t_end + dt / 2.:
@@ -481,7 +481,7 @@ def fillPhaseTrajWithZeros(phase, current_t, duration):
 
 
 def computeContactNormal(placement):
-    z_up = np.matrix([0., 0., 1.]).T
+    z_up = np.array([0., 0., 1.])
     contactNormal = placement.rotation * z_up
     return contactNormal
 

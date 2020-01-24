@@ -82,9 +82,9 @@ def projectCoMInSupportPolygon(s):
 def generateConfigFromPhase(fb, phase, projectCOM=False):
     fb.usePosturalTaskContactCreation(False)
     contacts = getActiveContactLimbs(phase, fb)
-    #q = phase.reference_configurations[0].T.tolist()[0] # should be the correct config for the previous phase, if used only from high level helper methods
+    #q = phase.reference_configurations[0].tolist() # should be the correct config for the previous phase, if used only from high level helper methods
     q = fb.referenceConfig[::] + [0] * 6  # FIXME : more generic !
-    root = computeCenterOfSupportPolygonFromPhase(phase, fb).T.tolist()[0]
+    root = computeCenterOfSupportPolygonFromPhase(phase, fb).tolist()
     q[0:2] = root[0:2]
     q[2] += root[2] - fb.DEFAULT_COM_HEIGHT
     quat = Quaternion(rootOrientationFromFeetPlacement(phase, None)[0].rotation)
@@ -100,8 +100,8 @@ def generateConfigFromPhase(fb, phase, projectCOM=False):
         if placement_fb != placement_phase:  # add a threshold instead of 0 ? how ?
             # need to project the new contact :
             placement = getContactPlacement(phase, eeName, fb)
-            p = placement.translation.T.tolist()[0]
-            n = computeContactNormal(placement).T.tolist()[0]
+            p = placement.translation.tolist()
+            n = computeContactNormal(placement).tolist()
             state, success = StateHelper.addNewContact(state, limbId, p, n, 1000)
             if not success:
                 print("Cannot project the configuration to contact, for effector : ", eeName)
