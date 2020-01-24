@@ -503,17 +503,16 @@ def generateWholeBodyMotion(cs, fullBody=None, viewer=None):
                     if traj:
                         swingPhase = True  # there is an effector motion in this phase
                         sampleEff = effectorTraj.computeNext()
-                        traj_t = traj(t)
-                        sampleEff.pos(SE3toVec(traj_t[0]))
-                        sampleEff.vel(MotiontoVec(traj_t[1]))
+                        sampleEff.pos(SE3toVec(traj.evaluateAsSE3(t)))
+                        sampleEff.vel(MotiontoVec(traj.derivateAsMotion(t,1)))
                         dic_effectors_tasks[eeName].setReference(sampleEff)
                         if cfg.WB_VERBOSE == 2:
                             print("effector " + str(eeName) + " pos : " + str(sampleEff.pos()))
                             print("effector " + str(eeName) + " vel : " + str(sampleEff.vel()))
                         if cfg.IK_store_reference_effector:
-                            res.effector_references[eeName][:, k_t] = SE3toVec(traj_t[0])
-                            res.d_effector_references[eeName][:, k_t] = MotiontoVec(traj_t[1])
-                            res.dd_effector_references[eeName][:, k_t] = MotiontoVec(traj_t[2])
+                            res.effector_references[eeName][:, k_t] = SE3toVec(traj.evaluateAsSE3(t))
+                            res.d_effector_references[eeName][:, k_t] = MotiontoVec(traj.derivateAsMotion(t,1))
+                            res.dd_effector_references[eeName][:, k_t] = MotiontoVec(traj.derivateAsMotion(t,2))
                     elif cfg.IK_store_reference_effector:
                         if k_t == 0:
                             res.effector_references[eeName][:, k_t] = SE3toVec(

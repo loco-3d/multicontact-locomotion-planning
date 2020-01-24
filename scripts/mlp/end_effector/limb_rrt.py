@@ -1,20 +1,14 @@
 import mlp.config as cfg
-import time
-import os
-import pinocchio as pin
 from pinocchio import SE3
-from pinocchio.utils import *
 import numpy.linalg
-from multicontact_api import WrenchCone, SOC6, ContactSequenceHumanoid
 import numpy as np
 import math
 from mlp.utils.util import stdVecToMatrix, createStateFromPhase, effectorPositionFromHPPPath
 import eigenpy
 import hpp_bezier_com_traj as bezier_com
-from curves import bezier, piecewise_bezier
+from curves import bezier, piecewise_bezier, SE3Curve, piecewise_SE3
 import quadprog
 eigenpy.switchToNumpyMatrix()
-from mlp.utils import trajectories
 from mlp.end_effector.bezier_predef import generatePredefBeziers, generateSmoothBezierTraj
 
 VERBOSE = 1
@@ -227,7 +221,7 @@ def generateLimbRRTOptimizedTraj(time_interval,
     else:
         predef_curves = generateSmoothBezierTraj(time_interval, placement_init, placement_end)
     id_middle = int(math.floor(predef_curves.num_curves() / 2.))
-    predef_middle = predef_curves.curve_at_index(id_middle)
+    predef_middle = predef_curves.curve_at_index(id_middle).translation_curve()
     pos_init = predef_middle(predef_middle.min())
     pos_end = predef_middle(predef_middle.max())
     if VERBOSE:
@@ -359,14 +353,13 @@ def generateLimbRRTOptimizedTraj(time_interval,
         print("Variables waypoints replaced by quadprog results.")
     bezier_middle = bezier(wps,t_begin, t_end)
     # create concatenation with takeoff/landing
-    pBezier = piecewise_bezier()
+    pBezier = piecewise_SE3()
     for ci in range(predef_curves.num_curves()):
         if ci == id_middle:
-            pBezier.append(bezier_middle)
+            pBezier.append(SE3Curve(bezier_middle,placement_init.rotation, placement_end.rotation))
         else:
             pBezier.append(predef_curves.curve_at_index(ci))
 
     if VERBOSE:
         print("time interval     = ", time_interval[1] - time_interval[0])
-    ref_traj = trajectories.BezierTrajectory(pBezier, placement_init, placement_end, time_interval)
-    return ref_traj
+    return pBezier
