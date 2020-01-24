@@ -1,6 +1,7 @@
 import numpy as np
 import mlp.config as cfg
 import multicontact_api
+multicontact_api.switchToNumpyArray()
 from multicontact_api import WrenchCone, SOC6, ContactPatch, ContactPhaseHumanoid, ContactSequenceHumanoid
 from curves import bezier
 from mlp.utils.util import createStateFromPhase, phasesHaveSameConfig, createFullbodyStatesFromCS
@@ -42,11 +43,11 @@ def writeTrajInPhase(phase, c, current_t, start, end, append=False):
     for i in range(nsteps):
         #print "t curve = ",t
         #print "t tot = ",current_t + i*cfg.SOLVER_DT
-        x = np.matrix(np.zeros(9)).T
+        x = np.zeros(9)
         x[0:3] = c(t)
         x[3:6] = dc(t)
         #x[6:9] #am
-        u = np.matrix(np.zeros(6)).T
+        u = np.zeros(6)
         u[0:3] = ddc(t)
         #u[3:6] # am variation
         phase.state_trajectory.append(x)

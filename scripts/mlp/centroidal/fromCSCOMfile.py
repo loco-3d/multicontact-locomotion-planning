@@ -1,5 +1,7 @@
 import mlp.config as cfg
+import multicontact_api
 from multicontact_api import ContactSequenceHumanoid
+multicontact_api.switchToNumpyArray()
 
 
 def generateCentroidalTrajectory(cs, cs_initGuess=None, fullBody=None, viewer=None):

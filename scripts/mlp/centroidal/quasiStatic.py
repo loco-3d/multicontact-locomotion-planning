@@ -1,6 +1,8 @@
 import numpy as np
 import mlp.config as cfg
+import multicontact_api
 from multicontact_api import ContactPhaseHumanoid, ContactSequenceHumanoid
+multicontact_api.switchToNumpyArray()
 from mlp.utils.util import connectPhaseTrajToFinalState, createFullbodyStatesFromCS, fillPhaseTrajWithZeros, genSplinesForPhase
 
 ## Produce a centroidal trajectory where the CoM only move when the contact are fixed.
@@ -14,11 +16,14 @@ def getTargetCOMPosition(fullBody, id_state):
     success = tab[0]
     assert success, "2-pac failed for state id : " + str(id_state)
     if len(tab) == 7:
-        cBreak = np.matrix(tab[1:4]).T
-        cCreate = np.matrix(tab[4:7]).T
+        cBreak = np.array(tab[1:4]).reshape(-1)
+        cCreate = np.array(tab[4:7]).reshape(-1)
         c = (cBreak + cCreate) / 2.
+        print("shape c : ",c.shape)
     else:
-        c = np.matrix(tab[1:4]).T
+        c = np.array(tab[1:4]).reshape(-1)
+        print("shape c else : ",c.shape)
+
     print("c before shift : ", c)
     c[2] += cfg.COM_SHIFT_Z
     print("c after  shift : ", c)
@@ -27,7 +32,7 @@ def getTargetCOMPosition(fullBody, id_state):
 
 def moveToCOMPosition(phase, c, current_t, duration):
     # final com position equal to c
-    final_state = np.matrix(np.zeros(9)).T
+    final_state = np.zeros(9)
     final_state[0:3] = c
     phase.final_state = final_state
     genSplinesForPhase(phase, current_t, duration)
