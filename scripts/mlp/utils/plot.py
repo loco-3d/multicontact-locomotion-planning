@@ -54,16 +54,16 @@ def plotEffectorRef(dict_refs, dt):
             id_traj = 0
             traj = trajs[id_traj]
             # save current pos (or next) and use it when timing not inside bounds
-            pos = traj.evaluateAsSE3( traj.min()).translation
+            pos = traj.translation( traj.min() )
             for i, t in np.ndenumerate(timeline):
                 i = i[1]
                 #print "t =",t
                 if t > traj.max() and id_traj < (len(trajs) - 1):  # take next traj in list
-                    pos = traj.evaluateAsSE3( traj.max()).translation
+                    pos = traj.translation( traj.max())
                     id_traj += 1
                     traj = trajs[id_traj]
                     #print "new traj, t0 = ",traj.min()
-                if t >= traj.min() and t < traj.max():
+                if traj.min() <= t <= traj.max():
                     values[0:3, i] = traj.translation(t)
                     values[3:6, i] = traj.derivateAsMotion(t, 1).linear
                     values[6:9, i] = traj.derivateAsMotion(t, 2).linear
