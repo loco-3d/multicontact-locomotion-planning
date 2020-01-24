@@ -38,8 +38,8 @@ def plotEffectorRef(dict_refs, dt):
     t_max = 0.
     for trajs in dict_refs.values():
         if len(trajs) > 0:
-            if trajs[-1].time_interval[-1] > t_max:
-                t_max = trajs[-1].time_interval[-1]
+            if trajs[-1].max() > t_max:
+                t_max = trajs[-1].max()
     N = int(t_max / dt) + 1
     timeline = np.matrix([i * dt for i in range(N)])
     #print "plot : tmax = ",t_max
@@ -54,19 +54,19 @@ def plotEffectorRef(dict_refs, dt):
             id_traj = 0
             traj = trajs[id_traj]
             # save current pos (or next) and use it when timing not inside bounds
-            pos = traj.placement_init.translation
+            pos = traj.translation( traj.min() )
             for i, t in np.ndenumerate(timeline):
                 i = i[1]
                 #print "t =",t
-                if t > traj.time_interval[-1] and id_traj < (len(trajs) - 1):  # take next traj in list
-                    pos = traj.placement_end.translation
+                if t > traj.max() and id_traj < (len(trajs) - 1):  # take next traj in list
+                    pos = traj.translation( traj.max())
                     id_traj += 1
                     traj = trajs[id_traj]
-                    #print "new traj, t0 = ",traj.time_interval[0]
-                if t >= traj.time_interval[0] and t < traj.time_interval[-1]:
-                    values[0:3, i] = traj.curves(t - traj.time_interval[0])
-                    values[3:6, i] = traj.curves.d(t - traj.time_interval[0])
-                    values[6:9, i] = traj.curves.dd(t - traj.time_interval[0])
+                    #print "new traj, t0 = ",traj.min()
+                if traj.min() <= t <= traj.max():
+                    values[0:3, i] = traj.translation(t)
+                    values[3:6, i] = traj.derivateAsMotion(t, 1).linear
+                    values[6:9, i] = traj.derivateAsMotion(t, 2).linear
                     #print "add column ",i
                     #print " values : ",values[:,i]
                 else:

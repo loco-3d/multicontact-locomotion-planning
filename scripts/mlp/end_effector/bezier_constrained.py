@@ -1,3 +1,4 @@
+# DEPRECATED
 import mlp.config as cfg
 import time
 import os
@@ -12,7 +13,7 @@ from numpy import array, dot, vstack, hstack, asmatrix, identity
 from numpy.linalg import norm, inv
 from scipy.spatial import ConvexHull
 from tools.disp_bezier import *
-import hpp_spline
+import curves
 import hpp_bezier_com_traj as bezier_com
 from mlp.utils import trajectories
 import math
@@ -675,16 +676,20 @@ def computeProblemConstraints(pData, fullBody, pathId, t, eeName, viewer):
     groupName = "constraints_" + str(pathId)
     if DISPLAY_CONSTRAINTS:
         viewer.client.gui.createGroup(groupName)
-    pDef = hpp_spline.problemDefinition()
-    # set up problem definition :
-    pDef.flag = int(hpp_spline.constraint_flag.INIT_POS) | int(hpp_spline.constraint_flag.INIT_VEL) | int(
-        hpp_spline.constraint_flag.INIT_ACC) | int(hpp_spline.constraint_flag.INIT_JERK) | int(
-            hpp_spline.constraint_flag.END_POS) | int(hpp_spline.constraint_flag.END_VEL) | int(
-                hpp_spline.constraint_flag.END_ACC) | int(hpp_spline.constraint_flag.END_JERK)
-    pDef.costFlag = hpp_spline.derivative_flag.VELOCITY
+    pDef = curves.problemDefinition()
+    # set up problem definition : 
+    pDef.flag =  int(curves.constraint_flag.INIT_POS) \
+                 | int(curves.constraint_flag.INIT_VEL) \
+                 | int(curves.constraint_flag.INIT_ACC)\
+                 | int(curves.constraint_flag.INIT_JERK) \
+                 | int(curves.constraint_flag.END_POS) \
+                 | int(curves.constraint_flag.END_VEL) \
+                 | int(curves.constraint_flag.END_ACC) \
+                 | int(curves.constraint_flag.END_JERK)
+    pDef.costFlag = curves.derivative_flag.VELOCITY    
     pDef.start = pData.c0_
     pDef.end = pData.c1_
-    curveConstraints = hpp_spline.curve_constraints()
+    curveConstraints = curves.curve_constraints()
     curve_constraints.init_vel = pData.dc0_
     curve_constraints.init_acc = pData.ddc0_
     curve_constraints.init_jerk = pData.j0_
@@ -814,7 +819,7 @@ def generateConstrainedBezierTraj(time_interval,
         res = bezier_com.computeEndEffector(pData, t_middle)  #only used for comparison/debug ?
         bezier_unconstrained = res.c_of_t
         pDef.degree = bezier_unconstrained.degree
-        ineqConstraints = hpp_spline.generate_problem(pDef)
+        ineqConstraints = curves.generate_problem(pDef)
 
         # _ prefix = previous notation (in bezier_com_traj)
         # min        x' H x + 2 g' x
@@ -860,7 +865,7 @@ def generateConstrainedBezierTraj(time_interval,
         wps[:, i] = x
         i += 1
 
-    bezier_middle = hpp_spline.bezier(wps, t_middle)
+    bezier_middle = curves.bezier(wps,0., t_middle)
     # create concatenation with takeoff/landing
     curves = predef_curves.curves[::]
     curves[id_middle] = bezier_middle

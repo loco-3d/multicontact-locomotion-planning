@@ -1,5 +1,5 @@
 import pinocchio as pin
-from pinocchio import SE3, Quaternion, Force
+from pinocchio import SE3, Quaternion, Force, Motion
 import tsid
 import numpy as np
 from numpy.linalg import norm as norm
@@ -11,7 +11,7 @@ import gepetto.corbaserver
 import mlp.config as cfg
 import multicontact_api
 from multicontact_api import WrenchCone, SOC6, ContactPatch, ContactPhaseHumanoid, ContactSequenceHumanoid
-from mlp.utils import trajectories
+from curves import SE3Curve, piecewise
 from mlp.utils.computation_tools import shiftZMPtoFloorAltitude
 import mlp.viewer.display_tools as display_tools
 import math
@@ -110,9 +110,7 @@ def createEffectorTasksDic(cs, robot):
     return res
 
 
-def computeCOMRefFromPhase(phase, time_interval):
-    #return trajectories.SmoothedCOMTrajectory("com_reference", phase, com_init, dt) # cubic interpolation from timeopt dt to tsid dt
-    com_ref = trajectories.TwiceDifferentiableEuclidianTrajectory("com_reference")
+def computeCOMRefFromPhase(phase):
     # rearrange discretized points from phase to numpy matrices :
     N = len(phase.time_trajectory)
     timeline = np.matrix(np.zeros(N))
@@ -124,13 +122,14 @@ def computeCOMRefFromPhase(phase, time_interval):
         c[:, i] = phase.state_trajectory[i][0:3]
         dc[:, i] = phase.state_trajectory[i][3:6]
         ddc[:, i] = phase.control_trajectory[i][0:3]
-    com_ref.computeFromPoints(timeline, c, dc, ddc)
-    return com_ref
+    # com_ref = piecewise.FromPointsList(c,dc,ddc,timeline.T) # do not produce the correct trajectories !
+    com_pos_ref = piecewise.FromPointsList(c,timeline.T)
+    com_vel_ref = piecewise.FromPointsList(dc,timeline.T)
+    com_acc_ref = piecewise.FromPointsList(ddc,timeline.T)
+    return [com_pos_ref,com_vel_ref,com_acc_ref]
 
 
-def computeAMRefFromPhase(phase, time_interval):
-    #return trajectories.SmoothedCOMTrajectory("com_reference", phase, com_init, dt) # cubic interpolation from timeopt dt to tsid dt
-    am_ref = trajectories.DifferentiableEuclidianTrajectory("am_reference")
+def computeAMRefFromPhase(phase):
     # rearrange discretized points from phase to numpy matrices :
     N = len(phase.time_trajectory)
     timeline = np.matrix(np.zeros(N))
@@ -140,9 +139,40 @@ def computeAMRefFromPhase(phase, time_interval):
         timeline[0, i] = phase.time_trajectory[i]
         L[:, i] = phase.state_trajectory[i][6:9]
         dL[:, i] = phase.control_trajectory[i][3:6]
-    am_ref.computeFromPoints(timeline, L, dL)
-    return am_ref
+    L_ref = piecewise.FromPointsList(L,timeline.T)
+    dL_ref = piecewise.FromPointsList(dL,timeline.T)
+    return [L_ref, dL_ref]
 
+def curvesToTSID(curves,t):
+    # adjust t to bounds, required due to precision issues:
+    if curves[0].min() > t > curves[0].min() - 1e-3:
+        t = curves[0].min()
+    if curves[0].max() < t < curves[0].max() + 1e-3:
+        t = curves[0].max()
+    sample = tsid.TrajectorySample(curves[0].dim())
+    sample.pos(curves[0](t))
+    sample.vel(curves[1](t))
+    if len(curves) == 3:
+        sample.acc(curves[2](t))
+    return sample
+
+def curveSE3toTSID(curve,t, computeAcc = False):
+    # adjust t to bounds, required due to precision issues:
+    if curve.min() > t > curve.min() - 1e-3:
+        t = curve.min()
+    if curve.max() < t < curve.max() + 1e-3:
+        t = curve.max()
+    sample = tsid.TrajectorySample(12,6)
+    placement = curve.evaluateAsSE3(t)
+    vel = curve.derivateAsMotion(t,1)
+    sample.pos(SE3toVec(placement))
+    sample.vel(MotiontoVec(vel))
+    if computeAcc:
+        acc = curve.derivateAsMotion(t, 2)
+        sample.acc(MotiontoVec(acc))
+    else:
+        acc = Motion()
+    return sample, placement,vel,acc
 
 def generateWholeBodyMotion(cs, fullBody=None, viewer=None):
     if not viewer:
@@ -181,14 +211,10 @@ def generateWholeBodyMotion(cs, fullBody=None, viewer=None):
     comTask.setKd(2.0 * np.sqrt(cfg.kp_com) * np.matrix(np.ones(3)).transpose())
     invdyn.addMotionTask(comTask, cfg.w_com, cfg.level_com, 0.0)
 
-    com_ref = robot.com(invdyn.data())
-    trajCom = tsid.TrajectoryEuclidianConstant("traj_com", com_ref)
-
     amTask = tsid.TaskAMEquality("task-am", robot)
     amTask.setKp(cfg.kp_am * np.matrix([1., 1., 0.]).T)
     amTask.setKd(2.0 * np.sqrt(cfg.kp_am * np.matrix([1., 1., 0.]).T))
     invdyn.addTask(amTask, cfg.w_am, cfg.level_am)
-    trajAM = tsid.TrajectoryEuclidianConstant("traj_am", np.matrix(np.zeros(3)).T)
 
     postureTask = tsid.TaskJointPosture("task-joint-posture", robot)
     postureTask.setKp(cfg.kp_posture * cfg.gain_vector)
@@ -196,7 +222,8 @@ def generateWholeBodyMotion(cs, fullBody=None, viewer=None):
     postureTask.mask(cfg.masks_posture)
     invdyn.addMotionTask(postureTask, cfg.w_posture, cfg.level_posture, 0.0)
     q_ref = cfg.IK_REFERENCE_CONFIG
-    trajPosture = tsid.TrajectoryEuclidianConstant("traj_joint", q_ref[7:])
+    samplePosture = tsid.TrajectorySample(q_ref.shape[0] - 7)
+    samplePosture.pos(q_ref[7:])
 
     orientationRootTask = tsid.TaskSE3Equality("task-orientation-root", robot, 'root_joint')
     mask = np.matrix(np.ones(6)).transpose()
@@ -205,8 +232,6 @@ def generateWholeBodyMotion(cs, fullBody=None, viewer=None):
     orientationRootTask.setKp(cfg.kp_rootOrientation * mask)
     orientationRootTask.setKd(2.0 * np.sqrt(cfg.kp_rootOrientation * mask))
     invdyn.addMotionTask(orientationRootTask, cfg.w_rootOrientation, cfg.level_rootOrientation, 0.0)
-    root_ref = robot.position(data, robot.model().getJointId('root_joint'))
-    trajRoot = tsid.TrajectorySE3Constant("traj-root", root_ref)
 
     usedEffectors = []
     for eeName in list(cfg.Robot.dict_limb_joint.values()):
@@ -214,9 +239,6 @@ def generateWholeBodyMotion(cs, fullBody=None, viewer=None):
             usedEffectors.append(eeName)
     # init effector task objects :
     dic_effectors_tasks = createEffectorTasksDic(cs, robot)
-    effectorTraj = tsid.TrajectorySE3Constant(
-        "traj-effector",
-        SE3.Identity())  # trajectory doesn't matter as it's only used to get the correct struct and size
 
     # init empty dic to store effectors trajectories :
     dic_effectors_trajs = {}
@@ -258,17 +280,17 @@ def generateWholeBodyMotion(cs, fullBody=None, viewer=None):
                                                                                                                  k_t])
         # store centroidal info (real one and reference) :
         if cfg.IK_store_reference_centroidal:
-            res.c_reference[:, k_t] = com_desired
-            res.dc_reference[:, k_t] = vcom_desired
-            res.ddc_reference[:, k_t] = acom_desired
-            res.L_reference[:, k_t] = L_desired
-            res.dL_reference[:, k_t] = dL_desired
+            res.c_reference[:, k_t] = sampleCom.pos()
+            res.dc_reference[:, k_t] = sampleCom.vel()
+            res.ddc_reference[:, k_t] = sampleCom.acc()
+            res.L_reference[:, k_t] = sampleAM.pos()
+            res.dL_reference[:, k_t] = sampleAM.vel()
             if cfg.IK_store_zmp:
                 Mcom = SE3.Identity()
-                Mcom.translation = com_desired
+                Mcom.translation = sampleCom.pos()
                 Fcom = Force.Zero()
-                Fcom.linear = cfg.MASS * (acom_desired - cfg.GRAVITY)
-                Fcom.angular = dL_desired
+                Fcom.linear = cfg.MASS * (sampleCom.acc() - cfg.GRAVITY)
+                Fcom.angular = sampleAM.vel()
                 F0 = Mcom.act(Fcom)
                 res.wrench_reference[:, k_t] = F0.vector
                 res.zmp_reference[:, k_t] = shiftZMPtoFloorAltitude(cs, res.t_t[k_t], F0, cfg.EXPORT_OPENHRP)
@@ -368,23 +390,21 @@ def generateWholeBodyMotion(cs, fullBody=None, viewer=None):
         # generate com ref traj from phase :
         com_init = np.matrix(np.zeros((9, 1)))
         com_init[0:3, 0] = robot.com(invdyn.data())
-        com_traj = computeCOMRefFromPhase(phase, time_interval)
+        com_traj = computeCOMRefFromPhase(phase)
+        am_traj = computeAMRefFromPhase(phase)
 
-        am_traj = computeAMRefFromPhase(phase, time_interval)
         # add root's orientation ref from reference config :
         if cfg.USE_PLANNING_ROOT_ORIENTATION:
+            q_0 = SE3FromConfig(phase.reference_configurations[0])
             if phase_next:
-                root_traj = trajectories.TrajectorySE3LinearInterp(
-                    SE3FromConfig(phase.reference_configurations[0]),
-                    SE3FromConfig(phase_next.reference_configurations[0]), time_interval)
+                q_1 = SE3FromConfig(phase_next.reference_configurations[0])
             else:
-                root_traj = trajectories.TrajectorySE3LinearInterp(SE3FromConfig(phase.reference_configurations[0]),
-                                                                   SE3FromConfig(phase.reference_configurations[0]),
-                                                                   time_interval)
+                q_1 = SE3FromConfig(phase.reference_configurations[0])
+            root_traj = SE3Curve(q_0, q_1, time_interval[0], time_interval[1])
         else:
             # orientation such that the torso orientation is the mean between both feet yaw rotations:
             placement_init, placement_end = rootOrientationFromFeetPlacement(phase, phase_next)
-            root_traj = trajectories.TrajectorySE3LinearInterp(placement_init, placement_end, time_interval)
+            root_traj = SE3Curve(placement_init, placement_end, time_interval[0],time_interval[1])
         # add newly created contacts :
         for eeName in usedEffectors:
             if phase_prev and not isContactActive(phase_prev, eeName) and isContactActive(phase, eeName):
@@ -458,39 +478,25 @@ def generateWholeBodyMotion(cs, fullBody=None, viewer=None):
                 t = res.t_t[k_t]
                 # set traj reference for current time :
                 # com
-                sampleCom = trajCom.computeNext()
-                com_desired = com_traj(t)[0]
-                vcom_desired = com_traj(t)[1]
-                acom_desired = com_traj(t)[2]
-                sampleCom.pos(com_desired)
-                sampleCom.vel(vcom_desired)
-                sampleCom.acc(acom_desired)
+                sampleCom = curvesToTSID(com_traj,t)
                 comTask.setReference(sampleCom)
 
                 # am
-                sampleAM = trajAM.computeNext()
-                L_desired = am_traj(t)[0]
-                dL_desired = am_traj(t)[1]
-                sampleAM.pos(L_desired)
-                sampleAM.vel(dL_desired)
+                sampleAM =  curvesToTSID(am_traj,t)
                 amTask.setReference(sampleAM)
 
                 # posture
-                samplePosture = trajPosture.computeNext()
                 #print "postural task ref : ",samplePosture.pos()
                 postureTask.setReference(samplePosture)
 
                 # root orientation :
-                sampleRoot = trajRoot.computeNext()
-                sampleRoot.pos(SE3toVec(root_traj(t)[0]))
-                sampleRoot.vel(MotiontoVec(root_traj(t)[1]))
-
+                sampleRoot,target_root_placement,target_root_vel,target_root_acc = curveSE3toTSID(root_traj,t)
                 orientationRootTask.setReference(sampleRoot)
-                quat_waist = Quaternion(root_traj(t)[0].rotation)
+                quat_waist = Quaternion(target_root_placement.rotation)
                 res.waist_orientation_reference[:, k_t] = np.matrix(
                     [quat_waist.x, quat_waist.y, quat_waist.z, quat_waist.w]).T
-                res.d_waist_orientation_reference[:, k_t] = np.matrix((root_traj(t)[1]).angular)
-                res.dd_waist_orientation_reference[:, k_t] = np.matrix([0, 0, 0]).T
+                res.d_waist_orientation_reference[:, k_t] = np.matrix(target_root_vel.angular)
+                res.dd_waist_orientation_reference[:, k_t] = np.matrix(target_root_acc.angular)
                 if cfg.WB_VERBOSE == 2:
                     print("### references given : ###")
                     print("com  pos : ", sampleCom.pos())
@@ -505,18 +511,15 @@ def generateWholeBodyMotion(cs, fullBody=None, viewer=None):
                 for eeName, traj in dic_effectors_trajs.items():
                     if traj:
                         swingPhase = True  # there is an effector motion in this phase
-                        sampleEff = effectorTraj.computeNext()
-                        traj_t = traj(t)
-                        sampleEff.pos(SE3toVec(traj_t[0]))
-                        sampleEff.vel(MotiontoVec(traj_t[1]))
+                        sampleEff = curveSE3toTSID(traj,t,True)[0]
                         dic_effectors_tasks[eeName].setReference(sampleEff)
                         if cfg.WB_VERBOSE == 2:
                             print("effector " + str(eeName) + " pos : " + str(sampleEff.pos()))
                             print("effector " + str(eeName) + " vel : " + str(sampleEff.vel()))
                         if cfg.IK_store_reference_effector:
-                            res.effector_references[eeName][:, k_t] = SE3toVec(traj_t[0])
-                            res.d_effector_references[eeName][:, k_t] = MotiontoVec(traj_t[1])
-                            res.dd_effector_references[eeName][:, k_t] = MotiontoVec(traj_t[2])
+                            res.effector_references[eeName][:, k_t] = sampleEff.pos()
+                            res.d_effector_references[eeName][:, k_t] = sampleEff.vel()
+                            res.dd_effector_references[eeName][:, k_t] = sampleEff.acc()
                     elif cfg.IK_store_reference_effector:
                         if k_t == 0:
                             res.effector_references[eeName][:, k_t] = SE3toVec(

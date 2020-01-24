@@ -5,7 +5,7 @@ from numpy.linalg import norm
 from pinocchio import SE3, Quaternion, Motion
 from pinocchio.utils import rpyToMatrix, rotate
 import mlp.config as cfg
-from mlp.utils.trajectories import cubicSplineTrajectory, quinticSplineTrajectory
+from curves import polynomial
 import math
 import types
 
@@ -255,7 +255,9 @@ def genAMTrajFromPhaseStates(t_init, t_end, init_state, final_state, init_contro
         dAm_end = np.zeros([3, 1])
     else:
         dAm_end = final_control[3:6]
-    return cubicSplineTrajectory(t_init, t_end, am_init, dAm_init, am_end, dAm_end)
+    am_traj =  polynomial(am_init, dAm_init, am_end, dAm_end,t_init,t_end)
+    dAm_traj = am_traj.compute_derivate(1)
+    return am_traj,dAm_traj
 
 
 def genCOMTrajFromPhaseStates(t_init, t_end, init_state, final_state, init_control=None, final_control=None):
@@ -272,7 +274,10 @@ def genCOMTrajFromPhaseStates(t_init, t_end, init_state, final_state, init_contr
         a_end = np.zeros([3, 1])
     else:
         a_end = final_control[0:3]
-    return quinticSplineTrajectory(t_init, t_end, p_init, v_init, a_init, p_end, v_end, a_end)
+    com_traj = polynomial(p_init, v_init, a_init, p_end, v_end, a_end,t_init, t_end)
+    vel_traj = com_traj.compute_derivate(1)
+    acc_traj = vel_traj.compute_derivate(1)
+    return com_traj,vel_traj,acc_traj
 
 
 def connectPhaseTrajToFinalState(phase, duration):
@@ -291,8 +296,8 @@ def connectPhaseTrajToFinalState(phase, duration):
     print "t_init : ",t_init
     print "t_end  : ",t_end
     """
-    com_traj = genCOMTrajFromPhaseStates(t_init, t_end, init_state, final_state, init_control)
-    am_traj = genAMTrajFromPhaseStates(t_init, t_end, init_state, final_state, init_control)
+    com_traj,vel_traj,acc_traj = genCOMTrajFromPhaseStates(t_init, t_end, init_state, final_state, init_control)
+    am_traj, dAm_traj = genAMTrajFromPhaseStates(t_init, t_end, init_state, final_state, init_control)
     i = len(phase.time_trajectory)
 
     dt = cfg.SOLVER_DT
@@ -300,15 +305,13 @@ def connectPhaseTrajToFinalState(phase, duration):
     while t < t_end + dt / 2.:
         if t > t_end:  # may happen due to numerical imprecision
             t = t_end
-        c, dc, ddc = com_traj(t)
-        L, dL = am_traj(t)
         state = np.matrix(np.zeros(9)).T
         control = np.matrix(np.zeros(6)).T
-        state[0:3] = c
-        state[3:6] = dc
-        control[0:3] = ddc
-        state[6:9] = L
-        control[3:6] = dL
+        state[0:3] = com_traj(t)
+        state[3:6] = vel_traj(t)
+        control[0:3] = acc_traj(t)
+        state[6:9] = am_traj(t)
+        control[3:6] = dAm_traj(t)
         phase.state_trajectory.append(state)
         phase.control_trajectory.append(control)
         phase.time_trajectory.append(t)
