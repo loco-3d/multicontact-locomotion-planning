@@ -45,7 +45,7 @@ FEET_MAX_ANG_VEL = 1.5
 p_max = 0.07
 
 import numpy as np
-gain_vector = np.matrix([
+gain_vector = np.array([
     10.,
     5.,
     5.,
@@ -58,7 +58,7 @@ gain_vector = np.matrix([
     1.,
     1.,
     10.,  #rleg
-]).T  # gain vector for postural task :
+])  # gain vector for postural task :
 
-masks_posture = np.matrix(np.ones(12)).T
+masks_posture = np.ones(12)
 #masks_posture[:11] = 0

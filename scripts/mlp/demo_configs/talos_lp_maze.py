@@ -23,9 +23,7 @@ USE_PLANNING_ROOT_ORIENTATION = False  # if true, the reference for the root ori
 #p_max = 0.08
 
 # Reference config used by the wholeBody script, may be different than the one used by the planning (default value is the same as planning)
-IK_REFERENCE_CONFIG = np.matrix(
-    Robot.referenceConfig_elbowsUp
-).T
+IK_REFERENCE_CONFIG = np.array(Robot.referenceConfig_elbowsUp)
 
 #FEET_MAX_VEL = 0.4 # maximal linear velocity of the effector, if the current duration of the phase lead to a greater velocity than this setting, the duration of the phase is increased
 #FEET_MAX_ANG_VEL = 1. # maximal angular velocity of the effectors

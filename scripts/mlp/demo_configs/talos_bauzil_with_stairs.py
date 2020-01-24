@@ -16,6 +16,4 @@ p_max = 0.13  #setting used to compute the default height of the effector trajec
 GUIDE_STEP_SIZE = 0.6
 
 # Reference config used by the wholeBody script, may be different than the one used by the planning (default value is the same as planning)
-IK_REFERENCE_CONFIG = np.matrix(
-    Robot.referenceConfig_elbowsUp
-).T
+IK_REFERENCE_CONFIG = np.array(Robot.referenceConfig_elbowsUp)
