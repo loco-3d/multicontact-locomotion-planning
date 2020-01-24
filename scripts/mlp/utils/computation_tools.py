@@ -3,10 +3,9 @@ import pinocchio as pin
 from pinocchio import SE3, Motion, Force
 from mlp.utils.util import *
 import mlp.config as cfg
-import mlp.utils.trajectories as Trajectories
 from rospkg import RosPack
 from pinocchio.robot_wrapper import RobotWrapper
-
+from curves import piecewise
 
 def pacthSameAltitude(M1, M2, eps=1e-3):
     return abs(M1.translation[2] == M2.translation[2]) <= eps
@@ -101,11 +100,10 @@ def computeZMPFromWrench(cs, time_t, wrench_t):
     ZMP_t = np.matrix(np.empty((3, N)))
 
     # smooth wrench traj :
-    Wrench_trajectory = Trajectories.DifferentiableEuclidianTrajectory()
-    Wrench_trajectory.computeFromPoints(np.asmatrix(time_t), wrench_t, 0 * wrench_t)
+    Wrench_trajectory = piecewise.FromPointList( wrench_t,np.asmatrix(time_t).T)
 
     for k in range(N):
-        wrench = Wrench_trajectory(time_t[k])[0]
+        wrench = Wrench_trajectory(time_t[k])
         phi0 = Force(wrench)
         ZMP_t[:, k] = shiftZMPtoFloorAltitude(cs, time_t[k], phi0)
 

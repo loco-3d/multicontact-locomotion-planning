@@ -11,8 +11,7 @@ import gepetto.corbaserver
 import mlp.config as cfg
 import multicontact_api
 from multicontact_api import WrenchCone, SOC6, ContactPatch, ContactPhaseHumanoid, ContactSequenceHumanoid
-from mlp.utils import trajectories
-from curves import SE3Curve
+from curves import SE3Curve, piecewise
 from mlp.utils.computation_tools import shiftZMPtoFloorAltitude
 import mlp.viewer.display_tools as display_tools
 import math
@@ -111,8 +110,7 @@ def createEffectorTasksDic(cs, robot):
     return res
 
 
-def computeCOMRefFromPhase(phase, time_interval):
-    com_ref = trajectories.TwiceDifferentiableEuclidianTrajectory("com_reference")
+def computeCOMRefFromPhase(phase):
     # rearrange discretized points from phase to numpy matrices :
     N = len(phase.time_trajectory)
     timeline = np.matrix(np.zeros(N))
@@ -124,12 +122,14 @@ def computeCOMRefFromPhase(phase, time_interval):
         c[:, i] = phase.state_trajectory[i][0:3]
         dc[:, i] = phase.state_trajectory[i][3:6]
         ddc[:, i] = phase.control_trajectory[i][0:3]
-    com_ref.computeFromPoints(timeline, c, dc, ddc)
-    return com_ref
+    # com_ref = piecewise.FromPointsList(c,dc,ddc,timeline.T) # do not produce the correct trajectories !
+    com_pos_ref = piecewise.FromPointsList(c,timeline.T)
+    com_vel_ref = piecewise.FromPointsList(dc,timeline.T)
+    com_acc_ref = piecewise.FromPointsList(ddc,timeline.T)
+    return [com_pos_ref,com_vel_ref,com_acc_ref]
 
 
-def computeAMRefFromPhase(phase, time_interval):
-    am_ref = trajectories.DifferentiableEuclidianTrajectory("am_reference")
+def computeAMRefFromPhase(phase):
     # rearrange discretized points from phase to numpy matrices :
     N = len(phase.time_trajectory)
     timeline = np.matrix(np.zeros(N))
@@ -139,9 +139,9 @@ def computeAMRefFromPhase(phase, time_interval):
         timeline[0, i] = phase.time_trajectory[i]
         L[:, i] = phase.state_trajectory[i][6:9]
         dL[:, i] = phase.control_trajectory[i][3:6]
-    am_ref.computeFromPoints(timeline, L, dL)
-    return am_ref
-
+    L_ref = piecewise.FromPointsList(L,timeline.T)
+    dL_ref = piecewise.FromPointsList(dL,timeline.T)
+    return [L_ref, dL_ref]
 
 def generateWholeBodyMotion(cs, fullBody=None, viewer=None):
     if not viewer:
@@ -367,9 +367,9 @@ def generateWholeBodyMotion(cs, fullBody=None, viewer=None):
         # generate com ref traj from phase :
         com_init = np.matrix(np.zeros((9, 1)))
         com_init[0:3, 0] = robot.com(invdyn.data())
-        com_traj = computeCOMRefFromPhase(phase, time_interval)
+        com_traj = computeCOMRefFromPhase(phase)
+        am_traj = computeAMRefFromPhase(phase)
 
-        am_traj = computeAMRefFromPhase(phase, time_interval)
         # add root's orientation ref from reference config :
         if cfg.USE_PLANNING_ROOT_ORIENTATION:
             q_0 = SE3FromConfig(phase.reference_configurations[0])
