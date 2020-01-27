@@ -42,7 +42,7 @@ def findPhase(cs, t):
 
 
 def SE3toVec(M):
-    v = np.zeros(12, 1)
+    v = np.zeros(12)
     for j in range(3):
         v[j] = M.translation[j]
         v[j + 3] = M.rotation[j, 0]
@@ -52,7 +52,7 @@ def SE3toVec(M):
 
 
 def MotiontoVec(M):
-    v = np.zeros(6, 1)
+    v = np.zeros(6)
     for j in range(3):
         v[j] = M.linear[j]
         v[j + 3] = M.angular[j]

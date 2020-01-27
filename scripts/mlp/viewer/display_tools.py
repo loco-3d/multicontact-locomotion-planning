@@ -165,7 +165,7 @@ def displaySE3Traj(traj, gui, sceneName, name, color, time_interval, offset=SE3.
     while t <= time_interval[1]:
         m = traj.evaluateAsSE3(t)
         m = m.act(offset)
-        path += m.translation.T.tolist()
+        path += [m.translation.tolist()]
         t += dt
     gui.addCurve(name, path, color)
     gui.addToGroup(name, sceneName)
