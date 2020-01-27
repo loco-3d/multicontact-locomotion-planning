@@ -2,15 +2,19 @@ from __future__ import absolute_import
 from pinocchio.utils import *
 import mlp.config as cfg
 import importlib
-from mlp.utils.cs_tools import *
+import multicontact_api
+from multicontact_api import ContactSequenceHumanoid
+from mlp.utils.cs_tools import addPhaseFromConfig, moveEffectorToPlacement, setFinalState
 from mlp.viewer.display_tools import initScene, displaySteppingStones
+import pinocchio
 from pinocchio.utils import matrixToRpy
+from pinocchio import Quaternion, SE3
 from tools.surfaces_from_path import getSurfacesFromGuideContinuous
 import random
 from sl1m.planner import *
 
 import eigenpy
-eigenpy.switchToNumpyMatrix()
+pinocchio.switchToNumpyArray()
 
 Z_AXIS = np.array([0, 0, 1]).T
 VERBOSE = False
@@ -114,7 +118,7 @@ def gen_pb(root_init, R, surfaces):
     print("number of surfaces : ", len(surfaces))
     print("number of rotation matrix for root : ", len(R))
     nphases = len(surfaces)
-    ref_root_height = cfg.IK_REFERENCE_CONFIG[2, 0]
+    ref_root_height = cfg.IK_REFERENCE_CONFIG[2]
     lf_0 = array(root_init[0:3]) + array([0, 0.085, -ref_root_height])  # values for talos !
     rf_0 = array(root_init[0:3]) + array([0, -0.085, -ref_root_height])  # values for talos !
     #init_floor_height = surfaces[0][0][2][0]
@@ -230,11 +234,11 @@ def generateContactSequence():
 
     # load scene and robot
     fb, v = initScene(cfg.Robot, cfg.ENV_NAME, True)
-    q_init = cfg.IK_REFERENCE_CONFIG.T.tolist()[0] + [0] * 6
+    q_init = cfg.IK_REFERENCE_CONFIG.tolist() + [0] * 6
     q_init[0:7] = root_init
     feet_height_init = allfeetpos[0][2]
     print("feet height initial = ", feet_height_init)
-    q_init[2] = feet_height_init + cfg.IK_REFERENCE_CONFIG[2, 0]
+    q_init[2] = feet_height_init + cfg.IK_REFERENCE_CONFIG[2]
     q_init[2] += EPS_Z
     #q_init[2] = fb.referenceConfig[2] # 0.98 is in the _path script
     if v:
@@ -277,19 +281,19 @@ def generateContactSequence():
         else:
             rot = Quaternion.Identity()
         placement = SE3()
-        placement.translation = np.matrix(pos).T
+        placement.translation = np.array(pos).T
         placement.rotation = rot.matrix()
         moveEffectorToPlacement(fb, v, cs, movingID, placement, initStateCenterSupportPolygon=True)
     # final phase :
     # fixme : assume root is in the middle of the last 2 feet pos ...
-    q_end = cfg.IK_REFERENCE_CONFIG.T.tolist()[0] + [0] * 6
+    q_end = cfg.IK_REFERENCE_CONFIG.tolist() + [0] * 6
     #p_end = (allfeetpos[-1] + allfeetpos[-2]) / 2.
     #for i in range(3):
     #    q_end[i] += p_end[i]
     q_end[0:7] = root_end
     feet_height_end = allfeetpos[-1][2]
     print("feet height final = ", feet_height_end)
-    q_end[2] = feet_height_end + cfg.IK_REFERENCE_CONFIG[2, 0]
+    q_end[2] = feet_height_end + cfg.IK_REFERENCE_CONFIG[2]
     q_end[2] += EPS_Z
     setFinalState(cs, q=q_end)
     if cfg.DISPLAY_CS_STONES:

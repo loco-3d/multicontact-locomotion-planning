@@ -2,6 +2,7 @@ import pinocchio as pin
 from pinocchio import SE3, Quaternion
 import multicontact_api
 from multicontact_api import WrenchCone, SOC6, ContactPatch, ContactPhaseHumanoid, ContactSequenceHumanoid
+pin.switchToNumpyArray()
 import numpy as np
 import time
 from mlp.utils.util import stdVecToMatrix, numpy2DToList, hppConfigFromMatrice

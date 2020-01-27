@@ -1,6 +1,8 @@
-from multicontact_api import ContactSequenceHumanoid, ContactPhaseHumanoid
+from mlp.utils.cs_tools import addPhaseFromConfig, moveEffectorOf, setFinalState, removeContact, moveEffectorToPlacement
+import multicontact_api
+from multicontact_api import ContactSequenceHumanoid
 import mlp.viewer.display_tools as display_tools
-from mlp.utils.cs_tools import *
+multicontact_api.switchToNumpyArray()
 import mlp.config as cfg
 
 from talos_rbprm.talos import Robot  # change robot here

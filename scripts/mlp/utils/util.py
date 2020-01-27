@@ -1,13 +1,14 @@
-from pinocchio import SE3
 import numpy as np
 from numpy import cross
 from numpy.linalg import norm
+import pinocchio
 from pinocchio import SE3, Quaternion, Motion
 from pinocchio.utils import rpyToMatrix, rotate
 import mlp.config as cfg
 from curves import polynomial
 import math
 import types
+pinocchio.switchToNumpyArray()
 
 
 def quatFromConfig(q):
@@ -123,7 +124,8 @@ def SE3FromConfig(q):
     if isinstance(q, list):
         q = np.array(q)
     placement = SE3.Identity()
-    placement.translation = q[0:3]
+    tr = np.array(q[0:3])
+    placement.translation = tr
     r = Quaternion(q[6], q[3], q[4], q[5])
     placement.rotation = r.matrix()
     return placement
@@ -133,7 +135,7 @@ def SE3FromConfig(q):
 # axis : either 'x' , 'y' or 'z'
 def rotatePlacement(placement, axis, angle):
     T = rotate(axis, angle)
-    placement.rotation = placement.rotation * T
+    placement.rotation = placement.rotation @ T
     return placement
 
 
@@ -482,7 +484,7 @@ def fillPhaseTrajWithZeros(phase, current_t, duration):
 
 def computeContactNormal(placement):
     z_up = np.array([0., 0., 1.])
-    contactNormal = placement.rotation * z_up
+    contactNormal = placement.rotation @ z_up
     return contactNormal
 
 

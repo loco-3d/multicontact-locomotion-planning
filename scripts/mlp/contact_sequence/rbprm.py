@@ -5,6 +5,7 @@ import inspect
 import mlp.config as cfg
 import multicontact_api
 from multicontact_api import ContactPhaseHumanoid, ContactSequenceHumanoid
+multicontact_api.switchToNumpyArray()
 from mlp.utils.util import quatFromConfig, copyPhaseContacts, copyPhaseContactPlacements, contactPatchForEffector
 import importlib
 
@@ -26,10 +27,10 @@ def setContactPlacementFromRBPRMState(phase, fb, stateId, limbs=None):
         if fb.isLimbInContact(limbId, stateId):
             [p, n] = fb.clientRbprm.rbprm.computeCenterOfContactAtStateForLimb(stateId, False, limbId)
             placement = SE3.Identity()
-            placement.translation = np.matrix(p).T
+            placement.translation = np.array(p)
             if fb.cType == "_3_DOF":
-                normal = np.matrix(n).T
-                quat = Quaternion.FromTwoVectors(np.matrix(fb.dict_normal[eeName]).T, normal)
+                normal = np.array(n)
+                quat = Quaternion.FromTwoVectors(np.array(fb.dict_normal[eeName]), normal)
             else:
                 q_r = fb.getJointPosition(eeName)
                 quat = quatFromConfig(q_r)
@@ -116,18 +117,18 @@ def contactSequenceFromRBPRMConfigs(fb, beginId, endId):
                 setContactPlacementFromRBPRMState(phase, fb, stateId, previous_variations)
 
             # assign current wholebody config as reference in phase :
-            phase.reference_configurations.append(np.matrix((current_config)).T)
+            phase.reference_configurations.append(np.array((current_config)))
             # retrieve the COM position for init and final state
-            init_state = np.matrix(np.zeros(9)).T
-            init_state[0:3] = np.matrix(fb.getCenterOfMass()).transpose()
-            init_state[3:6] = np.matrix(current_config[-6:-3]).transpose()
+            init_state = np.array(np.zeros(9))
+            init_state[0:3] = np.array(fb.getCenterOfMass())
+            init_state[3:6] = np.array(current_config[-6:-3])
             phase.init_state = init_state
             final_state = init_state.copy()
             if not contact_reposition and stateId < endId:  # in the case of contact reposition, the CoM motion will take place in the next intermediate phase. For the current phase the init and final state are equals
                 current_config = fb.getConfigAtState(stateId + 1)
                 fb.setCurrentConfig(current_config)
-                final_state[0:3] = np.matrix(fb.getCenterOfMass()).transpose()
-                final_state[3:6] = np.matrix(current_config[-6:-3]).transpose()
+                final_state[0:3] = np.array(fb.getCenterOfMass())
+                final_state[3:6] = np.array(current_config[-6:-3])
             phase.final_state = final_state
 
             # add phase to contactSequence :
@@ -145,14 +146,14 @@ def contactSequenceFromRBPRMConfigs(fb, beginId, endId):
                 patch = contactPatchForEffector(phase, fb.dict_limb_joint[movingLimb])
                 patch.active = False
                 # assign current wholebody config as reference in phase :
-                phase.reference_configurations.append(np.matrix((current_config)).T)
+                phase.reference_configurations.append(np.array((current_config)))
                 # retrieve the COM position for init and final state
                 phase.init_state = prev_phase.final_state.copy()
                 final_state = phase.init_state.copy()
                 current_config = fb.getConfigAtState(stateId + 1)
                 fb.setCurrentConfig(current_config)
-                final_state[0:3] = np.matrix(fb.getCenterOfMass()).transpose()
-                final_state[3:6] = np.matrix(current_config[-6:-3]).transpose()
+                final_state[0:3] = np.array(fb.getCenterOfMass())
+                final_state[3:6] = np.array(current_config[-6:-3])
                 phase.final_state = final_state.copy()
                 # add phase to contactSequence :
                 cs.contact_phases.append(phase)
