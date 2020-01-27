@@ -1,11 +1,12 @@
 import mlp.config as cfg
+import pinocchio
 from pinocchio import SE3, Quaternion
 import numpy.linalg
 import numpy as np
 from curves import bezier, piecewise_bezier, SE3Curve, piecewise_SE3
 import hpp_bezier_com_traj as bezier_com
 import math
-
+pinocchio.switchToNumpyArray()
 
 def effectorCanRetry():
     return False
@@ -41,7 +42,7 @@ def computePredefConstants(t):
 
 def buildPredefinedInitTraj(placement, t_total,t_min,t_max):
     p_off, v_off, a_off = computePredefConstants(t_total)
-    normal = placement.rotation * np.matrix([0, 0, 1]).T
+    normal = placement.rotation @ np.array([0, 0, 1])
     #print "normal used for takeoff : ",normal.T
     #print "offset used : ",p_off
     c0 = placement.translation.copy()
@@ -49,13 +50,13 @@ def buildPredefinedInitTraj(placement, t_total,t_min,t_max):
     c1 += p_off * normal
     #print "takeoff part, c0 : ",c0.T
     #print "takeoff part, c1 : ",c1.T
-    dc0 = np.matrix(np.zeros(3)).T
+    dc0 = np.zeros(3)
     #dc1 = v_off * normal
-    ddc0 = np.matrix(np.zeros(3)).T
+    ddc0 = np.zeros(3)
     #ddc1 = a_off * normal
     #create wp :
     n = 4.
-    wps = np.matrix(np.zeros(([3, int(n + 1)])))
+    wps = np.zeros(([3, int(n + 1)]))
     T = t_max - t_min
     # constrained init pos and final pos. Init vel, acc and jerk = 0
     # c0
@@ -73,7 +74,7 @@ def buildPredefinedInitTraj(placement, t_total,t_min,t_max):
 
 def buildPredefinedFinalTraj(placement, t_total,t_min,t_max):
     p_off, v_off, a_off = computePredefConstants(t_total)
-    normal = placement.rotation * np.matrix([0, 0, 1]).T
+    normal = placement.rotation @ np.array([0, 0, 1])
     #print "normal used for landing : ",normal.T
     #print "offset used : ",p_off
     c0 = placement.translation.copy()
@@ -81,13 +82,13 @@ def buildPredefinedFinalTraj(placement, t_total,t_min,t_max):
     c0 += p_off * normal
     #print "landing part, c0 : ",c0.T
     #print "landing part, c1 : ",c1.T
-    dc1 = np.matrix(np.zeros(3)).T
+    dc1 = np.zeros(3)
     #dc0 = v_off * normal
-    ddc1 = np.matrix(np.zeros(3)).T
+    ddc1 = np.zeros(3)
     #ddc0 = a_off * normal
     #create wp :
     n = 4.
-    wps = np.matrix(np.zeros(([3, int(n + 1)])))
+    wps = np.zeros(([3, int(n + 1)]))
     T = t_max - t_max
     # constrained init pos and final pos. final vel, acc and jerk = 0
     #c0
@@ -115,7 +116,7 @@ def generatePredefMiddle(bezier_takeoff, bezier_landing, t_min,t_max):
     ddc1 = bezier_landing.derivate(bezier_landing.min(), 2)
     j1 = bezier_landing.derivate(bezier_landing.min(), 3)
     n = 7
-    wps = np.matrix(np.zeros(([3, int(n + 1)])))
+    wps = np.zeros(([3, int(n + 1)]))
     # c0
     wps[:, 0] = (c0)
     #dc0
@@ -157,14 +158,14 @@ def generatePredefBeziers(time_interval, placement_init, placement_end):
     # create polybezier with concatenation of the 3 (or 5) curves :
     # create constant curve at the beginning and end for the delay :
     if cfg.EFF_T_DELAY > 0:
-        bezier_init_zero = bezier(bezier_takeoff(bezier_takeoff.min()), time_interval[0], t_takeoff_min)
+        bezier_init_zero = bezier(bezier_takeoff(bezier_takeoff.min()).reshape([-1,1]), time_interval[0], t_takeoff_min)
         # Create SE3 curves with translation and duration defined from the bezier and constant orientation:
         curves.append(SE3Curve(bezier_init_zero,placement_init.rotation, placement_init.rotation))
     curves.append(SE3Curve(bezier_takeoff, placement_init.rotation, placement_init.rotation))
     curves.append(SE3Curve(bezier_middle, placement_init.rotation, placement_end.rotation))
     curves.append(SE3Curve(bezier_landing, placement_end.rotation, placement_end.rotation))
     if cfg.EFF_T_DELAY > 0:
-        bezier_end_zero = bezier(bezier_landing(bezier_landing.max()), t_landing_max,time_interval[1])
+        bezier_end_zero = bezier(bezier_landing(bezier_landing.max()).reshape([-1,1]), t_landing_max,time_interval[1])
         # Create SE3 curves with translation and duration defined from the bezier and constant orientation:
         curves.append(SE3Curve(bezier_end_zero,placement_end.rotation,placement_end.rotation))
     return curves
@@ -212,7 +213,7 @@ def generateSmoothBezierTrajWithPredef(time_interval, placement_init, placement_
 
 def generateSmoothBezierTrajWithoutPredef(time_interval, placement_init, placement_end):
     t_tot = time_interval[1] - time_interval[0]
-    wps = np.matrix(np.zeros([3, 9]))
+    wps = np.zeros([3, 9])
     for i in range(4):  # init position. init vel,acc and jerk == 0
         wps[:, i] = placement_init.translation.copy()
     # compute mid point (average and offset along z)

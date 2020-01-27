@@ -2,7 +2,6 @@
 import mlp.config as cfg
 import time
 import os
-from mlp.utils.polyBezier import *
 import pinocchio as pin
 from pinocchio import SE3, Quaternion
 from pinocchio.utils import *
@@ -201,7 +200,7 @@ def saveProblem(pDef):
 
 def rot_quat_x(client, a):
     x = [1., 0., 0.]
-    return Quaternion(np.matrix(x).T, np.matrix(a).T).coeffs().T.tolist()[0]
+    return Quaternion(np.matrix(x).T, np.matrix(a).T).coeffs().tolist()
 
 
 def rot_mat_x(client, a):
@@ -540,8 +539,8 @@ def large_col_free_box(client, a, b, maxX=0.2, maxY=0.05, maxZ=0.05, sizeObject=
 # but the constraints (H,h) are expressed at the joint level
 # the display is done before the transform and thus show the constraints at the contact level
 def computeInequalitiesAroundLine(fullBody, p_from, p_to, eeName, groupName, viewer):
-    a = p_from.translation.T.tolist()[0]
-    b = p_to.translation.T.tolist()[0]
+    a = p_from.translation.tolist()
+    b = p_to.translation.tolist()
     # size of the end effector (-x,x,-y,y,-z,z)
     size_diagonal = math.sqrt(cfg.Robot.dict_size[eeName][0]**2 + cfg.Robot.dict_size[eeName][1]**2)  #TODO margin ??
     #size = [size_diagonal/2., size_diagonal/2.,0.001]
@@ -578,7 +577,7 @@ def computeInequalitiesAroundLine(fullBody, p_from, p_to, eeName, groupName, vie
     pointsJoint = []
     for point in points:
         pc.translation = np.matrix(point).T
-        pointsJoint += [cfg.Robot.dict_offset[eeName].actInv(pc).translation.T.tolist()[0]]
+        pointsJoint += [cfg.Robot.dict_offset[eeName].actInv(pc).translation.tolist()]
     if DISPLAY_CONSTRAINTS and DISPLAY_JOINT_LEVEL:
         display_box(viewer, pointsJoint, groupName)
     H, h = to_ineq(pointsJoint)
@@ -788,7 +787,7 @@ def generateConstrainedBezierTraj(time_interval,
             #TODO
             pp.displayPath(pathId,
                            jointName=fullBody.getLinkNames(eeName)[0],
-                           offset=cfg.Robot.dict_offset[eeName].translation.T.tolist()[0])
+                           offset=cfg.Robot.dict_offset[eeName].translation.tolist())
 
     # compute constraints for the end effector trajectories :
     pData = bezier_com.ProblemData()
