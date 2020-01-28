@@ -41,7 +41,7 @@ def plotEffectorRef(dict_refs, dt):
             if trajs[-1].max() > t_max:
                 t_max = trajs[-1].max()
     N = int(t_max / dt) + 1
-    timeline = np.matrix([i * dt for i in range(N)])
+    timeline = np.array([i * dt for i in range(N)])
     #print "plot : tmax = ",t_max
     #print " N = ",N
     #print "last timeline = ",timeline[-1]
@@ -50,13 +50,13 @@ def plotEffectorRef(dict_refs, dt):
     for eeName, trajs in dict_refs.items():
         if len(trajs) > 0:
             # first build matrices of position, velocity and acceleration (each is 3D)  :
-            values = np.matrix(np.zeros([9, N]))
+            values = np.zeros([9, N])
             id_traj = 0
             traj = trajs[id_traj]
             # save current pos (or next) and use it when timing not inside bounds
             pos = traj.translation( traj.min() )
             for i, t in np.ndenumerate(timeline):
-                i = i[1]
+                i = i[0]
                 #print "t =",t
                 if t > traj.max() and id_traj < (len(trajs) - 1):  # take next traj in list
                     pos = traj.translation( traj.max())
@@ -278,7 +278,7 @@ def plotContactForces(timeline, p_intervals, forces_dict, N):
     ax.yaxis.grid()
     addVerticalLineContactSwitch(timeline.T, p_intervals, ax)
     i = 0
-    sum_f = np.matrix(np.zeros([1, N]))
+    sum_f = np.zeros([1, N])
 
     for eeName, force in forces_dict.items():
         ax.plot(timeline.T, force[0, :].T, color=colors[i], label=eeName)
