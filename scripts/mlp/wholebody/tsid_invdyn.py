@@ -300,7 +300,9 @@ def generateWholeBodyMotion(cs, fullBody=None, viewer=None):
             res.dc_t[:, k_t] = vcom
             res.ddc_t[:, k_t] = acom
             res.L_t[:, k_t] = pinRobot.centroidalMomentum(q, v).angular
-            res.dL_t[:,k_t] = pinRobot.centroidalMomentumVariation(q,v,dv) # FIXME : in robot wrapper, use * instead of .dot() for np matrices
+            #res.dL_t[:,k_t] = pinRobot.centroidalMomentumVariation(q,v,dv)
+            # FIXME : replace both lines below by the commented line above once it is fixed in pinocchio
+            # https://github.com/stack-of-tasks/pinocchio/issues/1035
             pin.dccrba(pinRobot.model, pinRobot.data, q, v)
             res.dL_t[:, k_t] = Force(pinRobot.data.Ag.dot(dv) + pinRobot.data.dAg.dot(v)).angular
             if cfg.IK_store_zmp:
