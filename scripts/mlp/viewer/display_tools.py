@@ -2,6 +2,7 @@ import pinocchio as pin
 from pinocchio import SE3, Quaternion
 import multicontact_api
 from multicontact_api import WrenchCone, SOC6, ContactPatch, ContactPhaseHumanoid, ContactSequenceHumanoid
+pin.switchToNumpyArray()
 import numpy as np
 import time
 from mlp.utils.util import stdVecToMatrix, numpy2DToList, hppConfigFromMatrice
@@ -33,10 +34,10 @@ def displaySphere(viewer, pos, size=0.01, color=[0, 0, 0, 1]):
 
 def SE3ToViewerConfig(placement):
     q = [0] * 7
-    q[0:3] = placement.translation.T.tolist()[0]
+    q[0:3] = placement.translation.tolist()
     r = Quaternion(placement.rotation)
     q[6] = r.w
-    q[3:6] = r.coeffs().transpose().tolist()[0][0:3]
+    q[3:6] = r.coeffs().tolist()[0:3]
     return q
 
 
@@ -164,7 +165,7 @@ def displaySE3Traj(traj, gui, sceneName, name, color, time_interval, offset=SE3.
     while t <= time_interval[1]:
         m = traj.evaluateAsSE3(t)
         m = m.act(offset)
-        path += m.translation.T.tolist()
+        path += [m.translation.tolist()]
         t += dt
     gui.addCurve(name, path, color)
     gui.addToGroup(name, sceneName)

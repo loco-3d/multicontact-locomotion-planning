@@ -1,3 +1,4 @@
+import multicontact_api
 from multicontact_api import ContactSequenceHumanoid, ContactPhaseHumanoid
 from pinocchio import SE3, Quaternion
 import mlp.viewer.display_tools as display_tools
@@ -6,16 +7,18 @@ import numpy as np
 import types
 from hpp.corbaserver.rbprm.rbprmstate import State, StateHelper
 from math import isnan
+multicontact_api.switchToNumpyArray()
 
 
 def addPhaseFromConfig(fb, v, cs, q, limbsInContact):
+    multicontact_api.switchToNumpyArray() # FIXME : why is it required to add it again here ?
     phase = ContactPhaseHumanoid()
-    phase.reference_configurations.append(np.matrix((q)).T)
+    phase.reference_configurations.append(np.array(q).T)
     if v:
         v(q)
     fb.setCurrentConfig(q)
-    state = np.matrix(np.zeros(9)).T
-    state[0:3] = np.matrix(fb.getCenterOfMass()).T
+    state = np.zeros(9)
+    state[0:3] = np.array(fb.getCenterOfMass()).T
     phase.init_state = state.copy()
     phase.final_state = state.copy()
     # set Identity to each contact placement (otherwise it's uninitialized)
@@ -32,7 +35,7 @@ def addPhaseFromConfig(fb, v, cs, q, limbsInContact):
         patch.active = True
 
     cs.contact_phases.append(phase)
-    if v:
+    if v: # FIXME : uncomment after debug
         display_tools.displaySteppingStones(cs, v.client.gui, v.sceneName, fb)
 
 
@@ -47,7 +50,7 @@ def computeCenterOfSupportPolygonFromState(s):
 
 
 def computeCenterOfSupportPolygonFromPhase(phase, fb):
-    com = np.matrix(np.zeros(3)).T
+    com = np.zeros(3)
     nContact = 0.
     if phase.RF_patch.active:
         com += phase.RF_patch.placement.translation
@@ -82,9 +85,9 @@ def projectCoMInSupportPolygon(s):
 def generateConfigFromPhase(fb, phase, projectCOM=False):
     fb.usePosturalTaskContactCreation(False)
     contacts = getActiveContactLimbs(phase, fb)
-    #q = phase.reference_configurations[0].T.tolist()[0] # should be the correct config for the previous phase, if used only from high level helper methods
+    #q = phase.reference_configurations[0].tolist() # should be the correct config for the previous phase, if used only from high level helper methods
     q = fb.referenceConfig[::] + [0] * 6  # FIXME : more generic !
-    root = computeCenterOfSupportPolygonFromPhase(phase, fb).T.tolist()[0]
+    root = computeCenterOfSupportPolygonFromPhase(phase, fb).tolist()
     q[0:2] = root[0:2]
     q[2] += root[2] - fb.DEFAULT_COM_HEIGHT
     quat = Quaternion(rootOrientationFromFeetPlacement(phase, None)[0].rotation)
@@ -100,8 +103,8 @@ def generateConfigFromPhase(fb, phase, projectCOM=False):
         if placement_fb != placement_phase:  # add a threshold instead of 0 ? how ?
             # need to project the new contact :
             placement = getContactPlacement(phase, eeName, fb)
-            p = placement.translation.T.tolist()[0]
-            n = computeContactNormal(placement).T.tolist()[0]
+            p = placement.translation.tolist()
+            n = computeContactNormal(placement).tolist()
             state, success = StateHelper.addNewContact(state, limbId, p, n, 1000)
             if not success:
                 print("Cannot project the configuration to contact, for effector : ", eeName)
@@ -110,7 +113,7 @@ def generateConfigFromPhase(fb, phase, projectCOM=False):
                 success = projectCoMInSupportPolygon(state)
                 if not success:
                     print("cannot project com to the middle of the support polygon.")
-    phase.reference_configurations[0] = np.matrix(state.q()).T
+    phase.reference_configurations[0] = np.array(state.q()).T
 
     return state.q()
 
@@ -137,11 +140,11 @@ def moveEffectorToPlacement(fb, v, cs, eeName, placement, initStateCenterSupport
     patch.active = True
     q = generateConfigFromPhase(fb, phase, projectCOM)
     fb.setCurrentConfig(q)
-    state = np.matrix(np.zeros(9)).T
+    state = np.zeros(9)
     if initStateCenterSupportPolygon:
         state[0:3] = computeCenterOfSupportPolygonFromPhase(phase, fb)
     else:
-        state[0:3] = np.matrix(fb.getCenterOfMass()).T
+        state[0:3] = np.array(fb.getCenterOfMass()).T
     phase.init_state = state.copy()
     prev_phase.final_state = state.copy()
     cs.contact_phases.append(phase)
@@ -157,7 +160,7 @@ def moveEffectorOf(fb, v, cs, eeName, translation):
                            fb), "Cannot use 'moveEffectorOf' if the effector is not in contact in the last phase."
     placement = getContactPlacement(prev_phase, eeName, fb).copy()
     if isinstance(translation, list):
-        translation = np.matrix(translation).T
+        translation = np.array(translation).T
     assert translation.shape[0] == 3, "translation must be a 3D vector"
     placement.translation += translation
     moveEffectorToPlacement(fb, v, cs, eeName, placement)
@@ -166,28 +169,28 @@ def moveEffectorOf(fb, v, cs, eeName, translation):
 def setFinalState(cs, com=None, q=None):
     phase = cs.contact_phases[-1]
     if q:
-        phase.reference_configurations[0] = np.matrix((q)).T
+        phase.reference_configurations[0] = np.array((q)).T
     if not com:
         com_x = 0.
         com_y = 0.
         if phase.LF_patch.active:
-            com_x += phase.LF_patch.placement.translation[0, 0]
-            com_y += phase.LF_patch.placement.translation[1, 0]
+            com_x += phase.LF_patch.placement.translation[0]
+            com_y += phase.LF_patch.placement.translation[1]
         if phase.RF_patch.active:
-            com_x += phase.RF_patch.placement.translation[0, 0]
-            com_y += phase.RF_patch.placement.translation[1, 0]
+            com_x += phase.RF_patch.placement.translation[0]
+            com_y += phase.RF_patch.placement.translation[1]
         if phase.LH_patch.active:
-            com_x += phase.LH_patch.placement.translation[0, 0]
-            com_y += phase.LH_patch.placement.translation[1, 0]
+            com_x += phase.LH_patch.placement.translation[0]
+            com_y += phase.LH_patch.placement.translation[1]
         if phase.RH_patch.active:
-            com_x += phase.RH_patch.placement.translation[0, 0]
-            com_y += phase.RH_patch.placement.translation[1, 0]
+            com_x += phase.RH_patch.placement.translation[0]
+            com_y += phase.RH_patch.placement.translation[1]
         com_x /= phase.numActivePatches()
         com_y /= phase.numActivePatches()
         com_z = phase.init_state[2]
-        com = np.matrix([com_x, com_y, com_z]).T
+        com = np.array([com_x, com_y, com_z]).T
     elif isinstance(com, list):
-        com = np.matrix(com).T
+        com = np.array(com).T
     state = phase.init_state.copy()
     state[0:3] = com
     phase.final_state = state

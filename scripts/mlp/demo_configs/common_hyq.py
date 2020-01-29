@@ -17,5 +17,5 @@ kp_rootOrientation = 500.0  # proportional gain of the root's orientation task
 kp_Eff = 3000.0  # proportional gain ofthe effectors motion task
 
 import numpy as np
-gain_vector = np.matrix(np.ones(24)).T
-masks_posture = np.matrix(np.zeros(24)).T
+gain_vector = np.ones(24)
+masks_posture = np.zeros(24)

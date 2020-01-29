@@ -1,6 +1,7 @@
 import numpy as np
 import mlp.config as cfg
 import multicontact_api
+multicontact_api.switchToNumpyArray()
 from multicontact_api import WrenchCone, SOC6, ContactPatch, ContactPhaseHumanoid, ContactSequenceHumanoid
 import math
 from mlp.utils.util import computeEffectorTranslationBetweenStates, computeEffectorRotationBetweenStates
@@ -55,7 +56,7 @@ def generateCentroidalTrajectory(cs, cs_initGuess=None, fullBody=None, viewer=No
         print("WARNING : in centroidal.geometric, initial guess is ignored.")
     cs_result = ContactSequenceHumanoid(cs)
     p0 = cs_result.contact_phases[0]
-    com_z = p0.init_state[2, 0]
+    com_z = p0.init_state[2]
     previous_phase = None
     # first, compute the new init/final position for each state : in the center of the support polygon
     for pid in range(1, cs_result.size() - 1):
@@ -64,21 +65,21 @@ def generateCentroidalTrajectory(cs, cs_initGuess=None, fullBody=None, viewer=No
         com_x = 0.
         com_y = 0.
         if phase.LF_patch.active:
-            com_x += phase.LF_patch.placement.translation[0, 0]
-            com_y += phase.LF_patch.placement.translation[1, 0]
+            com_x += phase.LF_patch.placement.translation[0]
+            com_y += phase.LF_patch.placement.translation[1]
         if phase.RF_patch.active:
-            com_x += phase.RF_patch.placement.translation[0, 0]
-            com_y += phase.RF_patch.placement.translation[1, 0]
+            com_x += phase.RF_patch.placement.translation[0]
+            com_y += phase.RF_patch.placement.translation[1]
         if phase.LH_patch.active:
-            com_x += phase.LH_patch.placement.translation[0, 0]
-            com_y += phase.LH_patch.placement.translation[1, 0]
+            com_x += phase.LH_patch.placement.translation[0]
+            com_y += phase.LH_patch.placement.translation[1]
         if phase.RH_patch.active:
-            com_x += phase.RH_patch.placement.translation[0, 0]
-            com_y += phase.RH_patch.placement.translation[1, 0]
+            com_x += phase.RH_patch.placement.translation[0]
+            com_y += phase.RH_patch.placement.translation[1]
         com_x /= phase.numActivePatches()
         com_y /= phase.numActivePatches()
         # test : take com height from config found from planning :
-        com_z = cs_result.contact_phases[pid].init_state[2, 0]
+        com_z = cs_result.contact_phases[pid].init_state[2]
         state[0] = com_x
         state[1] = com_y
         state[2] = com_z
@@ -96,11 +97,11 @@ def generateCentroidalTrajectory(cs, cs_initGuess=None, fullBody=None, viewer=No
         com0 = phase.init_state[0:3]
         com1 = phase.final_state[0:3]
         vel = (com1 - com0) / duration
-        am = np.matrix(np.zeros(3)).T
+        am = np.zeros(3)
         t = 0.
         while t < duration - 0.0001:
             u = t / duration
-            state = np.matrix(np.zeros(9)).T
+            state = np.zeros(9)
             com = com0 * (1. - u) + com1 * (u)
             state[0:3] = com
             state[3:6] = vel

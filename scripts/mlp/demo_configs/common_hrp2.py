@@ -51,7 +51,7 @@ p_max = 0.12
 
 import numpy as np
 
-gain_vector = np.matrix([
+gain_vector = np.array([
     500.,
     500.,  #chest
     100.,
@@ -82,12 +82,10 @@ gain_vector = np.matrix([
     1.,
     1.,
     10.,  #rleg    
-]).T  # gain vector for postural task :
+])  # gain vector for postural task :
 
-#gain_vector = np.matrix(np.ones(30)).T
-
-masks_posture = np.matrix(np.ones(30)).T
+masks_posture = np.ones(30)
 #masks_posture[-12:] = 0 # legID
 #print "mask postural task",masks_posture
 
-IK_REFERENCE_CONFIG = np.matrix(Robot.referenceConfig).T
+IK_REFERENCE_CONFIG = np.array(Robot.referenceConfig)

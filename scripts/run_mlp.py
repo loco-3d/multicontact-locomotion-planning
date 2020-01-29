@@ -1,6 +1,11 @@
 import mlp.config as cfg
 import mlp.viewer.display_tools as display_tools
 import os
+import eigenpy
+import pinocchio
+import curves
+import multicontact_api
+eigenpy.switchToNumpyArray()
 
 print("### MLP : contact sequence ###")
 from mlp.contact_sequence import generateContactSequence

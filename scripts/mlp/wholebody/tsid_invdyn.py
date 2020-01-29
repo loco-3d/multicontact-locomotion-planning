@@ -19,19 +19,19 @@ from mlp.utils.wholebody_result import Result
 from mlp.utils.util import *
 from mlp.end_effector import generateEndEffectorTraj, effectorCanRetry
 import eigenpy
-eigenpy.switchToNumpyMatrix()
+eigenpy.switchToNumpyArray()
 
 
 def buildRectangularContactPoints(eeName):
     size = cfg.IK_eff_size[eeName]
     transform = cfg.Robot.dict_offset[eeName]
     # build matrices with corners of the feet
-    lxp = size[0] / 2. + transform.translation[0, 0]  # foot length in positive x direction
-    lxn = size[0] / 2. - transform.translation[0, 0]  # foot length in negative x direction
-    lyp = size[1] / 2. + transform.translation[1, 0]  # foot length in positive y direction
-    lyn = size[1] / 2. - transform.translation[1, 0]  # foot length in negative y direction
-    lz = transform.translation[2, 0]  # foot sole height with respect to ankle joint
-    contact_Point = np.matrix(np.ones((3, 4)))
+    lxp = size[0] / 2. + transform.translation[0]  # foot length in positive x direction
+    lxn = size[0] / 2. - transform.translation[0]  # foot length in negative x direction
+    lyp = size[1] / 2. + transform.translation[1]  # foot length in positive y direction
+    lyn = size[1] / 2. - transform.translation[1]  # foot length in negative y direction
+    lz = transform.translation[2]  # foot sole height with respect to ankle joint
+    contact_Point = np.ones((3, 4))
     contact_Point[0, :] = [-lxn, -lxn, lxp, lxp]
     contact_Point[1, :] = [-lyn, lyp, -lyn, lyp]
     contact_Point[2, :] = [lz] * 4
@@ -66,17 +66,17 @@ def getCurrentEffectorAcceleration(robot, data, eeName):
 
 
 def createContactForEffector(invdyn, robot, phase, eeName):
-    contactNormal = np.matrix(cfg.Robot.dict_normal[eeName]).T
-    contactNormal = cfg.Robot.dict_offset[eeName].rotation * contactNormal  # apply offset transform
+    contactNormal = np.array(cfg.Robot.dict_normal[eeName])
+    contactNormal = cfg.Robot.dict_offset[eeName].rotation @ contactNormal  # apply offset transform
     if cfg.Robot.cType == "_3_DOF":
         contact = tsid.ContactPoint("contact_" + eeName, robot, eeName, contactNormal, cfg.MU, cfg.fMin, cfg.fMax)
-        mask = np.matrix(np.ones(3)).transpose()
+        mask = np.ones(3)
         contact.useLocalFrame(False)
     else:
         contact_Points = buildRectangularContactPoints(eeName)
         contact = tsid.Contact6d("contact_" + eeName, robot, eeName, contact_Points, contactNormal, cfg.MU, cfg.fMin,
                                  cfg.fMax)
-        mask = np.matrix(np.ones(6)).transpose()
+        mask = np.ones(6)
     contact.setKp(cfg.kp_contact * mask)
     contact.setKd(2.0 * np.sqrt(cfg.kp_contact) * mask)
     ref = getCurrentEffectorPosition(robot, invdyn.data(), eeName)
@@ -101,9 +101,9 @@ def createEffectorTasksDic(cs, robot):
         if isContactEverActive(cs, eeName):
             # build effector task object
             effectorTask = tsid.TaskSE3Equality("task-" + eeName, robot, eeName)
-            mask = np.matrix(np.ones(6)).transpose()
+            mask = np.ones(6)
             if cfg.Robot.cType == "_3_DOF":
-                mask[3:6] = np.matrix(np.zeros(3)).transpose()  # ignore rotation for contact points
+                mask[3:6] = np.zeros(3) # ignore rotation for contact points
             effectorTask.setKp(cfg.kp_Eff * mask)
             effectorTask.setKd(2.0 * np.sqrt(cfg.kp_Eff) * mask)
             res.update({eeName: effectorTask})
@@ -113,12 +113,12 @@ def createEffectorTasksDic(cs, robot):
 def computeCOMRefFromPhase(phase):
     # rearrange discretized points from phase to numpy matrices :
     N = len(phase.time_trajectory)
-    timeline = np.matrix(np.zeros(N))
-    c = np.matrix(np.zeros([3, N]))
-    dc = np.matrix(np.zeros([3, N]))
-    ddc = np.matrix(np.zeros([3, N]))
+    timeline = np.zeros(N)
+    c = np.zeros([3, N])
+    dc = np.zeros([3, N])
+    ddc = np.zeros([3, N])
     for i in range(N):
-        timeline[0, i] = phase.time_trajectory[i]
+        timeline[i] = phase.time_trajectory[i]
         c[:, i] = phase.state_trajectory[i][0:3]
         dc[:, i] = phase.state_trajectory[i][3:6]
         ddc[:, i] = phase.control_trajectory[i][0:3]
@@ -132,11 +132,11 @@ def computeCOMRefFromPhase(phase):
 def computeAMRefFromPhase(phase):
     # rearrange discretized points from phase to numpy matrices :
     N = len(phase.time_trajectory)
-    timeline = np.matrix(np.zeros(N))
-    L = np.matrix(np.zeros([3, N]))
-    dL = np.matrix(np.zeros([3, N]))
+    timeline = np.zeros(N)
+    L = np.zeros([3, N])
+    dL = np.zeros([3, N])
     for i in range(N):
-        timeline[0, i] = phase.time_trajectory[i]
+        timeline[i] = phase.time_trajectory[i]
         L[:, i] = phase.state_trajectory[i][6:9]
         dL[:, i] = phase.control_trajectory[i][3:6]
     L_ref = piecewise.FromPointsList(L,timeline.T)
@@ -193,7 +193,7 @@ def generateWholeBodyMotion(cs, fullBody=None, viewer=None):
     if cfg.WB_VERBOSE:
         print("pinocchio robot loaded from urdf.")
     q = cs.contact_phases[0].reference_configurations[0][:robot.nq].copy()
-    v = np.matrix(np.zeros(robot.nv)).transpose()
+    v = np.zeros(robot.nv)
     t = 0.0  # time
     # init states list with initial state (assume joint velocity is null for t=0)
     invdyn = tsid.InverseDynamicsFormulationAccForce("tsid", robot, False)
@@ -207,13 +207,13 @@ def generateWholeBodyMotion(cs, fullBody=None, viewer=None):
     if cfg.WB_VERBOSE:
         print("initialize tasks : ")
     comTask = tsid.TaskComEquality("task-com", robot)
-    comTask.setKp(cfg.kp_com * np.matrix(np.ones(3)).transpose())
-    comTask.setKd(2.0 * np.sqrt(cfg.kp_com) * np.matrix(np.ones(3)).transpose())
+    comTask.setKp(cfg.kp_com * np.ones(3))
+    comTask.setKd(2.0 * np.sqrt(cfg.kp_com) * np.ones(3))
     invdyn.addMotionTask(comTask, cfg.w_com, cfg.level_com, 0.0)
 
     amTask = tsid.TaskAMEquality("task-am", robot)
-    amTask.setKp(cfg.kp_am * np.matrix([1., 1., 0.]).T)
-    amTask.setKd(2.0 * np.sqrt(cfg.kp_am * np.matrix([1., 1., 0.]).T))
+    amTask.setKp(cfg.kp_am * np.array([1., 1., 0.]))
+    amTask.setKd(2.0 * np.sqrt(cfg.kp_am * np.array([1., 1., 0.])))
     invdyn.addTask(amTask, cfg.w_am, cfg.level_am)
 
     postureTask = tsid.TaskJointPosture("task-joint-posture", robot)
@@ -226,7 +226,7 @@ def generateWholeBodyMotion(cs, fullBody=None, viewer=None):
     samplePosture.pos(q_ref[7:])
 
     orientationRootTask = tsid.TaskSE3Equality("task-orientation-root", robot, 'root_joint')
-    mask = np.matrix(np.ones(6)).transpose()
+    mask = np.ones(6)
     mask[0:3] = 0
     mask[5] = cfg.YAW_ROT_GAIN
     orientationRootTask.setKp(cfg.kp_rootOrientation * mask)
@@ -300,7 +300,9 @@ def generateWholeBodyMotion(cs, fullBody=None, viewer=None):
             res.dc_t[:, k_t] = vcom
             res.ddc_t[:, k_t] = acom
             res.L_t[:, k_t] = pinRobot.centroidalMomentum(q, v).angular
-            #res.dL_t[:,k_t] = pinRobot.centroidalMomentumVariation(q,v,dv) # FIXME : in robot wrapper, use * instead of .dot() for np matrices
+            #res.dL_t[:,k_t] = pinRobot.centroidalMomentumVariation(q,v,dv)
+            # FIXME : replace both lines below by the commented line above once it is fixed in pinocchio
+            # https://github.com/stack-of-tasks/pinocchio/issues/1035
             pin.dccrba(pinRobot.model, pinRobot.data, q, v)
             res.dL_t[:, k_t] = Force(pinRobot.data.Ag.dot(dv) + pinRobot.data.dAg.dot(v)).angular
             if cfg.IK_store_zmp:
@@ -388,8 +390,8 @@ def generateWholeBodyMotion(cs, fullBody=None, viewer=None):
         if cfg.WB_VERBOSE:
             print("time_interval ", time_interval)
         # generate com ref traj from phase :
-        com_init = np.matrix(np.zeros((9, 1)))
-        com_init[0:3, 0] = robot.com(invdyn.data())
+        com_init = np.zeros(9)
+        com_init[0:3] = robot.com(invdyn.data())
         com_traj = computeCOMRefFromPhase(phase)
         am_traj = computeAMRefFromPhase(phase)
 
@@ -473,7 +475,7 @@ def generateWholeBodyMotion(cs, fullBody=None, viewer=None):
             else:
                 phase_interval = res.phases_intervals[pid][:-1]
             if iter_for_phase == 0:
-                first_q_t = np.matrix(np.zeros([robot.nq, phase_interval[-1] - phase_interval[0] + 1]))
+                first_q_t = np.zeros([robot.nq, phase_interval[-1] - phase_interval[0] + 1])
             for k_t in phase_interval:
                 t = res.t_t[k_t]
                 # set traj reference for current time :
@@ -493,10 +495,10 @@ def generateWholeBodyMotion(cs, fullBody=None, viewer=None):
                 sampleRoot,target_root_placement,target_root_vel,target_root_acc = curveSE3toTSID(root_traj,t)
                 orientationRootTask.setReference(sampleRoot)
                 quat_waist = Quaternion(target_root_placement.rotation)
-                res.waist_orientation_reference[:, k_t] = np.matrix(
-                    [quat_waist.x, quat_waist.y, quat_waist.z, quat_waist.w]).T
-                res.d_waist_orientation_reference[:, k_t] = np.matrix(target_root_vel.angular)
-                res.dd_waist_orientation_reference[:, k_t] = np.matrix(target_root_acc.angular)
+                res.waist_orientation_reference[:, k_t] = np.array(
+                    [quat_waist.x, quat_waist.y, quat_waist.z, quat_waist.w])
+                res.d_waist_orientation_reference[:, k_t] = target_root_vel.angular
+                res.dd_waist_orientation_reference[:, k_t] = target_root_acc.angular
                 if cfg.WB_VERBOSE == 2:
                     print("### references given : ###")
                     print("com  pos : ", sampleCom.pos())
@@ -526,8 +528,8 @@ def generateWholeBodyMotion(cs, fullBody=None, viewer=None):
                                 getCurrentEffectorPosition(robot, invdyn.data(), eeName))
                         else:
                             res.effector_references[eeName][:, k_t] = res.effector_references[eeName][:, k_t - 1]
-                        res.d_effector_references[eeName][:, k_t] = np.matrix(np.zeros(6)).T
-                        res.dd_effector_references[eeName][:, k_t] = np.matrix(np.zeros(6)).T
+                        res.d_effector_references[eeName][:, k_t] = np.zeros(6)
+                        res.dd_effector_references[eeName][:, k_t] = np.zeros(6)
 
                 # solve HQP for the current time
                 HQPData = invdyn.computeProblemData(t, q, v)

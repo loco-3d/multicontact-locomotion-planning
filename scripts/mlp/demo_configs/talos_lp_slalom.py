@@ -17,9 +17,7 @@ EFF_T_PREDEF = 0.3
 p_max = 0.2
 
 # Reference config used by the wholeBody script, may be different than the one used by the planning (default value is the same as planning)
-IK_REFERENCE_CONFIG = np.matrix(
-    Robot.referenceConfig_elbowsUp
-).T
+IK_REFERENCE_CONFIG = np.array(Robot.referenceConfig_elbowsUp)
 COM_SHIFT_Z = -0.04
 TIME_SHIFT_COM = 2.
 

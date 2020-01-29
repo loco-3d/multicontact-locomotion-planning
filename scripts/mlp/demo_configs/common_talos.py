@@ -50,7 +50,7 @@ FEET_MAX_ANG_VEL = 1.5  # maximal angular velocity of the effectors
 p_max = 0.1  #setting used to compute the default height of the effector trajectory. end_effector/bezier_predef.py : computePosOffset()
 
 import numpy as np
-gain_vector = np.matrix(  # gain vector for postural task
+gain_vector = np.array(  # gain vector for postural task
     [
         10.,
         5.,
@@ -85,12 +85,10 @@ gain_vector = np.matrix(  # gain vector for postural task
         100.,
         100.
     ]  #head
-).T
+)
 
-masks_posture = np.matrix(np.ones(32)).T
+masks_posture = np.ones(32)
 #masks_posture[:11] = 0
 
 # Reference config used by the wholeBody script, may be different than the one used by the planning (default value is the same as planning)
-IK_REFERENCE_CONFIG = np.matrix(
-    Robot.referenceConfig
-).T
+IK_REFERENCE_CONFIG = np.array(Robot.referenceConfig)

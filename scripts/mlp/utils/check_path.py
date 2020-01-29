@@ -22,7 +22,7 @@ class PathChecker():
     # return valid,message  : valid = bool, message = string
     def checkConfig(self, q_m):
         q = [0] * self.configSize
-        q[:self.nq] = q_m.T.tolist()[0]
+        q[:self.nq] = q_m.tolist()
         res = self.fullBody.isConfigValid(q)
         return res[0], res[1]
 
@@ -120,7 +120,7 @@ class PathChecker():
         q = [0]*self.fullBody.getConfigSize()
         success_global = True
         for i in range(self.q_t.shape[1]):
-            q[:self.size_conf] = self.q_t[:,i].transpose().tolist()[0]
+            q[:self.size_conf] = self.q_t[:,i].tolist()
             q = HPPQuaternion(q)
             res = self.fullBody.isConfigValid(q)
             if not res[0]:
@@ -142,7 +142,7 @@ class PathChecker():
         q = [0]*self.fullBody.getConfigSize()
         success_global = True
         for i in range(self.q_t.shape[1]):
-            q[:self.size_conf] = self.q_t[:,i].transpose().tolist()[0]
+            q[:self.size_conf] = self.q_t[:,i].tolist()
             q = HPPQuaternion(q)
             res = self.fullBody.isConfigValid(q)
             if not res[0]:
@@ -163,7 +163,7 @@ class PathChecker():
         q = [0]*self.fullBody.getConfigSize()
         success_global = True
         for i in range(self.q_t.shape[1]):
-            q[:self.size_conf] = self.q_t[:,i].transpose().tolist()[0]
+            q[:self.size_conf] = self.q_t[:,i].tolist()
             q = HPPQuaternion(q)
             res = self.fullBody.isConfigValid(q)
             if not res[0]:
@@ -181,7 +181,7 @@ class PathChecker():
         
     def showConfigAtId(self,id):
         q = [0]*self.fullBody.getConfigSize()
-        q[:self.size_conf] = self.q_t[:,id].transpose().tolist()[0]
+        q[:self.size_conf] = self.q_t[:,id].tolist()
         q = HPPQuaternion(q)        
         self.r(q)
 

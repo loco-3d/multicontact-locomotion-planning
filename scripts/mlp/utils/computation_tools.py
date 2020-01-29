@@ -88,7 +88,7 @@ def shiftZMPtoFloorAltitude(cs, t, phi0, useJointLevel=False):
     #print "Zy",w[0]/f[2]
     #print floor_altitude
 
-    ZMP = np.matrix([float(-w[1] / f[2]), float(w[0] / f[2]), float(floor_altitude)]).T
+    ZMP = np.array([float(-w[1] / f[2]), float(w[0] / f[2]), float(floor_altitude)])
     return ZMP
 
 
@@ -97,10 +97,10 @@ def shiftZMPtoFloorAltitude(cs, t, phi0, useJointLevel=False):
 def computeZMPFromWrench(cs, time_t, wrench_t):
 
     N = len(time_t)
-    ZMP_t = np.matrix(np.empty((3, N)))
+    ZMP_t = np.empty((3, N))
 
     # smooth wrench traj :
-    Wrench_trajectory = piecewise.FromPointList( wrench_t,np.asmatrix(time_t).T)
+    Wrench_trajectory = piecewise.FromPointList( wrench_t,np.asarray(time_t))
 
     for k in range(N):
         wrench = Wrench_trajectory(time_t[k])

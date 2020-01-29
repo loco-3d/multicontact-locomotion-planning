@@ -25,49 +25,49 @@ class Result:
         # timing vector (1 x N ) (time at each discretized point, from t=0 to t=dt*(N-1))
         self.t_t = np.array([t_begin + i * self.dt for i in range(N)])
         # matrix of joint configurations (nq x N )
-        self.q_t = np.matrix(np.zeros([self.nq, N]))
+        self.q_t = np.zeros([self.nq, N])
         # matrix of joint velocities (nv x N )
-        self.dq_t = np.matrix(np.zeros([self.nv, N]))
+        self.dq_t = np.zeros([self.nv, N])
         # matrix of joint accelerations ( nv x N )
-        self.ddq_t = np.matrix(np.zeros([self.nv, N]))
+        self.ddq_t = np.zeros([self.nv, N])
         # matrix of joint accelerations ( v x N )
-        self.tau_t = np.matrix(np.zeros([self.nu, N]))
+        self.tau_t = np.zeros([self.nu, N])
         # Center of Mass (CoM) positions at each time step (3 x N )
-        self.c_t = np.matrix(np.zeros([3, N]))
+        self.c_t = np.zeros([3, N])
         # Center of Mass (CoM) velocities at each time step (3 x N )
-        self.dc_t = np.matrix(np.zeros([3, N]))
+        self.dc_t = np.zeros([3, N])
         # Center of Mass (CoM) accelerations at each time step (3 x N )
-        self.ddc_t = np.matrix(np.zeros([3, N]))
+        self.ddc_t = np.zeros([3, N])
         # Angular momentum at each time step (3 x N )
-        self.L_t = np.matrix(np.zeros([3, N]))
+        self.L_t = np.zeros([3, N])
         # Angular momentum rate at each time step (3 x N )
-        self.dL_t = np.matrix(np.zeros([3, N]))
+        self.dL_t = np.zeros([3, N])
         # Center of Mass (CoM) positions at each time step (3xN ) as computed by the CoM trajectory optimization
-        self.c_reference = np.matrix(np.zeros([3, N]))
+        self.c_reference = np.zeros([3, N])
         # Center of Mass (CoM) velocities at each time step (3 x N ) as computed by the CoM trajectory optimization
-        self.dc_reference = np.matrix(np.zeros([3, N]))
+        self.dc_reference = np.zeros([3, N])
         # Center of Mass (CoM) accelerations at each time step (3 x N ) as computed by the CoM trajectory optimization
-        self.ddc_reference = np.matrix(np.zeros([3, N]))
+        self.ddc_reference = np.zeros([3, N])
         # Angular momentum at each time step (3 x N ) as computed by the CoM trajectory optimization
-        self.L_reference = np.matrix(np.zeros([3, N]))
+        self.L_reference = np.zeros([3, N])
         # Angular momentum rate at each time step (3 x N ) as computed by the CoM trajectory optimization
-        self.dL_reference = np.matrix(np.zeros([3, N]))
+        self.dL_reference = np.zeros([3, N])
         #  Centroidal wrench at each time step (6 x N )
-        self.wrench_t = np.matrix(np.zeros([6, N]))
+        self.wrench_t = np.zeros([6, N])
         # Centroidal wrench at each time step (6 x N ) as computed by the CoM trajectory optimization
-        self.wrench_reference = np.matrix(np.zeros([6, N]))
+        self.wrench_reference = np.zeros([6, N])
         # Zero Moment Point location at each time step(3 x N )
-        self.zmp_t = np.matrix(np.zeros([3, N]))
+        self.zmp_t = np.zeros([3, N])
         # Zero Moment Point location at each time step(3 x N ) as computed by the CoM trajectory optimization
-        self.zmp_reference = np.matrix(np.zeros([3, N]))
+        self.zmp_reference = np.zeros([3, N])
         # Reference used (from contact planning) of the waist orientation, stored as quaternion (x,y,z,w)
-        self.waist_orientation_reference = np.matrix(np.zeros([4, N]))
+        self.waist_orientation_reference = np.zeros([4, N])
         # Reference used (from contact planning) of the waist angular velocity,
         # stored as angular velocity (in world frame)
-        self.d_waist_orientation_reference = np.matrix(np.zeros([3, N]))
+        self.d_waist_orientation_reference = np.zeros([3, N])
         # Reference used (from contact planning) of the waist angular acceleration,
         # stored as angular acceleration (in world frame)
-        self.dd_waist_orientation_reference = np.matrix(np.zeros([3, N]))
+        self.dd_waist_orientation_reference = np.zeros([3, N])
         self.eeNames = eeNames  # The list of all effector names used during the motion
         # The following variables are maps with keys = effector name and value = numpy matrices :
         # 3d forces at each contact force generator/contact point of each end-effector.
@@ -109,15 +109,15 @@ class Result:
         # binary indicator whether a contact is active (1 x N per end-effector)
         self.contact_activity = {}
         for ee in self.eeNames:
-            self.contact_forces.update({ee: np.matrix(np.zeros([12, N]))})
-            self.contact_normal_force.update({ee: np.matrix(np.zeros([1, N]))})
-            self.effector_trajectories.update({ee: np.matrix(np.zeros([12, N]))})
-            self.d_effector_trajectories.update({ee: np.matrix(np.zeros([6, N]))})
-            self.dd_effector_trajectories.update({ee: np.matrix(np.zeros([6, N]))})
-            self.effector_references.update({ee: np.matrix(np.zeros([12, N]))})
-            self.d_effector_references.update({ee: np.matrix(np.zeros([6, N]))})
-            self.dd_effector_references.update({ee: np.matrix(np.zeros([6, N]))})
-            self.contact_activity.update({ee: np.matrix(np.zeros([1, N]))})
+            self.contact_forces.update({ee: np.zeros([12, N])})
+            self.contact_normal_force.update({ee: np.zeros([1, N])})
+            self.effector_trajectories.update({ee: np.zeros([12, N])})
+            self.d_effector_trajectories.update({ee: np.zeros([6, N])})
+            self.dd_effector_trajectories.update({ee: np.zeros([6, N])})
+            self.effector_references.update({ee: np.zeros([12, N])})
+            self.d_effector_references.update({ee: np.zeros([6, N])})
+            self.dd_effector_references.update({ee: np.zeros([6, N])})
+            self.contact_activity.update({ee: np.zeros([1, N])})
         if cs:
             # Correspondence between the contact phases and the indexes of discretized points in phase_intervals.
             # This field have the same length as the number of contact phases in the motion, and each element is a range of Id.
@@ -287,27 +287,27 @@ def loadFromNPZ(filename):
     eeNames = f['eeNames'].tolist()
     res = Result(nq, nv, dt, eeNames=eeNames, N=N, nu=nu)
     res.t_t = f['t_t']
-    res.q_t = np.asmatrix(f['q_t'])
-    res.dq_t = np.asmatrix(f['dq_t'])
-    res.ddq_t = np.asmatrix(f['ddq_t'])
-    res.tau_t = np.asmatrix(f['tau_t'])
-    res.c_t = np.asmatrix(f['c_t'])
-    res.dc_t = np.asmatrix(f['dc_t'])
-    res.ddc_t = np.asmatrix(f['ddc_t'])
-    res.L_t = np.asmatrix(f['L_t'])
-    res.dL_t = np.asmatrix(f['dL_t'])
-    res.c_reference = np.asmatrix(f['c_reference'])
-    res.dc_reference = np.asmatrix(f['dc_reference'])
-    res.ddc_reference = np.asmatrix(f['ddc_reference'])
-    res.L_reference = np.asmatrix(f['L_t'])
-    res.dL_reference = np.asmatrix(f['dL_t'])
-    res.wrench_t = np.asmatrix(f['wrench_t'])
-    res.zmp_reference = np.asmatrix(f['zmp_t'])
-    res.wrench_reference = np.asmatrix(f['wrench_t'])
-    res.zmp_t = np.asmatrix(f['zmp_t'])
-    res.waist_orientation_reference = np.asmatrix(f['waist_orientation_reference'])
-    res.d_waist_orientation_reference = np.asmatrix(f['d_waist_orientation_reference'])
-    res.dd_waist_orientation_reference = np.asmatrix(f['dd_waist_orientation_reference'])
+    res.q_t = f['q_t']
+    res.dq_t = f['dq_t']
+    res.ddq_t = f['ddq_t']
+    res.tau_t = f['tau_t']
+    res.c_t = f['c_t']
+    res.dc_t = f['dc_t']
+    res.ddc_t = f['ddc_t']
+    res.L_t = f['L_t']
+    res.dL_t = f['dL_t']
+    res.c_reference = f['c_reference']
+    res.dc_reference = f['dc_reference']
+    res.ddc_reference = f['ddc_reference']
+    res.L_reference = f['L_t']
+    res.dL_reference = f['dL_t']
+    res.wrench_t = f['wrench_t']
+    res.zmp_reference = f['zmp_t']
+    res.wrench_reference = f['wrench_t']
+    res.zmp_t = f['zmp_t']
+    res.waist_orientation_reference = f['waist_orientation_reference']
+    res.d_waist_orientation_reference = f['d_waist_orientation_reference']
+    res.dd_waist_orientation_reference = f['dd_waist_orientation_reference']
     res.contact_forces = f['contact_forces'].tolist()
     res.contact_normal_force = f['contact_normal_force'].tolist()
     res.effector_trajectories = f['effector_trajectories'].tolist()
@@ -319,14 +319,4 @@ def loadFromNPZ(filename):
     res.contact_activity = f['contact_activity'].tolist()
     res.phases_intervals = f['phases_intervals'].tolist()
     f.close()
-    for ee in res.eeNames:
-        res.contact_forces[ee] = np.asmatrix(res.contact_forces[ee])
-        res.contact_normal_force[ee] = np.asmatrix(res.contact_normal_force[ee])
-        res.effector_trajectories[ee] = np.asmatrix(res.effector_trajectories[ee])
-        res.d_effector_trajectories[ee] = np.asmatrix(res.d_effector_trajectories[ee])
-        res.dd_effector_trajectories[ee] = np.asmatrix(res.dd_effector_trajectories[ee])
-        res.effector_references[ee] = np.asmatrix(res.effector_references[ee])
-        res.d_effector_references[ee] = np.asmatrix(res.d_effector_references[ee])
-        res.dd_effector_references[ee] = np.asmatrix(res.dd_effector_references[ee])
-        res.contact_activity[ee] = np.asmatrix(res.contact_activity[ee])
     return res

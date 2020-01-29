@@ -4,6 +4,8 @@ import os
 import timeopt
 import multicontact_api
 from multicontact_api import WrenchCone, SOC6, ContactPatch, ContactPhaseHumanoid, ContactSequenceHumanoid
+multicontact_api.switchToNumpyArray()
+
 import time
 import mlp.config as cfg
 import mlp.viewer.display_tools as display
@@ -88,7 +90,7 @@ def fillCSFromTimeopt(cs, cs_initGuess, tp):
     state = p0.init_state
     appendOrReplace(p0.time_trajectory, 0, 0.)
     appendOrReplace(p0.state_trajectory, 0, state)
-    appendOrReplace(p0.control_trajectory, 0, np.matrix(np.zeros(6)).T)
+    appendOrReplace(p0.control_trajectory, 0, np.zeros(6))
     for k in range(tp.getTrajectorySize()):
         appendOrReplace(cs_com.contact_phases[p_id].time_trajectory, k_id, tp.getTime(k))
         #extract x and u from tp :
@@ -105,20 +107,20 @@ def fillCSFromTimeopt(cs, cs_initGuess, tp):
         x[3:6] = (tp.getLMOM(k) / MASS).tolist()  # velocity
         x[6:9] = tp.getAMOM(k).tolist()  # angular momentum
 
-        appendOrReplace(cs_com.contact_phases[p_id].control_trajectory, k_id, np.matrix(u))
-        appendOrReplace(cs_com.contact_phases[p_id].state_trajectory, k_id, np.matrix(x))
+        appendOrReplace(cs_com.contact_phases[p_id].control_trajectory, k_id, np.array(u))
+        appendOrReplace(cs_com.contact_phases[p_id].state_trajectory, k_id, np.array(x))
 
         if k > 0 and isNewPhase(tp, k - 1, k, cs_com, cs_initGuess, p_id) and p_id < cs_com.size() - 1:
             #last k of current phase, first k of next one (same state_traj and time)
             # set final state of current phase :
-            cs_com.contact_phases[p_id].final_state = np.matrix(x)
+            cs_com.contact_phases[p_id].final_state = np.array(x)
             # first k of the current phase
             p_id += 1
             k_id = 0
-            cs_com.contact_phases[p_id].init_state = np.matrix(x)
+            cs_com.contact_phases[p_id].init_state = np.array(x)
             appendOrReplace(cs_com.contact_phases[p_id].time_trajectory, k_id, tp.getTime(k))
-            appendOrReplace(cs_com.contact_phases[p_id].control_trajectory, k_id, np.matrix(u))
-            appendOrReplace(cs_com.contact_phases[p_id].state_trajectory, k_id, np.matrix(x))
+            appendOrReplace(cs_com.contact_phases[p_id].control_trajectory, k_id, np.array(u))
+            appendOrReplace(cs_com.contact_phases[p_id].state_trajectory, k_id, np.array(x))
         k_id += 1
     if cfg.DURATION_CONNECT_GOAL > 0:
         # timeopt solution is not guarantee to end at the desired final state.
@@ -193,7 +195,7 @@ def addCOMviapoints(tp, cs, cs_initGuess, viewer=None):
             com = phase.init_state[0:3]
             tp.setViapoint(cs_initGuess.contact_phases[pid].time_trajectory[0], com)
             if viewer and cfg.DISPLAY_WP_COST:
-                display.displaySphere(viewer, com.T.tolist()[0])
+                display.displaySphere(viewer, com.tolist())
 
 
 def extractAllEffectorsPhasesFromCS(cs, cs_initGuess, ee_ids):

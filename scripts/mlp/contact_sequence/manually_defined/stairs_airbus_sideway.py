@@ -1,6 +1,7 @@
-from multicontact_api import ContactSequenceHumanoid, ContactPhaseHumanoid
+from mlp.utils.cs_tools import addPhaseFromConfig, moveEffectorOf, setFinalState, removeContact, moveEffectorToPlacement
+import multicontact_api
+from multicontact_api import ContactSequenceHumanoid
 import mlp.viewer.display_tools as display_tools
-from mlp.utils.cs_tools import *
 import mlp.config as cfg
 from pinocchio import SE3
 from mlp.utils.util import rotatePlacement
@@ -8,6 +9,7 @@ from talos_rbprm.talos import Robot  # change robot here
 from mlp.utils.cs_tools import moveEffectorToPlacement
 import numpy as np
 from hpp.corbaserver.rbprm.rbprmstate import State, StateHelper
+multicontact_api.switchToNumpyArray()
 
 ENV_NAME = "multicontact/stairsAirbus_noRamp"
 
@@ -66,7 +68,7 @@ fb.setPostureWeights(fb.postureWeights_straff[::] + [0] * 6)
 # create hand contacts :
 pRH = SE3.Identity()
 pRH = rotatePlacement(pRH, 'y', -0.8115781021773631)
-n = computeContactNormal(pRH).T.tolist()[0]
+n = computeContactNormal(pRH).tolist()
 
 state = State(fb, q=q_ref, limbsIncontact=[fb.rLegId, fb.lLegId])
 pLHand = [-2.75, -1.235, 1.02]

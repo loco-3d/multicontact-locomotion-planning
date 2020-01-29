@@ -4,12 +4,12 @@ import numpy.linalg
 import numpy as np
 import math
 from mlp.utils.util import stdVecToMatrix, createStateFromPhase, effectorPositionFromHPPPath
-import eigenpy
+import hpp_bezier_com_traj
 import hpp_bezier_com_traj as bezier_com
 from curves import bezier, piecewise_bezier, SE3Curve, piecewise_SE3
 import quadprog
-eigenpy.switchToNumpyMatrix()
 from mlp.end_effector.bezier_predef import generatePredefBeziers, generateSmoothBezierTraj
+hpp_bezier_com_traj.switchToNumpyArray()
 
 VERBOSE = 1
 DISPLAY_RRT_PATH = True
@@ -84,8 +84,8 @@ def quadprog_solve_qp(P, q, G=None, h=None, C=None, d=None):
 def generateLimbRRTPath(q_init, q_end, phase_previous, phase, phase_next, fullBody):
     assert fullBody and "Cannot use limb-rrt method as fullBody object is not defined."
     extraDof = int(fullBody.client.robot.getDimensionExtraConfigSpace())
-    q_init = q_init.T.tolist()[0] + [0] * extraDof
-    q_end = q_end.T.tolist()[0] + [0] * extraDof
+    q_init = q_init.tolist() + [0] * extraDof
+    q_end = q_end.tolist() + [0] * extraDof
     # create nex states in fullBody corresponding to given configuration and set of contacts
     s0 = createStateFromPhase(fullBody, phase_previous, q_init)
     s1 = createStateFromPhase(fullBody, phase_next, q_end)
@@ -124,8 +124,8 @@ def generateLimbRRTPath(q_init, q_end, phase_previous, phase, phase_next, fullBo
     com1_fb = fullBody.getCenterOfMass()
 
     ## TEST, FIXME (force com path to start/end in the com position found from q_init and q_end. :
-    c_t[0, :] = np.matrix(com0_fb)
-    c_t[-1, :] = np.matrix(com1_fb)
+    c_t[0, :] = np.array(com0_fb)
+    c_t[-1, :] = np.array(com1_fb)
     com0 = c_t.tolist()[0]
     com1 = c_t.tolist()[-1]
     if VERBOSE > 1:
@@ -193,7 +193,7 @@ def computeDistanceCostMatrices(fb, pathId, pData, T, eeName, numPoints=50):
     problem = fb.client.problem
     # build a matrice 3xnumPoints by sampling the given path :
     step = problem.pathLength(pathId) / (numPoints - 1)
-    pts = np.matrix(np.zeros([3, numPoints]))
+    pts = np.zeros([3, numPoints])
     for i in range(numPoints):
         p = effectorPositionFromHPPPath(fb, problem, eeName, pathId, float(step * i))
         pts[:, i] = p
@@ -248,7 +248,7 @@ def generateLimbRRTOptimizedTraj(time_interval,
             pp = PathPlayer(viewer)
             pp.displayPath(current_limbRRT_id,
                            jointName=fullBody.getLinkNames(eeName)[0],
-                           offset=cfg.Robot.dict_offset[eeName].translation.T.tolist()[0])
+                           offset=cfg.Robot.dict_offset[eeName].translation.tolist())
 
     # find weight and number of variable to use from the numTry :
     for offset in reversed(recompute_rrt_at_tries):
@@ -286,6 +286,7 @@ def generateLimbRRTOptimizedTraj(time_interval,
     Constraints = bezier_com.computeEndEffectorConstraints(pData, t_middle)
     Cost_smooth = bezier_com.computeEndEffectorVelocityCost(pData, t_middle)
     Cost_distance = computeDistanceCostMatrices(fullBody, current_limbRRT_id, pData, t_middle, eeName)
+
     # formulate QP matrices :
     # _ prefix = previous notation (in bezier_com_traj)
     # min        x' H x + 2 g' x
@@ -311,9 +312,9 @@ def generateLimbRRTOptimizedTraj(time_interval,
     #subject to  G x <= h
     #subject to  C x  = d
     G = _A
-    h = _b.flatten().T  # remove the transpose when working with array
+    h = _b.flatten()  # remove the transpose when working with array
     P = _H * 2.
-    q = (_g * 2.).flatten().T
+    q = (_g * 2.).flatten()
 
     if VERBOSE > 1:
         print("G = ", G)
@@ -339,6 +340,7 @@ def generateLimbRRTOptimizedTraj(time_interval,
             str(numTry))
     if VERBOSE:
         print("Quadprog solved.")
+
     # build a bezier curve from the result of quadprog :
     vars = np.split(res, numVars)
     wps = bezier_com.computeEndEffectorConstantWaypoints(pData, t_middle)  # one wp per column
@@ -347,7 +349,7 @@ def generateLimbRRTOptimizedTraj(time_interval,
     id_firstVar = 4  # depend on the flag defined above, but for end effector we always use this ones ...
     i = id_firstVar
     for x in vars:
-        wps[:, i] = np.matrix(x).T
+        wps[:, i] = np.array(x)
         i += 1
     if VERBOSE:
         print("Variables waypoints replaced by quadprog results.")

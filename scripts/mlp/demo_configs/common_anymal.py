@@ -45,9 +45,9 @@ p_max = 0.2
 EFF_T_PREDEF = 0.
 
 import numpy as np
-gain_vector = np.matrix(np.ones(12)).T
-masks_posture = np.matrix(np.zeros(12)).T
+gain_vector = np.ones(12)
+masks_posture = np.zeros(12)
 for i in range(4):
     masks_posture[2 + i * 3] = 1.  # knees
 
-IK_REFERENCE_CONFIG = np.matrix(Robot.referenceConfig).T
+IK_REFERENCE_CONFIG = np.array(Robot.referenceConfig)
