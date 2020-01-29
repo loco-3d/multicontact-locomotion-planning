@@ -4,7 +4,7 @@ from numpy.linalg import norm
 import pinocchio
 from pinocchio import SE3, Quaternion, Motion
 from pinocchio.utils import rpyToMatrix, rotate
-import mlp.config as cfg
+import mlp.config as cfg #TODO : remove cfg from here and only take it as argument when required
 from curves import polynomial
 import math
 import types
@@ -23,15 +23,15 @@ def distPointLine(p_l, x1_l, x2_l):
 
 
 def findPhase(cs, t):
-    phase0 = cs.contact_phases[0]
-    phasel = cs.contact_phases[-1]
+    phase0 = cs.contactPhases[0]
+    phasel = cs.contactPhases[-1]
     if t <= phase0.time_trajectory[0]:
         return 0
     elif t >= phasel.time_trajectory[-1]:
-        return len(cs.contact_phases) - 1
+        return len(cs.contactPhases) - 1
 
     id = [
-        k for k, phase in enumerate(cs.contact_phases)
+        k for k, phase in enumerate(cs.contactPhases)
         if t >= phase.time_trajectory[0] and t <= phase.time_trajectory[-1]
     ]
     assert len(id) >= 1 or len(id) <= 2
@@ -145,41 +145,13 @@ def rotateFromRPY(placement, rpy):
     return placement.act(trans)
 
 
-def contactPatchForEffector(phase, eeName, Robot=None):
-    if not Robot:
-        Robot = cfg.Robot
-    if eeName == Robot.rfoot:
-        patch = phase.RF_patch
-    elif eeName == Robot.lfoot:
-        patch = phase.LF_patch
-    elif eeName == Robot.rhand:
-        patch = phase.RH_patch
-    elif eeName == Robot.lhand:
-        patch = phase.LH_patch
-    else:
-        raise Exception("Unknown effector name")
-    return patch
-
-
 # get the joint position for the given phase with the given effector name
 # Note that if the effector is not in contact the phase placement may be uninitialized (==Identity)
 def JointPatchForEffector(phase, eeName, Robot=None):
     if not Robot:
         Robot = cfg.Robot
-    if eeName == Robot.rfoot:
-        patch = phase.RF_patch.copy()
-        patch.placement = patch.placement.act(Robot.MRsole_offset.inverse())
-    elif eeName == Robot.lfoot:
-        patch = phase.LF_patch.copy()
-        patch.placement = patch.placement.act(Robot.MLsole_offset.inverse())
-    elif eeName == Robot.rhand:
-        patch = phase.RH_patch.copy()
-        patch.placement = patch.placement.act(Robot.MRhand_offset.inverse())
-    elif eeName == Robot.lhand:
-        patch = phase.LH_patch.copy()
-        patch.placement = patch.placement.act(Robot.MLhand_offset.inverse())
-    else:
-        raise Exception("Unknown effector name")
+    patch = phase.contactPatch(eeName)
+    patch.placement = patch.placement.act(Robot.dict_offset[eeName].inverse())
     return patch
 
 
@@ -187,39 +159,8 @@ def JointPlacementForEffector(phase, eeName, Robot=None):
     return JointPatchForEffector(phase, eeName, Robot).placement
 
 
-def getContactPlacement(phase, eeName, Robot=None):
-    if not Robot:
-        Robot = cfg.Robot
-    if eeName == Robot.rfoot:
-        return phase.RF_patch.placement
-    elif eeName == Robot.lfoot:
-        return phase.LF_patch.placement
-    elif eeName == Robot.rhand:
-        return phase.RH_patch.placement
-    elif eeName == Robot.lhand:
-        return phase.LH_patch.placement
-    else:
-        raise Exception("Unknown effector name : " + str(eeName))
-    return patch
-
-
-def isContactActive(phase, eeName, Robot=None):
-    if not Robot:
-        Robot = cfg.Robot
-    if eeName == Robot.rfoot:
-        return phase.RF_patch.active
-    elif eeName == Robot.lfoot:
-        return phase.LF_patch.active
-    elif eeName == Robot.rhand:
-        return phase.RH_patch.active
-    elif eeName == Robot.lhand:
-        return phase.LH_patch.active
-    else:
-        raise Exception("Unknown effector name")
-
-
 def isContactEverActive(cs, eeName):
-    for phase in cs.contact_phases:
+    for phase in cs.contactPhases:
         if eeName == cfg.Robot.rfoot:
             if phase.RF_patch.active:
                 return True
@@ -354,25 +295,15 @@ def copyPhaseContactPlacements(phase_in, phase_out):
     phase_out.LH_patch.placement = phase_in.LH_patch.placement
 
 
-def getActiveContactLimbs(phase, Robot=None):
-    if not Robot:
-        Robot = cfg.Robot
-    contacts = []
-    if phase.RF_patch.active:
-        contacts += [Robot.rLegId]
-    if phase.LF_patch.active:
-        contacts += [Robot.lLegId]
-    if phase.RH_patch.active:
-        contacts += [Robot.rArmId]
-    if phase.LH_patch.active:
-        contacts += [Robot.lArmId]
-    return contacts
-
 
 def createStateFromPhase(fullBody, phase, q=None):
     if q is None:
-        q = hppConfigFromMatrice(fullBody.client.robot, phase.reference_configurations[0])
-    contacts = getActiveContactLimbs(phase)
+        q = hppConfigFromMatrice(fullBody.client.robot, phase.q_init)
+    effectorsInContact = phase.effectorsInContact()
+    contacts = [] # contacts should contains the limb names, not the effector names
+    list_effector = list(fullBody.dict_limb_joint.values())
+    for eeName in effectorsInContact:
+        contacts += [list(fullBody.dict_limb_joint.keys())[list_effector.index(eeName)]]
     # FIXME : check if q is consistent with the contacts, and project it if not.
     return fullBody.createState(q, contacts)
 
@@ -393,40 +324,65 @@ def phasesHaveSameConfig(p0, p1):
     assert len(
         p1.reference_configurations
     ) > 0 and "CS object given to croc method should store one reference_configuration in each contact_phase"
-    return np.array_equal(p0.reference_configurations[0], p1.reference_configurations[0])
+    return np.array_equal(p0.q_init, p1.q_init)
 
 
-# TODO : check if only one effector move and raise error
-def computeEffectorTranslationBetweenStates(contact_phase, next_phase):
-    d = 0
-    if (not contact_phase.RF_patch.active and next_phase.RF_patch.active):
-        d = next_phase.RF_patch.placement.translation - contact_phase.RF_patch.placement.translation
-    if (not contact_phase.LF_patch.active and next_phase.LF_patch.active):
-        d = next_phase.LF_patch.placement.translation - contact_phase.LF_patch.placement.translation
-    if (not contact_phase.LH_patch.active and next_phase.LH_patch.active):
-        d = next_phase.LH_patch.placement.translation - contact_phase.LH_patch.placement.translation
-    if (not contact_phase.RH_patch.active and next_phase.RH_patch.active):
-        d = next_phase.RH_patch.placement.translation - contact_phase.RH_patch.placement.translation
+def computeEffectorTranslationBetweenStates(cs, pid):
+    """
+    Compute the distance travelled by the effector (suppose a straight line) between
+    it's contact placement in pid+1 and it's previous contact placement
+    :param cs:
+    :param pid:
+    :return:
+    """
+    phase = cs.contactPhases[pid]
+    next_phase = cs.contactPhases[pid+1]
+    eeNames = phase.getContactsCreated(next_phase)
+    if len(eeNames) > 1:
+        raise NotImplementedError("Several effectors are moving during the same phase.")
+    if len(eeNames) == 0 :
+        # no effectors motions in this phase
+        return 0.
+    eeName = eeNames[0]
+    i = pid
+    while not cs.contactPhases[i].isEffectorInContact(eeName) and i >= 0:
+        i -= 1
+    if i < 0:
+        # this is the first phase where this effector enter in contact
+        # TODO what should we do here ?
+        return 0.
+
+    d = next_phase.contactPatch(eeName).placement.translation -  cs.contactPhases[i].contactPatch(eeName).placement.translation
     return norm(d)
 
 
-# TODO : check if only one effector move and raise error
-def computeEffectorRotationBetweenStates(contact_phase, next_phase):
-    P = np.identity(3)
-    Q = np.identity(3)
-    if (not contact_phase.RF_patch.active and next_phase.RF_patch.active):
-        P = next_phase.RF_patch.placement.rotation
-        Q = contact_phase.RF_patch.placement.rotation
-    if (not contact_phase.LF_patch.active and next_phase.LF_patch.active):
-        P = next_phase.LF_patch.placement.rotation
-        Q = contact_phase.LF_patch.placement.rotation
-    if (not contact_phase.LH_patch.active and next_phase.LH_patch.active):
-        P = next_phase.LH_patch.placement.rotation
-        Q = contact_phase.LH_patch.placement.rotation
-    if (not contact_phase.RH_patch.active and next_phase.RH_patch.active):
-        P = next_phase.RH_patch.placement.rotation
-        Q = contact_phase.RH_patch.placement.rotation
+def computeEffectorRotationBetweenStates(cs, pid):
+    """
+    Compute the rotation applied to the effector  between
+    it's contact placement in pid+1 and it's previous contact placement
+    :param cs:
+    :param pid:
+    :return:
+    """
+    phase = cs.contactPhases[pid]
+    next_phase = cs.contactPhases[pid + 1]
+    eeNames = phase.getContactsCreated(next_phase)
+    if len(eeNames) > 1:
+        raise NotImplementedError("Several effectors are moving during the same phase.")
+    if len(eeNames) == 0:
+        # no effectors motions in this phase
+        return 0.
+    eeName = eeNames[0]
+    i = pid
+    while not cs.contactPhases[pid].isEffectorInContact(eeName) and i >= 0:
+        i -= 1
+    if i < 0:
+        # this is the first phase where this effector enter in contact
+        # TODO what should we do here ?
+        return 0.
 
+    P = next_phase.contactPatch(eeName).placement.rotation
+    Q = cs.contactPhases[i].contactPatch(eeName).placement.rotation
     R = P.dot(Q.T)
     tR = R.trace()
     try:
@@ -452,12 +408,12 @@ def createFullbodyStatesFromCS(cs, fb):
     if lastId > 0:
         print("States already exist in fullBody instance. endId = ", lastId)
         return 0, lastId
-    phase_prev = cs.contact_phases[0]
+    phase_prev = cs.contactPhases[0]
     beginId = createStateFromPhase(fb, phase_prev)
     lastId = beginId
     print("CreateFullbodyStateFromCS ##################")
     print("beginId = ", beginId)
-    for pid, phase in enumerate(cs.contact_phases[1:]):
+    for pid, phase in enumerate(cs.contactPhases[1:]):
         if not phasesHaveSameConfig(phase_prev, phase):
             lastId = createStateFromPhase(fb, phase)
             print("add phase " + str(pid) + " at state index : " + str(lastId))
@@ -515,7 +471,7 @@ def getPhaseEffTrajectoryByName(phase, eeName, Robot):
 def addEffectorTrajectoryInCS(cs, wb_result, Robot=None):
     if not Robot:
         Robot = cfg.Robot
-    for phase in cs.contact_phases:
+    for phase in cs.contactPhases:
         for i_traj in range(len(phase.time_trajectory)):
             id = int(phase.time_trajectory[i_traj] / wb_result.dt)
             if id >= len(wb_result.t_t):
@@ -528,11 +484,11 @@ def addEffectorTrajectoryInCS(cs, wb_result, Robot=None):
 
 def rootOrientationFromFeetPlacement(phase, phase_next):
     #FIXME : extract only the yaw rotation
-    qr = Quaternion(phase.RF_patch.placement.rotation)
+    qr = Quaternion(phase.contactPatch(cfg.Robot.rfoot).placement.rotation)
     qr.x = 0
     qr.y = 0
     qr.normalize()
-    ql = Quaternion(phase.LF_patch.placement.rotation)
+    ql = Quaternion(phase.contactPatch(cfg.Robot.lfoot).placement.rotation)
     ql.x = 0
     ql.y = 0
     ql.normalize()
@@ -540,13 +496,13 @@ def rootOrientationFromFeetPlacement(phase, phase_next):
     placement_init = SE3.Identity()
     placement_init.rotation = q_rot.matrix()
     if phase_next:
-        if not isContactActive(phase, cfg.Robot.rfoot) and isContactActive(phase_next, cfg.Robot.rfoot):
-            qr = Quaternion(phase_next.RF_patch.placement.rotation)
+        if not phase.isEffectorInContact(cfg.Robot.rfoot) and phase_next.isEffectorInContact(cfg.Robot.rfoot):
+            qr = Quaternion(phase_next.contactPatch(cfg.Robot.rfoot).placement.rotation)
             qr.x = 0
             qr.y = 0
             qr.normalize()
-        if not isContactActive(phase, cfg.Robot.lfoot) and isContactActive(phase_next, cfg.Robot.lfoot):
-            ql = Quaternion(phase_next.LF_patch.placement.rotation)
+        if not phase.isEffectorInContact(cfg.Robot.lfoot) and phase_next.isEffectorInContact(cfg.Robot.lfoot):
+            ql = Quaternion(phase_next.contactPatch(cfg.Robot.lfoot).placement.rotation)
             ql.x = 0
             ql.y = 0
             ql.normalize()
@@ -554,3 +510,11 @@ def rootOrientationFromFeetPlacement(phase, phase_next):
     placement_end = SE3.Identity()
     placement_end.rotation = q_rot.matrix()
     return placement_init, placement_end
+
+def copyPhaseInitToFinal(phase):
+    phase.c_final = phase.c_init
+    phase.dc_final = phase.dc_init
+    phase.ddc_final = phase.ddc_init
+    phase.L_final = phase.L_init
+    phase.dL_final = phase.dL_init
+    phase.q_final = phase.q_init

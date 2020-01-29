@@ -1,7 +1,7 @@
 import pinocchio as pin
 from pinocchio import SE3, Quaternion
 import multicontact_api
-from multicontact_api import WrenchCone, SOC6, ContactPatch, ContactPhaseHumanoid, ContactSequenceHumanoid
+from multicontact_api import WrenchCone, SOC6, ContactPatch, ContactPhase, ContactSequence
 pin.switchToNumpyArray()
 import numpy as np
 import time
@@ -91,24 +91,24 @@ def displaySteppingStones(cs, gui, sceneName, Robot):
     id_RH = 0
     id_LH = 0
 
-    for phase in cs.contact_phases:
-        if phase.LF_patch.active:
-            addSteppingStone(gui, phase.LF_patch.placement * Robot.dict_display_offset[Robot.lfoot],
+    for phase in cs.contactPhases:
+        if phase.isEffectorInContact(Robot.lfoot):
+            addSteppingStone(gui, phase.contactPatch(Robot.lfoot).placement * Robot.dict_display_offset[Robot.lfoot],
                              name_LF + str(id_LF), STONE_LF, Robot.dict_size[Robot.lfoot],
                              Robot.dict_limb_color_traj[Robot.lfoot])
             id_LF += 1
-        if phase.RF_patch.active:
-            addSteppingStone(gui, phase.RF_patch.placement * Robot.dict_display_offset[Robot.rfoot],
+        if phase.isEffectorInContact(Robot.rfoot):
+            addSteppingStone(gui, phase.contactPatch(Robot.rfoot).placement * Robot.dict_display_offset[Robot.rfoot],
                              name_RF + str(id_RF), STONE_RF, Robot.dict_size[Robot.rfoot],
                              Robot.dict_limb_color_traj[Robot.rfoot])
             id_RF += 1
-        if phase.LH_patch.active:
-            addSteppingStone(gui, phase.LH_patch.placement * Robot.dict_display_offset[Robot.lhand],
+        if phase.isEffectorInContact(Robot.lhand):
+            addSteppingStone(gui, phase.contactPatch(Robot.lhand).placement * Robot.dict_display_offset[Robot.lhand],
                              name_LH + str(id_LH), STONE_LH, Robot.dict_size[Robot.lhand],
                              Robot.dict_limb_color_traj[Robot.lhand])
             id_LH += 1
-        if phase.RH_patch.active:
-            addSteppingStone(gui, phase.RH_patch.placement * Robot.dict_display_offset[Robot.rhand],
+        if phase.isEffectorInContact(Robot.rhand):
+            addSteppingStone(gui, phase.contactPatch(Robot.rhand).placement * Robot.dict_display_offset[Robot.rhand],
                              name_RH + str(id_RH), STONE_RH, Robot.dict_size[Robot.rhand],
                              Robot.dict_limb_color_traj[Robot.rhand])
             id_RH += 1
@@ -136,10 +136,10 @@ def displayCOMTrajForPhase(p, gui, name, name_group, color):
 def displayCOMTrajectory(cs, gui, sceneName, colors=[0, 0, 0, 1], nameGroup=""):
     name_group = TRAJ_GROUP + nameGroup
     gui.createGroup(name_group)
-    for pid in range(len(cs.contact_phases)):
-        phase = cs.contact_phases[pid]
-        if pid < len(cs.contact_phases) - 1:
-            phase_next = cs.contact_phases[pid + 1]
+    for pid in range(len(cs.contactPhases)):
+        phase = cs.contactPhases[pid]
+        if pid < len(cs.contactPhases) - 1:
+            phase_next = cs.contactPhases[pid + 1]
         else:
             phase_next = None
         name = name_group + "/" + '%.2f' % phase.time_trajectory[0] + "-" + '%.2f' % phase.time_trajectory[-1]
@@ -214,8 +214,8 @@ def displayFeetTrajFromResult(gui, sceneName, res, Robot):
 
 
 def displayContactSequence(v, cs, step=0.2):
-    for p in cs.contact_phases:
-        displayWBconfig(v, p.reference_configurations[0])
+    for p in cs.contactPhases:
+        displayWBconfig(v, p.q_init)
         time.sleep(step)
 
 

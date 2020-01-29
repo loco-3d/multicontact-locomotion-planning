@@ -1,6 +1,6 @@
 from mlp.utils.cs_tools import addPhaseFromConfig, moveEffectorOf, setFinalState, removeContact, moveEffectorToPlacement
 import multicontact_api
-from multicontact_api import ContactSequenceHumanoid
+from multicontact_api import ContactSequence
 import mlp.viewer.display_tools as display_tools
 multicontact_api.switchToNumpyArray()
 import mlp.config as cfg
@@ -9,7 +9,7 @@ from talos_rbprm.talos import Robot  # change robot here
 ENV_NAME = "multicontact/bauzil_stairs"
 
 fb, v = display_tools.initScene(Robot, ENV_NAME, False)
-cs = ContactSequenceHumanoid(0)
+cs = ContactSequence(0)
 
 #Create an initial contact phase :
 q_ref = fb.referenceConfig[::] + [0] * 6
