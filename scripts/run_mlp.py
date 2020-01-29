@@ -7,20 +7,22 @@ import curves
 import multicontact_api
 eigenpy.switchToNumpyArray()
 
-print("### MLP : contact sequence ###")
-from mlp.contact_sequence import generateContactSequence
-cs, fullBody, viewer = generateContactSequence()
-
-if cfg.WRITE_STATUS:
-    f = open(cfg.STATUS_FILENAME, "a")
-    f.write("gen_cs_success: True\n")
-    f.close()
-
 try:
     #python2
     input = raw_input
 except NameError:
     pass
+
+
+print("### MLP : contact sequence ###")
+import mlp.contact_sequence as contactGeneration
+cs, fullBody, viewer = contactGeneration.generateContactSequence()
+contactGeneration.Outputs.assertRequirements(cs)
+
+if cfg.WRITE_STATUS:
+    f = open(cfg.STATUS_FILENAME, "a")
+    f.write("gen_cs_success: True\n")
+    f.close()
 
 if cfg.DISPLAY_CS:
     input("Press Enter to display the contact sequence ...")
@@ -36,8 +38,10 @@ if cfg.DISPLAY_CS_STONES:
 
 print("------------------------------")
 print("### MLP : centroidal, initial Guess ###")
-from mlp.centroidal import generateCentroidalInitGuess
-cs_initGuess = generateCentroidalInitGuess(cs, fullBody=fullBody, viewer=viewer)
+import mlp.centroidal.initGuess as centroidalInitGuess
+centroidalInitGuess.Inputs.checkAndFillRequirements(cs,cfg,fullBody)
+cs_initGuess = centroidalInitGuess.generateCentroidalTrajectory(cs, fullBody=fullBody, viewer=viewer)
+centroidalInitGuess.Outputs.assertRequirements(cs_initGuess)
 
 if cfg.DISPLAY_INIT_GUESS_TRAJ and cs_initGuess:
     colors = [viewer.color.red, viewer.color.yellow]
@@ -45,8 +49,10 @@ if cfg.DISPLAY_INIT_GUESS_TRAJ and cs_initGuess:
 
 print("------------------------------")
 print("### MLP : centroidal  ###")
-from mlp.centroidal import generateCentroidalTrajectory
-cs_com = generateCentroidalTrajectory(cs, cs_initGuess, fullBody, viewer)
+import mlp.centroidal as centroidal
+centroidal.Inputs.checkAndFillRequirements(cs_initGuess,cfg,fullBody)
+cs_com = centroidal.generateCentroidalTrajectory(cs, cs_initGuess, fullBody, viewer)
+centroidal.Outputs.assertRequirements(cs_com)
 
 if cfg.WRITE_STATUS:
     f = open(cfg.STATUS_FILENAME, "a")
@@ -68,8 +74,10 @@ if cfg.PLOT_CENTROIDAL:
 
 print("------------------------------")
 print("### MLP : whole-body  ###")
-from mlp.wholebody import generateWholeBodyMotion
-res, robot = generateWholeBodyMotion(cs_com, fullBody, viewer)
+import mlp.wholebody as wholeBody
+wholeBody.Inputs.checkAndFillRequirements(cs_com,cfg,fullBody)
+cs_wb, res, robot = wholeBody.generateWholeBodyMotion(cs_com, fullBody, viewer)
+wholeBody.Outputs.assertRequirements(cs_wb)
 
 if cfg.WRITE_STATUS:
     if not os.path.exists(cfg.OUTPUT_DIR):
