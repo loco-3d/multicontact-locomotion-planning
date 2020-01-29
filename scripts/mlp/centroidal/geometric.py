@@ -4,51 +4,15 @@ import multicontact_api
 from multicontact_api import WrenchCone, SOC6, ContactPatch, ContactPhase, ContactSequence
 from mlp.utils.requirements import Requirements
 import math
-from mlp.utils.util import computeEffectorTranslationBetweenStates, computeEffectorRotationBetweenStates
 VERBOSE = False
 multicontact_api.switchToNumpyArray()
 
+class Inputs(Requirements):
+    timings = True
+    COMvalues = True
 
-def computePhaseDuration(cs, pid):
-    duration = 0
-    phase = cs.contact_phases[pid]
-    if phase.numActivePatches() == 1:
-        duration = cfg.DURATION_SS
-    if phase.numActivePatches() == 2:
-        duration = cfg.DURATION_DS
-    if phase.numActivePatches() == 3:
-        duration = cfg.DURATION_TS
-    if phase.numActivePatches() == 4:
-        duration = cfg.DURATION_QS
-    if phase.numActivePatches() > 4:
-        raise Exception("Case not implemented")
-    if pid == 0:
-        duration = cfg.DURATION_INIT
-    if pid == (cs.size() - 1):
-        duration = cfg.DURATION_FINAL
-    # Adjust duration if needed to respect bound on effector velocity
-    duration_feet = 0.
-    duration_feet_trans = 0.
-    duration_feet_rot = 0.
-    if pid < cs.size() - 1:
-        dist_feet = computeEffectorTranslationBetweenStates(phase, cs.contact_phases[pid + 1])
-        if dist_feet > 0.:
-            duration_feet_trans = (2. * cfg.EFF_T_DELAY + 2. * cfg.EFF_T_PREDEF) + dist_feet / cfg.FEET_MAX_VEL
-        rot_feet = computeEffectorRotationBetweenStates(phase, cs.contact_phases[pid + 1])
-        if rot_feet > 0.:
-            duration_feet_rot = (2. * cfg.EFF_T_DELAY + 2. * cfg.EFF_T_PREDEF) + rot_feet / cfg.FEET_MAX_ANG_VEL
-        duration_feet = max(duration_feet_trans, duration_feet_rot)
-        # Make it a multiple of solver_dt :
-        if duration_feet > 0.:
-            duration_feet = math.ceil(duration_feet / cfg.SOLVER_DT) * cfg.SOLVER_DT
-        if VERBOSE:
-            print("for phase : ", pid)
-            print("dist_feet            : ", dist_feet)
-            print("duration translation : ", duration_feet_trans)
-            print("rot_feet             : ", rot_feet)
-            print("duration rotation    : ", duration_feet_rot)
-            print("duration complete    : ", duration_feet)
-    return max(duration, duration_feet)
+class Outputs(Inputs):
+    COMtrajectories = True
 
 
 ## straight line from the center of the support polygon of the current phase to the next one
