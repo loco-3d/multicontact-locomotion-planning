@@ -3,7 +3,7 @@ from numpy.linalg import norm
 import os
 import timeopt
 import multicontact_api
-from multicontact_api import WrenchCone, SOC6, ContactPatch, ContactPhaseHumanoid, ContactSequenceHumanoid
+from multicontact_api import WrenchCone, SOC6, ContactPatch, ContactPhase, ContactSequence
 multicontact_api.switchToNumpyArray()
 
 import time
@@ -15,7 +15,7 @@ CONTACT_ANKLE_LEVEL = False  # probably only required for hrp2, as the center of
 
 
 def isContactEverActive(cs, eeName):
-    for phase in cs.contact_phases:
+    for phase in cs.contactPhases:
         if eeName == timeopt.EndeffectorID.RF:
             if phase.RF_patch.active:
                 return True
@@ -49,7 +49,7 @@ def isNewPhaseFromContact(tp, k0, k1):
 def isNewPhaseFromCS(cs_com, cs_initGuess, p_id):
     """
     id = 0
-    for phase in cs.contact_phases :
+    for phase in cs.contactPhases :
         if id == 0:
             id += len(phase.time_trajectory)
         else :
@@ -60,7 +60,7 @@ def isNewPhaseFromCS(cs_com, cs_initGuess, p_id):
             return False
     return False
     """
-    if len(cs_com.contact_phases[p_id].time_trajectory) == len(cs_initGuess.contact_phases[p_id].time_trajectory):
+    if len(cs_com.contactPhases[p_id].time_trajectory) == len(cs_initGuess.contactPhases[p_id].time_trajectory):
         return True
     else:
         return False
@@ -74,16 +74,16 @@ def isNewPhase(tp, k0, k1, cs_com, cs_initGuess, p_id):
 
 
 def fillCSFromTimeopt(cs, cs_initGuess, tp):
-    cs_com = ContactSequenceHumanoid(cs)
+    cs_com = ContactSequence(cs)
 
-    # extract infos from tp to fill cs.contact_phases struct
+    # extract infos from tp to fill cs.contactPhases struct
     u = [0] * 6
     x = [0] * 9
     MASS = tp.getMass()
     p_id = 0  # phase id in cs
     k_id = 1  # id in the current phase
     # tp.getTime(0) == dt !! not 0
-    p0 = cs_com.contact_phases[0]
+    p0 = cs_com.contactPhases[0]
     init_state = p0.init_state
     init_state[0:3] = tp.getInitialCOM()
     p0.init_state = init_state
@@ -92,7 +92,7 @@ def fillCSFromTimeopt(cs, cs_initGuess, tp):
     appendOrReplace(p0.state_trajectory, 0, state)
     appendOrReplace(p0.control_trajectory, 0, np.zeros(6))
     for k in range(tp.getTrajectorySize()):
-        appendOrReplace(cs_com.contact_phases[p_id].time_trajectory, k_id, tp.getTime(k))
+        appendOrReplace(cs_com.contactPhases[p_id].time_trajectory, k_id, tp.getTime(k))
         #extract x and u from tp :
         if k == 0:
             u[0:3] = ((tp.getLMOM(k) / MASS) / tp.getTime(k)).tolist()  # acceleration
@@ -107,25 +107,25 @@ def fillCSFromTimeopt(cs, cs_initGuess, tp):
         x[3:6] = (tp.getLMOM(k) / MASS).tolist()  # velocity
         x[6:9] = tp.getAMOM(k).tolist()  # angular momentum
 
-        appendOrReplace(cs_com.contact_phases[p_id].control_trajectory, k_id, np.array(u))
-        appendOrReplace(cs_com.contact_phases[p_id].state_trajectory, k_id, np.array(x))
+        appendOrReplace(cs_com.contactPhases[p_id].control_trajectory, k_id, np.array(u))
+        appendOrReplace(cs_com.contactPhases[p_id].state_trajectory, k_id, np.array(x))
 
         if k > 0 and isNewPhase(tp, k - 1, k, cs_com, cs_initGuess, p_id) and p_id < cs_com.size() - 1:
             #last k of current phase, first k of next one (same state_traj and time)
             # set final state of current phase :
-            cs_com.contact_phases[p_id].final_state = np.array(x)
+            cs_com.contactPhases[p_id].final_state = np.array(x)
             # first k of the current phase
             p_id += 1
             k_id = 0
-            cs_com.contact_phases[p_id].init_state = np.array(x)
-            appendOrReplace(cs_com.contact_phases[p_id].time_trajectory, k_id, tp.getTime(k))
-            appendOrReplace(cs_com.contact_phases[p_id].control_trajectory, k_id, np.array(u))
-            appendOrReplace(cs_com.contact_phases[p_id].state_trajectory, k_id, np.array(x))
+            cs_com.contactPhases[p_id].init_state = np.array(x)
+            appendOrReplace(cs_com.contactPhases[p_id].time_trajectory, k_id, tp.getTime(k))
+            appendOrReplace(cs_com.contactPhases[p_id].control_trajectory, k_id, np.array(u))
+            appendOrReplace(cs_com.contactPhases[p_id].state_trajectory, k_id, np.array(x))
         k_id += 1
     if cfg.DURATION_CONNECT_GOAL > 0:
         # timeopt solution is not guarantee to end at the desired final state.
         # so we add a final phase here, with a smooth motion from the final state atteined by timeopt to the desired one
-        connectPhaseTrajToFinalState(cs_com.contact_phases[-1], cfg.DURATION_CONNECT_GOAL)
+        connectPhaseTrajToFinalState(cs_com.contactPhases[-1], cfg.DURATION_CONNECT_GOAL)
     return cs_com
 
 
@@ -159,7 +159,7 @@ def extractEffectorPhasesFromCS(cs, ee):
     pid = 0
     # find a first active patch or given effector :
     while pid < cs.size():
-        p = cs.contact_phases[pid]
+        p = cs.contactPhases[pid]
         patch = getPhasePatchforEE(p, ee)
         if patch.active:
             previous_patch = patch
@@ -170,7 +170,7 @@ def extractEffectorPhasesFromCS(cs, ee):
             while patch.active and patch.placement == previous_patch.placement and pid <= cs.size():
                 t_end = p.time_trajectory[-1]
                 if pid < cs.size():
-                    p = cs.contact_phases[pid]
+                    p = cs.contactPhases[pid]
                     patch = getPhasePatchforEE(p, ee)
                 pid += 1
             pid -= 1
@@ -187,13 +187,13 @@ def extractEffectorPhasesFromCSWithoutInitGuess(cs, ee):
 def addCOMviapoints(tp, cs, cs_initGuess, viewer=None):
     phase_previous = None
     for pid in range(1, cs.size() - 1):
-        phase = cs.contact_phases[pid]
-        phase_previous = cs.contact_phases[pid - 1]
-        phase_next = cs.contact_phases[pid + 1]
+        phase = cs.contactPhases[pid]
+        phase_previous = cs.contactPhases[pid - 1]
+        phase_next = cs.contactPhases[pid + 1]
         if phase_previous and (phase_previous.numActivePatches() < phase.numActivePatches()) and phase_next and (
                 phase_next.numActivePatches() < phase.numActivePatches()):
             com = phase.init_state[0:3]
-            tp.setViapoint(cs_initGuess.contact_phases[pid].time_trajectory[0], com)
+            tp.setViapoint(cs_initGuess.contactPhases[pid].time_trajectory[0], com)
             if viewer and cfg.DISPLAY_WP_COST:
                 display.displaySphere(viewer, com.tolist())
 
@@ -255,14 +255,14 @@ def extractAllEffectorsPhasesFromCS(cs, cs_initGuess, ee_ids):
 def addInitShift(cs):
     # shit all times of TIME_SHIFT_COM
     for k in range(cs.size()):
-        phase = cs.contact_phases[k]
+        phase = cs.contactPhases[k]
         # shift times to take in account the new duration of init phase :
         for i in range(len(phase.time_trajectory)):
             phase.time_trajectory[i] += cfg.TIME_SHIFT_COM
 
     # now add new first phase :
-    prev_phase_init = cs.contact_phases[0]
-    phase_init = ContactPhaseHumanoid()
+    prev_phase_init = cs.contactPhases[0]
+    phase_init = ContactPhase()
     copyPhaseContacts(prev_phase_init, phase_init)
     phase_init.reference_configurations = prev_phase_init.reference_configurations
     # generate trajectory for the 'shift' part :
@@ -278,7 +278,7 @@ def addInitShift(cs):
         phase_init.time_trajectory.append(prev_phase_init.time_trajectory[i])
         phase_init.state_trajectory.append(prev_phase_init.state_trajectory[i])
         phase_init.control_trajectory.append(prev_phase_init.control_trajectory[i])
-    cs.contact_phases[0] = phase_init
+    cs.contactPhases[0] = phase_init
     return cs
 
 
@@ -287,7 +287,7 @@ def generateCentroidalTrajectory(cs, cs_initGuess=None, fullBody=None, viewer=No
         print(
             "WARNING : in current implementation of timeopt.generateCentroidalTrajectory the initial guess is ignored. (TODO)"
         )
-    q_init = cs.contact_phases[0].reference_configurations[0].copy()
+    q_init = cs.contactPhases[0].q_init.copy()
     num_phases = cs.size()
     ee_ids = [timeopt.EndeffectorID.RF, timeopt.EndeffectorID.LF, timeopt.EndeffectorID.RH, timeopt.EndeffectorID.LH]
 
@@ -296,14 +296,14 @@ def generateCentroidalTrajectory(cs, cs_initGuess=None, fullBody=None, viewer=No
     print("final number of phases : ", size)
     # initialize timeopt problem :
     tp = timeopt.problem(size)
-    com_init = cs.contact_phases[0].init_state[:3]
-    vel_init = cs.contact_phases[0].init_state[3:6]
-    com_end = cs.contact_phases[-1].final_state[:3]
+    com_init = cs.contactPhases[0].init_state[:3]
+    vel_init = cs.contactPhases[0].init_state[3:6]
+    com_end = cs.contactPhases[-1].final_state[:3]
     com_init[2] += cfg.COM_SHIFT_Z
     tp.setInitialCOM(com_init)
     tp.setInitialLMOM(vel_init * cfg.MASS)
     tp.setFinalCOM(com_end)
-    p0 = cs.contact_phases[0]
+    p0 = cs.contactPhases[0]
     for ee in ee_ids:
         patch = getPhasePatchforEE(p0, ee)
         tp.setInitialPose(isContactEverActive(cs, ee), patch.placement.translation, patch.placement.rotation, ee)

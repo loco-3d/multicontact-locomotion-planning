@@ -6,7 +6,7 @@ import pinocchio as pin
 from pinocchio import SE3, Quaternion
 from pinocchio.utils import *
 import numpy.linalg
-from multicontact_api import WrenchCone, SOC6, ContactSequenceHumanoid
+from multicontact_api import WrenchCone, SOC6, ContactSequence
 import numpy as np
 from numpy import array, dot, vstack, hstack, asmatrix, identity
 from numpy.linalg import norm, inv

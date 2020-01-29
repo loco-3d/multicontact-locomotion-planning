@@ -10,7 +10,7 @@ class Result:
     def __init__(self, nq, nv, dt, eeNames, N=None, cs=None, t_begin=0, nu=None):
         self.dt = dt
         if cs:
-            self.N = int(round(cs.contact_phases[-1].time_trajectory[-1] / self.dt)) + 1
+            self.N = int(round(cs.contactPhases[-1].time_trajectory[-1] / self.dt)) + 1
         elif N:
             self.N = N
         else:
@@ -131,7 +131,7 @@ class Result:
     def buildPhasesIntervals(self, cs):
         intervals = []
         k = 0
-        for phase in cs.contact_phases:
+        for phase in cs.contactPhases:
             duration = phase.time_trajectory[-1] - phase.time_trajectory[0]
             n_phase = int(round(duration / self.dt))
             interval = range(k, k + n_phase + 1)

@@ -33,7 +33,7 @@ class PathChecker():
 
     def phaseOfT(self, t_switch):
         for i in range(self.cs.size()):
-            p = self.cs.contact_phases[i]
+            p = self.cs.contactPhases[i]
             if t_switch >= p.time_trajectory[0] and t_switch <= p.time_trajectory[-1]:
                 return i
 
@@ -70,7 +70,7 @@ class PathChecker():
         bad_phases = []
         success_global=True
         for phaseId in range(self.cs.size()):
-            phase = self.cs.contact_phases[phaseId]
+            phase = self.cs.contactPhases[phaseId]
             t_phase = phase.time_trajectory[0]
             q = self.qAtT(t_phase)
             res = self.fullBody.isConfigValid(q)
@@ -86,7 +86,7 @@ class PathChecker():
         bad_phases = []
         success_global=True
         for phaseId in range(self.cs.size()):
-            phase = self.cs.contact_phases[phaseId]
+            phase = self.cs.contactPhases[phaseId]
             t_phase = phase.time_trajectory[0]
             q = self.qAtT(t_phase)
             t = 0

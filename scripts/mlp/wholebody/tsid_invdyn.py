@@ -10,7 +10,7 @@ import subprocess
 import gepetto.corbaserver
 import mlp.config as cfg
 import multicontact_api
-from multicontact_api import WrenchCone, SOC6, ContactPatch, ContactPhaseHumanoid, ContactSequenceHumanoid
+from multicontact_api import WrenchCone, SOC6, ContactPatch, ContactPhase, ContactSequence
 from curves import SE3Curve, piecewise
 from mlp.utils.computation_tools import shiftZMPtoFloorAltitude
 import mlp.viewer.display_tools as display_tools
@@ -192,7 +192,7 @@ def generateWholeBodyMotion(cs, fullBody=None, viewer=None):
     pinRobot = pin.RobotWrapper.BuildFromURDF(urdf, package_path, pin.JointModelFreeFlyer(), cfg.WB_VERBOSE == 2)
     if cfg.WB_VERBOSE:
         print("pinocchio robot loaded from urdf.")
-    q = cs.contact_phases[0].reference_configurations[0][:robot.nq].copy()
+    q = cs.contactPhases[0].q_init[:robot.nq].copy()
     v = np.zeros(robot.nv)
     t = 0.0  # time
     # init states list with initial state (assume joint velocity is null for t=0)
@@ -248,8 +248,8 @@ def generateWholeBodyMotion(cs, fullBody=None, viewer=None):
     # add initial contacts :
     dic_contacts = {}
     for eeName in usedEffectors:
-        if isContactActive(cs.contact_phases[0], eeName):
-            contact = createContactForEffector(invdyn, robot, cs.contact_phases[0], eeName)
+        if isContactActive(cs.contactPhases[0], eeName):
+            contact = createContactForEffector(invdyn, robot, cs.contactPhases[0], eeName)
             dic_contacts.update({eeName: contact})
 
     if cfg.PLOT:  # init a dict storing all the reference trajectories used (for plotting)
@@ -306,8 +306,8 @@ def generateWholeBodyMotion(cs, fullBody=None, viewer=None):
             pin.dccrba(pinRobot.model, pinRobot.data, q, v)
             res.dL_t[:, k_t] = Force(pinRobot.data.Ag.dot(dv) + pinRobot.data.dAg.dot(v)).angular
             if cfg.IK_store_zmp:
-                tau = pin.rnea(pinRobot.model, pinRobot.data, q, v,
-                               dv)  # tau without external forces, only used for the 6 first
+                tau = pin.rnea(pinRobot.model, pinRobot.data, q, v, dv)
+                # tau without external forces, only used for the 6 first
                 #res.tau_t[:6,k_t] = tau[:6]
                 phi0 = pinRobot.data.oMi[1].act(Force(tau[:6]))
                 res.wrench_t[:, k_t] = phi0.vector
@@ -375,13 +375,13 @@ def generateWholeBodyMotion(cs, fullBody=None, viewer=None):
         if cfg.WB_VERBOSE:
             print("## for phase : ", pid)
             print("t = ", t)
-        phase = cs.contact_phases[pid]
+        phase = cs.contactPhases[pid]
         if pid < cs.size() - 1:
-            phase_next = cs.contact_phases[pid + 1]
+            phase_next = cs.contactPhases[pid + 1]
         else:
             phase_next = None
         if pid > 0:
-            phase_prev = cs.contact_phases[pid - 1]
+            phase_prev = cs.contactPhases[pid - 1]
         else:
             phase_prev = None
         t_phase_begin = res.phases_intervals[pid][0] * dt
@@ -397,11 +397,11 @@ def generateWholeBodyMotion(cs, fullBody=None, viewer=None):
 
         # add root's orientation ref from reference config :
         if cfg.USE_PLANNING_ROOT_ORIENTATION:
-            q_0 = SE3FromConfig(phase.reference_configurations[0])
+            q_0 = SE3FromConfig(phase.q_init)
             if phase_next:
-                q_1 = SE3FromConfig(phase_next.reference_configurations[0])
+                q_1 = SE3FromConfig(phase_next.q_init)
             else:
-                q_1 = SE3FromConfig(phase.reference_configurations[0])
+                q_1 = SE3FromConfig(phase.q_init)
             root_traj = SE3Curve(q_0, q_1, time_interval[0], time_interval[1])
         else:
             # orientation such that the torso orientation is the mean between both feet yaw rotations:
@@ -616,7 +616,7 @@ def generateWholeBodyMotion(cs, fullBody=None, viewer=None):
     print("Whole body motion generated in : " + str(time_end) + " s.")
     if cfg.WB_VERBOSE:
         print("\nFinal COM Position  ", robot.com(invdyn.data()).T)
-        print("Desired COM Position", cs.contact_phases[-1].final_state.T)
+        print("Desired COM Position", cs.contactPhases[-1].final_state.T)
 
     # store last state : #FIXME
 

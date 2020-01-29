@@ -3,7 +3,7 @@ from pinocchio.utils import *
 import mlp.config as cfg
 import importlib
 import multicontact_api
-from multicontact_api import ContactSequenceHumanoid
+from multicontact_api import ContactSequence
 from mlp.utils.cs_tools import addPhaseFromConfig, moveEffectorToPlacement, setFinalState
 from mlp.viewer.display_tools import initScene, displaySteppingStones
 import pinocchio
@@ -246,12 +246,12 @@ def generateContactSequence():
 
     # init contact sequence with first phase : q_ref move at the right root pose and with both feet in contact
     # FIXME : allow to customize that first phase
-    cs = ContactSequenceHumanoid(0)
+    cs = ContactSequence(0)
     addPhaseFromConfig(fb, v, cs, q_init, [fb.rLegId, fb.lLegId])
 
     # loop over all phases of pb and add them to the cs :
     for pId in range(2, len(pb["phaseData"])):  # start at 2 because the first two ones are already done in the q_init
-        prev_contactPhase = cs.contact_phases[-1]
+        prev_contactPhase = cs.contactPhases[-1]
         #n = normal(pb["phaseData"][pId])
         phase = pb["phaseData"][pId]
         moving = phase["moving"]

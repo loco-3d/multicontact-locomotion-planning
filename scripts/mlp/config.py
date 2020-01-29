@@ -55,7 +55,7 @@ SL1M_USE_INTERPOLATED_ORIENTATION = True  # Only matter if SL1M_USE_ORIENTATION=
 # if False, it interpolate the orientation and adapt it depending if the feet is in the inside or outside of the turn
 
 ### Settings for centroidal script :
-GRAVITY = np.matrix([0, 0, -9.81]).T
+GRAVITY = np.array([0, 0, -9.81])
 MU = 0.5  # Friction coefficient. hardcoded in timeOpt_configs files, must match this one !
 SOLVER_DT = 0.05  # hardcoded in timeOpt_configs files, must match this one !
 # Hardcoded height change of the COM before the beginning of the motion (value in m and time allowed to make this motion)

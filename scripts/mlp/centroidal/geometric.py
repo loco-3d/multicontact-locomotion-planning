@@ -1,11 +1,12 @@
 import numpy as np
 import mlp.config as cfg
 import multicontact_api
-multicontact_api.switchToNumpyArray()
-from multicontact_api import WrenchCone, SOC6, ContactPatch, ContactPhaseHumanoid, ContactSequenceHumanoid
+from multicontact_api import WrenchCone, SOC6, ContactPatch, ContactPhase, ContactSequence
+from mlp.utils.requirements import Requirements
 import math
 from mlp.utils.util import computeEffectorTranslationBetweenStates, computeEffectorRotationBetweenStates
 VERBOSE = False
+multicontact_api.switchToNumpyArray()
 
 
 def computePhaseDuration(cs, pid):
@@ -54,13 +55,13 @@ def computePhaseDuration(cs, pid):
 def generateCentroidalTrajectory(cs, cs_initGuess=None, fullBody=None, viewer=None):
     if cs_initGuess:
         print("WARNING : in centroidal.geometric, initial guess is ignored.")
-    cs_result = ContactSequenceHumanoid(cs)
-    p0 = cs_result.contact_phases[0]
+    cs_result = ContactSequence(cs)
+    p0 = cs_result.contactPhases[0]
     com_z = p0.init_state[2]
     previous_phase = None
     # first, compute the new init/final position for each state : in the center of the support polygon
     for pid in range(1, cs_result.size() - 1):
-        phase = cs_result.contact_phases[pid]
+        phase = cs_result.contactPhases[pid]
         state = phase.init_state
         com_x = 0.
         com_y = 0.
@@ -79,7 +80,7 @@ def generateCentroidalTrajectory(cs, cs_initGuess=None, fullBody=None, viewer=No
         com_x /= phase.numActivePatches()
         com_y /= phase.numActivePatches()
         # test : take com height from config found from planning :
-        com_z = cs_result.contact_phases[pid].init_state[2]
+        com_z = cs_result.contactPhases[pid].init_state[2]
         state[0] = com_x
         state[1] = com_y
         state[2] = com_z
@@ -87,12 +88,12 @@ def generateCentroidalTrajectory(cs, cs_initGuess=None, fullBody=None, viewer=No
         #print "phase : "+str(pid)+" com Init = "+str(com_x)+","+str(com_y)+","+str(com_z)
         if previous_phase != None:
             previous_phase.final_state = phase.init_state.copy()
-        previous_phase = cs_result.contact_phases[pid]
+        previous_phase = cs_result.contactPhases[pid]
 
     # then, generate a straight line from init_state to final_state for each phase :
     t_total = 0.
     for pid in range(cs_result.size()):
-        phase = cs_result.contact_phases[pid]
+        phase = cs_result.contactPhases[pid]
         duration = computePhaseDuration(cs_result, pid)
         com0 = phase.init_state[0:3]
         com1 = phase.final_state[0:3]

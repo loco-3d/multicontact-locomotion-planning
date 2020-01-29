@@ -17,7 +17,7 @@ def pacthSameAltitude(M1, M2, eps=1e-3):
 # - if both feet in contact, make a linear interp between both feet altitude wrt to which feet will move next
 def computeFloorAltitude(cs, t, useJointLevel=False):
     id_phase = findPhase(cs, t)
-    phase = cs.contact_phases[id_phase]
+    phase = cs.contactPhases[id_phase]
     RF_patch = phase.RF_patch
     LF_patch = phase.LF_patch
     if useJointLevel:
@@ -34,7 +34,7 @@ def computeFloorAltitude(cs, t, useJointLevel=False):
             # look for wich feet just created contact :
             LF_moved = False
             if id_phase > 0:  #look for the inactive contact in the previous phase
-                pprev = cs.contact_phases[id_phase - 1]
+                pprev = cs.contactPhases[id_phase - 1]
                 if not pprev.RF_patch.active:
                     LF_moved = False
                 elif not pprev.LF_patch.active:
@@ -42,7 +42,7 @@ def computeFloorAltitude(cs, t, useJointLevel=False):
                 else:
                     assert "Must never happened"
             else:  #look for the inactive contact in the next phase and assume cyclic gait for the last couple of phases
-                pnext = cs.contact_phases[id_phase + 1]
+                pnext = cs.contactPhases[id_phase + 1]
                 if not pnext.RF_patch.active:
                     LF_moved = True
                 elif not pnext.LF_patch.active:

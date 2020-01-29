@@ -1,7 +1,7 @@
 import numpy as np
 import mlp.config as cfg
 import multicontact_api
-from multicontact_api import ContactPhaseHumanoid, ContactSequenceHumanoid
+from multicontact_api import ContactPhase, ContactSequence
 multicontact_api.switchToNumpyArray()
 from mlp.utils.util import connectPhaseTrajToFinalState, createFullbodyStatesFromCS, fillPhaseTrajWithZeros, genSplinesForPhase
 
@@ -46,20 +46,20 @@ def generateCentroidalTrajectory(cs, cs_initGuess=None, fullBody=None, viewer=No
     beginId, endId = createFullbodyStatesFromCS(cs, fullBody)
     print("beginid = ", beginId)
     print("endId   = ", endId)
-    cs_result = ContactSequenceHumanoid(cs)
+    cs_result = ContactSequence(cs)
 
     def getPhaseDuration(sid, pid):
         if sid == endId:
             duration = cfg.DURATION_FINAL
         if pid == 0:
             duration = cfg.DURATION_INIT
-        elif cs.contact_phases[pid].numActivePatches() == 1:
+        elif cs.contactPhases[pid].numActivePatches() == 1:
             duration = cfg.DURATION_SS
-        elif cs.contact_phases[pid].numActivePatches() == 2:
+        elif cs.contactPhases[pid].numActivePatches() == 2:
             duration = cfg.DURATION_DS
-        elif cs.contact_phases[pid].numActivePatches() == 3:
+        elif cs.contactPhases[pid].numActivePatches() == 3:
             duration = cfg.DURATION_TS
-        elif cs.contact_phases[pid].numActivePatches() == 4:
+        elif cs.contactPhases[pid].numActivePatches() == 4:
             duration = cfg.DURATION_QS
         return duration
 
@@ -70,7 +70,7 @@ def generateCentroidalTrajectory(cs, cs_initGuess=None, fullBody=None, viewer=No
     for id_state in range(beginId, endId + 1):
         print("id_state = ", str(id_state))
         print("id_phase = ", str(id_phase))
-        phase_fixed = cs_result.contact_phases[id_phase]  # phase where the CoM move and the contacts are fixed
+        phase_fixed = cs_result.contactPhases[id_phase]  # phase where the CoM move and the contacts are fixed
         # set initial state to be the final one of the previous phase :
         if id_phase > 1:
             phase_fixed.init_state = phase_swing.final_state.copy()
@@ -87,7 +87,7 @@ def generateCentroidalTrajectory(cs, cs_initGuess=None, fullBody=None, viewer=No
         id_phase += 1
         if id_state < endId:
             current_t = phase_fixed.time_trajectory[-1]
-            phase_swing = cs_result.contact_phases[id_phase]  # phase where the CoM is fixed and an effector move
+            phase_swing = cs_result.contactPhases[id_phase]  # phase where the CoM is fixed and an effector move
             # in swing phase, com do not move :
             phase_swing.init_state = phase_fixed.final_state.copy()
             phase_swing.final_state = phase_fixed.final_state.copy()

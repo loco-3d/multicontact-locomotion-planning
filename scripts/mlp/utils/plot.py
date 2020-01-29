@@ -164,7 +164,7 @@ def plotZMP(cs, ZMP_t, ZMP_ref, pcom_t):
     plt.ylabel("y position (m)")
     plt.axis('equal')
     plt.grid(True)
-    for p in cs.contact_phases:
+    for p in cs.contactPhases:
         # plot x for the center of the feets contact,
         # and a circle of 1cm of radius around it (size of the flexibility) :
         if p.RF_patch.active:
@@ -223,7 +223,7 @@ def plotCOMTrajFromCS(cs):
     fig, ax = plt.subplots(3, 3)
     fig.canvas.set_window_title("COM trajectory reference")
     fig.suptitle("COM trajectory reference", fontsize=20)
-    for p in cs.contact_phases:
+    for p in cs.contactPhases:
         states = stdVecToMatrix(p.state_trajectory)
         controls = stdVecToMatrix(p.control_trajectory)
         timeline = stdVecToMatrix(p.time_trajectory)

@@ -4,7 +4,7 @@ from pinocchio.utils import *
 import inspect
 import mlp.config as cfg
 import multicontact_api
-from multicontact_api import ContactPhaseHumanoid, ContactSequenceHumanoid
+from multicontact_api import ContactPhase, ContactSequence
 multicontact_api.switchToNumpyArray()
 from mlp.utils.util import quatFromConfig, copyPhaseContacts, copyPhaseContactPlacements, contactPatchForEffector
 import importlib
@@ -65,7 +65,7 @@ def contactSequenceFromRBPRMConfigs(fb, beginId, endId):
     n_states = endId - beginId + 1
     # There could be either contact break, creation or repositionning between each adjacent states.
     # But there should be only contacts break or creation between each adjacent contactPhases
-    cs = ContactSequenceHumanoid(0)
+    cs = ContactSequence(0)
     prev_phase = None
     phaseId = 0
 
@@ -74,7 +74,7 @@ def contactSequenceFromRBPRMConfigs(fb, beginId, endId):
         if VERBOSE:
             print("current state id = ", stateId)
         # %%%%%%%%%  add phase with all the contacts in the rbprm State: %%%%%%%%%%%%%
-        phase = ContactPhaseHumanoid()
+        phase = ContactPhase()
         current_config = fb.getConfigAtState(stateId)
         fb.setCurrentConfig(current_config)
 
@@ -132,14 +132,14 @@ def contactSequenceFromRBPRMConfigs(fb, beginId, endId):
             phase.final_state = final_state
 
             # add phase to contactSequence :
-            cs.contact_phases.append(phase)
+            cs.contactPhases.append(phase)
             phaseId += 1
             prev_phase = phase
             if VERBOSE:
                 print("add a phase at id : ", phaseId - 1)
             if contact_reposition:
                 # %%%%%% create intermediate state, by removing the contact repositionned betwen stateId and stateId+1 %%%%%%%%
-                phase = ContactPhaseHumanoid()
+                phase = ContactPhase()
                 # copy previous placement :
                 copyPhaseContacts(prev_phase, phase)
                 # find the contact to break :
@@ -156,7 +156,7 @@ def contactSequenceFromRBPRMConfigs(fb, beginId, endId):
                 final_state[3:6] = np.array(current_config[-6:-3])
                 phase.final_state = final_state.copy()
                 # add phase to contactSequence :
-                cs.contact_phases.append(phase)
+                cs.contactPhases.append(phase)
                 phaseId += 1
                 prev_phase = phase
                 if VERBOSE:
@@ -166,7 +166,7 @@ def contactSequenceFromRBPRMConfigs(fb, beginId, endId):
     # end for each stateId
     # assign contact models :
     # only used by muscod ?? But we need to fill it otherwise the serialization fail
-    for k, phase in enumerate(cs.contact_phases):
+    for k, phase in enumerate(cs.contactPhases):
         RF_patch = phase.RF_patch
         cm = RF_patch.contactModel
         cm.mu = cfg.MU

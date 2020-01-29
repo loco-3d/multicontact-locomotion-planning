@@ -2,7 +2,7 @@ import numpy as np
 import mlp.config as cfg
 import multicontact_api
 multicontact_api.switchToNumpyArray()
-from multicontact_api import WrenchCone, SOC6, ContactPatch, ContactPhaseHumanoid, ContactSequenceHumanoid
+from multicontact_api import WrenchCone, SOC6, ContactPatch, ContactPhase, ContactSequence
 from curves import bezier
 from mlp.utils.util import createStateFromPhase, phasesHaveSameConfig, createFullbodyStatesFromCS
 
@@ -67,7 +67,7 @@ def generateCentroidalTrajectory(cs, cs_initGuess=None, fb=None, viewer=None):
     beginId, endId = createFullbodyStatesFromCS(cs, fb)
     print("beginid = ", beginId)
     print("endId   = ", endId)
-    cs_result = ContactSequenceHumanoid(cs)
+    cs_result = ContactSequence(cs)
     if (2 * (endId - beginId) + 1) != cs.size():
         raise NotImplemented("Current implementation of CROC require to have 2 contact phases per States in fullBody")
     # for each phase in the cs, create a corresponding FullBody State and call CROC,
@@ -89,24 +89,24 @@ def generateCentroidalTrajectory(cs, cs_initGuess=None, fb=None, viewer=None):
             t = 0.
         else:
             append = True
-            t = cs_result.contact_phases[id_phase].time_trajectory[-1]
+            t = cs_result.contactPhases[id_phase].time_trajectory[-1]
         assert c.min() == 0, "bezier curve should start at t=0."
         # First phase (second half of the trajectory of this phase if it's not the initial phase of the CS)
         start = 0
         end = fb.client.problem.pathLength(int(pid[1]))
-        writeTrajInPhase(cs_result.contact_phases[id_phase], c, t, start, end, append)
+        writeTrajInPhase(cs_result.contactPhases[id_phase], c, t, start, end, append)
         #Second phase
         id_phase += 1
         start = end
         end += fb.client.problem.pathLength(int(pid[2]))
-        t = cs_result.contact_phases[id_phase - 1].time_trajectory[-1]
-        writeTrajInPhase(cs_result.contact_phases[id_phase], c, t, start, end)
+        t = cs_result.contactPhases[id_phase - 1].time_trajectory[-1]
+        writeTrajInPhase(cs_result.contactPhases[id_phase], c, t, start, end)
         # Third phase (only the first half of the trajectory, exept if it's the final contact phase of the CS)
         id_phase += 1
         start = end
         end += fb.client.problem.pathLength(int(pid[3]))
-        t = cs_result.contact_phases[id_phase - 1].time_trajectory[-1]
+        t = cs_result.contactPhases[id_phase - 1].time_trajectory[-1]
         assert abs(end - c.max()) < 1e-10, "Error in computation of time interval"
-        writeTrajInPhase(cs_result.contact_phases[id_phase], c, t, start, end)
+        writeTrajInPhase(cs_result.contactPhases[id_phase], c, t, start, end)
 
     return cs_result
