@@ -282,13 +282,6 @@ def copyPhaseContacts(phase_in, phase_out):
     phase_out.LH_patch = phase_in.LH_patch
 
 
-def copyPhaseContactPlacements(phase_in, phase_out):
-    phase_out.RF_patch.placement = phase_in.RF_patch.placement
-    phase_out.LF_patch.placement = phase_in.LF_patch.placement
-    phase_out.RH_patch.placement = phase_in.RH_patch.placement
-    phase_out.LH_patch.placement = phase_in.LH_patch.placement
-
-
 
 def createStateFromPhase(fullBody, phase, q=None):
     if q is None:
