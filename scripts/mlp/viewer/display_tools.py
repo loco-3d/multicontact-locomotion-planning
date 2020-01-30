@@ -1,11 +1,14 @@
 import pinocchio as pin
 from pinocchio import SE3, Quaternion
-import multicontact_api
-from multicontact_api import WrenchCone, SOC6, ContactPatch, ContactPhase, ContactSequence
-pin.switchToNumpyArray()
-import numpy as np
 import time
 from mlp.utils.util import numpy2DToList, hppConfigFromMatrice, discretizeCurve
+from mlp.utils.requirements import Requirements
+pin.switchToNumpyArray()
+
+
+class DisplayContactSequenceRequirements(Requirements):
+    configurationValues = True
+
 STONE_HEIGHT = 0.005
 STONE_GROUP = "stepping_stones"
 STONE_RF = STONE_GROUP + "/" + "RF"
@@ -207,6 +210,7 @@ def displayContactSequence(v, cs, step=0.2):
     for p in cs.contactPhases:
         displayWBconfig(v, p.q_init)
         time.sleep(step)
+    displayWBconfig(v, cs.contactPhases[-1].q_final)
 
 
 def initScene(Robot, envName="multicontact/ground", genLimbsDB=True):

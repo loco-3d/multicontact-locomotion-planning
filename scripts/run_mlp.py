@@ -26,22 +26,24 @@ if cfg.WRITE_STATUS:
     f.write("gen_cs_success: True\n")
     f.close()
 
+if cfg.DISPLAY_CS_STONES:
+    display_tools.displaySteppingStones(cs, gui, viewer.sceneName, cfg.Robot)
 if cfg.DISPLAY_CS:
-    input("Press Enter to display the contact sequence ...")
-    display_tools.displayContactSequence(viewer, cs)
+    if display_tools.DisplayContactSequenceRequirements.checkAndFillRequirements(cs, cfg, fullBody):
+        input("Press Enter to display the contact sequence ...")
+        display_tools.displayContactSequence(viewer, cs)
 if cfg.SAVE_CS:
     if not os.path.exists(cfg.CONTACT_SEQUENCE_PATH):
         os.makedirs(cfg.CONTACT_SEQUENCE_PATH)
     filename = cfg.CONTACT_SEQUENCE_PATH + "/" + cfg.DEMO_NAME + ".cs"
     print("Write contact sequence binary file : ", filename)
     cs.saveAsBinary(filename)
-if cfg.DISPLAY_CS_STONES:
-    display_tools.displaySteppingStones(cs, gui, viewer.sceneName, cfg.Robot)
+
 
 print("------------------------------")
 print("### MLP : centroidal, initial Guess ###")
 import mlp.centroidal.initGuess as centroidalInitGuess
-if not centroidalInitGuess.Inputs.checkAndFillRequirements(cs,cfg,fullBody):
+if not centroidalInitGuess.Inputs.checkAndFillRequirements(cs,cfg, fullBody):
     raise RuntimeError("The current contact sequence cannot be given as input to the centroidalInitGuess method selected.")
 cs_initGuess = centroidalInitGuess.generateCentroidalTrajectory(cs, fullBody=fullBody, viewer=viewer)
 centroidalInitGuess.Outputs.assertRequirements(cs_initGuess)
