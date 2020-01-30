@@ -186,42 +186,30 @@ def effectorPositionFromHPPPath(fb, problem, eeName, pid, t):
     return np.array(p)
 
 
-def genAMTrajFromPhaseStates(t_init, t_end, init_state, final_state, init_control=None, final_control=None):
-    # build Angular moment cubic spline :
-    am_init = init_state[6:9]
-    am_end = final_state[6:9]
-    if init_control is None:
-        dAm_init = np.zeros([3])
+def genAMTrajFromPhaseStates(phase, constraintVelocity = True):
+    if constraintVelocity:
+        am_traj = polynomial(phase.L_init, phase.dL_init, phase.L_final, phase.dL_final,
+                              phase.timeInitial, phase.timeFinal)
     else:
-        dAm_init = init_control[3:6]
-    if final_control is None:
-        dAm_end = np.zeros([3])
-    else:
-        dAm_end = final_control[3:6]
-    am_traj =  polynomial(am_init, dAm_init, am_end, dAm_end,t_init,t_end)
-    dAm_traj = am_traj.compute_derivate(1)
-    return am_traj,dAm_traj
+        am_traj = polynomial(phase.L_init, phase.L_final, phase.timeInitial, phase.timeFinal)
+    phase.L_t = am_traj
+    phase.dL_t = am_traj.compute_derivate(1)
 
 
-def genCOMTrajFromPhaseStates(t_init, t_end, init_state, final_state, init_control=None, final_control=None):
-    # build quintic spline for the com position :
-    p_init = init_state[0:3]
-    p_end = final_state[0:3]
-    v_init = init_state[3:6]
-    v_end = final_state[3:6]
-    if init_control is None:
-        a_init = np.zeros([3])
+def genCOMTrajFromPhaseStates(phase, constraintVelocity = True, constraintAcceleration = True):
+    if constraintAcceleration and not constraintVelocity:
+        raise ValueError("Cannot constraints acceleration if velocity is not constrained.")
+    if constraintAcceleration:
+        com_traj = polynomial(phase.c_init, phase.dc_init, phase.ddc_init,
+                              phase.c_final, phase.dc_final, phase.ddc_final,phase.timeInitial, phase.timeFinal)
+    elif constraintVelocity:
+        com_traj = polynomial(phase.c_init, phase.dc_init, phase.c_final, phase.dc_final,
+                              phase.timeInitial, phase.timeFinal)
     else:
-        a_init = init_control[0:3]
-    if final_control is None:
-        a_end = np.zeros([3])
-    else:
-        a_end = final_control[0:3]
-    com_traj = polynomial(p_init, v_init, a_init, p_end, v_end, a_end,t_init, t_end)
-    vel_traj = com_traj.compute_derivate(1)
-    acc_traj = vel_traj.compute_derivate(1)
-    return com_traj,vel_traj,acc_traj
-
+        com_traj = polynomial(phase.c_init, phase.c_final, phase.timeInitial, phase.timeFinal)
+    phase.c_t = com_traj
+    phase.dc_t = com_traj.compute_derivate(1)
+    phase.ddc_t = com_traj.compute_derivate(2)
 
 def connectPhaseTrajToFinalState(phase, duration):
     if duration <= 0.:
@@ -239,8 +227,8 @@ def connectPhaseTrajToFinalState(phase, duration):
     print "t_init : ",t_init
     print "t_end  : ",t_end
     """
-    com_traj,vel_traj,acc_traj = genCOMTrajFromPhaseStates(t_init, t_end, init_state, final_state, init_control)
-    am_traj, dAm_traj = genAMTrajFromPhaseStates(t_init, t_end, init_state, final_state, init_control)
+    com_traj,vel_traj,acc_traj = genCOMTrajFromPhaseStates(phase)
+    am_traj, dAm_traj = genAMTrajFromPhaseStates(phase)
     i = len(phase.time_trajectory)
 
     dt = cfg.SOLVER_DT
