@@ -18,6 +18,8 @@ print("### MLP : contact sequence ###")
 import mlp.contact_sequence as contactGeneration
 cs, fullBody, viewer = contactGeneration.generateContactSequence()
 contactGeneration.Outputs.assertRequirements(cs)
+gui = viewer.client.gui
+
 
 if cfg.WRITE_STATUS:
     f = open(cfg.STATUS_FILENAME, "a")
@@ -34,7 +36,7 @@ if cfg.SAVE_CS:
     print("Write contact sequence binary file : ", filename)
     cs.saveAsBinary(filename)
 if cfg.DISPLAY_CS_STONES:
-    display_tools.displaySteppingStones(cs, viewer.client.gui, viewer.sceneName, cfg.Robot)
+    display_tools.displaySteppingStones(cs, gui, viewer.sceneName, cfg.Robot)
 
 print("------------------------------")
 print("### MLP : centroidal, initial Guess ###")
@@ -45,7 +47,7 @@ centroidalInitGuess.Outputs.assertRequirements(cs_initGuess)
 
 if cfg.DISPLAY_INIT_GUESS_TRAJ and cs_initGuess:
     colors = [viewer.color.red, viewer.color.yellow]
-    display_tools.displayCOMTrajectory(cs_initGuess, viewer.client.gui, viewer.sceneName, colors, "_init")
+    display_tools.displayCOMTrajectory(cs_initGuess, gui, viewer.sceneName, cfg.DT_DISPLAY, colors, "_init")
 
 print("------------------------------")
 print("### MLP : centroidal  ###")
@@ -67,7 +69,7 @@ if cfg.SAVE_CS_COM:
     cs_com.saveAsBinary(filename)
 if cfg.DISPLAY_COM_TRAJ:
     colors = [viewer.color.blue, viewer.color.green]
-    display_tools.displayCOMTrajectory(cs_com, viewer.client.gui, viewer.sceneName, colors)
+    display_tools.displayCOMTrajectory(cs_com, gui, viewer.sceneName, cfg.DT_DISPLAY, colors)
 if cfg.PLOT_CENTROIDAL:
     from mlp.utils.plot import plotCOMTrajFromCS
     plotCOMTrajFromCS(cs_com)
