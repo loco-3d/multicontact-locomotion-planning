@@ -41,7 +41,8 @@ if cfg.DISPLAY_CS_STONES:
 print("------------------------------")
 print("### MLP : centroidal, initial Guess ###")
 import mlp.centroidal.initGuess as centroidalInitGuess
-centroidalInitGuess.Inputs.checkAndFillRequirements(cs,cfg,fullBody)
+if not centroidalInitGuess.Inputs.checkAndFillRequirements(cs,cfg,fullBody):
+    raise RuntimeError("The current contact sequence cannot be given as input to the centroidalInitGuess method selected.")
 cs_initGuess = centroidalInitGuess.generateCentroidalTrajectory(cs, fullBody=fullBody, viewer=viewer)
 centroidalInitGuess.Outputs.assertRequirements(cs_initGuess)
 
@@ -52,7 +53,8 @@ if cfg.DISPLAY_INIT_GUESS_TRAJ and cs_initGuess:
 print("------------------------------")
 print("### MLP : centroidal  ###")
 import mlp.centroidal as centroidal
-centroidal.Inputs.checkAndFillRequirements(cs_initGuess,cfg,fullBody)
+if not centroidal.Inputs.checkAndFillRequirements(cs,cfg,fullBody):
+    raise RuntimeError("The current contact sequence cannot be given as input to the centroidal method selected.")
 cs_com = centroidal.generateCentroidalTrajectory(cs, cs_initGuess, fullBody, viewer)
 centroidal.Outputs.assertRequirements(cs_com)
 
@@ -77,7 +79,8 @@ if cfg.PLOT_CENTROIDAL:
 print("------------------------------")
 print("### MLP : whole-body  ###")
 import mlp.wholebody as wholeBody
-wholeBody.Inputs.checkAndFillRequirements(cs_com,cfg,fullBody)
+if not wholeBody.Inputs.checkAndFillRequirements(cs_com,cfg,fullBody):
+    raise RuntimeError("The current contact sequence cannot be given as input to the wholeBody method selected.")
 cs_wb, res, robot = wholeBody.generateWholeBodyMotion(cs_com, fullBody, viewer)
 wholeBody.Outputs.assertRequirements(cs_wb)
 
