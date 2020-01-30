@@ -37,7 +37,7 @@ def generateCentroidalTrajectory(cs, cs_initGuess=None, fullBody=None, viewer=No
     if cs.haveCOMvalues():
         # do not overwrite com values in input sequence
         cs_result = ContactSequence(cs)
-        computePhasesCOMValues(cs_result, cfg.Robot.DEFAULT_COM_HEIGHT)
+        computePhasesCOMValues(cs_result, cfg.Robot.DEFAULT_COM_HEIGHT, overwrite= True)
     else:
         # add them in output sequence if not present
         computePhasesCOMValues(cs, cfg.Robot.DEFAULT_COM_HEIGHT)

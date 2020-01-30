@@ -228,16 +228,32 @@ def computePhasesTimings(cs, cfg):
 
 
 
-def computePhasesCOMValues(cs,DEFAULT_HEIGHT):
+def computePhasesCOMValues(cs,DEFAULT_HEIGHT, overwrite = False):
+    """
+    Generate c, dc and ddc initial and final values for the contactSequence if not provided or if overwrite = True
+    With null dc and ddc and c position in the center of the support polygone for each phase
+    :param cs: the contact sequence
+    :param DEFAULT_HEIGHT: z value used for com_z position
+    :param overwrite: if true, overwrite existing values
+    :return:
+    """
     for pid,phase in enumerate(cs.contactPhases):
-        if not phase.c_init.any():
+        if overwrite or not phase.c_init.any():
             # this value is uninitialized
             phase.c_init = computeCenterOfSupportPolygonFromPhase(phase,DEFAULT_HEIGHT)
+        if overwrite:
+            phase.dc_init = np.zeros(3)
+            phase.ddc_init = np.zeros(3)
         if pid > 0:
             cs.contactPhases[pid-1].c_final = phase.c_init
+            cs.contactPhases[pid-1].dc_final = phase.dc_init
+            cs.contactPhases[pid-1].ddc_final = phase.ddc_init
     if not cs.contactPhases[-1].c_final.any():
         # this value is uninitialized
         cs.contactPhases[-1].c_final = cs.contactPhases[-1].c_init
+    if overwrite:
+        cs.contactPhases[-1].dc_final = np.zeros(3)
+        cs.contactPhases[-1].ddc_final = np.zeros(3)
     return cs
 
 def computePhasesConfigurations(cs, fb):
