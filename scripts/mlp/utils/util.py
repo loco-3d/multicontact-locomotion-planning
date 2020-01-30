@@ -109,6 +109,12 @@ def appendOrReplace(vec, i, value):
 
 
 def numpy2DToList(m):
+    """
+    Convert a numpy array of shape (n,m) in a list of list.
+    First list is of length m and contains list of length n
+    :param m:
+    :return:
+    """
     l = []
     for i in range(m.shape[1]):
         p = m[:, i]
@@ -506,3 +512,23 @@ def copyPhaseInitToFinal(phase):
     phase.L_final = phase.L_init
     phase.dL_final = phase.dL_init
     phase.q_final = phase.q_init
+
+def discretizeCurve(curve,dt):
+    """
+    Discretize the given curve at the given dt
+    return the result as an array (one column per discret point)
+    In case where the time interval of the curve is not a multiple of dt, the last point is still included
+    This mean that the timestep between the two last points may be less than dt
+    :param curve: a curve object, require operator (), min() and max()
+    :param dt: the discretization step
+    :return: an array of shape (curve.dim(), numPoints)
+    """
+    numPoints = math.ceil((curve.max() - curve.min()) / dt )
+    res = np.zeros([curve.dim(), numPoints])
+    t = curve.min()
+    for i in range(numPoints):
+        res[:,i] = curve(t)
+        t += dt
+        if t > curve.max():
+            t = curve.max()
+    return res
