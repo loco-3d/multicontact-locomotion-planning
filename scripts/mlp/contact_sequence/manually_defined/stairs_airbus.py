@@ -27,7 +27,7 @@ q_ref[24] -= 1.3  # lift up arms
 q_ref[32] -= 1.3
 v(q_ref)
 
-addPhaseFromConfig(fb, v, cs, q_ref, [fb.rLegId, fb.lLegId])
+addPhaseFromConfig(fb, cs, q_ref, [fb.rLegId, fb.lLegId])
 
 pRH = SE3.Identity()
 pRH = rotatePlacement(pRH, 'y', -0.8115781021773631)

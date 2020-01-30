@@ -9,26 +9,32 @@ from hpp.corbaserver.rbprm.rbprmstate import State, StateHelper
 from math import isnan, ceil
 multicontact_api.switchToNumpyArray()
 
-
-def addPhaseFromConfig(fb, v, cs, q, limbsInContact, t_init = -1):
-    multicontact_api.switchToNumpyArray() # FIXME : why is it required to add it again here ?
+def createPhaseFromConfig(fb, q, limbsInContact, t_init = -1):
     phase = ContactPhase()
-    phase.q_init =np.array(q)
-    if v:
-        v(q)
+    phase.q_init = np.array(q)
     fb.setCurrentConfig(q)
     com = np.array(fb.getCenterOfMass())
     if t_init > 0:
         phase.timeInitial = 0.
     phase.c_init = com.copy()
     phase.c_final = com.copy()
+    if  fb.client.robot.getDimensionExtraConfigSpace() >= 6 and len(q) == fb.getConfigSize():
+        # add dc and ddc values from extraDOF
+        phase.dc_init = np.array(q[-6:-3])
+        phase.dc_final = np.array(q[-6:-3])
+        phase.ddc_init = np.array(q[-3:])
+        phase.ddc_final = np.array(q[-3:])
     for limb in limbsInContact:
         eeName = fb.dict_limb_joint[limb]
         q_j = fb.getJointPosition(eeName)
         placement = SE3FromConfig(q_j).act(fb.dict_offset[eeName])
-        patch = ContactPatch(placement) # TODO set friction / other parameters here
-        phase.addContact(eeName,patch)
-    cs.append(phase)
+        patch = ContactPatch(placement)  # TODO set friction / other parameters here
+        phase.addContact(eeName, patch)
+    return phase
+
+def addPhaseFromConfig(fb, cs, q, limbsInContact, t_init = -1):
+    multicontact_api.switchToNumpyArray() # FIXME : why is it required to add it again here ?
+    cs.append(createPhaseFromConfig(fb, q, limbsInContact, t_init))
 
 
 def computeCenterOfSupportPolygonFromState(s):

@@ -18,7 +18,7 @@ cs = ContactSequence(0)
 
 #Create an initial contact phase :
 q_ref = fb.referenceConfig[::] + [0] * 6
-addPhaseFromConfig(fb, v, cs, q_ref, [fb.rLegId, fb.lLegId])
+addPhaseFromConfig(fb, cs, q_ref, [fb.rLegId, fb.lLegId])
 
 displacement = SE3.Identity()
 displacement.translation = array([0.2, 0, 0])

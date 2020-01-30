@@ -18,7 +18,7 @@ cs = ContactSequence(0)
 
 #Create an initial contact phase :
 q_ref = fb.referenceConfig[::] + [0] * 6
-addPhaseFromConfig(fb, v, cs, q_ref, [fb.rLegId, fb.lLegId])
+addPhaseFromConfig(fb, cs, q_ref, [fb.rLegId, fb.lLegId])
 
 walk(fb, cs, 0.5, 0.1, [fb.rLegId, fb.lLegId])
 

@@ -91,7 +91,7 @@ fb.setReferenceConfig(q_ref)
 fb.setPostureWeights(fb.postureWeights_straff[::] + [0] * 6)
 v(q_ref)
 
-addPhaseFromConfig(fb, v, cs, q_ref, [fb.rLegId, fb.lLegId, fb.rArmId, fb.lArmId])
+addPhaseFromConfig(fb, cs, q_ref, [fb.rLegId, fb.lLegId, fb.rArmId, fb.lArmId])
 
 num_steps = 1
 step_height = 0.22

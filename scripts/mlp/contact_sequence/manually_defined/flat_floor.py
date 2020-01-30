@@ -31,7 +31,7 @@ v(q_ref)
 
 # create a first contact phase corresponding to this configuration
 limbsInContact = [fb.rLegId, fb.lLegId]  # define the limbs in contact for this first phase
-addPhaseFromConfig(fb, v, cs, q_ref, limbsInContact)
+addPhaseFromConfig(fb, cs, q_ref, limbsInContact)
 
 print("number of contact phases in the contact sequence : ", cs.size())
 # there is now one phase in our 'cs' object
