@@ -5,7 +5,7 @@ from multicontact_api import WrenchCone, SOC6, ContactPatch, ContactPhase, Conta
 pin.switchToNumpyArray()
 import numpy as np
 import time
-from mlp.utils.util import stdVecToMatrix, numpy2DToList, hppConfigFromMatrice
+from mlp.utils.util import numpy2DToList, hppConfigFromMatrice, discretizeCurve
 STONE_HEIGHT = 0.005
 STONE_GROUP = "stepping_stones"
 STONE_RF = STONE_GROUP + "/" + "RF"
@@ -121,30 +121,20 @@ def displaySteppingStones(cs, gui, sceneName, Robot):
     gui.refresh()
 
 
-def comPosListFromState(state_traj):
-    state = stdVecToMatrix(state_traj)
-    c = state[:3, :]
-    return numpy2DToList(c)
 
-
-def displayCOMTrajForPhase(p, gui, name, name_group, color):
-    c = comPosListFromState(p.state_trajectory)
+def displayCOMTrajForPhase(phase, gui, name, name_group, color, dt):
+    c = numpy2DToList(discretizeCurve(phase.c_t, dt))
     gui.addCurve(name, c, color)
     gui.addToGroup(name, name_group)
 
 
-def displayCOMTrajectory(cs, gui, sceneName, colors=[0, 0, 0, 1], nameGroup=""):
+def displayCOMTrajectory(cs, gui, sceneName, dt, colors=[0, 0, 0, 1], nameGroup=""):
     name_group = TRAJ_GROUP + nameGroup
     gui.createGroup(name_group)
-    for pid in range(len(cs.contactPhases)):
-        phase = cs.contactPhases[pid]
-        if pid < len(cs.contactPhases) - 1:
-            phase_next = cs.contactPhases[pid + 1]
-        else:
-            phase_next = None
-        name = name_group + "/" + '%.2f' % phase.time_trajectory[0] + "-" + '%.2f' % phase.time_trajectory[-1]
+    for pid,phase in enumerate(cs.contactPhases):
+        name = name_group + "/" + '%.2f' % phase.timeInitial + "-" + '%.2f' % phase.timeFinal
         color = colors[pid % len(colors)]
-        displayCOMTrajForPhase(phase, gui, name, name_group, color)
+        displayCOMTrajForPhase(phase, gui, name, name_group, color, dt)
     gui.addToGroup(name_group, sceneName)
     gui.refresh()
 
