@@ -85,8 +85,6 @@ cs.moveEffectorOf(fb.rfoot, displacement)
 displacement.translation = array([0.15, 0, 0])
 cs.moveEffectorOf(fb.lfoot, displacement)
 
-# set the last phase of the current sequence as the final one :
-setFinalState(cs)
 
 # display the position of the new contacts :
 display_tools.displaySteppingStones(cs, gui, sceneName, fb)

@@ -110,9 +110,9 @@ def generateConfigFromPhase(fb, phase, projectCOM=False):
 
 def setFinalState(cs, com=None, q=None):
     phase = cs.contactPhases[-1]
-    if q:
+    if q is not None:
         phase.q_end = np.array(q)
-    if not com:
+    if com is None:
         com_x = 0.
         com_y = 0.
         for patch in phase.contactPatches().values():
@@ -131,7 +131,7 @@ def setFinalState(cs, com=None, q=None):
 # generate a walking motion from the last phase in the contact sequence.
 # the contacts will be moved in the order of the 'gait' list. With the first one move only of half the stepLength
 # TODO : make it generic ! it's currently limited to motion in the x direction
-def walk(fb, v, cs, distance, stepLength, gait, duration_ss, duration_ds):
+def walk(fb, cs, distance, stepLength, gait, duration_ss = -1 , duration_ds = -1):
     fb.usePosturalTaskContactCreation(True)
     prev_phase = cs.contactPhases[-1]
     for limb in gait:
@@ -166,7 +166,9 @@ def walk(fb, v, cs, distance, stepLength, gait, duration_ss, duration_ds):
         cs.moveEffectorOf(fb.dict_limb_joint[gait[0]], transform, duration_ds, duration_ss)
     q_end = fb.referenceConfig[::] + [0] * 6
     q_end[0] += distance
-    setFinalState(cs, q=q_end)
+    fb.setCurrentConfig(q_end)
+    com = fb.getCenterOfMass()
+    setFinalState(cs, com, q=q_end)
     fb.usePosturalTaskContactCreation(False)
 
 

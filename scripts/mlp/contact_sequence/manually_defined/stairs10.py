@@ -1,14 +1,20 @@
-from mlp.utils.cs_tools import addPhaseFromConfig, moveEffectorOf, setFinalState, removeContact, moveEffectorToPlacement
+from mlp.utils.cs_tools import addPhaseFromConfig, setFinalState
+from pinocchio import SE3
+from numpy import array
 import multicontact_api
 from multicontact_api import ContactSequence
 import mlp.viewer.display_tools as display_tools
-multicontact_api.switchToNumpyArray()
 import mlp.config as cfg
-
 from talos_rbprm.talos import Robot  # change robot here
+
+multicontact_api.switchToNumpyArray()
+
 ENV_NAME = "multicontact/bauzil_stairs"
 
 fb, v = display_tools.initScene(Robot, ENV_NAME, False)
+gui = v.client.gui
+sceneName = v.sceneName
+
 cs = ContactSequence(0)
 
 #Create an initial contact phase :
@@ -19,15 +25,22 @@ addPhaseFromConfig(fb, v, cs, q_ref, [fb.rLegId, fb.lLegId])
 num_steps = 6
 step_height = 0.1
 step_width = 0.3
+displacement = SE3.Identity()
+displacement.translation = array([step_width, 0, step_height])
 
 for i in range(num_steps):
-    moveEffectorOf(fb, v, cs, fb.rfoot, [step_width, 0, step_height])
-    moveEffectorOf(fb, v, cs, fb.lfoot, [step_width, 0, step_height])
+    cs.moveEffectorOf(fb.rfoot, displacement)
+    cs.moveEffectorOf(fb.lfoot, displacement)
 
 q_end = q_ref[::]
 q_end[0] += step_width * num_steps
 q_end[2] += step_height * num_steps
-setFinalState(cs, q=q_end)
+fb.setCurrentConfig(q_end)
+com = fb.getCenterOfMass()
+setFinalState(cs, array(com), q=q_end)
+
+display_tools.displaySteppingStones(cs, gui, sceneName, fb)
+
 
 DEMO_NAME = "talos_stairs10"
 filename = cfg.CONTACT_SEQUENCE_PATH + "/" + DEMO_NAME + ".cs"
