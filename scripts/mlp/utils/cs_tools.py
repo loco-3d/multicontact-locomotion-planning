@@ -1,5 +1,6 @@
 import multicontact_api
 from multicontact_api import ContactSequence, ContactPhase, ContactPatch
+from curves import piecewise, polynomial
 from pinocchio import SE3, Quaternion
 from mlp.utils.util import SE3FromConfig,  computeContactNormal, JointPlacementForEffector, rootOrientationFromFeetPlacement, copyPhaseInitToFinal
 from mlp.utils.util import computeEffectorTranslationBetweenStates, computeEffectorRotationBetweenStates
@@ -83,7 +84,7 @@ def generateConfigFromPhase(fb, phase, projectCOM=False):
         contacts += [list(fb.dict_limb_joint.keys())[list_effector.index(eeName)]]
     #q = phase.q_init.tolist() # should be the correct config for the previous phase, if used only from high level helper methods
     q = fb.referenceConfig[::] + [0] * 6  # FIXME : more generic !
-    root = computeCenterOfSupportPolygonFromPhase(phase, fb).tolist()
+    root = computeCenterOfSupportPolygonFromPhase(phase, fb.DEFAULT_COM_HEIGHT).tolist()
     q[0:2] = root[0:2]
     q[2] += root[2] - fb.DEFAULT_COM_HEIGHT
     quat = Quaternion(rootOrientationFromFeetPlacement(phase, None)[0].rotation)
@@ -265,3 +266,179 @@ def computePhasesConfigurations(cs, fb):
     if not cs.contactPhases[-1].q_final.any():
         cs.contactPhases[-1].q_final =  cs.contactPhases[-1].q_init
     return cs
+
+def initEmptyPhaseCentroidalTrajectory(phase):
+    phase.c_t = piecewise()
+    phase.dc_t = piecewise()
+    phase.ddc_t = piecewise()
+    phase.L_t = piecewise()
+    phase.dL_t = piecewise()
+
+
+def initEmptyPhaseWholeBodyTrajectory(phase):
+    phase.q_t = piecewise()
+    phase.dq_t = piecewise()
+    phase.ddq_t = piecewise()
+    phase.tau_t = piecewise()
+
+def setCOMtrajectoryFromPoints(phase, c, dc, ddc, timeline, overwriteInit = True, overwriteFinal = True):
+    """
+    Define the CoM position, velocity and acceleration trajectories as a linear interpolation between each points
+    Also set the initial / final values for c, dc and ddc to match the ones in the trajectory
+    :param phase:
+    :param c:
+    :param dc:
+    :param ddc:
+    :param timeline:
+    :param overwrite: Default True : overwrite init/final values even if they exist
+    :return:
+    """
+    phase.c_t = piecewise.FromPointsList(c,timeline.T)
+    phase.dc_t = piecewise.FromPointsList(dc,timeline.T)
+    phase.ddc_t = piecewise.FromPointsList(ddc,timeline.T)
+    if overwriteInit or not phase.c_init.any():
+        phase.c_init = c[:,0]
+    if overwriteInit or not phase.dc_init.any():
+        phase.dc_init = dc[:,0]
+    if overwriteInit or not phase.ddc_init.any():
+        phase.ddc_init = ddc[:,0]
+    if overwriteFinal or not phase.c_final.any():
+        phase.c_final = c[:,-1]
+    if overwriteFinal or not phase.dc_final.any():
+        phase.dc_final= dc[:,-1]
+    if overwriteFinal or not phase.ddc_final.any():
+        phase.ddc_final = ddc[:,-1]
+
+
+def setAMtrajectoryFromPoints(phase, L, dL, timeline, overwrite = True):
+    """
+    Define the AM  value and it's time derivative trajectories as a linear interpolation between each points
+    Also set the initial / final values for L and dL to match the ones in the trajectory
+    :param phase:
+    :param L:
+    :param dL:
+    :param timeline:
+    :param overwrite: Default True : overwrite init/final values even if they exist
+    :return:
+    """
+    phase.L_t = piecewise.FromPointsList(L,timeline.T)
+    phase.dL_t = piecewise.FromPointsList(dL,timeline.T)
+    if overwrite or not phase.L_init.any():
+        phase.L_init = L[:,0]
+    if overwrite or not phase.dL_init.any():
+        phase.dL_init = dL[:,0]
+    if overwrite or not phase.L_final.any():
+        phase.L_final = L[:,-1]
+    if overwrite or not phase.dL_final.any():
+        phase.dL_final= dL[:,-1]
+
+def setJointsTrajectoryFromPoints(phase, q, dq, ddq, timeline, overwrite=True):
+    """
+    Define the joints position, velocity and acceleration trajectories as a linear interpolation between each points
+    Also set the initial / final values for q, dq and ddq to match the ones in the trajectory
+    :param phase:
+    :param q:
+    :param dq:
+    :param ddq:
+    :param timeline:
+    :param overwrite: Default True : overwrite init/final values even if they exist
+    :return:
+    """
+    phase.q_t = piecewise.FromPointsList(q, timeline.T)
+    phase.dq_t = piecewise.FromPointsList(dq, timeline.T)
+    phase.ddq_t = piecewise.FromPointsList(ddq, timeline.T)
+    if overwrite or not phase.q_init.any():
+        phase.q_init = q[:,0]
+    if overwrite or not phase.dq_init.any():
+        phase.dq_init = dq[:,0]
+    if overwrite or not phase.ddq_init.any():
+        phase.ddq_init = ddq[:,0]
+    if overwrite or not phase.q_final.any():
+        phase.q_final = q[:,-1]
+    if overwrite or not phase.dq_final.any():
+        phase.dq_final = dq[:,-1]
+    if overwrite or not phase.ddq_final.any():
+        phase.ddq_final = ddq[:,-1]
+
+
+def connectPhaseTrajToFinalState(phase, duration):
+    """
+    Append to the trajectory of c, dc and ddc a quintic spline connecting phase.c_final, dc_final and ddc_final
+    and L and dL with a trajectory at 0
+    :param phase:
+    :param duration:
+    """
+    if duration <= 0.:
+        return
+    if phase.c_t is None or phase.dc_t is None or phase.ddc_t is None:
+        raise RuntimeError("connectPhaseTrajToFinalState can only be called with a phase with an initialized COM trajectory")
+    if phase.L_t is None or phase.dL_t is None :
+        raise RuntimeError("connectPhaseTrajToFinalState can only be called with a phase with an initialized AM trajectory")
+    if not phase.c_final.any():
+        raise RuntimeError("connectPhaseTrajToFinalState can only be called with a phase with an initialized c_final")
+    t_init = phase.c_t.max()
+    t_final = t_init + duration
+    c_init = phase.c_t(t_init)
+    dc_init = phase.dc_t(t_init)
+    ddc_init = phase.ddc_t(t_init)
+    L_init = phase.c_t(t_init)
+    dL_init = phase.dL_t(t_init)
+    com_t = polynomial(c_init, dc_init, ddc_init, phase.c_final, phase.dc_final, phase.ddc_final, t_init, t_final)
+    L_t = polynomial(L_init, dL_init, phase.L_final, phase.dL_final, t_init, t_final)
+    phase.c_t.append(com_t)
+    phase.dc_t.append(com_t.compute_derivate(1))
+    phase.ddc_t.append(com_t.compute_derivate(2))
+    phase.L_t.append(L_t)
+    phase.dL_t.append(L_t.compute_derivate(1))
+    phase.timeFinal = t_final
+
+
+def connectPhaseTrajToInitialState(phase, duration):
+    """
+    Insert at the beginning of the trajectory of c, dc and ddc a quintic spline connecting phase.c_init, dc_init and ddc__init
+    and L and dL with a trajectory at 0
+    :param phase:
+    :param duration:
+    """
+    if duration <= 0.:
+        return
+    if phase.c_t is None or phase.dc_t is None or phase.ddc_t is None:
+        raise RuntimeError("connectPhaseTrajToFinalState can only be called with a phase with an initialized COM trajectory")
+    if phase.L_t is None or phase.dL_t is None :
+        raise RuntimeError("connectPhaseTrajToFinalState can only be called with a phase with an initialized AM trajectory")
+    if not phase.c_init.any():
+        raise RuntimeError("connectPhaseTrajToFinalState can only be called with a phase with an initialized c_final")
+    t_final = phase.c_t.min()
+    t_init = t_final - duration
+    c_final = phase.c_t(t_final)
+    dc_final = phase.dc_t(t_final)
+    ddc_final = phase.ddc_t(t_final)
+    L_final = phase.c_t(t_final)
+    dL_final = phase.dL_t(t_final)
+    com_t = polynomial( phase.c_init, phase.dc_init, phase.ddc_init,c_final, dc_final, ddc_final, t_init, t_final)
+    L_t = polynomial(phase.L_init, phase.dL_init, L_final, dL_final, t_init, t_final)
+
+    # insert this trajectories at the beginning of the phase :
+    piecewise_c= piecewise(com_t)
+    piecewise_c.append(phase.c_t)
+    phase.c_t = piecewise_c
+    piecewise_dc= piecewise(com_t.compute_derivate(1))
+    piecewise_dc.append(phase.dc_t)
+    phase.dc_t = piecewise_dc
+    piecewise_ddc= piecewise(com_t.compute_derivate(2))
+    piecewise_ddc.append(phase.ddc_t)
+    phase.ddc_t = piecewise_ddc
+    piecewise_L= piecewise(L_t)
+    piecewise_L.append(phase.L_t)
+    phase.L_t = piecewise_L
+    piecewise_dL= piecewise(L_t.compute_derivate(1))
+    piecewise_dL.append(phase.dL_t)
+    phase.dL_t = piecewise_dL
+    # set the new initial time
+    phase.timeInitial = t_init
+
+
+
+
+
+

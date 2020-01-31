@@ -165,23 +165,6 @@ def JointPlacementForEffector(phase, eeName, Robot=None):
     return JointPatchForEffector(phase, eeName, Robot).placement
 
 
-def isContactEverActive(cs, eeName):
-    for phase in cs.contactPhases:
-        if eeName == cfg.Robot.rfoot:
-            if phase.RF_patch.active:
-                return True
-        elif eeName == cfg.Robot.lfoot:
-            if phase.LF_patch.active:
-                return True
-        elif eeName == cfg.Robot.rhand:
-            if phase.RH_patch.active:
-                return True
-        elif eeName == cfg.Robot.lhand:
-            if phase.LH_patch.active:
-                return True
-        else:
-            raise Exception("Unknown effector name")
-    return False
 
 
 def effectorPositionFromHPPPath(fb, problem, eeName, pid, t):
@@ -216,45 +199,6 @@ def genCOMTrajFromPhaseStates(phase, constraintVelocity = True, constraintAccele
     phase.c_t = com_traj
     phase.dc_t = com_traj.compute_derivate(1)
     phase.ddc_t = com_traj.compute_derivate(2)
-
-def connectPhaseTrajToFinalState(phase, duration):
-    if duration <= 0.:
-        return
-    init_state = phase.state_trajectory[-1]
-    final_state = phase.final_state
-    init_control = phase.control_trajectory[-1]
-    t_init = phase.time_trajectory[-1]
-    t_end = t_init + duration
-    """
-    print "# call connectPhaseTrajToFinalState : "
-    print "init_state  : ",init_state
-    print "final_state : ",final_state
-    print "init_control: ",init_control
-    print "t_init : ",t_init
-    print "t_end  : ",t_end
-    """
-    com_traj,vel_traj,acc_traj = genCOMTrajFromPhaseStates(phase)
-    am_traj, dAm_traj = genAMTrajFromPhaseStates(phase)
-    i = len(phase.time_trajectory)
-
-    dt = cfg.SOLVER_DT
-    t = t_init + dt
-    while t < t_end + dt / 2.:
-        if t > t_end:  # may happen due to numerical imprecision
-            t = t_end
-        state = np.zeros(9)
-        control = np.zeros(6)
-        state[0:3] = com_traj(t)
-        state[3:6] = vel_traj(t)
-        control[0:3] = acc_traj(t)
-        state[6:9] = am_traj(t)
-        control[3:6] = dAm_traj(t)
-        phase.state_trajectory.append(state)
-        phase.control_trajectory.append(control)
-        phase.time_trajectory.append(t)
-        t += dt
-    return phase
-
 
 # fill state_trajectory and control_trajectory in order to connect init_state and final_state of the phase
 # use quintic spline for the com position and cubic spline for the angular momentum
