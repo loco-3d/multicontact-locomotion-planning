@@ -148,8 +148,9 @@ def walk(fb, cs, distance, stepLength, gait, duration_ss = -1 , duration_ds = -1
     reached = False
     firstContactReachedGoal = False
     remainingDistance = distance
-    while remainingDistance >= 0:
+    while remainingDistance >= 1e-6:
         for k, limb in enumerate(gait):
+            #print("move limb : ",limb)
             eeName = fb.dict_limb_joint[limb]
             if isFirst:
                 length = stepLength / 2.
@@ -164,12 +165,14 @@ def walk(fb, cs, distance, stepLength, gait, duration_ss = -1 , duration_ds = -1
                 if length > remainingDistance:
                     length = remainingDistance
             transform = SE3.Identity()
+            #print("length = ",length)
             transform.translation = np.array([length, 0, 0])
             cs.moveEffectorOf(eeName, transform, duration_ds, duration_ss)
         remainingDistance -= stepLength
     if not firstContactReachedGoal:
         transform = SE3.Identity()
-        transform.translation  = [stepLength / 2., 0, 0]
+        #print("last length = ", stepLength)
+        transform.translation  = np.array([stepLength / 2., 0, 0])
         cs.moveEffectorOf(fb.dict_limb_joint[gait[0]], transform, duration_ds, duration_ss)
     q_end = fb.referenceConfig[::] + [0] * 6
     q_end[0] += distance
