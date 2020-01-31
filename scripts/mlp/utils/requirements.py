@@ -28,10 +28,14 @@ class Requirements():
     def requireTimings(cls, cs, cfg):
         if not cs.haveTimings():
             print("- Contact sequence do not have consistent timings.")
-            print("Compute timings from predefined values in configuration file ...")
-            cs = cs_tools.computePhasesTimings(cs, cfg)
-            if not cs.haveTimings():
-                print("An error occurred in cs_tools.computePhasesTimings")
+            if cfg is not None:
+                print("Compute timings from predefined values in configuration file ...")
+                cs = cs_tools.computePhasesTimings(cs, cfg)
+                if not cs.haveTimings():
+                    print("An error occurred in cs_tools.computePhasesTimings")
+                    return False
+            else:
+                print("Cannot compute timings without a cfg pointer.")
                 return False
         return True
 
@@ -44,9 +48,10 @@ class Requirements():
             return True
 
     @classmethod
-    def requireRootTrajectories(cls, cs):
+    def requireRootTrajectories(cls, cs, cfg = None):
         if not cs.haveRootTrajectories():
             print("- Contact sequence do not have consistent root trajectories.")
+            cls.requireTimings(cs, cfg)
             if cs.haveConfigurationsValues():
                 print("Compute it from the configurations ...")
                 cs_tools.computeRootTrajFromConfigurations(cs)
@@ -228,7 +233,7 @@ class Requirements():
             if not cls.requireConsistentContacts(cs):
                 return False
         if cls.rootTrajectories:
-            if not cls.requireRootTrajectories(cs):
+            if not cls.requireRootTrajectories(cs, cfg):
                 return False
         if cls.COMvalues:
             if not cls.requireCOMvalues(cs, cfg.Robot.DEFAULT_COM_HEIGHT):
