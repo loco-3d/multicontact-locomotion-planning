@@ -249,12 +249,6 @@ def hppConfigFromMatrice(robot, q_matrix):
 
 
 def phasesHaveSameConfig(p0, p1):
-    assert len(
-        p0.reference_configurations
-    ) > 0 and "CS object given to croc method should store one reference_configuration in each contact_phase"
-    assert len(
-        p1.reference_configurations
-    ) > 0 and "CS object given to croc method should store one reference_configuration in each contact_phase"
     return np.array_equal(p0.q_init, p1.q_init)
 
 
@@ -335,10 +329,10 @@ def fullBodyStatesExists(cs, fb):
 
 
 def createFullbodyStatesFromCS(cs, fb):
-    lastId = fullBodyStatesExists(cs, fb)
-    if lastId > 0:
-        print("States already exist in fullBody instance. endId = ", lastId)
-        return 0, lastId
+    #lastId = fullBodyStatesExists(cs, fb)
+    #if lastId > 0:
+    #    print("States already exist in fullBody instance. endId = ", lastId)
+    #    return 0, lastId
     phase_prev = cs.contactPhases[0]
     beginId = createStateFromPhase(fb, phase_prev)
     lastId = beginId
@@ -351,22 +345,6 @@ def createFullbodyStatesFromCS(cs, fb):
             phase_prev = phase
     return beginId, lastId
 
-
-# fill the given phase with a state, control and time trajectory such that the COM do not moe during all the phase (it stay at it's init_state position)
-def fillPhaseTrajWithZeros(phase, current_t, duration):
-    dt = cfg.SOLVER_DT
-    state = np.zeros(9)
-    state[0:3] = phase.init_state[0:3]
-    control = np.zeros(6)
-    t = current_t
-    t_end = current_t + duration
-    while t < t_end + dt / 2.:
-        if t > t_end:  # may happen due to numerical imprecision
-            t = t_end
-        phase.state_trajectory.append(state)
-        phase.control_trajectory.append(control)
-        phase.time_trajectory.append(t)
-        t += dt
 
 
 def computeContactNormal(placement):
@@ -481,13 +459,7 @@ def rootOrientationFromFeetPlacement(phase_prev, phase, phase_next):
     placement_end.rotation = q_rot.matrix()
     return placement_init, placement_end
 
-def copyPhaseInitToFinal(phase):
-    phase.c_final = phase.c_init
-    phase.dc_final = phase.dc_init
-    phase.ddc_final = phase.ddc_init
-    phase.L_final = phase.L_init
-    phase.dL_final = phase.dL_init
-    phase.q_final = phase.q_init
+
 
 def discretizeCurve(curve,dt):
     """

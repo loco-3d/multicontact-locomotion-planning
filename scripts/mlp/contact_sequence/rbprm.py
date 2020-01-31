@@ -5,8 +5,8 @@ import inspect
 import mlp.config as cfg
 import multicontact_api
 from multicontact_api import ContactPhase, ContactSequence, ContactPatch
-from mlp.utils.util import quatFromConfig,  copyPhaseInitToFinal
-from mlp.utils.cs_tools import createPhaseFromConfig, setFinalState
+from mlp.utils.util import quatFromConfig
+from mlp.utils.cs_tools import createPhaseFromConfig, copyPhaseInitToFinal
 from mlp.utils.requirements import Requirements
 from numpy import array
 import enum
