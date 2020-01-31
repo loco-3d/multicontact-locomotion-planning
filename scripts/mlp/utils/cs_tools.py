@@ -87,7 +87,7 @@ def generateConfigFromPhase(fb, phase, projectCOM=False):
     root = computeCenterOfSupportPolygonFromPhase(phase, fb.DEFAULT_COM_HEIGHT).tolist()
     q[0:2] = root[0:2]
     q[2] += root[2] - fb.DEFAULT_COM_HEIGHT
-    quat = Quaternion(rootOrientationFromFeetPlacement(phase, None)[0].rotation)
+    quat = Quaternion(phase.root_t.evaluateAsSE3(phase.timeInitial).rotation)
     q[3:7] = [quat.x, quat.y, quat.z, quat.w]
     # create state in fullBody :
     state = State(fb, q=q, limbsIncontact=contacts)
@@ -263,7 +263,13 @@ def computePhasesCOMValues(cs,DEFAULT_HEIGHT, overwrite = False):
 def computePhasesConfigurations(cs, fb):
     for pid, phase in enumerate(cs.contactPhases):
         if not phase.q_init.any():
-            generateConfigFromPhase(fb, phase, projectCOM=True)
+            if pid > 0 and len(cs.contactPhases[pid-1].getContactsBroken(phase)) == 1 and \
+                    len(cs.contactPhases[pid-1].getContactsCreated(phase)) == 0 and \
+                    len(cs.contactPhases[pid-1].getContactsRepositioned(phase)) == 0:
+                # there is only a contact break between previous and current phase, do not generate a new config but copy the previous one
+                phase.q_init = cs.contactPhases[pid-1].q_init
+            else:
+                generateConfigFromPhase(fb, phase, projectCOM=True)
         if pid > 0:
             cs.contactPhases[pid-1].q_final = phase.q_init
     if not cs.contactPhases[-1].q_final.any():

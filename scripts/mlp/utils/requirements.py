@@ -84,11 +84,12 @@ class Requirements():
         return True
 
     @classmethod
-    def requireConfigurationValues(cls, cs, fullBody = None):
+    def requireConfigurationValues(cls, cs, fullBody = None, cfg = None):
         if not cs.haveConfigurationsValues():
             print("- Contact sequence do not have consistent configurations values.")
             if fullBody is not None:
                 print("Try to compute configuration from inverse kinematics from the contacts ... ")
+                cls.requireRootTrajectories(cs, cfg)
                 cs = cs_tools.computePhasesConfigurations(cs, fullBody)
                 if not cs.haveConfigurationsValues():
                     print("An error occurred in cs_tools.computePhasesConfigurations")
@@ -239,7 +240,7 @@ class Requirements():
             if not cls.requireCentroidalValues(cs):
                 return False
         if cls.configurationValues:
-            if not cls.requireConfigurationValues(cs, fullBody):
+            if not cls.requireConfigurationValues(cs, fullBody, cfg):
                 return False
         if cls.COMtrajectories:
             if not cls.requireCOMtrajectories(cs):
