@@ -2,7 +2,7 @@ import multicontact_api
 from multicontact_api import ContactSequence, ContactPhase, ContactPatch
 from curves import piecewise, polynomial, SE3Curve
 from pinocchio import SE3, Quaternion
-from mlp.utils.util import SE3FromConfig,  computeContactNormal, JointPlacementForEffector, rootOrientationFromFeetPlacement, copyPhaseInitToFinal
+from mlp.utils.util import SE3FromConfig,  computeContactNormal, JointPlacementForEffector, rootOrientationFromFeetPlacement
 from mlp.utils.util import computeEffectorTranslationBetweenStates, computeEffectorRotationBetweenStates
 import numpy as np
 import types
@@ -364,28 +364,45 @@ def setJointsTrajectoryFromPoints(phase, q, dq, ddq, timeline, overwrite=True):
         phase.ddq_final = ddq[:,-1]
 
 
-def connectPhaseTrajToFinalState(phase, duration):
+def connectPhaseTrajToFinalState(phase, duration = None):
     """
     Append to the trajectory of c, dc and ddc a quintic spline connecting phase.c_final, dc_final and ddc_final
     and L and dL with a trajectory at 0
     :param phase:
     :param duration:
     """
-    if duration <= 0.:
-        return
     if phase.c_t is None or phase.dc_t is None or phase.ddc_t is None:
-        raise RuntimeError("connectPhaseTrajToFinalState can only be called with a phase with an initialized COM trajectory")
+        # initialise empty trajectories
+        phase.c_t = piecewise()
+        phase.dc_t = piecewise()
+        phase.ddc_t = piecewise()
+        # get the initial state from the phase :
+        c_init = phase.c_init
+        dc_init = phase.dc_init
+        ddc_init = phase.ddc_init
+        t_init = phase.timeInitial
+    else:
+        # get the initial state from the last points of the trajectories :
+        t_init = phase.c_t.max()
+        c_init = phase.c_t(t_init)
+        dc_init = phase.dc_t(t_init)
+        ddc_init = phase.ddc_t(t_init)
     if phase.L_t is None or phase.dL_t is None :
-        raise RuntimeError("connectPhaseTrajToFinalState can only be called with a phase with an initialized AM trajectory")
+        # initialise empty trajectories
+        phase.L_t = piecewise()
+        phase.dL_t = piecewise()
+        # get the initial state from the phase :
+        L_init = phase.L_init
+        dL_init = phase.dL_init
+    else :
+        L_init = phase.c_t(t_init)
+        dL_init = phase.dL_t(t_init)
     if not phase.c_final.any():
         raise RuntimeError("connectPhaseTrajToFinalState can only be called with a phase with an initialized c_final")
-    t_init = phase.c_t.max()
-    t_final = t_init + duration
-    c_init = phase.c_t(t_init)
-    dc_init = phase.dc_t(t_init)
-    ddc_init = phase.ddc_t(t_init)
-    L_init = phase.c_t(t_init)
-    dL_init = phase.dL_t(t_init)
+    if duration is not None:
+        t_final = t_init + duration
+    else:
+        t_final = phase.timeFinal
     com_t = polynomial(c_init, dc_init, ddc_init, phase.c_final, phase.dc_final, phase.ddc_final, t_init, t_final)
     L_t = polynomial(L_init, dL_init, phase.L_final, phase.dL_final, t_init, t_final)
     phase.c_t.append(com_t)
