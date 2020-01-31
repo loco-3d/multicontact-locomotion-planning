@@ -2,17 +2,30 @@ import numpy as np
 import mlp.config as cfg
 import multicontact_api
 from multicontact_api import ContactPhase, ContactSequence
+from mlp.utils.util import createFullbodyStatesFromCS
+from mlp.utils.cs_tools import connectPhaseTrajToFinalState, setInitialFromFinalValues, copyPhaseInitToFinal
+from mlp.utils.requirements import Requirements
 multicontact_api.switchToNumpyArray()
-from mlp.utils.util import connectPhaseTrajToFinalState, createFullbodyStatesFromCS, fillPhaseTrajWithZeros, genSplinesForPhase
 
-## Produce a centroidal trajectory where the CoM only move when the contact are fixed.
+class Inputs(Requirements):
+    timings = True
+    consistentContacts = True
+    configurationValues = True
+
+class Outputs(Inputs):
+    COMtrajectories = True
+    COMvalues = True
+
+## Produce a centroidal trajectory where the CoM only move when the contacts are fixed.
 ## It is then fixed during the swing phase where one contact is repositionned.
 ## The position reached by the CoM are given with 2-PAC
 ## The trajectory of the CoM is a quintic spline with initial and final velocity/acceleration constrained to 0
 
 
 def getTargetCOMPosition(fullBody, id_state):
+    print("call 2-pac for ids : "+str(id_state)+ " ; "+str(id_state+1))
     tab = fullBody.isReachableFromState(id_state, id_state + 1, True, False)
+    print("tab results : ",tab)
     success = tab[0]
     assert success, "2-pac failed for state id : " + str(id_state)
     if len(tab) == 7:
@@ -30,13 +43,6 @@ def getTargetCOMPosition(fullBody, id_state):
     return c
 
 
-def moveToCOMPosition(phase, c, current_t, duration):
-    # final com position equal to c
-    final_state = np.zeros(9)
-    final_state[0:3] = c
-    phase.final_state = final_state
-    genSplinesForPhase(phase, current_t, duration)
-
 
 def generateCentroidalTrajectory(cs, cs_initGuess=None, fullBody=None, viewer=None):
     if cs_initGuess:
@@ -48,24 +54,8 @@ def generateCentroidalTrajectory(cs, cs_initGuess=None, fullBody=None, viewer=No
     print("endId   = ", endId)
     cs_result = ContactSequence(cs)
 
-    def getPhaseDuration(sid, pid):
-        if sid == endId:
-            duration = cfg.DURATION_FINAL
-        if pid == 0:
-            duration = cfg.DURATION_INIT
-        elif cs.contactPhases[pid].numActivePatches() == 1:
-            duration = cfg.DURATION_SS
-        elif cs.contactPhases[pid].numActivePatches() == 2:
-            duration = cfg.DURATION_DS
-        elif cs.contactPhases[pid].numActivePatches() == 3:
-            duration = cfg.DURATION_TS
-        elif cs.contactPhases[pid].numActivePatches() == 4:
-            duration = cfg.DURATION_QS
-        return duration
-
-    # for each phase in the cs, create a corresponding FullBody State and call CROC,
-    # then discretize the solution and fill the cs struct
-    # Make the assumption that the CS was created with the generateContactSequence method from the same fb object
+    # for each phase in the cs, create a corresponding FullBody State and call 2-PAC,
+    # then fill the cs struct with a quintic spline connecting the two points found
     id_phase = 0
     for id_state in range(beginId, endId + 1):
         print("id_state = ", str(id_state))
@@ -73,25 +63,25 @@ def generateCentroidalTrajectory(cs, cs_initGuess=None, fullBody=None, viewer=No
         phase_fixed = cs_result.contactPhases[id_phase]  # phase where the CoM move and the contacts are fixed
         # set initial state to be the final one of the previous phase :
         if id_phase > 1:
-            phase_fixed.init_state = phase_swing.final_state.copy()
-            current_t = phase_swing.time_trajectory[-1]
-        else:
-            current_t = 0.
+            setInitialFromFinalValues(phase_swing, phase_fixed)
         # compute 'optimal' position of the COM to go before switching phase:
         if id_state == endId:
-            c = phase_fixed.final_state[0:3]
+            c = phase_fixed.c_final
         else:
             c = getTargetCOMPosition(fullBody, id_state)
-        # fill phase trajectories to connect to 'c'
-        moveToCOMPosition(phase_fixed, c, current_t, getPhaseDuration(id_state, id_phase))
+            # set 'c' the final position of current phase :
+            phase_fixed.c_final = c
+        phase_fixed.dc_final = np.zeros(3)
+        phase_fixed.ddc_final = np.zeros(3)
+        connectPhaseTrajToFinalState(phase_fixed)
+
         id_phase += 1
         if id_state < endId:
-            current_t = phase_fixed.time_trajectory[-1]
             phase_swing = cs_result.contactPhases[id_phase]  # phase where the CoM is fixed and an effector move
             # in swing phase, com do not move :
-            phase_swing.init_state = phase_fixed.final_state.copy()
-            phase_swing.final_state = phase_fixed.final_state.copy()
-            fillPhaseTrajWithZeros(phase_swing, current_t, getPhaseDuration(id_state, id_phase))
+            setInitialFromFinalValues(phase_fixed,phase_swing)
+            copyPhaseInitToFinal(phase_swing)
+            connectPhaseTrajToFinalState(phase_swing)
             id_phase += 1
 
     return cs_result
