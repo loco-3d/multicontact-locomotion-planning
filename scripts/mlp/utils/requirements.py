@@ -11,6 +11,7 @@ class Requirements():
     """
     timings = False
     consistentContacts = False
+    rootTrajectories = False
     COMvalues = False
     AMvalues = False
     centroidalValues = False
@@ -22,6 +23,119 @@ class Requirements():
     torqueTrajectories = False
     effectorTrajectories = False
     contactForcesTrajectories = False
+
+    @classmethod
+    def requireTimings(cls, cs, cfg):
+        if not cs.haveTimings():
+            print("- Contact sequence do not have consistent timings.")
+            print("Compute timings from predefined values in configuration file ...")
+            cs = cs_tools.computePhasesTimings(cs, cfg)
+            if not cs.haveTimings():
+                print("An error occurred in cs_tools.computePhasesTimings")
+                return False
+        return True
+
+    @classmethod
+    def requireConsistentContacts(cls, cs):
+        if not cs.haveConsistentContacts():
+            print("- Contact sequence do not have consistent contacts.")
+            return False
+        else:
+            return True
+
+    @classmethod
+    def requireRootTrajectories(cls, cs):
+        if not cs.haveRootTrajectories():
+            #TODO
+            return False
+        return True
+
+    @classmethod
+    def requireCOMvalues(cls, cs, default_height):
+        if not cs.haveCOMvalues():
+            print("- Contact sequence do not have consistent CoM values.")
+            print("Compute CoM initial and final positions by projecting on the support polygon for each phase ...")
+            cs = cs_tools.computePhasesCOMValues(cs, default_height)
+            if not cs.haveCOMvalues():
+                print("An error occurred in cs_tools.computePhasesCOMValues")
+                return False
+        return True
+
+    @classmethod
+    def requireAMvalues(cls, cs):
+        if not cs.haveAMvalues():
+            print("- Contact sequence do not have consistent AM values .")
+            return False
+        return True
+
+    @classmethod
+    def requireCentroidalValues(cls, cs):
+        if not cs.haveCentroidalValues():
+            print("- Contact sequence do not have consistent centroidal values.")
+            return False
+        return True
+
+    @classmethod
+    def requireConfigurationValues(cls, cs, fullBody = None):
+        if not cs.haveConfigurationsValues():
+            print("- Contact sequence do not have consistent configurations values.")
+            if fullBody is not None:
+                print("Try to compute configuration from inverse kinematics from the contacts ... ")
+                cs = cs_tools.computePhasesConfigurations(cs, fullBody)
+                if not cs.haveConfigurationsValues():
+                    print("An error occurred in cs_tools.computePhasesConfigurations")
+                    return False
+            else:
+                print("Cannot compute this values without a fullBody object.")
+                return False
+        return True
+
+    @classmethod
+    def requireCOMtrajectories(cls, cs):
+        if not cs.haveCOMtrajectories():
+            print("- Contact sequence do not have consistent CoM trajectories.")
+            return False
+        return True
+
+    @classmethod
+    def requireAMtrajectories(cls, cs):
+        if not cs.haveAMtrajectories():
+            print("- Contact sequence do not have consistent AM trajectories.")
+            return False # TODO gen 0 splines
+        return True
+
+    @classmethod
+    def requireCentroidalTrajectories(cls, cs):
+        return cls.requireAMtrajectories(cs) and cls.requireCOMtrajectories(cs)
+
+    @classmethod
+    def requireJointsTrajectories(cls, cs):
+        if not cs.haveJointsTrajectories():
+            print("- Contact sequence do not have consistent joints trajectories.")
+            return False
+        return True
+
+    @classmethod
+    def requireTorqueTrajectories(cls, cs):
+        if not cs.haveTorquesTrajectories():
+            print("- Contact sequence do not have consistent torques trajectories")
+            return False
+        return True
+
+    @classmethod
+    def requireEffectorTrajectories(cls, cs):
+        if not cs.haveEffectorsTrajectories():
+            print("- Contact sequence do not have consistent effector trajectories.")
+            return False
+        return True
+
+    @classmethod
+    def requireContactForcesTrajectories(cls, cs):
+        if not cs.haveContactForcesTrajectories():
+            print("- Contact sequence do not have consistent contact forces trajectories.")
+            return False
+        return True
+
 
     @classmethod
     def print(cls):
@@ -60,6 +174,8 @@ class Requirements():
             assert cs.haveTimings(), "Contact sequence do not have consistent timings."
         if cls.consistentContacts:
             assert cs.haveConsistentContacts(), "Contact sequence do not have consistent contacts."
+        if cls.rootTrajectories:
+            assert cs.haveRootTrajectories(), "Contact sequence do not have consistent Root trajectories."
         if cls.COMvalues:
             assert cs.haveCOMvalues(), "Contact sequence do not have consistent CoM values."
         if cls.AMvalues:
@@ -97,72 +213,46 @@ class Requirements():
         print("# check requirements : ")
 
         if cls.timings:
-            if not cs.haveTimings():
-                print("- Contact sequence do not have consistent timings.")
-                print("Compute timings from predefined values in configuration file ...")
-                cs = cs_tools.computePhasesTimings(cs, cfg)
-                if not cs.haveTimings():
-                    print("An error occurred in cs_tools.computePhasesTimings")
-                    return False
+            if not cls.requireTimings(cs, cfg):
+                return False
         if cls.consistentContacts:
-            if not cs.haveConsistentContacts():
-                print("- Contact sequence do not have consistent contacts.")
+            if not cls.requireConsistentContacts(cs):
+                return False
+        if cls.rootTrajectories:
+            if not cls.requireRootTrajectories(cs):
                 return False
         if cls.COMvalues:
-            if not cs.haveCOMvalues():
-                print("- Contact sequence do not have consistent CoM values.")
-                print("Compute CoM initial and final positions by projecting on the support polygon for each phase ...")
-                cs = cs_tools.computePhasesCOMValues(cs, cfg.Robot.DEFAULT_COM_HEIGHT)
-                if not cs.haveCOMvalues():
-                    print("An error occurred in cs_tools.computePhasesCOMValues")
-                    return False
+            if not cls.requireCOMvalues(cs, cfg.Robot.DEFAULT_COM_HEIGHT):
+                return False
         if cls.AMvalues:
-            if not cs.haveAMvalues():
-                print("- Contact sequence do not have consistent AM values .")
+            if not cls.requireAMvalues(cs):
                 return False
         if cls.centroidalValues:
-            if not cs.haveCentroidalValues():
-                print("- Contact sequence do not have consistent centroidal values.")
+            if not cls.requireCentroidalValues(cs):
                 return False
         if cls.configurationValues:
-            if not cs.haveConfigurationsValues():
-                print("- Contact sequence do not have consistent configurations values.")
-                if fullBody is not None:
-                    print("Try to compute configuration from inverse kinematics from the contacts ... ")
-                    cs = cs_tools.computePhasesConfigurations(cs,fullBody)
-                    if not cs.haveConfigurationsValues():
-                        print("An error occurred in cs_tools.computePhasesConfigurations")
-                        return False
-                else:
-                    print("Cannot compute this values without a fullBody object.")
-                    return False
+            if not cls.requireConfigurationValues(cs, fullBody):
+                return False
         if cls.COMtrajectories:
-            if not cs.haveCOMtrajectories():
-                print("- Contact sequence do not have consistent CoM trajectories.")
+            if not cls.requireCOMtrajectories(cs):
                 return False
         if cls.AMtrajectories:
-            if not cs.haveAMtrajectories():
-                print("- Contact sequence do not have consistent AM trajectories.")
+            if not cls.requireAMtrajectories(cs):
                 return False
         if cls.centroidalTrajectories:
-            if not cs.haveCentroidalTrajectories ():
-                print("- Contact sequence do not have consistent centroidal trajectories.")
+            if not cls.requireCentroidalTrajectories(cs):
                 return False
         if cls.jointsTrajectories:
-            if not cs.haveJointsTrajectories():
-                print("- Contact sequence do not have consistent joints trajectories.")
+            if not cls.requireJointsTrajectories(cs):
                 return False
         if cls.torqueTrajectories:
-            if not cs.haveTorquesTrajectories():
-                print("- Contact sequence do not have consistent torques trajectories")
+            if not cls.requireTorqueTrajectories(cs):
                 return False
         if cls.effectorTrajectories:
-            if not cs.haveEffectorsTrajectories():
-                print("- Contact sequence do not have consistent effector trajectories.")
+            if not cls.requireEffectorTrajectories(cs):
                 return False
         if cls.contactForcesTrajectories:
-            if not cs.haveContactForcesTrajectories():
-                print("- Contact sequence do not have consistent contact forces trajectories.")
+            if not cls.requireContactForcesTrajectories(cs):
                 return False
         print("# check requirements done. ")
 
