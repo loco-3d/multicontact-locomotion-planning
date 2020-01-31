@@ -526,5 +526,9 @@ def setInitialFromFinalValues(previous_phase, next_phase):
     next_phase.dL_init = previous_phase.dL_final
     next_phase.q_init = previous_phase.q_final
 
-
+def resetCOMtrajectories(cs):
+    for phase in cs.contactPhases:
+        phase.c_t = None
+        phase.dc_t = None
+        phase.ddc_t = None
 
