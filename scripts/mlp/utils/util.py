@@ -413,19 +413,51 @@ def addEffectorTrajectoryInCS(cs, wb_result, Robot=None):
     return cs
 
 
-def rootOrientationFromFeetPlacement(phase, phase_next):
+def rootOrientationFromFeetPlacement(phase_prev, phase, phase_next):
+    """
+    Compute an initial and final root orientation for the ContactPhase
+    The initial orientation is a mean between both feet contact position in the current (or previous) phase
+    the final orientation is with considering the newt contact position of the feet
+    :param phase_prev:
+    :param phase:
+    :param phase_next:
+    :return:
+    """
     #FIXME : extract only the yaw rotation
-    qr = Quaternion(phase.contactPatch(cfg.Robot.rfoot).placement.rotation)
-    qr.x = 0
-    qr.y = 0
-    qr.normalize()
-    ql = Quaternion(phase.contactPatch(cfg.Robot.lfoot).placement.rotation)
-    ql.x = 0
-    ql.y = 0
-    ql.normalize()
-    q_rot = qr.slerp(0.5, ql)
+    qr = None
+    ql = None
+    patchR = None
+    patchL = None
+    if phase.isEffectorInContact(cfg.Robot.rfoot):
+        patchR = phase.contactPatch(cfg.Robot.rfoot)
+    elif phase_prev is not None and phase_prev.isEffectorInContact(cfg.Robot.rfoot):
+        patchR = phase_prev.contactPatch(cfg.Robot.rfoot)
+    if patchR is not None:
+        qr = Quaternion(patchR.placement.rotation)
+        qr.x = 0
+        qr.y = 0
+        qr.normalize()
+    if phase.isEffectorInContact(cfg.Robot.lfoot):
+        patchL = phase.contactPatch(cfg.Robot.lfoot)
+    elif phase_prev is not None and phase_prev.isEffectorInContact(cfg.Robot.lfoot):
+        patchL = phase_prev.contactPatch(cfg.Robot.lfoot)
+    if patchL is not None:
+        ql = Quaternion(patchL.placement.rotation)
+        ql.x = 0
+        ql.y = 0
+        ql.normalize()
+    if ql is not None and qr is not None:
+        q_rot = qr.slerp(0.5, ql)
+    elif qr is not None:
+        q_rot = qr
+    elif ql is not None:
+        q_rot = ql
+    else:
+        raise RuntimeError("In rootOrientationFromFeetPlacement, cannot deduce feet initial contacts positions.")
     placement_init = SE3.Identity()
     placement_init.rotation = q_rot.matrix()
+
+    # compute the final orientation :
     if phase_next:
         if not phase.isEffectorInContact(cfg.Robot.rfoot) and phase_next.isEffectorInContact(cfg.Robot.rfoot):
             qr = Quaternion(phase_next.contactPatch(cfg.Robot.rfoot).placement.rotation)
@@ -437,7 +469,14 @@ def rootOrientationFromFeetPlacement(phase, phase_next):
             ql.x = 0
             ql.y = 0
             ql.normalize()
-    q_rot = qr.slerp(0.5, ql)
+    if ql is not None and qr is not None:
+        q_rot = qr.slerp(0.5, ql)
+    elif qr is not None:
+        q_rot = qr
+    elif ql is not None:
+        q_rot = ql
+    else:
+        raise RuntimeError("In rootOrientationFromFeetPlacement, cannot deduce feet initial contacts positions.")
     placement_end = SE3.Identity()
     placement_end.rotation = q_rot.matrix()
     return placement_init, placement_end

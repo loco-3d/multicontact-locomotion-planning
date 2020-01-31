@@ -1,6 +1,6 @@
 import multicontact_api
 from multicontact_api import ContactSequence, ContactPhase, ContactPatch
-from curves import piecewise, polynomial
+from curves import piecewise, polynomial, SE3Curve
 from pinocchio import SE3, Quaternion
 from mlp.utils.util import SE3FromConfig,  computeContactNormal, JointPlacementForEffector, rootOrientationFromFeetPlacement, copyPhaseInitToFinal
 from mlp.utils.util import computeEffectorTranslationBetweenStates, computeEffectorRotationBetweenStates
@@ -437,6 +437,29 @@ def connectPhaseTrajToInitialState(phase, duration):
     # set the new initial time
     phase.timeInitial = t_init
 
+def computeRootTrajFromConfigurations(cs):
+    assert cs.haveConfigurationsValues(), "computeRootTrajFromConfigurations require haveConfigurationsValues"
+    for phase in cs.contactPhases:
+        p_init = SE3FromConfig(phase.q_init)
+        p_final = SE3FromConfig(phase.q_final)
+        phase.root_t = SE3Curve(p_init, p_final, phase.timeInitial, phase.timeFinal)
+
+
+def computeRootTrajFromContacts(cs):
+    #Quaternion(rootOrientationFromFeetPlacement(phase, None)[0].rotation)
+    for pid in range(cs.size()):
+        phase = cs.contactPhases[pid]
+        if pid > 0:
+            previous_phase = cs.contactPhases[pid-1]
+        else:
+            previous_phase = None
+        if pid < (cs.size()-1):
+            next_phase = cs.contactPhases[pid+1]
+        else:
+            next_phase = None
+
+        p_init, p_final = rootOrientationFromFeetPlacement(previous_phase, phase, next_phase)
+        phase.root_t = SE3Curve(p_init, p_final, phase.timeInitial, phase.timeFinal)
 
 
 
