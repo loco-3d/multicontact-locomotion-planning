@@ -482,6 +482,43 @@ def computeRootTrajFromContacts(cs):
         phase.root_t = SE3Curve(p_init, p_final, phase.timeInitial, phase.timeFinal)
 
 
+def copyPhaseInitToFinal(phase):
+    phase.c_final = phase.c_init
+    phase.dc_final = phase.dc_init
+    phase.ddc_final = phase.ddc_init
+    phase.L_final = phase.L_init
+    phase.dL_final = phase.dL_init
+    phase.q_final = phase.q_init
+
+def setFinalFromInitialValues(previous_phase, next_phase):
+    """
+    Set c_final, dc_final, ddc_final, L_final, dL_final of previous_phase
+    to the values of the 'init' in next_phase
+    :param previous_phase:
+    :param next_phase:
+    :return:
+    """
+    previous_phase.c_final = next_phase.c_init
+    previous_phase.dc_final = next_phase.dc_init
+    previous_phase.ddc_final = next_phase.ddc_init
+    previous_phase.L_final = next_phase.L_init
+    previous_phase.dL_final = next_phase.dL_init
+    previous_phase.q_final = next_phase.q_init
+
+def setInitialFromFinalValues(previous_phase, next_phase):
+    """
+    Set c_final, dc_init, ddc_init, L_init, dL_init of next_phase
+    to the values of the 'final' in previous_phase
+    :param previous_phase:
+    :param next_phase:
+    :return:
+    """
+    next_phase.c_init = previous_phase.c_final
+    next_phase.dc_init = previous_phase.dc_final
+    next_phase.ddc_init = previous_phase.ddc_final
+    next_phase.L_init = previous_phase.L_final
+    next_phase.dL_init = previous_phase.dL_final
+    next_phase.q_init = previous_phase.q_final
 
 
 
