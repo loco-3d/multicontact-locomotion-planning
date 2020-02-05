@@ -9,7 +9,15 @@ import hpp_bezier_com_traj as bezier_com
 from curves import bezier, piecewise_bezier, SE3Curve, piecewise_SE3
 import quadprog
 from mlp.end_effector.bezier_predef import generatePredefBeziers, generateSmoothBezierTraj
+from mlp.utils.requirements import Requirements
 hpp_bezier_com_traj.switchToNumpyArray()
+
+class Inputs(Requirements):
+    timings = True
+    configurationValues = True
+
+class Outputs(Inputs):
+    effectorTrajectories = True
 
 VERBOSE = 1
 DISPLAY_RRT_PATH = True
