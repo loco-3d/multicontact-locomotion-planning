@@ -164,6 +164,16 @@ def displaySE3Traj(traj, gui, sceneName, name, color, time_interval, offset=SE3.
     gui.addToGroup(name, sceneName)
     gui.refresh()
 
+def displayEffectorTrajectories(cs, viewer, Robot, suffixe = "", colorAlpha = 1):
+    effectors = cs.getAllEffectorsInContact()
+    for pid,phase in enumerate(cs.contactPhases):
+        for eeName in effectors:
+            if phase.effectorHaveAtrajectory(eeName):
+                color = Robot.dict_limb_color_traj[eeName]
+                color[-1] = colorAlpha
+                displaySE3Traj(phase.effectorTrajectory(eeName), viewer.client.gui, viewer.sceneName,
+                                 eeName + "_traj_"+ suffixe + str(pid), color,
+                                 [phase.timeInitial, phase.timeFinal], Robot.dict_offset[eeName])
 
 def displayWBconfig(viewer, q_matrix):
     viewer(hppConfigFromMatrice(viewer.robot, q_matrix))
