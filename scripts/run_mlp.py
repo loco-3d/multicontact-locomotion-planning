@@ -78,13 +78,49 @@ if cfg.PLOT_CENTROIDAL:
     from mlp.utils.plot import plotCOMTrajFromCS
     plotCOMTrajFromCS(cs_com)
 
+
+print("------------------------------")
+print("### MLP : End effector initial Guess  ###")
+import mlp.end_effector.initGuess as effectorsInitGuess
+if not effectorsInitGuess.Inputs.checkAndFillRequirements(cs_com, cfg, fullBody):
+    raise RuntimeError("The current contact sequence cannot be given as input to the end effector method selected.")
+cs_ref = effectorsInitGuess.generateEffectorTrajectoriesForSequence(cs_com, fullBody)
+effectorsInitGuess.Outputs.assertRequirements(cs_ref)
+
+if cfg.SAVE_CS_REF:
+    if not os.path.exists(cfg.CONTACT_SEQUENCE_PATH):
+        os.makedirs(cfg.CONTACT_SEQUENCE_PATH)
+    filename = cfg.CONTACT_SEQUENCE_PATH + "/" + cfg.DEMO_NAME + "_REF.cs"
+    print("Write contact sequence binary file with centroidal and end effector trajectories: ", filename)
+    cs_ref.saveAsBinary(filename)
+
+if cfg.DISPLAY_ALL_FEET_TRAJ:
+    from mlp.viewer.display_tools import displayEffectorTrajectories
+    displayEffectorTrajectories(cs_ref, viewer, fullBody, "_ref", 0.6)
+
+
 print("------------------------------")
 print("### MLP : whole-body  ###")
 import mlp.wholebody as wholeBody
-if not wholeBody.Inputs.checkAndFillRequirements(cs_com,cfg,fullBody):
+if not wholeBody.Inputs.checkAndFillRequirements(cs_ref,cfg,fullBody):
     raise RuntimeError("The current contact sequence cannot be given as input to the wholeBody method selected.")
-cs_wb, res, robot = wholeBody.generateWholeBodyMotion(cs_com, fullBody, viewer)
+cs_wb, robot = wholeBody.generateWholeBodyMotion(cs_ref, fullBody, viewer)
 wholeBody.Outputs.assertRequirements(cs_wb)
+
+if cfg.SAVE_CS_REF:
+    if not os.path.exists(cfg.CONTACT_SEQUENCE_PATH):
+        os.makedirs(cfg.CONTACT_SEQUENCE_PATH)
+    filename = cfg.CONTACT_SEQUENCE_PATH + "/" + cfg.DEMO_NAME + "_REF.cs"
+    print("Write contact sequence binary file with centroidal and end effector trajectories: ", filename)
+    cs_ref.saveAsBinary(filename)
+
+if cfg.SAVE_CS_WB:
+    if not os.path.exists(cfg.CONTACT_SEQUENCE_PATH):
+        os.makedirs(cfg.CONTACT_SEQUENCE_PATH)
+    filename = cfg.CONTACT_SEQUENCE_PATH + "/" + cfg.DEMO_NAME + "_WB.cs"
+    print("Write contact sequence binary file with wholebody trajectories: ", filename)
+    cs_wb.saveAsBinary(filename)
+
 
 if cfg.WRITE_STATUS:
     if not os.path.exists(cfg.OUTPUT_DIR):
@@ -96,6 +132,14 @@ if cfg.WRITE_STATUS:
     else:
         f.write("wholebody_reach_goal: False\n")
     f.close()
+
+if cfg.DISPLAY_FEET_TRAJ:
+    from mlp.viewer.display_tools import displayEffectorTrajectories
+    if cfg.IK_store_effector:
+        displayEffectorTrajectories(cs_wb, viewer, fullBody)
+    else :
+        displayEffectorTrajectories(cs_ref, viewer, fullBody)
+
 
 if cfg.CHECK_FINAL_MOTION:
     from mlp.utils import check_path
@@ -109,7 +153,7 @@ if cfg.CHECK_FINAL_MOTION:
         f = open(cfg.STATUS_FILENAME, "a")
         f.write("motion_valid: " + str(motion_valid) + "\n")
         f.close()
-elif res:
+elif cs_wb is not None:
     motion_valid = True
 else:
     motion_valid = False

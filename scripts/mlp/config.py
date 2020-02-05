@@ -4,15 +4,18 @@ import os
 contact_generation_method_available = ["none", "load", "rbprm", "sl1m"]
 centroidal_initGuess_method_available = ["none", "geometric", "croc", "timeopt", "quasistatic"]
 centroidal_method_available = ["load", "geometric", "croc", "timeopt", "quasistatic", "muscod", "none"]
+end_effector_initGuess_method_available = ["none","load","smoothedFoot", "bezierPredef"]
+end_effector_method_available = ["limbRRT", "limbRRToptimized"]
 wholebody_method_available = ["load", "tsid", "croccodyl", "none"]
-end_effector_method_available = ["smoothedFoot", "bezierPredef", "limbRRT", "limbRRToptimized"]
+
 
 ## methods setting : choose which method will be used to solve each subproblem : 
-contact_generation_method = "rbprm"
-centroidal_initGuess_method = "geometric" 
-centroidal_method = "timeopt"#"load"# 
-wholebody_method = "tsid" 
-end_effector_method = "limbRRToptimized" 
+contact_generation_method = "load"
+centroidal_initGuess_method = "none"
+centroidal_method = "timeopt" # TODO : fix load method ...
+end_effector_initGuess_method = "bezierPredef"
+end_effector_method = "limbRRToptimized"
+wholebody_method = "none"
 
 ## PATHS settings :
 PKG_PATH = os.path.dirname(os.path.realpath(__file__)).rstrip("/scripts/mlp")
@@ -25,12 +28,13 @@ EXPORT_PATH = OUTPUT_DIR + "/export"
 ## Export setting
 SAVE_CS = True
 SAVE_CS_COM = True
+SAVE_CS_REF = True
+SAVE_CS_WB = True
 EXPORT_GAZEBO = False
 EXPORT_NPZ = True
 EXPORT_BLENDER = False
 EXPORT_SOT = False
 EXPORT_OPENHRP = False
-EXPORT_EFF_IN_CS = False
 openHRP_useZMPref = False  # if true : in the export_openHRP, use the zmp computed by the centroidal solver and the one computed from the wholebody
 WRITE_STATUS = False
 ##DISPLAY settings :
@@ -40,7 +44,7 @@ DISPLAY_INIT_GUESS_TRAJ = False
 DISPLAY_WP_COST = True  # display waypoints found by the planner and used in the cost function of the centroidal dynamic solver
 DISPLAY_COM_TRAJ = True
 DISPLAY_FEET_TRAJ = True  # display the feet trajectories used in the final motion
-DISPLAY_ALL_FEET_TRAJ = False  # display all the trajectory used as reference, even the invalid ones
+DISPLAY_ALL_FEET_TRAJ = True  # display all the trajectory used as reference, even the invalid ones
 DISPLAY_WB_MOTION = False  # display whole body motion automatically once it's computed
 DT_DISPLAY = 0.05  # dt used to display the wb motion (one configuration every dt is sent to the viewer) It have to be greater than IK_dt
 PLOT = False  # Generate plot for various data
@@ -136,10 +140,11 @@ if not (wholebody_method in wholebody_method_available):
     raise ValueError("wholebody method must be choosed from : " + str(wholebody_method_available))
 if not (end_effector_method in end_effector_method_available):
     raise ValueError("end effector method must be choosed from : " + str(end_effector_method_available))
+if not (end_effector_initGuess_method in end_effector_initGuess_method_available):
+    raise ValueError("end effector method must be choosed from : " + str(end_effector_initGuess_method_available))
 if contact_generation_method == "none" and centroidal_method != "load":
     raise ValueError("Cannot skip contact_generation phase if centroidal trajectory is not loaded from file")
-if centroidal_method == "timeopt" and centroidal_initGuess_method != "geometric":
-    raise ValueError("In current implementation of timeopt, the initGuess must be geometric (FIXME)")
+
 
 # skip useless ethod when loading motion from file:
 if contact_generation_method == "load":
@@ -149,12 +154,20 @@ if centroidal_method == "load":
     centroidal_initGuess_method = "none"
     SAVE_CS = False
     SAVE_CS_COM = False
+if end_effector_initGuess_method == "load":
+    contact_generation_method = "load"
+    centroidal_initGuess_method = "none"
+    centroidal_method = "load"
+    SAVE_CS = False
+    SAVE_CS_COM = False
+    SAVE_CS_REF = False
 if wholebody_method == "load":
     contact_generation_method = "load"
     centroidal_initGuess_method = "none"
     centroidal_method = "load"
     SAVE_CS = False
     SAVE_CS_COM = False
+    SAVE_CS_WB = False
     EXPORT_NPZ = False
 
 if centroidal_method == "none":
@@ -164,8 +177,11 @@ if centroidal_method == "none":
     DISPLAY_COM_TRAJ = False
     PLOT_CENTROIDAL = False
     WRITE_STATUS = False
+if end_effector_initGuess_method == "none":
+    SAVE_CS_REF = False
 if wholebody_method == "none":
     EXPORT_NPZ = False
+    SAVE_CS_WB = False
     CHECK_FINAL_MOTION = False
     DISPLAY_WB_MOTION = False
     PLOT = False
