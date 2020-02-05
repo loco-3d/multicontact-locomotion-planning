@@ -377,19 +377,6 @@ def getPhaseEffTrajectoryByName(phase, eeName, Robot):
     raise ValueError("Unknown effector name : " + eeName)
 
 
-def addEffectorTrajectoryInCS(cs, wb_result, Robot=None):
-    if not Robot:
-        Robot = cfg.Robot
-    for phase in cs.contactPhases:
-        for i_traj in range(len(phase.time_trajectory)):
-            id = int(phase.time_trajectory[i_traj] / wb_result.dt)
-            if id >= len(wb_result.t_t):
-                id = len(wb_result.t_t) - 1
-            for eeName in wb_result.eeNames:
-                getPhaseEffTrajectoryByName(phase, eeName,
-                                            Robot).append(effectorStatePositionFromWB(Robot, wb_result, id, eeName))
-    return cs
-
 
 def rootOrientationFromFeetPlacement(phase_prev, phase, phase_next):
     """
