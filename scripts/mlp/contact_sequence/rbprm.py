@@ -5,7 +5,7 @@ import inspect
 import mlp.config as cfg
 import multicontact_api
 from multicontact_api import ContactPhase, ContactSequence, ContactPatch
-from mlp.utils.util import quatFromConfig
+from mlp.utils.util import quatFromConfig, SE3FromConfig
 from mlp.utils.cs_tools import createPhaseFromConfig, copyPhaseInitToFinal
 from mlp.utils.requirements import Requirements
 from numpy import array
@@ -30,17 +30,14 @@ class VariationType(enum.Enum):
 
 def contactPlacementFromRBPRMState(fb, stateId, eeName):
     # get limbName from effector name :
-    limbId = list(fb.dict_limb_joint.keys())[list(fb.dict_limb_joint.values()).index(eeName)]
-    [p, n] = fb.clientRbprm.rbprm.computeCenterOfContactAtStateForLimb(stateId, False, limbId)
-    placement = SE3.Identity()
-    placement.translation = array(p)
+    fb.setCurrentConfig(fb.getConfigAtState(stateId))
+    placement = SE3FromConfig(fb.getJointPosition(eeName))
     if fb.cType == "_3_DOF":
+        limbId = list(fb.dict_limb_joint.keys())[list(fb.dict_limb_joint.values()).index(eeName)]
+        [p, n] = fb.clientRbprm.rbprm.computeCenterOfContactAtStateForLimb(stateId, False, limbId)
         normal = np.array(n)
         quat = Quaternion.FromTwoVectors(np.array(fb.dict_normal[eeName]), normal)
-    else:
-        q_r = fb.getJointPosition(eeName)
-        quat = quatFromConfig(q_r)
-    placement.rotation = quat.matrix()
+        placement.rotation = quat.matrix()
     return placement
 
 
