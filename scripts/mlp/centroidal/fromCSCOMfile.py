@@ -1,7 +1,15 @@
 import mlp.config as cfg
 import multicontact_api
 from multicontact_api import ContactSequence
+from mlp.utils.requirements import Requirements as Inputs
+
 multicontact_api.switchToNumpyArray()
+
+class Outputs(Inputs):
+    consistentContacts = True
+    timings = True
+    centroidalTrajectories = True
+    centroidalValues = True
 
 
 def generateCentroidalTrajectory(cs, cs_initGuess=None, fullBody=None, viewer=None):
