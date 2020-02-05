@@ -262,9 +262,12 @@ def generateContactSequence():
         pos[2] += EPS_Z  # FIXME it shouldn't be required !!
         # compute desired foot rotation :
         if cfg.SL1M_USE_ORIENTATION:
-            if cfg.SL1M_USE_INTERPOLATED_ORIENTATION and pId < len(pb["phaseData"]) - 1:
-                quat0 = Quaternion(pb["phaseData"][pId]["rootOrientation"])
+            quat0 = Quaternion(pb["phaseData"][pId]["rootOrientation"])
+            if pId < len(pb["phaseData"]) - 1:
                 quat1 = Quaternion(pb["phaseData"][pId + 1]["rootOrientation"])
+            else:
+                quat1 = Quaternion(pb["phaseData"][pId]["rootOrientation"])
+            if cfg.SL1M_USE_INTERPOLATED_ORIENTATION :
                 rot = quat0.slerp(0.5, quat1)
                 # check if feets do not cross :
                 if moving == RF:
@@ -275,15 +278,16 @@ def generateContactSequence():
                     qr = Quaternion(prev_contactPhase.contactPatch(fb.rfoot).placement.rotation)
                 rpy = matrixToRpy((qr * (ql.inverse())).matrix())  # rotation from the left foot pose to the right one
                 if rpy[2, 0] > 0:  # yaw positive, feet are crossing
-                    rot = Quaternion(phase["rootOrientation"])  # rotation of the root, from the guide
+                    rot = quat0  # rotation of the root, from the guide
             else:
-                rot = Quaternion(phase["rootOrientation"])  # rotation of the root, from the guide
+                rot = quat0  # rotation of the root, from the guide
         else:
             rot = Quaternion.Identity()
         placement = SE3()
         placement.translation = np.array(pos).T
         placement.rotation = rot.matrix()
         cs.moveEffectorToPlacement(movingID, placement)
+
     # final phase :
     # fixme : assume root is in the middle of the last 2 feet pos ...
     q_end = cfg.IK_REFERENCE_CONFIG.tolist() + [0] * 6
