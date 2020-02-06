@@ -5,10 +5,8 @@ import numpy as np
 
 
 class PathChecker():
-    def __init__(self, fullBody, cs, nq, dt, verbose=False):
-        self.cs = cs
+    def __init__(self, fullBody, dt, verbose=False):
         self.fullBody = fullBody  # with effector collision disabled
-        self.nq = nq  # without extradof, size of configs in q_t
         self.configSize = fullBody.getConfigSize()
         self.dt = dt
         self.verbose = verbose
@@ -23,7 +21,7 @@ class PathChecker():
         :return:
         """
         q = [0] * self.configSize
-        q[:self.nq] = q_m.tolist()
+        q[:q_m.shape[0]] = q_m.tolist()
         res = self.fullBody.isConfigValid(q)
         return res[0], res[1]
 

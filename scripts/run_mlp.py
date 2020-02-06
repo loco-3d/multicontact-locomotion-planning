@@ -144,7 +144,7 @@ if cfg.DISPLAY_FEET_TRAJ:
 if cfg.CHECK_FINAL_MOTION:
     from mlp.utils import check_path
     print("## Begin validation of the final motion (collision and joint-limits)")
-    validator = check_path.PathChecker(fullBody, cs_wb, robot.nq, cfg.CHECK_DT, True)
+    validator = check_path.PathChecker(fullBody, cfg.CHECK_DT, True)
     motion_valid, t_invalid = validator.check_motion(cs_wb.concatenateQtrajectories())
     print("## Check final motion, valid = ", motion_valid)
     if not motion_valid:
