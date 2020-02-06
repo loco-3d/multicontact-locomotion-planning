@@ -3,7 +3,7 @@ from pinocchio import SE3
 import numpy.linalg
 import numpy as np
 import math
-from mlp.utils.util import stdVecToMatrix, createStateFromPhase, effectorPositionFromHPPPath
+from mlp.utils.util import stdVecToMatrix, createStateFromPhase, effectorPositionFromHPPPath, discretizeCurve
 import hpp_bezier_com_traj
 import hpp_bezier_com_traj as bezier_com
 from curves import bezier, piecewise_bezier, SE3Curve, piecewise_SE3
@@ -23,6 +23,8 @@ class Outputs(Inputs):
 VERBOSE = 1
 DISPLAY_RRT_PATH = True
 DISPLAY_JOINT_LEVEL = True
+HPP_DT = 0.01 # dt used to discretize trajectory given to hpp
+
 # order to try weight values and number of variables :
 weights_vars = [[0.5, bezier_com.ConstraintFlag.ONE_FREE_VAR, 1], [0.75, bezier_com.ConstraintFlag.ONE_FREE_VAR, 1],
                 [0.85, bezier_com.ConstraintFlag.ONE_FREE_VAR, 1], [0.90, bezier_com.ConstraintFlag.ONE_FREE_VAR, 1],
@@ -121,29 +123,32 @@ def generateLimbRRTPath(q_init, q_end, phase_previous, phase, phase_next, fullBo
             print("contact position for joint " + str(effName) + " = " + str(fullBody.getJointPosition(effName)[0:3]))
 
     # create a path in hpp corresponding to the discretized trajectory in phase :
-    dt = phase.time_trajectory[1] - phase.time_trajectory[0]
-    state_traj = stdVecToMatrix(phase.state_trajectory).transpose()
-    control_traj = stdVecToMatrix(phase.control_trajectory).transpose()
-    c_t = state_traj[:, :3]
-    v_t = state_traj[:-1, 3:6]
-    a_t = control_traj[:-1, :3]
+    dt = HPP_DT
+    c_t = discretizeCurve(phase.c_t, dt)
+    v_t = discretizeCurve(phase.dc_t, dt)[:,:-1]
+    a_t = discretizeCurve(phase.ddc_t, dt)[:,:-1]
+    if VERBOSE > 1:
+        print ("c shape : ", c_t.shape)
+        print ("v shape : ", v_t.shape)
+        print ("a shape : ", a_t.shape)
+
     fullBody.setCurrentConfig(fullBody.getConfigAtState(s0))
     com0_fb = fullBody.getCenterOfMass()
     fullBody.setCurrentConfig(fullBody.getConfigAtState(s1))
     com1_fb = fullBody.getCenterOfMass()
 
     ## TEST, FIXME (force com path to start/end in the com position found from q_init and q_end. :
-    c_t[0, :] = np.array(com0_fb)
-    c_t[-1, :] = np.array(com1_fb)
-    com0 = c_t.tolist()[0]
-    com1 = c_t.tolist()[-1]
+    c_t[:, 0] = np.array(com0_fb)
+    c_t[:, -1] = np.array(com1_fb)
+    com0 = c_t[:,0].tolist()
+    com1 = c_t[:,-1].tolist()
     if VERBOSE > 1:
         print("init com : ", com0_fb)
         print("init ref : ", com0)
         print("end  com : ", com1_fb)
         print("end  ref : ", com1)
 
-    path_com_id = fullBody.generateComTraj(c_t.tolist(), v_t.tolist(), a_t.tolist(), dt)
+    path_com_id = fullBody.generateComTraj(c_t.T.tolist(), v_t.T.tolist(), a_t.T.tolist(), dt)
     if VERBOSE:
         print("add com reference as hpp path with id : ", path_com_id)
 
