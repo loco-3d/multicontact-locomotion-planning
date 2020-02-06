@@ -20,6 +20,7 @@ class Requirements():
     AMtrajectories = False
     centroidalTrajectories = False
     jointsTrajectories = False
+    jointsDerivativesTrajectories = False
     torqueTrajectories = False
     effectorTrajectories = False
     contactForcesTrajectories = False
@@ -130,6 +131,13 @@ class Requirements():
         return True
 
     @classmethod
+    def requireJointsDerivativesTrajectories(cls, cs):
+        if not cs.haveJointsDerivativesTrajectories():
+            print("- Contact sequence do not have consistent joints derivatives trajectories.")
+            return False
+        return True
+
+    @classmethod
     def requireTorqueTrajectories(cls, cs):
         if not cs.haveTorquesTrajectories():
             print("- Contact sequence do not have consistent torques trajectories")
@@ -173,7 +181,9 @@ class Requirements():
         if cls.centroidalTrajectories:
             print("- c, dc, ddc, L, dL trajectories for each phases")
         if cls.jointsTrajectories:
-            print("- q, dq, ddq trajectories for each phases")
+            print("- q trajectories for each phases")
+        if cls.jointsDerivativesTrajectories:
+            print("- dq, ddq trajectories for each phases")
         if cls.torqueTrajectories:
             print("- torque trajectories for each phases")
         if cls.effectorTrajectories:
@@ -206,6 +216,8 @@ class Requirements():
             assert cs.haveCentroidalTrajectories (), "Contact sequence do not have consistent centroidal trajectories."
         if cls.jointsTrajectories:
             assert cs.haveJointsTrajectories(), "Contact sequence do not have consistent joints trajectories."
+        if cls.jointsDerivativesTrajectories:
+            assert cs.haveJointsDerivativesTrajectories(), "Contact sequence do not have consistent joints trajectories."
         if cls.torqueTrajectories:
             assert cs.haveTorquesTrajectories(), "Contact sequence do not have consistent torques trajectories"
         if cls.effectorTrajectories:
@@ -258,6 +270,9 @@ class Requirements():
                 return False
         if cls.jointsTrajectories:
             if not cls.requireJointsTrajectories(cs):
+                return False
+        if cls.jointsDerivativesTrajectories:
+            if not cls.requireJointsDerivativesTrajectories(cs):
                 return False
         if cls.torqueTrajectories:
             if not cls.requireTorqueTrajectories(cs):
