@@ -326,8 +326,12 @@ def generateWholeBodyMotion(cs_ref, fullBody=None, viewer=None):
 
     def stopHere():
         if cfg.WB_ABORT_WHEN_INVALID:
+            # cut the sequence up to the last phase
+            cs.resize(pid-2)
             return cs, pinRobot
         elif cfg.WB_RETURN_INVALID:
+            # cut the sequence up to the current phase
+            cs.resize(pid-1)
             return cs, pinRobot
 
     ### End of nested functions definitions ###
