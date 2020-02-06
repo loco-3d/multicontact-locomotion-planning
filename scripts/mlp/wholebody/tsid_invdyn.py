@@ -19,7 +19,28 @@ from mlp.utils.wholebody_result import Result
 from mlp.utils.util import *
 from mlp.end_effector import generateEndEffectorTraj, effectorCanRetry
 import eigenpy
+from mlp.utils.cs_tools import deleteAllTrajectories, deletePhaseWBtrajectories
+from mlp.utils.requirements import Requirements
 eigenpy.switchToNumpyArray()
+
+class Inputs(Requirements):
+    consistentContacts = True
+    timings = True
+    centroidalTrajectories = True
+    effectorTrajectories = True
+    rootTrajectories = True
+
+class Outputs(Requirements):
+    consistentContacts = True
+    timings = True
+    jointsTrajectories = True
+    torqueTrajectories = True
+    if cfg.IK_store_centroidal:
+        centroidalTrajectories = True
+    if cfg.IK_store_effector:
+        effectorTrajectories = True
+    if cfg.IK_store_contact_forces:
+        contactForcesTrajectories = False
 
 
 def buildRectangularContactPoints(eeName):
@@ -65,7 +86,14 @@ def getCurrentEffectorAcceleration(robot, data, eeName):
         return robot.frameAcceleration(data, id)
 
 
-def createContactForEffector(invdyn, robot, phase, eeName):
+def createContactForEffector(invdyn, robot, eeName):
+    """
+    Add a contact task in invdyn for the given effector, at it's current placement
+    :param invdyn:
+    :param robot:
+    :param eeName: name of the effector
+    :return: the contact task
+    """
     contactNormal = np.array(cfg.Robot.dict_normal[eeName])
     contactNormal = cfg.Robot.dict_offset[eeName].rotation @ contactNormal  # apply offset transform
     if cfg.Robot.cType == "_3_DOF":
@@ -94,54 +122,26 @@ def createContactForEffector(invdyn, robot, phase, eeName):
     return contact
 
 
-# build a dic with keys = effector names used in the cs, value = Effector tasks objects
-def createEffectorTasksDic(cs, robot):
+def createEffectorTasksDic(effectorsNames, robot):
+    """
+    Build a dic with keys = effector names, value = Effector tasks objects
+    :param effectorsNames:
+    :param robot:
+    :return: the dict
+    """
     res = {}
-    for eeName in list(cfg.Robot.dict_limb_joint.values()):
-        if isContactEverActive(cs, eeName):
-            # build effector task object
-            effectorTask = tsid.TaskSE3Equality("task-" + eeName, robot, eeName)
-            mask = np.ones(6)
-            if cfg.Robot.cType == "_3_DOF":
-                mask[3:6] = np.zeros(3) # ignore rotation for contact points
-            effectorTask.setKp(cfg.kp_Eff * mask)
-            effectorTask.setKd(2.0 * np.sqrt(cfg.kp_Eff) * mask)
-            res.update({eeName: effectorTask})
+    for eeName in effectorsNames:
+        # build effector task object
+        effectorTask = tsid.TaskSE3Equality("task-" + eeName, robot, eeName)
+        mask = np.ones(6)
+        if cfg.Robot.cType == "_3_DOF":
+            mask[3:6] = np.zeros(3) # ignore rotation for contact points
+        effectorTask.setKp(cfg.kp_Eff * mask)
+        effectorTask.setKd(2.0 * np.sqrt(cfg.kp_Eff) * mask)
+        res.update({eeName: effectorTask})
     return res
 
 
-def computeCOMRefFromPhase(phase):
-    # rearrange discretized points from phase to numpy matrices :
-    N = len(phase.time_trajectory)
-    timeline = np.zeros(N)
-    c = np.zeros([3, N])
-    dc = np.zeros([3, N])
-    ddc = np.zeros([3, N])
-    for i in range(N):
-        timeline[i] = phase.time_trajectory[i]
-        c[:, i] = phase.state_trajectory[i][0:3]
-        dc[:, i] = phase.state_trajectory[i][3:6]
-        ddc[:, i] = phase.control_trajectory[i][0:3]
-    # com_ref = piecewise.FromPointsList(c,dc,ddc,timeline.T) # do not produce the correct trajectories !
-    com_pos_ref = piecewise.FromPointsList(c,timeline.T)
-    com_vel_ref = piecewise.FromPointsList(dc,timeline.T)
-    com_acc_ref = piecewise.FromPointsList(ddc,timeline.T)
-    return [com_pos_ref,com_vel_ref,com_acc_ref]
-
-
-def computeAMRefFromPhase(phase):
-    # rearrange discretized points from phase to numpy matrices :
-    N = len(phase.time_trajectory)
-    timeline = np.zeros(N)
-    L = np.zeros([3, N])
-    dL = np.zeros([3, N])
-    for i in range(N):
-        timeline[i] = phase.time_trajectory[i]
-        L[:, i] = phase.state_trajectory[i][6:9]
-        dL[:, i] = phase.control_trajectory[i][3:6]
-    L_ref = piecewise.FromPointsList(L,timeline.T)
-    dL_ref = piecewise.FromPointsList(dL,timeline.T)
-    return [L_ref, dL_ref]
 
 def curvesToTSID(curves,t):
     # adjust t to bounds, required due to precision issues:
@@ -170,98 +170,70 @@ def curveSE3toTSID(curve,t, computeAcc = False):
     if computeAcc:
         acc = curve.derivateAsMotion(t, 2)
         sample.acc(MotiontoVec(acc))
-    else:
-        acc = Motion()
-    return sample, placement,vel,acc
+    return sample
 
-def generateWholeBodyMotion(cs, fullBody=None, viewer=None):
-    if not viewer:
-        print("No viewer linked, cannot display end_effector trajectories.")
-    print("Start TSID ... ")
+def adjustEndEffectorTrajectoryIfNeeded(phase, robot, data, eeName):
+    """
+    Check that the reference trajectory correctly start close enough to the current effector position
+    and adjust it if required to start at the current position
+    :param phase_ref:
+    :param robot:
+    :param data:
+    :param eeName:
+    :return:
+    """
+    current_placement = getCurrentEffectorPosition(robot, data, eeName)
+    ref_placement = phase.effectorTrajectory(eeName).evaluateAsSE3(phase.timeInitial)
+    if not current_placement.isApprox(ref_placement, 1e-4):
+        if cfg.WB_VERBOSE:
+            print("End effector trajectory need to be adjusted")
 
-    rp = RosPack()
-    package_path = rp.get_path(cfg.Robot.packageName)
-    urdf = package_path + '/urdf/' + cfg.Robot.urdfName + cfg.Robot.urdfSuffix + '.urdf'
-    if cfg.WB_VERBOSE:
-        print("load robot : ", urdf)
-    #srdf = "package://" + package + '/srdf/' +  cfg.Robot.urdfName+cfg.Robot.srdfSuffix + '.srdf'
-    robot = tsid.RobotWrapper(urdf, pin.StdVec_StdString(), pin.JointModelFreeFlyer(), False)
-    if cfg.WB_VERBOSE:
-        print("robot loaded in tsid.")
-    # FIXME : tsid robotWrapper don't have all the required methods, only pinocchio have them
-    pinRobot = pin.RobotWrapper.BuildFromURDF(urdf, package_path, pin.JointModelFreeFlyer(), cfg.WB_VERBOSE == 2)
-    if cfg.WB_VERBOSE:
-        print("pinocchio robot loaded from urdf.")
-    q = cs.contactPhases[0].q_init[:robot.nq].copy()
-    v = np.zeros(robot.nv)
-    t = 0.0  # time
-    # init states list with initial state (assume joint velocity is null for t=0)
-    invdyn = tsid.InverseDynamicsFormulationAccForce("tsid", robot, False)
-    invdyn.computeProblemData(t, q, v)
-    data = invdyn.data()
+    placement_end = phase.effectorTrajectory(eeName).evaluateAsSE3(phase.timeFinal)
+    ref_traj = generateEndEffectorTraj([phase.timeInitial, phase.timeFinal], current_placement, placement_end, 0)
+    phase.addEffectorTrajectory(eeName, ref_traj)
 
-    if cfg.EFF_CHECK_COLLISION:  # initialise object needed to check the motion
-        from mlp.utils import check_path
-        validator = check_path.PathChecker(fullBody, cs, len(q), cfg.WB_VERBOSE)
 
-    if cfg.WB_VERBOSE:
-        print("initialize tasks : ")
-    comTask = tsid.TaskComEquality("task-com", robot)
-    comTask.setKp(cfg.kp_com * np.ones(3))
-    comTask.setKd(2.0 * np.sqrt(cfg.kp_com) * np.ones(3))
-    invdyn.addMotionTask(comTask, cfg.w_com, cfg.level_com, 0.0)
+def generateWholeBodyMotion(cs_ref, fullBody=None, viewer=None):
+    """
+    Generate the whole body motion corresponding to the given contactSequence
+    :param cs: Contact sequence containing the references,
+     it will only be modified if the end effector trajectories are not valid.
+     New references will be generated and added to the cs
+    :param fullBody:
+    :param viewer:
+    :return: a new ContactSequence object, containing the wholebody trajectories,
+    and the other trajectories computed from the wholebody motion request with cfg.IK_STORE_*
+    """
 
-    amTask = tsid.TaskAMEquality("task-am", robot)
-    amTask.setKp(cfg.kp_am * np.array([1., 1., 0.]))
-    amTask.setKd(2.0 * np.sqrt(cfg.kp_am * np.array([1., 1., 0.])))
-    invdyn.addTask(amTask, cfg.w_am, cfg.level_am)
+    ### define nested functions used in control loop ###
+    def appendWBStateValues():
+        if phase.q_t is None:
+            pol_q = polynomial(q_begin,q,t-dt,t)
+            phase.q_t = piecewise(pol_q)
+            pol_v = polynomial(v_begin, v, t - dt, t)
+            phase.dq_t = piecewise(pol_v)
+        else:
+            phase.q_t.append(q, t)
+            phase.dq_t.append(v, t)
 
-    postureTask = tsid.TaskJointPosture("task-joint-posture", robot)
-    postureTask.setKp(cfg.kp_posture * cfg.gain_vector)
-    postureTask.setKd(2.0 * np.sqrt(cfg.kp_posture * cfg.gain_vector))
-    postureTask.mask(cfg.masks_posture)
-    invdyn.addMotionTask(postureTask, cfg.w_posture, cfg.level_posture, 0.0)
-    q_ref = cfg.IK_REFERENCE_CONFIG
-    samplePosture = tsid.TrajectorySample(q_ref.shape[0] - 7)
-    samplePosture.pos(q_ref[7:])
 
-    orientationRootTask = tsid.TaskSE3Equality("task-orientation-root", robot, 'root_joint')
-    mask = np.ones(6)
-    mask[0:3] = 0
-    mask[5] = cfg.YAW_ROT_GAIN
-    orientationRootTask.setKp(cfg.kp_rootOrientation * mask)
-    orientationRootTask.setKd(2.0 * np.sqrt(cfg.kp_rootOrientation * mask))
-    invdyn.addMotionTask(orientationRootTask, cfg.w_rootOrientation, cfg.level_rootOrientation, 0.0)
+    def appendWBControlValues(use_previous_phase = False):
+        if use_previous_phase:
+            if phase_prev is not None and t > phase_prev.ddq_t.max():
+                phase_prev.ddq_t.append(dv, t)
+                phase_prev.tau_t.append(tau, t)
+        elif phase.ddq_t is None:
+            pol_dv = polynomial(dv0, dv, t - dt, t)
+            pol_tau = polynomial(tau0, tau, t - dt, t)
+            phase.ddq_t = piecewise(pol_dv)
+            phase.tau_t = piecewise(pol_tau)
+        else:
+            phase.ddq_t.append(dv, t)
+            phase.tau_t.append(tau, t)
 
-    usedEffectors = []
-    for eeName in list(cfg.Robot.dict_limb_joint.values()):
-        if isContactEverActive(cs, eeName):
-            usedEffectors.append(eeName)
-    # init effector task objects :
-    dic_effectors_tasks = createEffectorTasksDic(cs, robot)
 
-    # init empty dic to store effectors trajectories :
-    dic_effectors_trajs = {}
-    for eeName in usedEffectors:
-        dic_effectors_trajs.update({eeName: None})
-
-    # add initial contacts :
-    dic_contacts = {}
-    for eeName in usedEffectors:
-        if isContactActive(cs.contactPhases[0], eeName):
-            contact = createContactForEffector(invdyn, robot, cs.contactPhases[0], eeName)
-            dic_contacts.update({eeName: contact})
-
-    if cfg.PLOT:  # init a dict storing all the reference trajectories used (for plotting)
-        stored_effectors_ref = {}
-        for eeName in dic_effectors_tasks:
-            stored_effectors_ref.update({eeName: []})
-
-    solver = tsid.SolverHQuadProg("qp solver")
-    solver.resize(invdyn.nVar, invdyn.nEq, invdyn.nIn)
-
-    # define nested function used in control loop
-    def storeData(k_t, res, q, v, dv, invdyn, sol):
+    def storeData():
+        """
         # store current state
         res.q_t[:, k_t] = q
         res.dq_t[:, k_t] = v
@@ -322,8 +294,9 @@ def generateWholeBodyMotion(cs, fullBody=None, viewer=None):
                     getCurrentEffectorAcceleration(robot, invdyn.data(), eeName))
 
         return res
+        """
 
-    def printIntermediate(v, dv, invdyn, sol):
+    def printIntermediate():
         print("Time %.3f" % (t))
         for eeName, contact in dic_contacts.items():
             if invdyn.checkContact(contact.name, sol):
@@ -331,16 +304,15 @@ def generateWholeBodyMotion(cs, fullBody=None, viewer=None):
                 print("\tnormal force %s: %.1f" % (contact.name.ljust(20, '.'), contact.getNormalForce(f)))
 
         print("\ttracking err %s: %.3f" % (comTask.name.ljust(20, '.'), norm(comTask.position_error, 2)))
-        for eeName, traj in dic_effectors_trajs.items():
-            if traj:
-                task = dic_effectors_tasks[eeName]
-                error = task.position_error
-                if cfg.Robot.cType == "_3_DOF":
-                    error = error[0:3]
-                print("\ttracking err %s: %.3f" % (task.name.ljust(20, '.'), norm(error, 2)))
+        for eeName in phase.effectorsWithTrajectory():
+            task = dic_effectors_tasks[eeName]
+            error = task.position_error
+            if cfg.Robot.cType == "_3_DOF":
+                error = error[0:3]
+            print("\ttracking err %s: %.3f" % (task.name.ljust(20, '.'), norm(error, 2)))
         print("\t||v||: %.3f\t ||dv||: %.3f" % (norm(v, 2), norm(dv)))
 
-    def checkDiverge(res, v, dv):
+    def checkDiverge():
         if norm(dv) > 1e6 or norm(v) > 1e6:
             print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
             print("/!\ ABORT : controler unstable at t = " + str(t) + "  /!\ ")
@@ -354,17 +326,101 @@ def generateWholeBodyMotion(cs, fullBody=None, viewer=None):
 
     def stopHere():
         if cfg.WB_ABORT_WHEN_INVALID:
-            return res.resize(phase_interval[0]), pinRobot
+            return cs, pinRobot
         elif cfg.WB_RETURN_INVALID:
-            return res.resize(k_t), pinRobot
+            return cs, pinRobot
+
+    ### End of nested functions definitions ###
+
+    if not viewer:
+        print("No viewer linked, cannot display end_effector trajectories.")
+    print("Start TSID ... ")
+
+    # copy the given contact sequence to keep it as reference :
+    cs = ContactSequence(cs_ref)
+    # delete all the 'reference' trajectories from result (to leave room for the real trajectories stored)
+    deleteAllTrajectories(cs)
+
+    # Create a robot wrapper
+    rp = RosPack()
+    package_path = rp.get_path(cfg.Robot.packageName)
+    urdf = package_path + '/urdf/' + cfg.Robot.urdfName + cfg.Robot.urdfSuffix + '.urdf'
+    if cfg.WB_VERBOSE:
+        print("load robot : ", urdf)
+    #srdf = "package://" + package + '/srdf/' +  cfg.Robot.urdfName+cfg.Robot.srdfSuffix + '.srdf'
+    robot = tsid.RobotWrapper(urdf, pin.StdVec_StdString(), pin.JointModelFreeFlyer(), False)
+    if cfg.WB_VERBOSE:
+        print("robot loaded in tsid.")
+    # FIXME : tsid robotWrapper don't have all the required methods, only pinocchio have them
+    pinRobot = pin.RobotWrapper.BuildFromURDF(urdf, package_path, pin.JointModelFreeFlyer(), cfg.WB_VERBOSE == 2)
+    if cfg.WB_VERBOSE:
+        print("pinocchio robot loaded from urdf.")
+
+    ### Define initial state of the robot ###
+    q = cs.contactPhases[0].q_init[:robot.nq].copy()
+    if not q.any():
+        raise RuntimeError("The contact sequence doesn't contain an initial whole body configuration")
+    v = np.zeros(robot.nv)
+    dv0 = np.zeros(robot.nv)
+    tau0 = np.zeros(robot.nv)
+    t = cs.contactPhases[0].timeInitial
+
+    # init states list with initial state (assume joint velocity is null for t=0)
+    invdyn = tsid.InverseDynamicsFormulationAccForce("tsid", robot, False)
+    invdyn.computeProblemData(t, q, v)
+
+    # add initial contacts :
+    dic_contacts = {}
+    for eeName in cs.contactPhases[0].effectorsInContact():
+        contact = createContactForEffector(invdyn, robot, eeName)
+        dic_contacts.update({eeName: contact})
+
+    if cfg.EFF_CHECK_COLLISION:  # initialise object needed to check the motion
+        from mlp.utils import check_path
+        validator = check_path.PathChecker(fullBody, cs, robot.nq, cfg.WB_VERBOSE)
+
+    ### Initialize all task used  ###
+    if cfg.WB_VERBOSE:
+        print("initialize tasks : ")
+    comTask = tsid.TaskComEquality("task-com", robot)
+    comTask.setKp(cfg.kp_com * np.ones(3))
+    comTask.setKd(2.0 * np.sqrt(cfg.kp_com) * np.ones(3))
+    invdyn.addMotionTask(comTask, cfg.w_com, cfg.level_com, 0.0)
+
+    amTask = tsid.TaskAMEquality("task-am", robot)
+    amTask.setKp(cfg.kp_am * np.array([1., 1., 0.]))
+    amTask.setKd(2.0 * np.sqrt(cfg.kp_am * np.array([1., 1., 0.])))
+    invdyn.addTask(amTask, cfg.w_am, cfg.level_am)
+
+    postureTask = tsid.TaskJointPosture("task-joint-posture", robot)
+    postureTask.setKp(cfg.kp_posture * cfg.gain_vector)
+    postureTask.setKd(2.0 * np.sqrt(cfg.kp_posture * cfg.gain_vector))
+    postureTask.mask(cfg.masks_posture)
+    invdyn.addMotionTask(postureTask, cfg.w_posture, cfg.level_posture, 0.0)
+    q_ref = cfg.IK_REFERENCE_CONFIG
+    samplePosture = tsid.TrajectorySample(q_ref.shape[0] - 7)
+    samplePosture.pos(q_ref[7:]) # -7 because we remove the freeflyer part
+
+    orientationRootTask = tsid.TaskSE3Equality("task-orientation-root", robot, 'root_joint')
+    mask = np.ones(6)
+    mask[0:3] = 0
+    mask[5] = cfg.YAW_ROT_GAIN
+    orientationRootTask.setKp(cfg.kp_rootOrientation * mask)
+    orientationRootTask.setKd(2.0 * np.sqrt(cfg.kp_rootOrientation * mask))
+    invdyn.addMotionTask(orientationRootTask, cfg.w_rootOrientation, cfg.level_rootOrientation, 0.0)
+
+    # init effector task objects :
+    usedEffectors = cs.getAllEffectorsInContact()
+    dic_effectors_tasks = createEffectorTasksDic(usedEffectors, robot)
+
+
+    solver = tsid.SolverHQuadProg("qp solver")
+    solver.resize(invdyn.nVar, invdyn.nEq, invdyn.nIn)
 
     # time check
     dt = cfg.IK_dt
     if cfg.WB_VERBOSE:
         print("dt : ", dt)
-    res = Result(robot.nq, robot.nv, cfg.IK_dt, eeNames=usedEffectors, cs=cs)
-    N = res.N
-    last_display = 0
     if cfg.WB_VERBOSE:
         print("tsid initialized, start control loop")
         #raw_input("Enter to start the motion (motion displayed as it's computed, may be slower than real-time)")
@@ -375,78 +431,59 @@ def generateWholeBodyMotion(cs, fullBody=None, viewer=None):
         if cfg.WB_VERBOSE:
             print("## for phase : ", pid)
             print("t = ", t)
+        # phase_ref contains the reference trajectories and should not be modified exept for new effector trajectories
+        # when the first ones was not collision free
+        phase_ref = cs_ref.contactPhases[pid]
+        # phase de not contains trajectories (exept for the end effectors) and should be modified with the new values computed
         phase = cs.contactPhases[pid]
-        if pid < cs.size() - 1:
-            phase_next = cs.contactPhases[pid + 1]
-        else:
-            phase_next = None
         if pid > 0:
             phase_prev = cs.contactPhases[pid - 1]
         else:
             phase_prev = None
-        t_phase_begin = res.phases_intervals[pid][0] * dt
-        t_phase_end = res.phases_intervals[pid][-1] * dt
-        time_interval = [t_phase_begin, t_phase_end]
+        if pid < cs.size() - 1:
+            phase_next = cs.contactPhases[pid + 1]
+        else:
+            phase_next = None
+
+        time_interval = [phase_ref.timeInitial, phase_ref.timeFinal]
+
         if cfg.WB_VERBOSE:
             print("time_interval ", time_interval)
-        # generate com ref traj from phase :
-        com_init = np.zeros(9)
-        com_init[0:3] = robot.com(invdyn.data())
-        com_traj = computeCOMRefFromPhase(phase)
-        am_traj = computeAMRefFromPhase(phase)
+
+        # take CoM and AM trajectory from the phase, with their derivatives
+        com_traj = [phase_ref.c_t, phase_ref.dc_t, phase_ref.ddc_t]
+        am_traj = [phase_ref.L_t, phase_ref.dL_t]
 
         # add root's orientation ref from reference config :
-        if cfg.USE_PLANNING_ROOT_ORIENTATION:
-            q_0 = SE3FromConfig(phase.q_init)
-            if phase_next:
-                q_1 = SE3FromConfig(phase_next.q_init)
-            else:
-                q_1 = SE3FromConfig(phase.q_init)
-            root_traj = SE3Curve(q_0, q_1, time_interval[0], time_interval[1])
-        else:
-            # orientation such that the torso orientation is the mean between both feet yaw rotations:
-            placement_init, placement_end = rootOrientationFromFeetPlacement(phase, phase_next)
-            root_traj = SE3Curve(placement_init, placement_end, time_interval[0],time_interval[1])
+        root_traj = phase_ref.root_t
+
         # add newly created contacts :
         for eeName in usedEffectors:
-            if phase_prev and not isContactActive(phase_prev, eeName) and isContactActive(phase, eeName):
+            if phase_prev is not None and phase_ref.isEffectorInContact(eeName) and not phase_prev.isEffectorInContact(eeName):
                 invdyn.removeTask(dic_effectors_tasks[eeName].name, 0.0)  # remove pin task for this contact
-                dic_effectors_trajs.update({eeName: None})  # delete reference trajectory for this task
                 if cfg.WB_VERBOSE:
-                    print("remove se3 task : " + dic_effectors_tasks[eeName].name)
-                contact = createContactForEffector(invdyn, robot, phase, eeName)
+                    print("remove se3 effector task : " + dic_effectors_tasks[eeName].name)
+                contact = createContactForEffector(invdyn, robot, eeName)
                 dic_contacts.update({eeName: contact})
+                if cfg.WB_VERBOSE:
+                    print("Create contact for : " + eeName)
 
-        # add se3 tasks for end effector not in contact that will be in contact next phase:
-        for eeName, task in dic_effectors_tasks.items():
-            if phase_next and not isContactActive(phase, eeName) and isContactActive(phase_next, eeName):
+        # add se3 tasks for end effector when required
+        for eeName in phase.effectorsWithTrajectory():
                 if cfg.WB_VERBOSE:
                     print("add se3 task for " + eeName)
+                task = dic_effectors_tasks[eeName]
                 invdyn.addMotionTask(task, cfg.w_eff, cfg.level_eff, 0.0)
-                #create reference trajectory for this task :
-                placement_init = getCurrentEffectorPosition(
-                    robot, invdyn.data(), eeName)  #FIXME : adjust orientation in case of 3D contact ...
-                if cfg.Robot.cType == "_3_DOF":
-                    placement_init.rotation = JointPlacementForEffector(phase, eeName).rotation
-                placement_end = JointPlacementForEffector(phase_next, eeName).copy()
-                ref_traj = generateEndEffectorTraj(time_interval, placement_init, placement_end, 0)
+                adjustEndEffectorTrajectoryIfNeeded(phase, robot, invdyn.data(), eeName)
                 if cfg.WB_VERBOSE:
                     print("t interval : ", time_interval)
-                    print("placement Init : ", placement_init)
-                    print("placement End  : ", placement_end)
-                    # display all the effector trajectories for this phase
-                if viewer and cfg.DISPLAY_ALL_FEET_TRAJ:
-                    display_tools.displaySE3Traj(ref_traj, viewer.client.gui, viewer.sceneName,
-                                                 eeName + "_traj_" + str(pid), cfg.Robot.dict_limb_color_traj[eeName],
-                                                 time_interval, cfg.Robot.dict_offset[eeName])
-                    viewer.client.gui.setVisibility(eeName + "_traj_" + str(pid), 'ALWAYS_ON_TOP')
-                dic_effectors_trajs.update({eeName: ref_traj})
+
 
         # start removing the contact that will be broken in the next phase :
-        # (This tell the solver that it should start minimzing the contact force on this contact, and ideally get to 0 at the given time)
+        # (This tell the solver that it should start minimizing the contact force on this contact, and ideally get to 0 at the given time)
         for eeName, contact in dic_contacts.items():
-            if phase_next and isContactActive(phase, eeName) and not isContactActive(phase_next, eeName):
-                transition_time = t_phase_end - t - dt / 2.
+            if phase_next is not None and phase.isEffectorInContact(eeName) and not phase_next.isEffectorInContact(eeName):
+                transition_time = phase.timeFinal - t - dt / 2.
                 if cfg.WB_VERBOSE:
                     print("\nTime %.3f Start breaking contact %s. transition time : %.3f\n" %
                           (t, contact.name, transition_time))
@@ -454,30 +491,30 @@ def generateWholeBodyMotion(cs, fullBody=None, viewer=None):
 
         if cfg.WB_STOP_AT_EACH_PHASE:
             input('start simulation')
+
         # save values at the beginning of the current phase
         q_begin = q.copy()
         v_begin = v.copy()
+        phase.q_init = q_begin
+        if phase_prev is not None:
+            phase_prev.q_final = q_begin
         phaseValid = False
-        swingPhase = False  # will be true if an effector move during this phase
         iter_for_phase = -1
         # iterate until a valid motion for this phase is found (ie. collision free and which respect joint-limits)
         while not phaseValid:
+            deletePhaseWBtrajectories(phase) # clean previous invalid trajectories
+            t = phase.timeInitial
+            k_t = 0
             if iter_for_phase >= 0:
                 # reset values to their value at the beginning of the current phase
                 q = q_begin.copy()
                 v = v_begin.copy()
             iter_for_phase += 1
             if cfg.WB_VERBOSE:
-                print("Start simulation for phase " + str(pid) + ", try number :  " + str(iter_for_phase))
+                print("Start computation for phase " + str(pid) + ", try number :  " + str(iter_for_phase))
             # loop to generate states (q,v,a) for the current contact phase :
-            if pid == cs.size() - 1:  # last state
-                phase_interval = res.phases_intervals[pid]
-            else:
-                phase_interval = res.phases_intervals[pid][:-1]
-            if iter_for_phase == 0:
-                first_q_t = np.zeros([robot.nq, phase_interval[-1] - phase_interval[0] + 1])
-            for k_t in phase_interval:
-                t = res.t_t[k_t]
+            while t < phase.timeFinal - (dt / 2.):
+
                 # set traj reference for current time :
                 # com
                 sampleCom = curvesToTSID(com_traj,t)
@@ -492,13 +529,9 @@ def generateWholeBodyMotion(cs, fullBody=None, viewer=None):
                 postureTask.setReference(samplePosture)
 
                 # root orientation :
-                sampleRoot,target_root_placement,target_root_vel,target_root_acc = curveSE3toTSID(root_traj,t)
+                sampleRoot = curveSE3toTSID(root_traj,t)
                 orientationRootTask.setReference(sampleRoot)
-                quat_waist = Quaternion(target_root_placement.rotation)
-                res.waist_orientation_reference[:, k_t] = np.array(
-                    [quat_waist.x, quat_waist.y, quat_waist.z, quat_waist.w])
-                res.d_waist_orientation_reference[:, k_t] = target_root_vel.angular
-                res.dd_waist_orientation_reference[:, k_t] = target_root_acc.angular
+
                 if cfg.WB_VERBOSE == 2:
                     print("### references given : ###")
                     print("com  pos : ", sampleCom.pos())
@@ -510,82 +543,80 @@ def generateWholeBodyMotion(cs, fullBody=None, viewer=None):
                     print("root vel : ", sampleRoot.vel())
 
                 # end effector (if they exists)
-                for eeName, traj in dic_effectors_trajs.items():
-                    if traj:
-                        swingPhase = True  # there is an effector motion in this phase
-                        sampleEff = curveSE3toTSID(traj,t,True)[0]
-                        dic_effectors_tasks[eeName].setReference(sampleEff)
-                        if cfg.WB_VERBOSE == 2:
-                            print("effector " + str(eeName) + " pos : " + str(sampleEff.pos()))
-                            print("effector " + str(eeName) + " vel : " + str(sampleEff.vel()))
-                        if cfg.IK_store_reference_effector:
-                            res.effector_references[eeName][:, k_t] = sampleEff.pos()
-                            res.d_effector_references[eeName][:, k_t] = sampleEff.vel()
-                            res.dd_effector_references[eeName][:, k_t] = sampleEff.acc()
-                    elif cfg.IK_store_reference_effector:
-                        if k_t == 0:
-                            res.effector_references[eeName][:, k_t] = SE3toVec(
-                                getCurrentEffectorPosition(robot, invdyn.data(), eeName))
-                        else:
-                            res.effector_references[eeName][:, k_t] = res.effector_references[eeName][:, k_t - 1]
-                        res.d_effector_references[eeName][:, k_t] = np.zeros(6)
-                        res.dd_effector_references[eeName][:, k_t] = np.zeros(6)
+                for eeName, traj in phase.effectorTrajectories().items():
+                    sampleEff = curveSE3toTSID(traj,t,True)
+                    dic_effectors_tasks[eeName].setReference(sampleEff)
+                    if cfg.WB_VERBOSE == 2:
+                        print("effector " + str(eeName) + " pos : " + str(sampleEff.pos()))
+                        print("effector " + str(eeName) + " vel : " + str(sampleEff.vel()))
 
                 # solve HQP for the current time
                 HQPData = invdyn.computeProblemData(t, q, v)
-                if cfg.WB_VERBOSE and t < phase.time_trajectory[0] + dt:
+                if cfg.WB_VERBOSE and t < phase.timeInitial + dt:
                     print("final data for phase ", pid)
                     HQPData.print_all()
 
                 sol = solver.solve(HQPData)
                 dv = invdyn.getAccelerations(sol)
-                res = storeData(k_t, res, q, v, dv, invdyn, sol)
-                if iter_for_phase == 0:
-                    first_q_t[:, k_t - phase_interval[0]] = q
-                # update state
+                tau = invdyn.getActuatorForces(sol)
+                if k_t == 0:
+                    dv0 = dv
+                    tau0 = tau
+                appendWBControlValues(k_t == 0) # save the control computed inside the ContactPhase
+                storeData() # TODO
+
+                # update state by integrating the acceleration computed
                 v_mean = v + 0.5 * dt * dv
                 v += dt * dv
                 q = pin.integrate(robot.model(), q, dt * v_mean)
+                t += dt
+                k_t += 1
+                if t >= phase.timeFinal - (dt / 2.):
+                    t = phase.timeFinal # avoid numerical imprecisions
+                appendWBStateValues() # save the new states inside the ContactPhase
 
                 if cfg.WB_VERBOSE == 2:
                     print("v = ", v)
                     print("dv = ", dv)
 
                 if cfg.WB_VERBOSE and int(t / dt) % cfg.IK_PRINT_N == 0:
-                    printIntermediate(v, dv, invdyn, sol)
+                    printIntermediate()
                 try:
-                    checkDiverge(res, v, dv)
+                    checkDiverge()
                 except ValueError:
                     return stopHere()
 
+            if iter_for_phase == 0:
+                # set the final value for q :
+                phase.q_final = q
+
             # end while t \in phase_t (loop for the current contact phase)
-            if swingPhase and cfg.EFF_CHECK_COLLISION:
-                phaseValid, t_invalid = validator.check_motion(res.q_t[:, phase_interval[0]:k_t])
-                #if iter_for_phase < 3 :# FIXME : debug only, force limb-rrt
+            if len(phase.effectorsWithTrajectory()) > 0 and cfg.EFF_CHECK_COLLISION:
+                phaseValid, t_invalid = validator.check_motion(phase.q_t)
+                #if iter_for_phase < 3 :# debug only, force limb-rrt
                 #    phaseValid = False
                 if not phaseValid:
+                    if iter_for_phase == 0:
+                        # save the first q_t trajectory computed, for limb-rrt
+                        first_q_t = phase.q_t.copy()
+                    # t_invalid is the time since the beginning of the phase
                     print("Phase " + str(pid) + " not valid at t = " + str(t_invalid))
                     if t_invalid <= cfg.EFF_T_PREDEF \
-                            or t_invalid >= ((t_phase_end - t_phase_begin) - cfg.EFF_T_PREDEF):
+                            or t_invalid >= (phase.duration - cfg.EFF_T_PREDEF):
                         print("Motion is invalid during predefined phases, cannot change this.")
                         return stopHere()
                     if effectorCanRetry():
                         print("Try new end effector trajectory.")
                         try:
-                            for eeName, oldTraj in dic_effectors_trajs.items():
-                                if oldTraj:  # update the traj in the map
-                                    placement_init = JointPlacementForEffector(phase_prev, eeName).copy()
-                                    placement_end = JointPlacementForEffector(phase_next, eeName).copy()
-                                    ref_traj = generateEndEffectorTraj(time_interval, placement_init, placement_end,
-                                                                       iter_for_phase + 1, first_q_t, phase_prev,
-                                                                       phase, phase_next, fullBody, eeName, viewer)
-                                    dic_effectors_trajs.update({eeName: ref_traj})
-                                    if viewer and cfg.DISPLAY_ALL_FEET_TRAJ:
-                                        display_tools.displaySE3Traj(ref_traj, viewer.client.gui, viewer.sceneName,
-                                                                     eeName + "_traj_" + str(pid),
-                                                                     cfg.Robot.dict_limb_color_traj[eeName],
-                                                                     time_interval, cfg.Robot.dict_offset[eeName])
-                                        viewer.client.gui.setVisibility(eeName + "_traj_" + str(pid), 'ALWAYS_ON_TOP')
+                            for eeName, ref_traj in phase.effectorTrajectories().items():
+                                placement_init = ref_traj.evaluateAsSE3(phase.timeInitial)
+                                placement_end = ref_traj.evaluateAsSE3(phase.timeFinal)
+                                traj = generateEndEffectorTraj(time_interval, placement_init, placement_end,
+                                                                   iter_for_phase + 1, first_q_t, phase_prev,
+                                                                   phase, phase_next, fullBody, eeName, viewer)
+                                # save the new trajectory in the phase (the wb and the reference one)
+                                phase_ref.addEffectorTrajectory(eeName,traj)
+                                phase.addEffectorTrajectory(eeName,traj)
                         except ValueError as e:
                             print("ERROR in generateEndEffectorTraj :")
                             print(e)
@@ -598,33 +629,15 @@ def generateWholeBodyMotion(cs, fullBody=None, viewer=None):
                 if cfg.WB_VERBOSE:
                     print("Phase " + str(pid) + " valid.")
             if phaseValid:
-                # display all the effector trajectories for this phase
-                if viewer and cfg.DISPLAY_FEET_TRAJ and not cfg.DISPLAY_ALL_FEET_TRAJ:
-                    for eeName, ref_traj in dic_effectors_trajs.items():
-                        if ref_traj:
-                            display_tools.displaySE3Traj(ref_traj, viewer.client.gui, viewer.sceneName,
-                                                         eeName + "_traj_" + str(pid),
-                                                         cfg.Robot.dict_limb_color_traj[eeName], time_interval,
-                                                         cfg.Robot.dict_offset[eeName])
-                            viewer.client.gui.setVisibility(eeName + "_traj_" + str(pid), 'ALWAYS_ON_TOP')
-                            if cfg.PLOT:  # add current ref_traj to the list for plotting
-                                stored_effectors_ref[eeName] += [ref_traj]
+                # display the progress by moving the robot at the last configuration computed
+                if viewer:
+                    display_tools.displayWBconfig(viewer,q)
         #end while not phaseValid
-
-    # run for last state (with the same references as the previous state)
+    # end for all phases
     time_end = time.time() - time_start
     print("Whole body motion generated in : " + str(time_end) + " s.")
     if cfg.WB_VERBOSE:
-        print("\nFinal COM Position  ", robot.com(invdyn.data()).T)
-        print("Desired COM Position", cs.contactPhases[-1].final_state.T)
+        print("\nFinal COM Position  ", robot.com(invdyn.data()))
+        print("Desired COM Position", cs.contactPhases[-1].c_final)
 
-    # store last state : #FIXME
-
-    if cfg.PLOT:
-        from mlp.utils import plot
-        # plot inside this file,
-        # as we have access to the real Bezier object and not only the discretization stored in 'res' struct
-        plot.plotEffectorRef(stored_effectors_ref, dt)
-
-    assert (k_t == res.N - 1) and "res struct not fully filled."
-    return res, pinRobot
+    return cs, pinRobot
