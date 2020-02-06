@@ -179,27 +179,24 @@ def displayWBconfig(viewer, q_matrix):
     viewer(hppConfigFromMatrice(viewer.robot, q_matrix))
 
 
-def displayWBatT(viewer, res, t):
-    viewer(hppConfigFromMatrice(viewer.robot, res.qAtT(t)))
+def displayWBatT(viewer, cs_wb, t):
+    q = cs_wb.phaseAtTime(t).q_t(t)
+    viewer(hppConfigFromMatrice(viewer.robot,q))
 
 
-def displayWBmotion(viewer, q_t, dt, dt_display):
-    id = 0
-    step = dt_display / dt
-    assert step % 1 == 0, "display dt shouldbe a multiple of ik dt"
-    # check if robot have extradof :
-    step = int(step)
-    while id < q_t.shape[1]:
+def displayWBmotion(viewer, q_t, dt_display):
+    t = q_t.min()
+    while t <= q_t.max():
         t_start = time.time()
-        displayWBconfig(viewer, q_t[:, id])
-        id += step
+        displayWBconfig(viewer, q_t(t))
+        t += dt_display
         elapsed = time.time() - t_start
         if elapsed > dt_display:
             print("Warning : display not real time ! choose a greater time step for the display.")
         else:
             time.sleep(dt_display - elapsed)
     # display last config if the total duration is not a multiple of the dt
-    displayWBconfig(viewer, q_t[:, -1])
+    displayWBconfig(viewer, q_t(q_t.max()))
 
 
 def displayFeetTrajFromResult(gui, sceneName, res, Robot):
