@@ -127,7 +127,7 @@ if cfg.WRITE_STATUS:
         os.makedirs(cfg.OUTPUT_DIR)
     f = open(cfg.STATUS_FILENAME, "a")
     f.write("wholebody_success: True\n")
-    if res.N == (int(round(cs_com.contact_phases[-1].time_trajectory[-1] / cfg.IK_dt)) + 1):
+    if cs_wb.size() == cs_ref.size() :
         f.write("wholebody_reach_goal: True\n")
     else:
         f.write("wholebody_reach_goal: False\n")
@@ -144,8 +144,8 @@ if cfg.DISPLAY_FEET_TRAJ:
 if cfg.CHECK_FINAL_MOTION:
     from mlp.utils import check_path
     print("## Begin validation of the final motion (collision and joint-limits)")
-    validator = check_path.PathChecker(fullBody, cs_com, res.nq, True)
-    motion_valid, t_invalid = validator.check_motion(res.q_t)
+    validator = check_path.PathChecker(fullBody, cs_wb, robot.nq, cfg.CHECK_DT, True)
+    motion_valid, t_invalid = validator.check_motion(cs_wb.concatenateQtrajectories())
     print("## Check final motion, valid = ", motion_valid)
     if not motion_valid:
         print("## First invalid time : ", t_invalid)
@@ -159,28 +159,27 @@ else:
     motion_valid = False
 if cfg.DISPLAY_WB_MOTION:
     input("Press Enter to display the whole body motion ...")
-    display_tools.displayWBmotion(viewer, res.q_t, cfg.IK_dt, cfg.DT_DISPLAY)
+    display_tools.displayWBmotion(viewer, cs_wb.concatenateQtrajectories(), cfg.DT_DISPLAY)
 
 if cfg.PLOT:
     from mlp.utils import plot
-    plot.plotKneeTorque(res.t_t, res.phases_intervals, res.tau_t, (res.nq - res.nu), cfg.Robot.kneeIds)
-    plot.plotALLFromWB(cs_com, res, cfg.DISPLAY_PLOT, cfg.SAVE_PLOT, cfg.OUTPUT_DIR + "/plot/" + cfg.DEMO_NAME)
+    plot.plotALLFromWB(cs_ref, cs_wb, cfg.DISPLAY_PLOT, cfg.SAVE_PLOT, cfg.OUTPUT_DIR + "/plot/" + cfg.DEMO_NAME)
 
 if cfg.EXPORT_OPENHRP and motion_valid:
     from mlp.export import openHRP
-    openHRP.export(cs_com, res)
+    openHRP.export(cs_com, cs_wb) # FIXME
 if cfg.EXPORT_GAZEBO and motion_valid:
     from mlp.export import gazebo
-    gazebo.export(res.q_t)
-if cfg.EXPORT_NPZ and motion_valid:
-    res.exportNPZ(cfg.EXPORT_PATH + "/npz", cfg.DEMO_NAME + ".npz")
+    gazebo.export(cs_wb.concatenateQtrajectories())
+#if cfg.EXPORT_NPZ and motion_valid:
+#    res.exportNPZ(cfg.EXPORT_PATH + "/npz", cfg.DEMO_NAME + ".npz") # TODO
 if cfg.EXPORT_BLENDER:
     from mlp.export import blender
-    blender.export(res.q_t, viewer, cfg.IK_dt)
+    blender.export(cs_wb.concatenateQtrajectories(), viewer, cfg.IK_dt)
     blender.exportSteppingStones(viewer)
 if cfg.EXPORT_SOT:
     from mlp.export import sotTalosBalance
-    sotTalosBalance.export(res)
+    sotTalosBalance.export(cs_wb) # TODO
 
 
 
@@ -190,9 +189,9 @@ def dispCS(step=0.2):
 
 def dispWB(t=None):
     if t is None:
-        display_tools.displayWBmotion(viewer, res.q_t, cfg.IK_dt, cfg.DT_DISPLAY)
+        display_tools.displayWBmotion(viewer,cs_wb.concatenateQtrajectories(), cfg.DT_DISPLAY)
     else:
-        display_tools.displayWBatT(viewer, res, t)
+        display_tools.displayWBatT(viewer, cs_wb, t)
 
 
 """
