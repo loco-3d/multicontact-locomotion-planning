@@ -49,6 +49,8 @@ class PathChecker():
                 else:
                     return always_valid, first_invalid
             t += self.dt
+            if q_t.max() < t < q_t.max() + self.dt/2.:
+                t = q_t.max() # assure to use t = t_max 
         return always_valid, first_invalid
 
     ############# old stuffs (need to be updated if necessary : #############
