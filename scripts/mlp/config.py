@@ -90,6 +90,8 @@ IK_store_zmp = False  # need store_centroidal
 IK_store_effector = False
 IK_store_reference_effector = False
 IK_store_contact_forces = False
+IK_store_joints_derivatives = True
+IK_store_joints_torque = True
 
 # import specific settings for the selected demo. This settings may override default ones.
 import importlib

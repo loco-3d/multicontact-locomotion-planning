@@ -34,7 +34,10 @@ class Outputs(Requirements):
     consistentContacts = True
     timings = True
     jointsTrajectories = True
-    torqueTrajectories = True
+    if cfg.IK_store_joints_derivatives:
+        jointsDerivativesTrajectories = True
+    if cfg.IK_store_joints_torque:
+        torqueTrajectories = True
     if cfg.IK_store_centroidal:
         centroidalTrajectories = True
     if cfg.IK_store_effector:
@@ -210,26 +213,35 @@ def generateWholeBodyMotion(cs_ref, fullBody=None, viewer=None):
         if phase.q_t is None:
             pol_q = polynomial(q_begin,q,t-dt,t)
             phase.q_t = piecewise(pol_q)
-            pol_v = polynomial(v_begin, v, t - dt, t)
-            phase.dq_t = piecewise(pol_v)
+            if cfg.IK_store_joints_derivatives:
+                pol_v = polynomial(v_begin, v, t - dt, t)
+                phase.dq_t = piecewise(pol_v)
         else:
             phase.q_t.append(q, t)
-            phase.dq_t.append(v, t)
+            if cfg.IK_store_joints_derivatives:
+                phase.dq_t.append(v, t)
 
+    def appendTauValues(use_previous_phase = False):
+        if cfg.IK_store_joints_torque:
+            if use_previous_phase:
+                if phase_prev is not None and t > phase_prev.tau_t.max():
+                    phase_prev.tau_t.append(tau, t)
+            elif phase.tau_t is None:
+                pol_tau = polynomial(tau0, tau, t - dt, t)
+                phase.tau_t = piecewise(pol_tau)
+            else:
+                phase.tau_t.append(tau, t)
 
-    def appendWBControlValues(use_previous_phase = False):
-        if use_previous_phase:
-            if phase_prev is not None and t > phase_prev.ddq_t.max():
-                phase_prev.ddq_t.append(dv, t)
-                phase_prev.tau_t.append(tau, t)
-        elif phase.ddq_t is None:
-            pol_dv = polynomial(dv0, dv, t - dt, t)
-            pol_tau = polynomial(tau0, tau, t - dt, t)
-            phase.ddq_t = piecewise(pol_dv)
-            phase.tau_t = piecewise(pol_tau)
-        else:
-            phase.ddq_t.append(dv, t)
-            phase.tau_t.append(tau, t)
+    def appendDDQValues(use_previous_phase = False):
+        if cfg.IK_store_joints_derivatives:
+            if use_previous_phase:
+                if phase_prev is not None and t > phase_prev.ddq_t.max():
+                    phase_prev.ddq_t.append(dv, t)
+            elif phase.ddq_t is None:
+                pol_dv = polynomial(dv0, dv, t - dt, t)
+                phase.ddq_t = piecewise(pol_dv)
+            else:
+                phase.ddq_t.append(dv, t)
 
 
     def storeData():
@@ -559,15 +571,17 @@ def generateWholeBodyMotion(cs_ref, fullBody=None, viewer=None):
                 if cfg.WB_VERBOSE and t < phase.timeInitial + dt:
                     print("final data for phase ", pid)
                     HQPData.print_all()
-
                 sol = solver.solve(HQPData)
                 dv = invdyn.getAccelerations(sol)
-                tau = invdyn.getActuatorForces(sol)
+
                 if k_t == 0:
                     dv0 = dv
-                    tau0 = tau
-                appendWBControlValues(k_t == 0) # save the control computed inside the ContactPhase
-                storeData() # TODO
+                appendDDQValues(k_t == 0) # save the control computed inside the ContactPhase
+                if cfg.IK_store_joints_torque:
+                    tau = invdyn.getActuatorForces(sol)
+                    if k_t == 0:
+                        tau0 = tau
+                    appendTauValues(k_t == 0)
 
                 # update state by integrating the acceleration computed
                 v_mean = v + 0.5 * dt * dv
@@ -578,6 +592,8 @@ def generateWholeBodyMotion(cs_ref, fullBody=None, viewer=None):
                 if t >= phase.timeFinal - (dt / 2.):
                     t = phase.timeFinal # avoid numerical imprecisions
                 appendWBStateValues() # save the new states inside the ContactPhase
+                storeData() # TODO
+
 
                 if cfg.WB_VERBOSE == 2:
                     print("v = ", v)
