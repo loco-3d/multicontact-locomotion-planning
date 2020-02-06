@@ -1,71 +1,67 @@
 # Copyright 2018, LAAS-CNRS
 # Author: Pierre Fernbach
 
-import mlp.config as cfg
 import numpy as np
 
 
 class PathChecker():
-    def __init__(self, fullBody, cs, nq, verbose=False):
+    def __init__(self, fullBody, cs, nq, dt, verbose=False):
         self.cs = cs
         self.fullBody = fullBody  # with effector collision disabled
         self.nq = nq  # without extradof, size of configs in q_t
         self.configSize = fullBody.getConfigSize()
-        self.dt = cfg.IK_dt
-        self.check_step = int(cfg.CHECK_DT / cfg.IK_dt)
-        if self.check_step < 1:
-            self.check_step = 1
+        self.dt = dt
         self.verbose = verbose
         self.extraDof = int(fullBody.client.robot.getDimensionExtraConfigSpace())
 
-    # convert to correct format for hpp, add extra dof if necessary
-    # return valid,message  : valid = bool, message = string
+
     def checkConfig(self, q_m):
+        """
+        convert to correct format for hpp, add extra dof if necessary
+        return valid,message  : valid = bool, message = string
+        :param q_m: configuration of size nq represented as a numpy array
+        :return:
+        """
         q = [0] * self.configSize
         q[:self.nq] = q_m.tolist()
         res = self.fullBody.isConfigValid(q)
         return res[0], res[1]
 
-    def qAtT(self, t, q_t):
-        for it in range(1, len(q_t) - 1):
-            if t > (self.dt * (it - 0.5)) and t <= (self.dt * (it + 0.5)):
-                return q_t[it]
 
-    def phaseOfT(self, t_switch):
-        for i in range(self.cs.size()):
-            p = self.cs.contactPhases[i]
-            if t_switch >= p.time_trajectory[0] and t_switch <= p.time_trajectory[-1]:
-                return i
-
-    def phaseOfId(self, id):
-        t_switch = self.dt * float(id)
-        return self.phaseOfT(t_switch)
-
-    # return a bool (true = valid) and the time of the first invalid q (None if always valid):
-    # if Verbose = True : check the complete motion before returning,
-    # if False stop at the first invalid
     def check_motion(self, q_t):
+        """
+        check if the given joint trajectory is valid, according to the Validation methods defined in self.fullBody
+        if Verbose = True : check the complete motion before returning,
+        if False stop at the first invalid
+        :param q_t: any curve object from the package Curves, of dimension nq
+        :return: a bool (True if the complete trajectory is valid, False otherwise) and the time of the first invalid configuration
+        """
         always_valid = True
         first_invalid = None
-        i = -self.check_step
-        while i < q_t.shape[1] - 1:
-            i += self.check_step
-            if i >= q_t.shape[1]:
-                i = q_t.shape[1] - 1
-            valid, mess = self.checkConfig(q_t[:, i])
+        t = q_t.min()
+        while t <= q_t.max():
+            valid, mess = self.checkConfig(q_t(t))
             if not valid:
                 if always_valid:  # first invalid config
                     always_valid = False
-                    first_invalid = self.dt * (float(i))
+                    first_invalid = t
                 if self.verbose:
-                    print("Invalid config at t= ", self.dt * (float(i)))
+                    print("Invalid config at t= ", t)
                     print(mess)
                 else:
                     return always_valid, first_invalid
+            t += self.dt
         return always_valid, first_invalid
 
     ############# old stuffs (need to be updated if necessary : #############
     """
+    
+    def qAtT(self, t, q_t):
+    for it in range(1, len(q_t) - 1):
+        if t > (self.dt * (it - 0.5)) and t <= (self.dt * (it + 0.5)):
+            return q_t[it]
+
+
     def check_postures(self,verbose = True):
         bad_phases = []
         success_global=True
