@@ -615,14 +615,14 @@ def generateWholeBodyMotion(cs_ref, fullBody=None, viewer=None):
                 phaseValid, t_invalid = validator.check_motion(phase.q_t)
                 #if iter_for_phase < 3 :# debug only, force limb-rrt
                 #    phaseValid = False
+                #    t_invalid = (phase.timeInitial + phase.timeFinal) / 2.
                 if not phaseValid:
                     if iter_for_phase == 0:
                         # save the first q_t trajectory computed, for limb-rrt
-                        first_q_t = phase.q_t.copy()
-                    # t_invalid is the time since the beginning of the phase
+                        first_q_t = phase.q_t
                     print("Phase " + str(pid) + " not valid at t = " + str(t_invalid))
-                    if t_invalid <= cfg.EFF_T_PREDEF \
-                            or t_invalid >= (phase.duration - cfg.EFF_T_PREDEF):
+                    if t_invalid <= (phase.timeInitial + cfg.EFF_T_PREDEF) \
+                            or t_invalid >= (phase.timeFinal - cfg.EFF_T_PREDEF):
                         print("Motion is invalid during predefined phases, cannot change this.")
                         return stopHere()
                     if effectorCanRetry():
@@ -633,7 +633,7 @@ def generateWholeBodyMotion(cs_ref, fullBody=None, viewer=None):
                                 placement_end = ref_traj.evaluateAsSE3(phase.timeFinal)
                                 traj = generateEndEffectorTraj(time_interval, placement_init, placement_end,
                                                                    iter_for_phase + 1, first_q_t, phase_prev,
-                                                                   phase, phase_next, fullBody, eeName, viewer)
+                                                                   phase_ref, phase_next, fullBody, eeName, viewer)
                                 # save the new trajectory in the phase (the wb and the reference one)
                                 phase_ref.addEffectorTrajectory(eeName,traj)
                                 phase.addEffectorTrajectory(eeName,traj)
