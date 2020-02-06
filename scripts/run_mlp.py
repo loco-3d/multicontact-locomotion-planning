@@ -141,7 +141,7 @@ if cfg.DISPLAY_FEET_TRAJ:
         displayEffectorTrajectories(cs_ref, viewer, fullBody)
 
 
-if cfg.CHECK_FINAL_MOTION:
+if cfg.CHECK_FINAL_MOTION and cs_wb is not None and cs_wb.size() > 0:
     from mlp.utils import check_path
     print("## Begin validation of the final motion (collision and joint-limits)")
     validator = check_path.PathChecker(fullBody, cfg.CHECK_DT, True)
@@ -153,7 +153,7 @@ if cfg.CHECK_FINAL_MOTION:
         f = open(cfg.STATUS_FILENAME, "a")
         f.write("motion_valid: " + str(motion_valid) + "\n")
         f.close()
-elif cs_wb is not None:
+elif cs_wb is not None and cs_wb.size() > 0:
     motion_valid = True
 else:
     motion_valid = False
