@@ -145,7 +145,7 @@ def exportRHO(path, f_left, f_right):
     return
 
 
-def export(res):
+def export(cs_wb): # TODO update to mcAPI v2
     if res.dt != 0.001:
         return ValueError("sotTalosBalance can only export moion generated with dt = 1ms")
     path = cfg.EXPORT_PATH + "/sotTalosBalance"
