@@ -9,6 +9,7 @@ import hpp_bezier_com_traj as bezier_com
 from curves import bezier, piecewise_bezier, SE3Curve, piecewise_SE3
 import quadprog
 from mlp.end_effector.bezier_predef import generatePredefBeziers, generateSmoothBezierTraj
+from mlp.utils.trajectories import HPPEffectorTrajectory
 from mlp.utils.requirements import Requirements
 hpp_bezier_com_traj.switchToNumpyArray()
 
@@ -183,10 +184,9 @@ def generateLimbRRTTraj(time_interval,
                         fullBody=None,
                         eeName=None,
                         viewer=None):
-    t_begin = cfg.EFF_T_PREDEF + cfg.EFF_T_DELAY
-    t_end = time_interval[1] - time_interval[0] - t_begin
-    q_init = q_t[:, int(t_begin / cfg.IK_dt)]  # after the predef takeoff
-    q_end = q_t[:, int(t_end / cfg.IK_dt)]
+
+    q_init = q_t(time_interval[0])
+    q_end = q_t(time_interval[1])
     pathId = generateLimbRRTPath(q_init, q_end, phase_previous, phase, phase_next, fullBody)
 
     if viewer and cfg.DISPLAY_FEET_TRAJ and DISPLAY_RRT_PATH:
@@ -194,7 +194,7 @@ def generateLimbRRTTraj(time_interval,
         pp = PathPlayer(viewer)
         pp.displayPath(pathId, jointName=fullBody.getLinkNames(eeName)[0])
 
-    return trajectories.HPPEffectorTrajectory(eeName, fullBody, fullBody.client.problem, pathId)
+    return HPPEffectorTrajectory(eeName, fullBody, fullBody.client.problem, pathId)
 
 
 def computeDistanceCostMatrices(fb, pathId, pData, T, eeName, numPoints=50):
@@ -242,11 +242,8 @@ def generateLimbRRTOptimizedTraj(time_interval,
     if VERBOSE:
         print("t begin : ", t_begin)
         print("t end   : ", t_end)
-    q_init = q_t[:, int(math.floor( (t_begin - predef_curves.min() )/ cfg.IK_dt))]  # after the predef takeoff
-    id_end = int(math.ceil((t_end - predef_curves.min() ) / cfg.IK_dt)) - 1
-    if id_end >= q_t.shape[1]:  # FIXME : why does it happen ? usually it's == to the size when the bug occur
-        id_end = q_t.shape[1] - 1
-    q_end = q_t[:, id_end]
+    q_init = q_t(t_begin)
+    q_end = q_t(t_end)
     global current_limbRRT_id
     # compute new limb-rrt path if needed:
     if not current_limbRRT_id or (numTry in recompute_rrt_at_tries):
