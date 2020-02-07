@@ -173,8 +173,9 @@ if cfg.EXPORT_OPENHRP and motion_valid:
 if cfg.EXPORT_GAZEBO and motion_valid:
     from mlp.export import gazebo
     gazebo.export(cs_wb.concatenateQtrajectories())
-#if cfg.EXPORT_NPZ and motion_valid:
-#    res.exportNPZ(cfg.EXPORT_PATH + "/npz", cfg.DEMO_NAME + ".npz") # TODO
+if cfg.EXPORT_NPZ and motion_valid:
+    from mlp.export import npz
+    npz.export(cs_ref, cs_wb, cfg)
 if cfg.EXPORT_BLENDER:
     from mlp.export import blender
     blender.export(cs_wb.concatenateQtrajectories(), viewer, cfg.IK_dt)

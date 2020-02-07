@@ -1,6 +1,7 @@
 import numpy as np
-
-
+from mlp.utils.util import discretizeCurve, discretizeDerivateCurve, discretizeSE3CurveTranslation,\
+    discretizeSE3CurveToVec, discretizeSE3CurveQuaternion, constantSE3curve
+from curves import piecewise_SE3
 class Result:
 
     ### This class store discretized data points, the time step can be accessed with res.dt.
@@ -10,7 +11,7 @@ class Result:
     def __init__(self, nq, nv, dt, eeNames, N=None, cs=None, t_begin=0, nu=None):
         self.dt = dt
         if cs:
-            self.N = int(round(cs.contactPhases[-1].time_trajectory[-1] / self.dt)) + 1
+            self.N = int(round((cs.contactPhases[-1].timeFinal - cs.contactPhases[0].timeInitial) / self.dt)) + 1
         elif N:
             self.N = N
         else:
@@ -132,7 +133,7 @@ class Result:
         intervals = []
         k = 0
         for phase in cs.contactPhases:
-            duration = phase.time_trajectory[-1] - phase.time_trajectory[0]
+            duration = phase.duration
             n_phase = int(round(duration / self.dt))
             interval = range(k, k + n_phase + 1)
             k += n_phase
@@ -277,6 +278,7 @@ class Result:
         return self.q_t[:, k]
 
 
+
 def loadFromNPZ(filename):
     f = np.load(filename)
     N = f['N'].tolist()
@@ -319,4 +321,69 @@ def loadFromNPZ(filename):
     res.contact_activity = f['contact_activity'].tolist()
     res.phases_intervals = f['phases_intervals'].tolist()
     f.close()
+    return res
+
+
+def FromContactSequenceWB(cs_ref, cs, dt):
+    p0 = cs.contactPhases[0]
+    nq = p0.q_t.dim()
+    nv = p0.dq_t.dim()
+    nu = p0.tau_t.dim()
+    eeNames = cs.getAllEffectorsInContact()
+    t_begin = p0.timeInitial
+    res = Result(nq, nv, dt, eeNames, cs=cs, t_begin=t_begin, nu=nu)
+    # fill all the array with discretization of the curves
+    res.q_t = discretizeCurve(cs.concatenateQtrajectories(), dt)[0]
+    res.dq_t = discretizeCurve(cs.concatenateDQtrajectories(), dt)[0]
+    res.ddq_t = discretizeCurve(cs.concatenateDDQtrajectories(), dt)[0]
+    res.tau_t = discretizeCurve(cs.concatenateTauTrajectories(), dt)[0]
+    res.c_t = discretizeCurve(cs.concatenateCtrajectories(), dt)[0]
+    res.dc_t = discretizeCurve(cs.concatenateDCtrajectories(), dt)[0]
+    res.ddc_t = discretizeCurve(cs.concatenateDDCtrajectories(), dt)[0]
+    res.L_t = discretizeCurve(cs.concatenateLtrajectories(), dt)[0]
+    res.dL_t = discretizeCurve(cs.concatenateDLtrajectories(), dt)[0]
+    res.c_reference = discretizeCurve(cs_ref.concatenateCtrajectories(), dt)[0]
+    res.dc_reference = discretizeCurve(cs_ref.concatenateDCtrajectories(), dt)[0]
+    res.ddc_reference = discretizeCurve(cs_ref.concatenateDDCtrajectories(), dt)[0]
+    res.L_reference = discretizeCurve(cs_ref.concatenateLtrajectories(), dt)[0]
+    res.dL_reference = discretizeCurve(cs_ref.concatenateDLtrajectories(), dt)[0]
+    res.zmp_t = discretizeCurve(cs.concatenateZMPtrajectories(), dt)[0]
+    res.wrench_t = discretizeCurve(cs.concatenateWrenchTrajectories(), dt)[0]
+    res.zmp_reference = discretizeCurve(cs_ref.concatenateZMPtrajectories(), dt)[0]
+    res.wrench_reference = discretizeCurve(cs_ref.concatenateWrenchTrajectories(), dt)[0]
+    root_t = cs_ref.concatenateRootTrajectories()
+    res.waist_orientation_reference = discretizeSE3CurveQuaternion(root_t, dt)[0]
+    res.d_waist_orientation_reference = discretizeDerivateCurve(root_t, dt, 1)[0][3:, :]
+    res.dd_waist_orientation_reference = discretizeDerivateCurve(root_t, dt, 2)[0][3:, :]
+    for ee in eeNames:
+        res.contact_forces[ee] = discretizeCurve(cs.concatenateContactForceTrajectories(ee), dt)[0]
+        res.contact_normal_force[ee] = discretizeCurve(cs.concatenateNormalForceTrajectories(ee), dt)[0]
+        eff = cs.concatenateEffectorTrajectories(ee)
+        # append init/end constant trajectorie if required :
+        if eff.min() < t_begin:
+            eff_begin = constantSE3curve(eff.evaluateAsSE3(eff.min()), t_begin, eff.min())
+            eff_mid = eff
+            eff = piecewise_SE3(eff_begin)
+            eff.append(eff_mid)
+        if eff.max() < cs.contactPhases[-1].timeFinal:
+            eff_end= constantSE3curve(eff.evaluateAsSE3(eff.max()), eff.max(), cs.contactPhases[-1].timeFinal)
+            eff.append(eff_end)
+        res.effector_trajectories[ee] = discretizeSE3CurveToVec(eff, dt)[0]
+        res.d_effector_trajectories[ee] = discretizeDerivateCurve(eff, dt, 1)[0]
+        res.dd_effector_trajectories[ee] = discretizeDerivateCurve(eff, dt, 2)[0]
+        eff = cs_ref.concatenateEffectorTrajectories(ee)
+        # append init/end constant trajectorie if required :
+        if eff.min() < t_begin:
+            eff_begin = constantSE3curve(eff.evaluateAsSE3(eff.min()), t_begin, eff.min())
+            eff_mid = eff
+            eff = piecewise_SE3(eff_begin)
+            eff.append(eff_mid)
+        if eff.max() < cs.contactPhases[-1].timeFinal:
+            eff_end = constantSE3curve(eff.evaluateAsSE3(eff.max()), eff.max(), cs.contactPhases[-1].timeFinal)
+            eff.append(eff_end)
+        res.effector_references[ee] = discretizeSE3CurveToVec(eff, dt)[0]
+        res.d_effector_references[ee] = discretizeDerivateCurve(eff, dt, 1)[0]
+        res.dd_effector_references[ee] = discretizeDerivateCurve(eff, dt, 2)[0]
+
+
     return res

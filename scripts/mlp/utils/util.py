@@ -481,6 +481,29 @@ def discretizeSE3CurveTranslation(curve,dt):
             t = curve.max()
     return res, timeline
 
+
+def discretizeSE3CurveQuaternion(curve,dt):
+    """
+    Discretize the given curve at the given dt
+    return the result as an array (one column per discret point)
+    In case where the time interval of the curve is not a multiple of dt, the last point is still included
+    This mean that the timestep between the two last points may be less than dt
+    :param curve: a SE3 curve object, require operator (), min() and max() and rotation()
+    :param dt: the discretization step
+    :return: an array of shape (3, numPoints) and an array corresponding to the timeline
+    """
+    numPoints = math.ceil((curve.max() - curve.min()) / dt )
+    res = np.zeros([4, numPoints])
+    timeline = np.zeros(numPoints)
+    t = curve.min()
+    for i in range(numPoints):
+        res[:,i] = Quaternion(curve.rotation(t)).coeffs()
+        timeline[i] = t
+        t += dt
+        if t > curve.max():
+            t = curve.max()
+    return res, timeline
+
 def discretizeSE3CurveToVec(curve,dt):
     """
     Discretize the given curve at the given dt
@@ -496,14 +519,16 @@ def discretizeSE3CurveToVec(curve,dt):
     timeline = np.zeros(numPoints)
     t = curve.min()
     for i in range(numPoints):
-        res[:,i] = SE3toVec(curve(t))
+        res[:,i] = SE3toVec(curve.evaluateAsSE3(t))
         timeline[i] = t
         t += dt
         if t > curve.max():
             t = curve.max()
     return res, timeline
 
-def constantSE3curve(placement, t):
-    rot = SO3Linear(placement.rotation, placement.rotation, t, t)
-    trans = polynomial(placement.translation.reshape(-1,1), t, t)
+def constantSE3curve(placement, t_min, t_max = None):
+    if t_max is None:
+        t_max = t_min
+    rot = SO3Linear(placement.rotation, placement.rotation, t_min, t_max)
+    trans = polynomial(placement.translation.reshape(-1,1), t_min, t_max)
     return SE3Curve(trans, rot)
