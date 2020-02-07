@@ -13,7 +13,7 @@ from curves import SE3Curve, piecewise, piecewise_SE3, polynomial
 from mlp.utils.computation_tools import shiftZMPtoFloorAltitude
 import mlp.viewer.display_tools as display_tools
 import math
-from mlp.utils.util import constantSE3curve, SE3toVec, MotiontoVec
+from mlp.utils.util import constantSE3curve, SE3toVec, MotiontoVec, SE3FromConfig
 from mlp.end_effector import generateEndEffectorTraj, effectorCanRetry
 import eigenpy
 from mlp.utils.cs_tools import deleteAllTrajectories, deletePhaseWBtrajectories, updateContactPlacement
@@ -214,12 +214,15 @@ def generateWholeBodyMotion(cs_ref, fullBody=None, viewer=None):
         if first_iter_for_phase:
             phase.q_init = q
             phase.q_t = piecewise(polynomial(q.reshape(-1,1), t, t))
+            #phase.root_t = piecewise_SE3(constantSE3curve(SE3FromConfig(q) ,t))
             if phase_prev is not None:
                 phase_prev.q_final = q
                 if t > phase_prev.q_t.max():
                     phase_prev.q_t.append(q, t)
+                    #phase_prev.root_t.append(SE3FromConfig(q), t)
         else:
             phase.q_t.append(q, t)
+            #phase.root_t.append(SE3FromConfig(q), t)
 
     def appendJointsDerivatives(first_iter_for_phase=False):
         if first_iter_for_phase:
