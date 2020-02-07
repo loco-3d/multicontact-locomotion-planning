@@ -16,18 +16,16 @@ def pacthSameAltitude(M1, M2, eps=1e-3):
 # - if only one feet in contact, return it's z coordinate
 # - if both feet in contact, make a linear interp between both feet altitude wrt to which feet will move next
 def computeFloorAltitude(cs, t, useJointLevel=False):
-    id_phase = findPhase(cs, t)
+    id_phase = cs.phaseIdAtTime(t)
     phase = cs.contactPhases[id_phase]
-    RF_patch = phase.RF_patch
-    LF_patch = phase.LF_patch
-    if useJointLevel:
-        Mrf = JointPlacementForEffector(phase, cfg.Robot.rfoot)
-        Mlf = JointPlacementForEffector(phase, cfg.Robot.lfoot)
-    else:
-        Mrf = RF_patch.placement
-        Mlf = LF_patch.placement
 
-    if RF_patch.active and LF_patch.active:
+    if phase.isEffectorInContact(cfg.Robot.rfoot) and phase.isEffectorInContact(cfg.Robot.lfoot):
+        if useJointLevel:
+            Mrf = JointPlacementForEffector(phase, cfg.Robot.rfoot)
+            Mlf = JointPlacementForEffector(phase, cfg.Robot.lfoot)
+        else:
+            Mrf = phase.contactPatch(cfg.Robot.rfoot).placement
+            Mlf = phase.contactPatch(cfg.Robot.lfoot).placement
         if pacthSameAltitude(Mrf, Mlf):
             floor_altitude = 0.5 * (Mrf.translation + Mlf.translation)[2]
         else:
@@ -35,17 +33,17 @@ def computeFloorAltitude(cs, t, useJointLevel=False):
             LF_moved = False
             if id_phase > 0:  #look for the inactive contact in the previous phase
                 pprev = cs.contactPhases[id_phase - 1]
-                if not pprev.RF_patch.active:
+                if not pprev.isEffectorInContact(cfg.Robot.rfoot):
                     LF_moved = False
-                elif not pprev.LF_patch.active:
+                elif not pprev.isEffectorInContact(cfg.Robot.lfoot):
                     LF_moved = True
                 else:
                     assert "Must never happened"
             else:  #look for the inactive contact in the next phase and assume cyclic gait for the last couple of phases
                 pnext = cs.contactPhases[id_phase + 1]
-                if not pnext.RF_patch.active:
+                if not pnext.isEffectorInContact(cfg.Robot.rfoot):
                     LF_moved = True
-                elif not pnext.LF_patch.active:
+                elif not pnext.isEffectorInContact(cfg.Robot.lfoot):
                     LF_moved = False
                 else:
                     assert "Must never happened"
@@ -57,15 +55,24 @@ def computeFloorAltitude(cs, t, useJointLevel=False):
                 p0 = Mlf.translation[2]
                 p1 = Mrf.translation[2]
 
-            t0 = phase.time_trajectory[0]
-            t1 = phase.time_trajectory[-1]
+            t0 = phase.timeInitial
+            t1 = phase.timeFinal
             assert t0 < t1
             s = (t - t0) / (t1 - t0)
             floor_altitude = p0 + s * (p1 - p0)
             pass
-    elif RF_patch.active:
+    elif phase.isEffectorInContact(cfg.Robot.rfoot):
+        if useJointLevel:
+            Mrf = JointPlacementForEffector(phase, cfg.Robot.rfoot)
+        else:
+            Mrf = phase.contactPatch(cfg.Robot.rfoot).placement
         floor_altitude = Mrf.translation[2]
-    elif LF_patch.active:
+
+    elif phase.isEffectorInContact(cfg.Robot.lfoot):
+        if useJointLevel:
+            Mlf = JointPlacementForEffector(phase, cfg.Robot.lfoot)
+        else:
+            Mlf = phase.contactPatch(cfg.Robot.lfoot).placement
         floor_altitude = Mlf.translation[2]
     else:
         assert "Must never happened"

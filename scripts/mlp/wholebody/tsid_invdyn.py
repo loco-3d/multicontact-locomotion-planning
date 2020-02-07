@@ -209,104 +209,159 @@ def generateWholeBodyMotion(cs_ref, fullBody=None, viewer=None):
     """
 
     ### define nested functions used in control loop ###
-    def appendWBStateValues():
-        if phase.q_t is None:
-            pol_q = polynomial(q_begin,q,t-dt,t)
-            phase.q_t = piecewise(pol_q)
-            if cfg.IK_store_joints_derivatives:
-                pol_v = polynomial(v_begin, v, t - dt, t)
-                phase.dq_t = piecewise(pol_v)
+    def appendJointsValues(first_iter_for_phase = False):
+        if first_iter_for_phase:
+            phase.q_init = q
+            phase.q_t = piecewise(polynomial(q.reshape(-1,1), t, t))
+            if phase_prev is not None:
+                phase_prev.q_final = q
+                if t > phase_prev.q_t.max():
+                    phase_prev.q_t.append(q, t)
         else:
             phase.q_t.append(q, t)
-            if cfg.IK_store_joints_derivatives:
-                phase.dq_t.append(v, t)
 
-    def appendTauValues(use_previous_phase = False):
-        if cfg.IK_store_joints_torque:
-            if use_previous_phase:
-                if phase_prev is not None and t > phase_prev.tau_t.max():
-                    phase_prev.tau_t.append(tau, t)
-            elif phase.tau_t is None:
-                pol_tau = polynomial(tau0, tau, t - dt, t)
-                phase.tau_t = piecewise(pol_tau)
-            else:
-                phase.tau_t.append(tau, t)
-
-    def appendDDQValues(use_previous_phase = False):
-        if cfg.IK_store_joints_derivatives:
-            if use_previous_phase:
-                if phase_prev is not None and t > phase_prev.ddq_t.max():
+    def appendJointsDerivatives(first_iter_for_phase=False):
+        if first_iter_for_phase:
+            phase.dq_t = piecewise(polynomial(v.reshape(-1, 1), t, t))
+            phase.ddq_t = piecewise(polynomial(dv.reshape(-1, 1), t, t))
+            if phase_prev is not None:
+                if t > phase_prev.dq_t.max():
+                    phase_prev.dq_t.append(v, t)
                     phase_prev.ddq_t.append(dv, t)
-            elif phase.ddq_t is None:
-                pol_dv = polynomial(dv0, dv, t - dt, t)
-                phase.ddq_t = piecewise(pol_dv)
-            else:
-                phase.ddq_t.append(dv, t)
+        else:
+            phase.dq_t.append(v, t)
+            phase.ddq_t.append(dv, t)
+
+    def appendTorques(first_iter_for_phase = False):
+        tau = invdyn.getActuatorForces(sol)
+        if first_iter_for_phase:
+            phase.tau_t = piecewise(polynomial(tau.reshape(-1,1), t, t))
+            if phase_prev is not None:
+                if t > phase_prev.tau_t.max():
+                    phase_prev.tau_t.append(tau, t)
+        else:
+            phase.tau_t.append(tau, t)
+
+    def appendCentroidal(first_iter_for_phase = False):
+        pcom, vcom, acom = pinRobot.com(q, v, dv)
+        L = pinRobot.centroidalMomentum(q, v).angular
+        dL = pin.computeCentroidalMomentumTimeVariation(pinRobot.model, pinRobot.data, q, v, dv).angular
+        if first_iter_for_phase:
+            phase.c_init = pcom
+            phase.dc_init = vcom
+            phase.ddc_init = acom
+            phase.L_init = L
+            phase.dL_init = dL
+            phase.c_t = piecewise(polynomial(pcom.reshape(-1,1), t , t))
+            phase.dc_t = piecewise(polynomial(vcom.reshape(-1,1), t, t))
+            phase.ddc_t = piecewise(polynomial(acom.reshape(-1,1), t, t))
+            phase.L_t = piecewise(polynomial(L.reshape(-1,1), t, t))
+            phase.dL_t = piecewise(polynomial(dL.reshape(-1,1), t, t))
+            if phase_prev is not None:
+                phase_prev.c_final = pcom
+                phase_prev.dc_final = vcom
+                phase_prev.ddc_final = acom
+                phase_prev.L_final = L
+                phase_prev.dL_final = dL
+                if t > phase_prev.c_t.max():
+                    phase_prev.c_t.append(pcom,t)
+                    phase_prev.dc_t.append(vcom,t)
+                    phase_prev.ddc_t.append(acom,t)
+                    phase_prev.L_t.append(L,t)
+                    phase_prev.dL_t.append(dL,t)
+        else:
+            phase.c_t.append(pcom, t)
+            phase.dc_t.append(vcom, t)
+            phase.ddc_t.append(acom, t)
+            phase.L_t.append(L, t)
+            phase.dL_t.append(dL, t)
+
+    def appendZMP(first_iter_for_phase = False):
+        tau = pin.rnea(pinRobot.model, pinRobot.data, q, v, dv)
+        # tau without external forces, only used for the 6 first
+        # res.tau_t[:6,k_t] = tau[:6]
+        phi0 = pinRobot.data.oMi[1].act(Force(tau[:6]))
+        wrench = phi0.vector
+        zmp = shiftZMPtoFloorAltitude(cs, t, phi0, cfg.EXPORT_OPENHRP)
+        if first_iter_for_phase:
+            phase.zmp_t = piecewise(polynomial(zmp.reshape(-1,1), t, t))
+            phase.wrench_t = piecewise(polynomial(wrench.reshape(-1,1), t, t))
+            if phase_prev is not None and t > phase_prev.zmp_t.max():
+                phase_prev.zmp_t.append(zmp, t)
+                phase_prev.wrench_t.append(wrench, t)
+        else:
+            phase.zmp_t.append(zmp, t)
+            phase.wrench_t.append(wrench, t)
+
+    def appendEffectorsTraj(first_iter_for_phase = False):
+        if first_iter_for_phase and phase_prev is not None:
+            for eeName in phase_prev.effectorsWithTrajectory():
+                if t > phase_prev.effectorTrajectory(eeName).max():
+                    placement = getCurrentEffectorPosition(robot, invdyn.data(), eeName)
+                    phase_prev.effectorTrajectory(eeName).append(placement, t)
+                    print("Add last placement in effector traj : ")
+                    print(placement)
+        if first_iter_for_phase:
+            for eeName in phase.effectorsWithTrajectory():
+                placement = getCurrentEffectorPosition(robot, invdyn.data(), eeName)
+                phase.addEffectorTrajectory(eeName, piecewise_SE3(constantSE3curve(placement, t)))
+        else:
+            for eeName in phase.effectorsWithTrajectory():
+                placement = getCurrentEffectorPosition(robot, invdyn.data(), eeName)
+                phase.effectorTrajectory(eeName).append(placement, t)
 
 
-    def storeData():
-        """
-        # store current state
-        res.q_t[:, k_t] = q
-        res.dq_t[:, k_t] = v
-        res.ddq_t[:, k_t] = dv
-        res.tau_t[:, k_t] = invdyn.getActuatorForces(sol)  # actuator forces, with external forces (contact forces)
-        #store contact info (force and status)
-        for eeName, contact in dic_contacts.items():
+    def appendContactForcesTrajs(first_iter_for_phase = False):
+        if first_iter_for_phase and phase_prev is not None:
+            for eeName in phase_prev.effectorsInContact():
+                if t > phase_prev.contactForce(eeName).max():
+                    if phase.isEffectorInContact(eeName):
+                        contact = dic_contacts[eeName]
+                        contact_forces = invdyn.getContactForce(contact.name, sol)
+                        contact_normal_force = np.array(contact.getNormalForce(contact_forces))
+                    else:
+                        contact_normal_force = np.zeros(1)
+                        if cfg.Robot.cType == "_3_DOF":
+                            contact_forces = np.zeros(3)
+                        else:
+                            contact_forces = np.zeros(12)
+                    phase_prev.contactForce(eeName).append(contact_forces, t)
+                    phase_prev.contactNormalForce(eeName).append(contact_normal_force.reshape(1), t)
+
+        for eeName in phase.effectorsInContact():
+            contact = dic_contacts[eeName]
             if invdyn.checkContact(contact.name, sol):
-                res.contact_activity[eeName][:, k_t] = 1
-                if cfg.IK_store_contact_forces:
-                    contact_forces = invdyn.getContactForce(contact.name, sol)
-                    if cfg.Robot.cType == "_3_DOF":
-                        contact_forces = np.vstack([contact_forces] * 4)
-                    res.contact_forces[eeName][:, k_t] = contact_forces
-                    res.contact_normal_force[eeName][:, k_t] = contact.getNormalForce(res.contact_forces[eeName][:,
-                                                                                                                 k_t])
-        # store centroidal info (real one and reference) :
-        if cfg.IK_store_reference_centroidal:
-            res.c_reference[:, k_t] = sampleCom.pos()
-            res.dc_reference[:, k_t] = sampleCom.vel()
-            res.ddc_reference[:, k_t] = sampleCom.acc()
-            res.L_reference[:, k_t] = sampleAM.pos()
-            res.dL_reference[:, k_t] = sampleAM.vel()
-            if cfg.IK_store_zmp:
-                Mcom = SE3.Identity()
-                Mcom.translation = sampleCom.pos()
-                Fcom = Force.Zero()
-                Fcom.linear = cfg.MASS * (sampleCom.acc() - cfg.GRAVITY)
-                Fcom.angular = sampleAM.vel()
-                F0 = Mcom.act(Fcom)
-                res.wrench_reference[:, k_t] = F0.vector
-                res.zmp_reference[:, k_t] = shiftZMPtoFloorAltitude(cs, res.t_t[k_t], F0, cfg.EXPORT_OPENHRP)
-        if cfg.IK_store_centroidal:
-            pcom, vcom, acom = pinRobot.com(q, v, dv)
-            res.c_t[:, k_t] = pcom
-            res.dc_t[:, k_t] = vcom
-            res.ddc_t[:, k_t] = acom
-            res.L_t[:, k_t] = pinRobot.centroidalMomentum(q, v).angular
-            #res.dL_t[:,k_t] = pinRobot.centroidalMomentumVariation(q,v,dv)
-            # FIXME : replace both lines below by the commented line above once it is fixed in pinocchio
-            # https://github.com/stack-of-tasks/pinocchio/issues/1035
-            pin.dccrba(pinRobot.model, pinRobot.data, q, v)
-            res.dL_t[:, k_t] = Force(pinRobot.data.Ag.dot(dv) + pinRobot.data.dAg.dot(v)).angular
-            if cfg.IK_store_zmp:
-                tau = pin.rnea(pinRobot.model, pinRobot.data, q, v, dv)
-                # tau without external forces, only used for the 6 first
-                #res.tau_t[:6,k_t] = tau[:6]
-                phi0 = pinRobot.data.oMi[1].act(Force(tau[:6]))
-                res.wrench_t[:, k_t] = phi0.vector
-                res.zmp_t[:, k_t] = shiftZMPtoFloorAltitude(cs, res.t_t[k_t], phi0, cfg.EXPORT_OPENHRP)
-        if cfg.IK_store_effector:
-            for eeName in usedEffectors:  # real position (not reference)
-                res.effector_trajectories[eeName][:, k_t] = SE3toVec(
-                    getCurrentEffectorPosition(robot, invdyn.data(), eeName))
-                res.d_effector_trajectories[eeName][:, k_t] = MotiontoVec(
-                    getCurrentEffectorVelocity(robot, invdyn.data(), eeName))
-                res.dd_effector_trajectories[eeName][:, k_t] = MotiontoVec(
-                    getCurrentEffectorAcceleration(robot, invdyn.data(), eeName))
+                contact_forces = invdyn.getContactForce(contact.name, sol)
+                contact_normal_force = np.array(contact.getNormalForce(contact_forces))
+            else:
+                contact_normal_force = np.zeros(1)
+                if cfg.Robot.cType == "_3_DOF":
+                    contact_forces = np.zeros(3)
+                else:
+                    contact_forces = np.zeros(12)
+            if first_iter_for_phase:
+                phase.addContactForceTrajectory(eeName, piecewise(polynomial(contact_forces.reshape(-1,1), t, t)))
+                phase.addContactNormalForceTrajectory(eeName, piecewise(polynomial(contact_normal_force.reshape(1,1), t, t)))
+            else:
+                phase.contactForce(eeName).append(contact_forces, t)
+                phase.contactNormalForce(eeName).append(contact_normal_force.reshape(1), t)
 
-        return res
-        """
+
+    def storeData(first_iter_for_phase = False):
+        appendJointsValues(first_iter_for_phase)
+        if cfg.IK_store_joints_derivatives:
+            appendJointsDerivatives(first_iter_for_phase)
+        if cfg.IK_store_joints_torque:
+            appendTorques(first_iter_for_phase)
+        if cfg.IK_store_centroidal:
+            appendCentroidal(first_iter_for_phase)
+        if cfg.IK_store_zmp:
+            appendZMP(first_iter_for_phase)
+        if cfg.IK_store_effector:
+            appendEffectorsTraj(first_iter_for_phase)
+        if cfg.IK_store_contact_forces:
+            appendContactForcesTrajs(first_iter_for_phase)
+
 
     def printIntermediate():
         print("Time %.3f" % (t))
@@ -574,14 +629,7 @@ def generateWholeBodyMotion(cs_ref, fullBody=None, viewer=None):
                 sol = solver.solve(HQPData)
                 dv = invdyn.getAccelerations(sol)
 
-                if k_t == 0:
-                    dv0 = dv
-                appendDDQValues(k_t == 0) # save the control computed inside the ContactPhase
-                if cfg.IK_store_joints_torque:
-                    tau = invdyn.getActuatorForces(sol)
-                    if k_t == 0:
-                        tau0 = tau
-                    appendTauValues(k_t == 0)
+                storeData(k_t == 0)
 
                 # update state by integrating the acceleration computed
                 v_mean = v + 0.5 * dt * dv
@@ -591,9 +639,6 @@ def generateWholeBodyMotion(cs_ref, fullBody=None, viewer=None):
                 k_t += 1
                 if t >= phase.timeFinal - (dt / 2.):
                     t = phase.timeFinal # avoid numerical imprecisions
-                appendWBStateValues() # save the new states inside the ContactPhase
-                storeData() # TODO
-
 
                 if cfg.WB_VERBOSE == 2:
                     print("v = ", v)
@@ -606,9 +651,6 @@ def generateWholeBodyMotion(cs_ref, fullBody=None, viewer=None):
                 except ValueError:
                     return stopHere()
 
-            if iter_for_phase == 0:
-                # set the final value for q :
-                phase.q_final = q
 
             # end while t \in phase_t (loop for the current contact phase)
             if len(phase.effectorsWithTrajectory()) > 0 and cfg.EFF_CHECK_COLLISION:
@@ -654,6 +696,10 @@ def generateWholeBodyMotion(cs_ref, fullBody=None, viewer=None):
                     display_tools.displayWBconfig(viewer,q)
         #end while not phaseValid
     # end for all phases
+    # store the data of the last point
+    phase_prev = phase
+    phase = ContactPhase()
+    storeData(True)
     time_end = time.time() - time_start
     print("Whole body motion generated in : " + str(time_end) + " s.")
     if cfg.WB_VERBOSE:

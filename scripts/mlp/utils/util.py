@@ -5,7 +5,7 @@ import pinocchio
 from pinocchio import SE3, Quaternion, Motion
 from pinocchio.utils import rpyToMatrix, rotate
 import mlp.config as cfg #TODO : remove cfg from here and only take it as argument when required
-from curves import polynomial
+from curves import polynomial, SE3Curve, SO3Linear
 import math
 import types
 pinocchio.switchToNumpyArray()
@@ -467,3 +467,8 @@ def discretizeCurve(curve,dt):
         if t > curve.max():
             t = curve.max()
     return res
+
+def constantSE3curve(placement, t):
+    rot = SO3Linear(placement.rotation, placement.rotation, t, t)
+    trans = polynomial(placement.translation.reshape(-1,1), t, t)
+    return SE3Curve(trans, rot)
