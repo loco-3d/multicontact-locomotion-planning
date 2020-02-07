@@ -50,7 +50,7 @@ centroidalInitGuess.Outputs.assertRequirements(cs_initGuess)
 
 if cfg.DISPLAY_INIT_GUESS_TRAJ and cs_initGuess:
     colors = [viewer.color.red, viewer.color.yellow]
-    display_tools.displayCOMTrajectory(cs_initGuess, gui, viewer.sceneName, cfg.DT_DISPLAY, colors, "_init")
+    display_tools.displayCOMTrajectory(cs_initGuess, gui, viewer.sceneName, cfg.SOLVER_DT, colors, "_init")
 
 print("------------------------------")
 print("### MLP : centroidal  ###")
