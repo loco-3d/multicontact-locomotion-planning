@@ -421,17 +421,87 @@ def discretizeCurve(curve,dt):
     This mean that the timestep between the two last points may be less than dt
     :param curve: a curve object, require operator (), min() and max()
     :param dt: the discretization step
-    :return: an array of shape (curve.dim(), numPoints)
+    :return: an array of shape (curve.dim(), numPoints) and an array corresponding to the timeline
     """
     numPoints = math.ceil((curve.max() - curve.min()) / dt )
     res = np.zeros([curve.dim(), numPoints])
+    timeline = np.zeros(numPoints)
     t = curve.min()
     for i in range(numPoints):
         res[:,i] = curve(t)
+        timeline[i] = t
         t += dt
         if t > curve.max():
             t = curve.max()
-    return res
+    return res, timeline
+
+
+def discretizeDerivateCurve(curve,dt, order):
+    """
+    Discretize the derivative of the given curve at the given dt
+    return the result as an array (one column per discret point)
+    In case where the time interval of the curve is not a multiple of dt, the last point is still included
+    This mean that the timestep between the two last points may be less than dt
+    :param curve: a curve object, require operator (), min() and max()
+    :param dt: the discretization step
+    :return: an array of shape (curve.dim(), numPoints) and an array corresponding to the timeline
+    """
+    numPoints = math.ceil((curve.max() - curve.min()) / dt )
+    res = np.zeros([curve.dim(), numPoints])
+    timeline = np.zeros(numPoints)
+    t = curve.min()
+    for i in range(numPoints):
+        res[:,i] = curve.derivate(t, order)
+        timeline[i] = t
+        t += dt
+        if t > curve.max():
+            t = curve.max()
+    return res, timeline
+
+
+def discretizeSE3CurveTranslation(curve,dt):
+    """
+    Discretize the given curve at the given dt
+    return the result as an array (one column per discret point)
+    In case where the time interval of the curve is not a multiple of dt, the last point is still included
+    This mean that the timestep between the two last points may be less than dt
+    :param curve: a SE3 curve object, require operator (), min() and max() and translation()
+    :param dt: the discretization step
+    :return: an array of shape (3, numPoints) and an array corresponding to the timeline
+    """
+    numPoints = math.ceil((curve.max() - curve.min()) / dt )
+    res = np.zeros([3, numPoints])
+    timeline = np.zeros(numPoints)
+    t = curve.min()
+    for i in range(numPoints):
+        res[:,i] = curve.translation(t)
+        timeline[i] = t
+        t += dt
+        if t > curve.max():
+            t = curve.max()
+    return res, timeline
+
+def discretizeSE3CurveToVec(curve,dt):
+    """
+    Discretize the given curve at the given dt
+    return the result as an array (one column per discret point)
+    In case where the time interval of the curve is not a multiple of dt, the last point is still included
+    This mean that the timestep between the two last points may be less than dt
+    :param curve: a SE3 curve object, require operator (), min() and max()
+    :param dt: the discretization step
+    :return: an array of shape (12, numPoints) and an array corresponding to the timeline
+    """
+    numPoints = math.ceil((curve.max() - curve.min()) / dt )
+    res = np.zeros([12, numPoints])
+    timeline = np.zeros(numPoints)
+    t = curve.min()
+    for i in range(numPoints):
+        res[:,i] = SE3toVec(curve(t))
+        timeline[i] = t
+        t += dt
+        if t > curve.max():
+            t = curve.max()
+    return res, timeline
 
 def constantSE3curve(placement, t):
     rot = SO3Linear(placement.rotation, placement.rotation, t, t)
