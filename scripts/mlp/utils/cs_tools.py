@@ -547,3 +547,21 @@ def deletePhaseWBtrajectories(phase):
     phase.dq_t = None
     phase.ddq_t = None
     phase.tau_t = None
+
+def updateContactPlacement(cs, pid_begin, eeName, placement):
+    """
+    Starting from cs.contactPhases[pid_begin] and going until eeName is in contact,
+    the placement of eeName is modified with the given placement.
+    Note that the wholebody configurations are not updated !
+    :param cs:
+    :param pid_begin:
+    :param eeName:
+    :param placement:
+    :return:
+    """
+    for pid in range(pid_begin, cs.size()):
+        phase = cs.contactPhases[pid]
+        if phase.isEffectorInContact(eeName):
+            phase.contactPatch(eeName).placement = placement
+        else:
+            return

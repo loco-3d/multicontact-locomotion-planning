@@ -119,7 +119,7 @@ def createContactForEffector(invdyn, robot, eeName):
             print("contact points : \n", contact_Points)
         print("contact placement : ", ref)
         print("contact_normal : ", contactNormal)
-    return contact
+    return contact, ref
 
 
 def createEffectorTasksDic(effectorsNames, robot):
@@ -440,7 +440,7 @@ def generateWholeBodyMotion(cs_ref, fullBody=None, viewer=None):
     # add initial contacts :
     dic_contacts = {}
     for eeName in cs.contactPhases[0].effectorsInContact():
-        contact = createContactForEffector(invdyn, robot, eeName)
+        contact = createContactForEffector(invdyn, robot, eeName)[0]
         dic_contacts.update({eeName: contact})
 
     if cfg.EFF_CHECK_COLLISION:  # initialise object needed to check the motion
@@ -525,16 +525,6 @@ def generateWholeBodyMotion(cs_ref, fullBody=None, viewer=None):
         # add root's orientation ref from reference config :
         root_traj = phase_ref.root_t
 
-        # add newly created contacts :
-        for eeName in usedEffectors:
-            if phase_prev is not None and phase_ref.isEffectorInContact(eeName) and not phase_prev.isEffectorInContact(eeName):
-                invdyn.removeTask(dic_effectors_tasks[eeName].name, 0.0)  # remove pin task for this contact
-                if cfg.WB_VERBOSE:
-                    print("remove se3 effector task : " + dic_effectors_tasks[eeName].name)
-                contact = createContactForEffector(invdyn, robot, eeName)
-                dic_contacts.update({eeName: contact})
-                if cfg.WB_VERBOSE:
-                    print("Create contact for : " + eeName)
 
         # add se3 tasks for end effector when required
         for eeName in phase.effectorsWithTrajectory():
@@ -551,11 +541,27 @@ def generateWholeBodyMotion(cs_ref, fullBody=None, viewer=None):
         # (This tell the solver that it should start minimizing the contact force on this contact, and ideally get to 0 at the given time)
         for eeName, contact in dic_contacts.items():
             if phase_next is not None and phase.isEffectorInContact(eeName) and not phase_next.isEffectorInContact(eeName):
-                transition_time = phase.timeFinal - t - dt / 2.
+                transition_time = phase.timeFinal - t
                 if cfg.WB_VERBOSE:
                     print("\nTime %.3f Start breaking contact %s. transition time : %.3f\n" %
                           (t, contact.name, transition_time))
                 invdyn.removeRigidContact(contact.name, transition_time)
+
+        # add newly created contacts :
+        for eeName in usedEffectors:
+            if phase_prev is not None and phase_ref.isEffectorInContact(eeName) and not phase_prev.isEffectorInContact(eeName):
+                invdyn.removeTask(dic_effectors_tasks[eeName].name, 0.0)  # remove pin task for this contact
+                if cfg.WB_VERBOSE:
+                    print("remove se3 effector task : " + dic_effectors_tasks[eeName].name)
+                contact, placement = createContactForEffector(invdyn, robot, eeName)
+                dic_contacts.update({eeName: contact})
+                if cfg.WB_VERBOSE:
+                    print("Create contact for : " + eeName)
+                # update wb_phase with possibly new placement :
+                if not placement.isApprox(phase.contactPatch(eeName).placement, 1e-9):
+                    print ("Need to replace save contact placement at pid ", pid)
+                    print (placement)
+                    updateContactPlacement(cs, pid, eeName, placement)
 
         if cfg.WB_STOP_AT_EACH_PHASE:
             input('start simulation')
@@ -611,7 +617,7 @@ def generateWholeBodyMotion(cs_ref, fullBody=None, viewer=None):
                     print("root vel : ", sampleRoot.vel())
 
                 # end effector (if they exists)
-                for eeName, traj in phase.effectorTrajectories().items():
+                for eeName, traj in phase_ref.effectorTrajectories().items():
                     sampleEff = curveSE3toTSID(traj,t,True)
                     dic_effectors_tasks[eeName].setReference(sampleEff)
                     if cfg.WB_VERBOSE == 2:
@@ -667,15 +673,14 @@ def generateWholeBodyMotion(cs_ref, fullBody=None, viewer=None):
                     if effectorCanRetry():
                         print("Try new end effector trajectory.")
                         try:
-                            for eeName, ref_traj in phase.effectorTrajectories().items():
+                            for eeName, ref_traj in phase_ref.effectorTrajectories().items():
                                 placement_init = ref_traj.evaluateAsSE3(phase.timeInitial)
                                 placement_end = ref_traj.evaluateAsSE3(phase.timeFinal)
                                 traj = generateEndEffectorTraj(time_interval, placement_init, placement_end,
                                                                    iter_for_phase + 1, first_q_t, phase_prev,
                                                                    phase_ref, phase_next, fullBody, eeName, viewer)
-                                # save the new trajectory in the phase (the wb and the reference one)
+                                # save the new trajectory in the phase with the references
                                 phase_ref.addEffectorTrajectory(eeName,traj)
-                                phase.addEffectorTrajectory(eeName,traj)
                         except ValueError as e:
                             print("ERROR in generateEndEffectorTraj :")
                             print(e)
