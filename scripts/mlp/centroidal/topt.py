@@ -81,7 +81,6 @@ def fillCSFromTimeopt(cs, cs_initGuess, tp, t_init = 0.):
         if k > 0 and isNewPhase(tp, k - 1, k) and p_id < cs_com.size() - 1:
             #last k of current phase, first k of next one (same state_traj and time)
             # set the trajectories for the current phase from the arrays :
-            print(" last point for phase " + str(p_id)+ " at t = "+ str(times[-1]))
             phase = cs_com.contactPhases[p_id]
             setCOMtrajectoryFromPoints(phase, c_t,dc_t,ddc_t,times, overwriteInit= (p_id > 0))
             setAMtrajectoryFromPoints(phase, L_t,dL_t,times)
