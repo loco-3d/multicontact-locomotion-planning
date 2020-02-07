@@ -38,7 +38,7 @@ level_posture = 1
 level_rootOrientation = 1
 level_am = 1
 
-IK_dt = 0.001
+IK_dt = 0.01
 IK_eff_size = Robot.dict_size.copy()
 #IK_eff_size={Robot.rfoot:[0.1 , 0.06], Robot.lfoot:[0.1 , 0.06],Robot.rhand:[0.1, 0.1],Robot.lhand:[0.1, 0.1]}
 
