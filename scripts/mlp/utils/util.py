@@ -22,24 +22,6 @@ def distPointLine(p_l, x1_l, x2_l):
     return norm(cross(p - x1, p - x2)) / norm(x2 - x1)
 
 
-def findPhase(cs, t):
-    phase0 = cs.contactPhases[0]
-    phasel = cs.contactPhases[-1]
-    if t <= phase0.time_trajectory[0]:
-        return 0
-    elif t >= phasel.time_trajectory[-1]:
-        return len(cs.contactPhases) - 1
-
-    id = [
-        k for k, phase in enumerate(cs.contactPhases)
-        if t >= phase.time_trajectory[0] and t <= phase.time_trajectory[-1]
-    ]
-    assert len(id) >= 1 or len(id) <= 2
-    if len(id) == 2:
-        return id[1]
-    else:
-        return id[0]
-
 
 def SE3toVec(M):
     v = np.zeros(12)
@@ -200,23 +182,6 @@ def genCOMTrajFromPhaseStates(phase, constraintVelocity = True, constraintAccele
     phase.dc_t = com_traj.compute_derivate(1)
     phase.ddc_t = com_traj.compute_derivate(2)
 
-# fill state_trajectory and control_trajectory in order to connect init_state and final_state of the phase
-# use quintic spline for the com position and cubic spline for the angular momentum
-# The state_trajectory and control_trajectory in phase should be empty
-# and the time_trajectory should start and end at the correct timings
-def genSplinesForPhase(phase, current_t, duration, init_control=None):
-    assert (len(phase.state_trajectory)
-            ) == 0, "You should only call this method with a 'clean' phase, without any pre existing trajectory"
-    assert (len(phase.time_trajectory)
-            ) == 0, "You should only call this method with a 'clean' phase, without any pre existing trajectory"
-    # fill the first dt of the trajectories :
-    phase.state_trajectory.append(phase.init_state)
-    if init_control:
-        phase.control_trajectory.append(init_control)
-    else:
-        phase.control_trajectory.append(np.zeros(6))
-    phase.time_trajectory.append(current_t)
-    return connectPhaseTrajToFinalState(phase, duration)
 
 
 def copyPhaseContacts(phase_in, phase_out):

@@ -6,20 +6,17 @@ from numpy.linalg import norm as norm
 import os
 from rospkg import RosPack
 import time
-import subprocess
-import gepetto.corbaserver
 import mlp.config as cfg
 import multicontact_api
-from multicontact_api import WrenchCone, SOC6, ContactPatch, ContactPhase, ContactSequence
-from curves import SE3Curve, piecewise
+from multicontact_api import ContactPhase, ContactSequence
+from curves import SE3Curve, piecewise, piecewise_SE3, polynomial
 from mlp.utils.computation_tools import shiftZMPtoFloorAltitude
 import mlp.viewer.display_tools as display_tools
 import math
-from mlp.utils.wholebody_result import Result
-from mlp.utils.util import *
+from mlp.utils.util import constantSE3curve, SE3toVec, MotiontoVec
 from mlp.end_effector import generateEndEffectorTraj, effectorCanRetry
 import eigenpy
-from mlp.utils.cs_tools import deleteAllTrajectories, deletePhaseWBtrajectories
+from mlp.utils.cs_tools import deleteAllTrajectories, deletePhaseWBtrajectories, updateContactPlacement
 from mlp.utils.requirements import Requirements
 eigenpy.switchToNumpyArray()
 
