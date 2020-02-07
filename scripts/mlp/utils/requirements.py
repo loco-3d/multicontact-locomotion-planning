@@ -146,7 +146,7 @@ class Requirements():
 
     @classmethod
     def requireEffectorTrajectories(cls, cs):
-        if not cs.haveEffectorsTrajectories():
+        if not cs.haveEffectorsTrajectories(1e-6):
             print("- Contact sequence do not have consistent effector trajectories.")
             return False
         return True
@@ -221,7 +221,7 @@ class Requirements():
         if cls.torqueTrajectories:
             assert cs.haveTorquesTrajectories(), "Contact sequence do not have consistent torques trajectories"
         if cls.effectorTrajectories:
-            assert cs.haveEffectorsTrajectories(), "Contact sequence do not have consistent effector trajectories."
+            assert cs.haveEffectorsTrajectories(1e-3), "Contact sequence do not have consistent effector trajectories."
         if cls.contactForcesTrajectories:
             assert cs.haveContactForcesTrajectories(), "Contact sequence do not have consistent contact forces trajectories."
         print("# Assert requirements done.")
