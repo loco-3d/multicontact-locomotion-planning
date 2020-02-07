@@ -22,6 +22,7 @@ eigenpy.switchToNumpyArray()
 
 class Inputs(Requirements):
     consistentContacts = True
+    friction = True
     timings = True
     centroidalTrajectories = True
     effectorTrajectories = True
@@ -98,12 +99,12 @@ def createContactForEffector(invdyn, robot, eeName, patch):
     contactNormal = np.array(cfg.Robot.dict_normal[eeName])
     contactNormal = cfg.Robot.dict_offset[eeName].rotation @ contactNormal  # apply offset transform
     if cfg.Robot.cType == "_3_DOF":
-        contact = tsid.ContactPoint("contact_" + eeName, robot, eeName, contactNormal, cfg.MU, cfg.fMin, cfg.fMax)
+        contact = tsid.ContactPoint("contact_" + eeName, robot, eeName, contactNormal, patch.friction, cfg.fMin, cfg.fMax)
         mask = np.ones(3)
         contact.useLocalFrame(False)
     else:
         contact_Points = buildRectangularContactPoints(eeName)
-        contact = tsid.Contact6d("contact_" + eeName, robot, eeName, contact_Points, contactNormal, cfg.MU, cfg.fMin,
+        contact = tsid.Contact6d("contact_" + eeName, robot, eeName, contact_Points, contactNormal, patch.friction, cfg.fMin,
                                  cfg.fMax)
         mask = np.ones(6)
     contact.setKp(cfg.kp_contact * mask)
