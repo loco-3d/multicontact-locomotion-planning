@@ -126,7 +126,7 @@ def displaySteppingStones(cs, gui, sceneName, Robot):
 
 
 def displayCOMTrajForPhase(phase, gui, name, name_group, color, dt):
-    c = numpy2DToList(discretizeCurve(phase.c_t, dt))
+    c = numpy2DToList(discretizeCurve(phase.c_t, dt)[0])
     gui.addCurve(name, c, color)
     gui.addToGroup(name, name_group)
 
