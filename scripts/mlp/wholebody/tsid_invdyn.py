@@ -42,6 +42,9 @@ class Outputs(Requirements):
         effectorTrajectories = True
     if cfg.IK_store_contact_forces:
         contactForcesTrajectories = False
+    if cfg.IK_store_zmp:
+        ZMPtrajectories = True
+
 
 
 def buildRectangularContactPoints(eeName):
@@ -280,7 +283,7 @@ def generateWholeBodyMotion(cs_ref, fullBody=None, viewer=None):
         # res.tau_t[:6,k_t] = tau[:6]
         phi0 = pinRobot.data.oMi[1].act(Force(tau[:6]))
         wrench = phi0.vector
-        zmp = shiftZMPtoFloorAltitude(cs, t, phi0, cfg.EXPORT_OPENHRP)
+        zmp = shiftZMPtoFloorAltitude(cs, t, phi0, cfg.Robot, cfg.EXPORT_OPENHRP)
         if first_iter_for_phase:
             phase.zmp_t = piecewise(polynomial(zmp.reshape(-1,1), t, t))
             phase.wrench_t = piecewise(polynomial(wrench.reshape(-1,1), t, t))
