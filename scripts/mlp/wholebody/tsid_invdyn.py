@@ -300,8 +300,6 @@ def generateWholeBodyMotion(cs_ref, fullBody=None, viewer=None):
                 if t > phase_prev.effectorTrajectory(eeName).max():
                     placement = getCurrentEffectorPosition(robot, invdyn.data(), eeName)
                     phase_prev.effectorTrajectory(eeName).append(placement, t)
-                    print("Add last placement in effector traj : ")
-                    print(placement)
         if first_iter_for_phase:
             for eeName in phase.effectorsWithTrajectory():
                 placement = getCurrentEffectorPosition(robot, invdyn.data(), eeName)
