@@ -75,8 +75,10 @@ if cfg.DISPLAY_COM_TRAJ:
     colors = [viewer.color.blue, viewer.color.green]
     display_tools.displayCOMTrajectory(cs_com, gui, viewer.sceneName, cfg.DT_DISPLAY, colors)
 if cfg.PLOT_CENTROIDAL:
-    from mlp.utils.plot import plotCOMTrajFromCS
-    plotCOMTrajFromCS(cs_com)
+    import mlp.utils.plot as plot
+    plot.plotCOMTraj(cs_com, cfg.SOLVER_DT)
+    plot.plotAMTraj(cs_com, cfg.SOLVER_DT)
+    plot.plt.show(block=False)
 
 
 print("------------------------------")
@@ -163,7 +165,7 @@ if cfg.DISPLAY_WB_MOTION:
 
 if cfg.PLOT:
     from mlp.utils import plot
-    plot.plotALLFromWB(cs_ref, cs_wb, cfg.DISPLAY_PLOT, cfg.SAVE_PLOT, cfg.OUTPUT_DIR + "/plot/" + cfg.DEMO_NAME)
+    plot.plotALLFromWB(cs_ref, cs_wb, cfg)
 
 if cfg.EXPORT_OPENHRP and motion_valid:
     from mlp.export import openHRP
