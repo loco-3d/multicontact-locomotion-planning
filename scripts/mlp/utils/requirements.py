@@ -19,6 +19,7 @@ class Requirements():
     configurationValues = False
     COMtrajectories = False
     AMtrajectories = False
+    ZMPtrajectories = False
     centroidalTrajectories = False
     jointsTrajectories = False
     jointsDerivativesTrajectories = False
@@ -132,6 +133,21 @@ class Requirements():
         return True
 
     @classmethod
+    def requireZMPtrajectories(cls, cs, cfg):
+        if not cs.haveZMPtrajectories():
+            print("- Contact sequence do not have consistent ZMP trajectories.")
+            if cs.haveCOMtrajectories() and cs.haveAMtrajectories():
+                print(" compute it from the centroidal data")
+                from mlp.utils.computation_tools import computeZMPRef
+                computeZMPRef(cs, cfg)
+                if not cs.haveZMPtrajectories():
+                    print("An error occurred in computation_tools.computeZMPRef")
+                    return False
+            else:
+                return False
+        return True
+
+    @classmethod
     def requireCentroidalTrajectories(cls, cs):
         return cls.requireAMtrajectories(cs) and cls.requireCOMtrajectories(cs)
 
@@ -192,6 +208,8 @@ class Requirements():
             print("- c, dc, ddc trajectories for each phases")
         if cls.AMtrajectories:
             print("- L, dL trajectories for each phases")
+        if cls.ZMPtrajectories:
+            print("- ZMP trajectories for each phases")
         if cls.centroidalTrajectories:
             print("- c, dc, ddc, L, dL trajectories for each phases")
         if cls.jointsTrajectories:
@@ -228,6 +246,8 @@ class Requirements():
             assert cs.haveCOMtrajectories(), "Contact sequence do not have consistent CoM trajectories."
         if cls.AMtrajectories:
             assert cs.haveAMtrajectories(), "Contact sequence do not have consistent AM trajectories."
+        if cls.ZMPtrajectories:
+            assert cs.haveZMPtrajectories(), "Contact sequence do not have consistent ZMP trajectories."
         if cls.centroidalTrajectories:
             assert cs.haveCentroidalTrajectories (), "Contact sequence do not have consistent centroidal trajectories."
         if cls.jointsTrajectories:
@@ -283,6 +303,9 @@ class Requirements():
                 return False
         if cls.AMtrajectories:
             if not cls.requireAMtrajectories(cs):
+                return False
+        if cls.ZMPtrajectories:
+            if not cls.requireZMPtrajectories(cs, cfg):
                 return False
         if cls.centroidalTrajectories:
             if not cls.requireCentroidalTrajectories(cs):
