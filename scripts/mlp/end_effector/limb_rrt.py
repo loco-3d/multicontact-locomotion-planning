@@ -124,9 +124,9 @@ def generateLimbRRTPath(q_init, q_end, phase_previous, phase, phase_next, fullBo
 
     # create a path in hpp corresponding to the discretized trajectory in phase :
     dt = HPP_DT
-    c_t = discretizeCurve(phase.c_t, dt)
-    v_t = discretizeCurve(phase.dc_t, dt)[:,:-1]
-    a_t = discretizeCurve(phase.ddc_t, dt)[:,:-1]
+    c_t = discretizeCurve(phase.c_t, dt)[0]
+    v_t = discretizeCurve(phase.dc_t, dt)[0][:,:-1]
+    a_t = discretizeCurve(phase.ddc_t, dt)[0][:,:-1]
     if VERBOSE > 1:
         print ("c shape : ", c_t.shape)
         print ("v shape : ", v_t.shape)
