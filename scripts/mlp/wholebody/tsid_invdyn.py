@@ -86,12 +86,13 @@ def getCurrentEffectorAcceleration(robot, data, eeName):
         return robot.frameAcceleration(data, id)
 
 
-def createContactForEffector(invdyn, robot, eeName):
+def createContactForEffector(invdyn, robot, eeName, patch):
     """
     Add a contact task in invdyn for the given effector, at it's current placement
     :param invdyn:
     :param robot:
     :param eeName: name of the effector
+    :param patch: the ContactPatch object to use. Take friction coefficient and placement for the contact from this object
     :return: the contact task
     """
     contactNormal = np.array(cfg.Robot.dict_normal[eeName])
@@ -107,8 +108,7 @@ def createContactForEffector(invdyn, robot, eeName):
         mask = np.ones(6)
     contact.setKp(cfg.kp_contact * mask)
     contact.setKd(2.0 * np.sqrt(cfg.kp_contact) * mask)
-    ref = getCurrentEffectorPosition(robot, invdyn.data(), eeName)
-    contact.setReference(ref)
+    contact.setReference(patch.placement)
     invdyn.addRigidContact(contact, cfg.w_forceRef)
     if cfg.WB_VERBOSE:
         print("create contact for effector ", eeName)
@@ -117,9 +117,9 @@ def createContactForEffector(invdyn, robot, eeName):
         else:
             print("create rectangular contact")
             print("contact points : \n", contact_Points)
-        print("contact placement : ", ref)
+        print("contact placement : ", patch.placement)
         print("contact_normal : ", contactNormal)
-    return contact, ref
+    return contact
 
 
 def createEffectorTasksDic(effectorsNames, robot):
@@ -425,13 +425,12 @@ def generateWholeBodyMotion(cs_ref, fullBody=None, viewer=None):
         print("pinocchio robot loaded from urdf.")
 
     ### Define initial state of the robot ###
-    q = cs.contactPhases[0].q_init[:robot.nq].copy()
+    phase0 = cs.contactPhases[0]
+    q = phase0.q_init[:robot.nq].copy()
     if not q.any():
         raise RuntimeError("The contact sequence doesn't contain an initial whole body configuration")
     v = np.zeros(robot.nv)
-    dv0 = np.zeros(robot.nv)
-    tau0 = np.zeros(robot.nv)
-    t = cs.contactPhases[0].timeInitial
+    t = phase0.timeInitial
 
     # init states list with initial state (assume joint velocity is null for t=0)
     invdyn = tsid.InverseDynamicsFormulationAccForce("tsid", robot, False)
@@ -440,7 +439,10 @@ def generateWholeBodyMotion(cs_ref, fullBody=None, viewer=None):
     # add initial contacts :
     dic_contacts = {}
     for eeName in cs.contactPhases[0].effectorsInContact():
-        contact = createContactForEffector(invdyn, robot, eeName)[0]
+        # replace the initial contact patch placements if needed to match exactly the current position in the problem:
+        updateContactPlacement(cs, 0, eeName, getCurrentEffectorPosition(robot, invdyn.data(), eeName))
+        # create the contacts :
+        contact = createContactForEffector(invdyn, robot, eeName, phase0.contactPatch(eeName))
         dic_contacts.update({eeName: contact})
 
     if cfg.EFF_CHECK_COLLISION:  # initialise object needed to check the motion
@@ -553,15 +555,10 @@ def generateWholeBodyMotion(cs_ref, fullBody=None, viewer=None):
                 invdyn.removeTask(dic_effectors_tasks[eeName].name, 0.0)  # remove pin task for this contact
                 if cfg.WB_VERBOSE:
                     print("remove se3 effector task : " + dic_effectors_tasks[eeName].name)
-                contact, placement = createContactForEffector(invdyn, robot, eeName)
+                contact = createContactForEffector(invdyn, robot, eeName, phase.contactPatch(eeName))
                 dic_contacts.update({eeName: contact})
                 if cfg.WB_VERBOSE:
                     print("Create contact for : " + eeName)
-                # update wb_phase with possibly new placement :
-                if not placement.isApprox(phase.contactPatch(eeName).placement, 1e-9):
-                    print ("Need to replace save contact placement at pid ", pid)
-                    print (placement)
-                    updateContactPlacement(cs, pid, eeName, placement)
 
         if cfg.WB_STOP_AT_EACH_PHASE:
             input('start simulation')
