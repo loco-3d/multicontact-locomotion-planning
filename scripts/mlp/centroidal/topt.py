@@ -73,7 +73,7 @@ def fillCSFromTimeopt(cs, cs_initGuess, tp, t_init = 0.):
         # stack the values in the arrays:
         c_t = append(c_t, c.reshape(3,1), axis = 1)
         dc_t = append(dc_t, dc.reshape(3,1), axis = 1)
-        ddc_t = append(ddc_t, dc.reshape(3,1), axis = 1)
+        ddc_t = append(ddc_t, ddc.reshape(3,1), axis = 1)
         L_t = append(L_t, L.reshape(3,1), axis = 1)
         dL_t = append(dL_t, dL.reshape(3,1), axis = 1)
         times = append(times, tp.getTime(k) + t_init)
