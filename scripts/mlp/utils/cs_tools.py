@@ -565,3 +565,15 @@ def updateContactPlacement(cs, pid_begin, eeName, placement):
             phase.contactPatch(eeName).placement = placement
         else:
             return
+
+def setAllUninitializedFrictionCoef(cs, mu):
+    """
+    For all the contact patch of all the phases, if the friction is <= 0, set it to the given value
+    :param cs:
+    :param mu:
+    :return:
+    """
+    for phase in cs.contactPhases:
+        for eeName in phase.effectorsInContact():
+            if phase.contactPatch(eeName).friction <= 0 :
+                phase.contactPatch(eeName).friction = mu

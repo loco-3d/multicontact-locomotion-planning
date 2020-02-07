@@ -11,6 +11,7 @@ class Requirements():
     """
     timings = False
     consistentContacts = False
+    friction = False
     rootTrajectories = False
     COMvalues = False
     AMvalues = False
@@ -47,6 +48,17 @@ class Requirements():
             return False
         else:
             return True
+
+    @classmethod
+    def requireFriction(cls, cs, mu):
+        if not cs.haveFriction():
+            print("- Contact sequence do not have consistent contacts.")
+            print("Set all the uninitialized patch with the defaut value : ",mu )
+            cs_tools.setAllUninitializedFrictionCoef(cs, mu)
+            if not cs.haveFriction():
+                print("An error occurred in setAllUninitializedFrictionCoef.")
+                return False
+        return True
 
     @classmethod
     def requireRootTrajectories(cls, cs, cfg = None):
@@ -166,6 +178,8 @@ class Requirements():
             print("- Consistent timings")
         if cls.consistentContacts:
             print("- Consistent contacts")
+        if cls.friction:
+            print("- friction coefficient for all contacts")
         if cls.COMvalues:
             print("- c_init / final for each phases")
         if cls.AMvalues:
@@ -198,6 +212,8 @@ class Requirements():
             assert cs.haveTimings(), "Contact sequence do not have consistent timings."
         if cls.consistentContacts:
             assert cs.haveConsistentContacts(), "Contact sequence do not have consistent contacts."
+        if cls.friction:
+            assert cs.haveFriction(), "Contact sequence do not have friction coefficient defined for all contacts."
         if cls.rootTrajectories:
             assert cs.haveRootTrajectories(), "Contact sequence do not have consistent Root trajectories."
         if cls.COMvalues:
@@ -243,6 +259,9 @@ class Requirements():
                 return False
         if cls.consistentContacts:
             if not cls.requireConsistentContacts(cs):
+                return False
+        if cls.friction:
+            if not cls.requireFriction(cs, cfg.MU):
                 return False
         if cls.rootTrajectories:
             if not cls.requireRootTrajectories(cs, cfg):
