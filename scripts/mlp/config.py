@@ -15,7 +15,7 @@ centroidal_initGuess_method = "none"
 centroidal_method = "timeopt" # TODO : fix load method ...
 end_effector_initGuess_method = "bezierPredef"
 end_effector_method = "limbRRToptimized"
-wholebody_method = "none"
+wholebody_method = "tsid"
 
 ## PATHS settings :
 PKG_PATH = os.path.dirname(os.path.realpath(__file__)).rstrip("/scripts/mlp")
@@ -47,7 +47,7 @@ DISPLAY_FEET_TRAJ = True  # display the feet trajectories used in the final moti
 DISPLAY_ALL_FEET_TRAJ = True  # display all the trajectory used as reference, even the invalid ones
 DISPLAY_WB_MOTION = False  # display whole body motion automatically once it's computed
 DT_DISPLAY = 0.05  # dt used to display the wb motion (one configuration every dt is sent to the viewer) It have to be greater than IK_dt
-PLOT = False  # Generate plot for various data
+PLOT = True  # Generate plot for various data
 PLOT_CENTROIDAL = False  # plot COM trajectory computed by the centroidal dynamic solver, before trying to compute the wholebody motion
 DISPLAY_PLOT = PLOT and True  # display plot directly
 SAVE_PLOT = PLOT and True  #save plot as svg in OUTPUT_DIR/plot/demo_name_*
@@ -76,7 +76,6 @@ WB_RETURN_INVALID = not WB_ABORT_WHEN_INVALID and True  # stop wb script when st
 
 ##  Settings for whole body :
 YAW_ROT_GAIN = 1.  # gain for the orientation task of the root orientation, along the yaw axis (wrt to the other axis of the orientation task)
-USE_PLANNING_ROOT_ORIENTATION = True  # if true, the reference for the root orientation is the one given by the planning (stored in phase.reference_configurations) if false, use the one of q_init for all the motion.
 WB_VERBOSE = 0  # 0,1 or 2 Verbosity level for the output of the wholebody script
 WB_STOP_AT_EACH_PHASE = False  # wait for user input between each phase
 IK_dt = 0.001  # controler time step (in second)
