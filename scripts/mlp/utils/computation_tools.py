@@ -1,8 +1,8 @@
 import numpy as np
 import pinocchio as pin
 from pinocchio import SE3, Motion, Force
-from mlp.utils.util import *
-import mlp.config as cfg
+from mlp.utils.util import JointPlacementForEffector
+from curves import piecewise, polynomial
 from rospkg import RosPack
 from pinocchio.robot_wrapper import RobotWrapper
 from curves import piecewise
@@ -15,17 +15,17 @@ def pacthSameAltitude(M1, M2, eps=1e-3):
 #Only consider the feet :
 # - if only one feet in contact, return it's z coordinate
 # - if both feet in contact, make a linear interp between both feet altitude wrt to which feet will move next
-def computeFloorAltitude(cs, t, useJointLevel=False):
+def computeFloorAltitude(cs, t, Robot, useJointLevel=False):
     id_phase = cs.phaseIdAtTime(t)
     phase = cs.contactPhases[id_phase]
 
-    if phase.isEffectorInContact(cfg.Robot.rfoot) and phase.isEffectorInContact(cfg.Robot.lfoot):
+    if phase.isEffectorInContact(Robot.rfoot) and phase.isEffectorInContact(Robot.lfoot):
         if useJointLevel:
-            Mrf = JointPlacementForEffector(phase, cfg.Robot.rfoot)
-            Mlf = JointPlacementForEffector(phase, cfg.Robot.lfoot)
+            Mrf = JointPlacementForEffector(phase, Robot.rfoot)
+            Mlf = JointPlacementForEffector(phase, Robot.lfoot)
         else:
-            Mrf = phase.contactPatch(cfg.Robot.rfoot).placement
-            Mlf = phase.contactPatch(cfg.Robot.lfoot).placement
+            Mrf = phase.contactPatch(Robot.rfoot).placement
+            Mlf = phase.contactPatch(Robot.lfoot).placement
         if pacthSameAltitude(Mrf, Mlf):
             floor_altitude = 0.5 * (Mrf.translation + Mlf.translation)[2]
         else:
@@ -33,17 +33,17 @@ def computeFloorAltitude(cs, t, useJointLevel=False):
             LF_moved = False
             if id_phase > 0:  #look for the inactive contact in the previous phase
                 pprev = cs.contactPhases[id_phase - 1]
-                if not pprev.isEffectorInContact(cfg.Robot.rfoot):
+                if not pprev.isEffectorInContact(Robot.rfoot):
                     LF_moved = False
-                elif not pprev.isEffectorInContact(cfg.Robot.lfoot):
+                elif not pprev.isEffectorInContact(Robot.lfoot):
                     LF_moved = True
                 else:
                     assert "Must never happened"
             else:  #look for the inactive contact in the next phase and assume cyclic gait for the last couple of phases
                 pnext = cs.contactPhases[id_phase + 1]
-                if not pnext.isEffectorInContact(cfg.Robot.rfoot):
+                if not pnext.isEffectorInContact(Robot.rfoot):
                     LF_moved = True
-                elif not pnext.isEffectorInContact(cfg.Robot.lfoot):
+                elif not pnext.isEffectorInContact(Robot.lfoot):
                     LF_moved = False
                 else:
                     assert "Must never happened"
@@ -61,28 +61,28 @@ def computeFloorAltitude(cs, t, useJointLevel=False):
             s = (t - t0) / (t1 - t0)
             floor_altitude = p0 + s * (p1 - p0)
             pass
-    elif phase.isEffectorInContact(cfg.Robot.rfoot):
+    elif phase.isEffectorInContact(Robot.rfoot):
         if useJointLevel:
-            Mrf = JointPlacementForEffector(phase, cfg.Robot.rfoot)
+            Mrf = JointPlacementForEffector(phase, Robot.rfoot)
         else:
-            Mrf = phase.contactPatch(cfg.Robot.rfoot).placement
+            Mrf = phase.contactPatch(Robot.rfoot).placement
         floor_altitude = Mrf.translation[2]
 
-    elif phase.isEffectorInContact(cfg.Robot.lfoot):
+    elif phase.isEffectorInContact(Robot.lfoot):
         if useJointLevel:
-            Mlf = JointPlacementForEffector(phase, cfg.Robot.lfoot)
+            Mlf = JointPlacementForEffector(phase, Robot.lfoot)
         else:
-            Mlf = phase.contactPatch(cfg.Robot.lfoot).placement
+            Mlf = phase.contactPatch(Robot.lfoot).placement
         floor_altitude = Mlf.translation[2]
     else:
         assert "Must never happened"
     return floor_altitude
 
 
-def shiftZMPtoFloorAltitude(cs, t, phi0, useJointLevel=False):
+def shiftZMPtoFloorAltitude(cs, t, phi0, Robot, useJointLevel=False):
     Mshift = SE3.Identity()
     shift = Mshift.translation
-    floor_altitude = computeFloorAltitude(cs, t, useJointLevel)
+    floor_altitude = computeFloorAltitude(cs, t, Robot, useJointLevel)
     shift[2] = floor_altitude
     Mshift.translation = shift
     #print "phi0",phi0
@@ -101,59 +101,77 @@ def shiftZMPtoFloorAltitude(cs, t, phi0, useJointLevel=False):
 
 # not generic ! only consider feet
 # (not a problem as we only call it for openHRP)
-def computeZMPFromWrench(cs, time_t, wrench_t):
+def computeZMPFromWrench(cs, Robot, dt):
 
-    N = len(time_t)
-    ZMP_t = np.empty((3, N))
+    for phase in cs.contactPhases:
+        t = phase.timeInitial
+        phase.zmp_t = None
+        while t <= phase.timeFinal:
+            phi0 = Force(phase.wrench_t(t))
+            zmp = shiftZMPtoFloorAltitude(cs, t, phi0, Robot)
+            if phase.zmp_t is None:
+                phase.zmp_t = piecewise(polynomial(zmp.reshape(-1, 1), t, t))
+            else:
+                phase.zmp_t.append(zmp, t)
+            t += dt
+            if phase.timeFinal - dt/2. <= t <= phase.timeFinal + dt/2.:
+                t = phase.timeFinal
 
-    # smooth wrench traj :
-    Wrench_trajectory = piecewise.FromPointList( wrench_t,np.asarray(time_t))
 
-    for k in range(N):
-        wrench = Wrench_trajectory(time_t[k])
-        phi0 = Force(wrench)
-        ZMP_t[:, k] = shiftZMPtoFloorAltitude(cs, time_t[k], phi0)
-
-    return ZMP_t
-
-
-def computeWrench(res):
+def computeWrench(cs, Robot, dt):
     rp = RosPack()
-    urdf = rp.get_path(cfg.Robot.packageName) + '/urdf/' + cfg.Robot.urdfName + cfg.Robot.urdfSuffix + '.urdf'
+    urdf = rp.get_path(Robot.packageName) + '/urdf/' + Robot.urdfName + Robot.urdfSuffix + '.urdf'
     #srdf = "package://" + package + '/srdf/' +  cfg.Robot.urdfName+cfg.Robot.srdfSuffix + '.srdf'
     robot = RobotWrapper.BuildFromURDF(urdf, pin.StdVec_StdString(), pin.JointModelFreeFlyer(), False)
     model = robot.model
     data = robot.data
-    for k in range(res.N):
-        pin.rnea(model, data, res.q_t[:, k], res.dq_t[:, k], res.ddq_t[:, k])
-        pcom, vcom, acom = robot.com(
-            res.q_t[:, k], res.dq_t[:, k],
-            res.ddq_t[:, k])  # FIXME : why do I need to call com to have the correct values in data ??
-        phi0 = data.oMi[1].act(pin.Force(data.tau[:6]))
-        res.wrench_t[:, k] = phi0.vector
-    return res
+    q_t = cs.concatenateQtrajectories()
+    dq_t = cs.concatenateQtrajectories()
+    ddq_t = cs.concatenateQtrajectories()
+    t = q_t.min()
+    for phase in cs.contactPhases:
+        phase.wrench_t = None
+        t = phase.timeInitial
+        while t <= phase.timeFinal:
+            pin.rnea(model, data, phase.q_t(t), phase.dq_t(t), phase.ddq_t(t))
+            pcom, vcom, acom = robot.com( phase.q_t(t), phase.dq_t(t), phase.ddq_t(t))
+            # FIXME : why do I need to call com to have the correct values in data ??
+            phi0 = data.oMi[1].act(pin.Force(data.tau[:6]))
+            if phase.wrench_t is None:
+                phase.wrench_t = piecewise(polynomial(phi0.vector.reshape(-1,1), t, t))
+            else:
+                phase.wrench_t.append(phi0.vector, t)
+            t += dt
+            if phase.timeFinal - dt/2. <= t <= phase.timeFinal + dt/2.:
+                t = phase.timeFinal
 
 
-def computeZMP(cs, res):
-    res = computeWrench(res)
-    res.zmp_t = computeZMPFromWrench(cs, res.t_t, res.wrench_t)
-    return res
+def computeZMP(cs, cfg):
+    computeWrench(cs, cfg.Robot, cfg.IK_dt)
+    computeZMPFromWrench(cs, cfg.Robot, cfg.IK_dt)
 
 
 # compute wrench F0 from centroidal data
-def computeWrenchRef(res):
+def computeWrenchRef(cs, mass, G, dt):
     Mcom = SE3.Identity()
-    for k, t in enumerate(res.t_t):
-        Mcom.translation = res.c_reference[:, k]
-        Fcom = Force.Zero()
-        Fcom.linear = cfg.MASS * (res.ddc_reference[:, k] - cfg.GRAVITY)
-        Fcom.angular = res.dL_reference[:, k]
-        F0 = Mcom.act(Fcom)
-        res.wrench_reference[:, k] = F0.vector
-    return res
+    for phase in cs.contactPhases:
+        t = phase.timeInitial
+        phase.wrench_t = None
+        while t <= phase.timeFinal:
+            Mcom.translation = phase.c_t(t)
+            Fcom = Force.Zero()
+            Fcom.linear = mass * (phase.ddc_t(t) - G)
+            Fcom.angular = phase.dL_t(t)
+            F0 = Mcom.act(Fcom)
+            if phase.wrench_t is None:
+                phase.wrench_t = piecewise(polynomial(F0.vector.reshape(-1,1), t, t))
+            else:
+                phase.wrench_t.append(F0.vector, t)
+            t += dt
+            if phase.timeFinal - dt/2. <= t <= phase.timeFinal + dt/2.:
+                t = phase.timeFinal
 
 
-def computeZMPRef(cs, res):
-    res = computeWrenchRef(res)
-    res.zmp_reference = computeZMPFromWrench(cs, res.t_t, res.wrench_reference)
-    return res
+def computeZMPRef(cs, cfg):
+    computeWrenchRef(cs, cfg.MASS, cfg.GRAVITY, cfg.SOLVER_DT)
+    computeZMPFromWrench(cs, cfg.Robot, cfg.SOLVER_DT)
