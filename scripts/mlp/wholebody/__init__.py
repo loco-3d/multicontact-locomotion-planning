@@ -12,7 +12,7 @@ elif method == "croccodyl":
 elif method == "none":
     from  mlp.utils.requirements import Requirements as Inputs
     from  mlp.utils.requirements import Requirements as Outputs
-    def generateWholeBodyMotion(cs, fullBody=None, viewer=None):
+    def generateWholeBodyMotion(cs_ref, fullBody=None, viewer=None):
         print("Whole body motion not computed !")
         return None, None
 else:
