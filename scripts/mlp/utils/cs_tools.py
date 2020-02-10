@@ -224,9 +224,10 @@ def computePhasesTimings(cs, cfg):
                 print("rot_feet             : ", rot_feet)
                 print("duration rotation    : ", duration_feet_rot)
                 print("duration complete    : ", duration_feet)
-            duration = max(duration, duration_feet)
+            duration = round(max(duration, duration_feet), 3) # round at the millisecond
+
         phase.timeInitial = current_t
-        phase.duration = duration
+        phase.timeFinal = round(current_t + duration, 3)
         current_t = phase.timeFinal
     return cs
 
