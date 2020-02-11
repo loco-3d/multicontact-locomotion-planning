@@ -178,7 +178,7 @@ if cfg.EXPORT_NPZ and motion_valid:
     npz.export(cs_ref, cs_wb, cfg)
 if cfg.EXPORT_BLENDER:
     from mlp.export import blender
-    blender.export(cs_wb.concatenateQtrajectories(), viewer, cfg.IK_dt)
+    blender.export(cs_wb.concatenateQtrajectories(), viewer)
     blender.exportSteppingStones(viewer)
 if cfg.EXPORT_SOT:
     from mlp.export import sotTalosBalance

@@ -6,7 +6,7 @@ import mlp.viewer.display_tools as display_tools
 dt_display = 0.04
 
 
-def export(q_t, v, dt):
+def export(q_t, v):
     path = cfg.EXPORT_PATH + "/blender"
     if not os.path.exists(path):
         os.makedirs(path)
