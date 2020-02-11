@@ -11,7 +11,7 @@ DURATION_FINAL_SS = 1.  # duration of the final phase if it's a single support p
 DURATION_SS = 1.4  # duration of the single support phases
 DURATION_DS = 0.2  # duration of the double support phases
 DURATION_TS = 0.4  # duration of the triple support phases
-DURATION_CONNECT_GOAL = 2.  # duration to try to connect the last points in the CoM trajectory with the goal position given to planning
+DURATION_CONNECT_GOAL = 0.  # duration to try to connect the last points in the CoM trajectory with the goal position given to planning
 # Hardcoded height change of the COM before the beginning of the motion (value in m and time allowed to make this motion)
 # This is used because for some robot, the reference configuration is really close to the kinematic limits of the robot.
 COM_SHIFT_Z = -0.03
