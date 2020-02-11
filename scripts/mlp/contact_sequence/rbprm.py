@@ -5,7 +5,7 @@ import inspect
 import mlp.config as cfg
 import multicontact_api
 from multicontact_api import ContactPhase, ContactSequence, ContactPatch
-from mlp.utils.util import quatFromConfig, SE3FromConfig
+from mlp.utils.util import SE3FromConfig
 from mlp.utils.cs_tools import createPhaseFromConfig, copyPhaseInitToFinal
 from mlp.utils.requirements import Requirements
 from numpy import array

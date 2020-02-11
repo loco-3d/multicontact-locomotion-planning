@@ -11,10 +11,6 @@ import types
 pinocchio.switchToNumpyArray()
 
 
-def quatFromConfig(q):
-    return Quaternion(q[6], q[3], q[4], q[5])
-
-
 def distPointLine(p_l, x1_l, x2_l):
     p = np.matrix(p_l)
     x1 = np.matrix(x1_l)
@@ -68,26 +64,6 @@ def MotionFromVec(vect):
     m.angular = np.array(vect[3:6])
     return m
 
-
-def stdVecToMatrix(std_vector):
-    if len(std_vector) == 0:
-        raise Exception("std_vector is Empty")
-    vec_l = []
-    for vec in std_vector:
-        vec_l.append(vec)
-
-    res = np.vstack(tuple(vec_l)).T
-    return res
-
-
-## helper method to deal with StateVectorState and other exposed c++ vectors :
-# replace vec[i] with value if it already exist or append the value
-def appendOrReplace(vec, i, value):
-    assert len(vec) >= i, "There is an uninitialized gap in the vector."
-    if i < len(vec):
-        vec[i] = value
-    else:
-        vec.append(value)
 
 
 def numpy2DToList(m):
@@ -144,6 +120,12 @@ def effectorPositionFromHPPPath(fb, problem, eeName, pid, t):
 
 
 def genAMTrajFromPhaseStates(phase, constraintVelocity = True):
+    """
+    Generate a cubic spline connecting (L_init, dL_init) to (L_final, dL_final) and set it as the phase AM trajectory
+    :param phase: the ContactPhase to use
+    :param constraintVelocity: if False, generate only a linear interpolation and ignore the values of dL
+    :return:
+    """
     if constraintVelocity:
         am_traj = polynomial(phase.L_init, phase.dL_init, phase.L_final, phase.dL_final,
                               phase.timeInitial, phase.timeFinal)
@@ -154,6 +136,13 @@ def genAMTrajFromPhaseStates(phase, constraintVelocity = True):
 
 
 def genCOMTrajFromPhaseStates(phase, constraintVelocity = True, constraintAcceleration = True):
+    """
+    Generate a quintic spline connecting exactly (c, dc, ddc) init to final
+    :param phase:
+    :param constraintVelocity: if False, generate only a linear interpolation and ignore ddc, and dc values
+    :param constraintAcceleration: if False, generate only a cubic spline and ignore ddc values
+    :return:
+    """
     if constraintAcceleration and not constraintVelocity:
         raise ValueError("Cannot constraints acceleration if velocity is not constrained.")
     if constraintAcceleration:
@@ -170,15 +159,15 @@ def genCOMTrajFromPhaseStates(phase, constraintVelocity = True, constraintAccele
 
 
 
-def copyPhaseContacts(phase_in, phase_out):
-    phase_out.RF_patch = phase_in.RF_patch
-    phase_out.LF_patch = phase_in.LF_patch
-    phase_out.RH_patch = phase_in.RH_patch
-    phase_out.LH_patch = phase_in.LH_patch
-
-
 
 def createStateFromPhase(fullBody, phase, q=None):
+    """
+    Create and add an RBPRM state to fullBody corresponding to the contacts defined in the given phase
+    :param fullBody:
+    :param phase:
+    :param q: if given, set the state wholebody configuration
+    :return: the Id of the state in fullbody
+    """
     if q is None:
         q = hppConfigFromMatrice(fullBody.client.robot, phase.q_init)
     effectorsInContact = phase.effectorsInContact()
@@ -191,16 +180,18 @@ def createStateFromPhase(fullBody, phase, q=None):
 
 
 def hppConfigFromMatrice(robot, q_matrix):
+    """
+    Convert a numpy array to a list, if required fill the list with 0 at the end to match the dimension defined in robot
+    :param robot:
+    :param q_matrix:
+    :return: a list a length robot.configSize() where the head is the values in q_matrix and the tail are zero
+    """
     q = q_matrix.tolist()
     extraDof = robot.getConfigSize() - q_matrix.shape[0]
     assert extraDof >= 0, "Changes in the robot model happened."
     if extraDof > 0:
         q += [0] * extraDof
     return q
-
-
-def phasesHaveSameConfig(p0, p1):
-    return np.array_equal(p0.q_init, p1.q_init)
 
 
 def computeEffectorTranslationBetweenStates(cs, pid):
@@ -270,16 +261,14 @@ def computeEffectorRotationBetweenStates(cs, pid):
     return res
 
 
-def fullBodyStatesExists(cs, fb):
-    lastId = fb.createState([0] * fb.getConfigSize(), []) - 1
-    if lastId <= 0:
-        return 0
-    else:
-        # TODO check with cs if all the states belong to the contact sequence and adjust lastId if necessary
-        return lastId
-
 
 def createFullbodyStatesFromCS(cs, fb):
+    """
+    Create all the rbprm State corresponding to the given cs object, and add them to the fullbody object
+    :param cs: a ContactSequence
+    :param fb: the Fullbody object used
+    :return: the first and last Id of the states added to fb
+    """
     #lastId = fullBodyStatesExists(cs, fb)
     #if lastId > 0:
     #    print("States already exist in fullBody instance. endId = ", lastId)
@@ -290,7 +279,7 @@ def createFullbodyStatesFromCS(cs, fb):
     print("CreateFullbodyStateFromCS ##################")
     print("beginId = ", beginId)
     for pid, phase in enumerate(cs.contactPhases[1:]):
-        if not phasesHaveSameConfig(phase_prev, phase):
+        if not np.array_equal(phase_prev.q_init, phase.q_init):
             lastId = createStateFromPhase(fb, phase)
             print("add phase " + str(pid) + " at state index : " + str(lastId))
             phase_prev = phase
@@ -299,26 +288,14 @@ def createFullbodyStatesFromCS(cs, fb):
 
 
 def computeContactNormal(placement):
+    """
+    Compute the contact normal assuming that it's orthogonal to the contact orientation
+    :param placement: the contact placement
+    :return:
+    """
     z_up = np.array([0., 0., 1.])
     contactNormal = placement.rotation @ z_up
     return contactNormal
-
-
-def computeContactNormalForPhase(phase, eeName):
-    return computeContactNormal(getContactPlacement(phase, eeName))
-
-
-
-def getPhaseEffTrajectoryByName(phase, eeName, Robot):
-    if eeName == Robot.rfoot:
-        return phase.RF_trajectory
-    if eeName == Robot.lfoot:
-        return phase.LF_trajectory
-    if eeName == Robot.rhand:
-        return phase.RH_trajectory
-    if eeName == Robot.lhand:
-        return phase.LH_trajectory
-    raise ValueError("Unknown effector name : " + eeName)
 
 
 
@@ -506,6 +483,13 @@ def discretizeSE3CurveToVec(curve,dt):
     return res, timeline
 
 def constantSE3curve(placement, t_min, t_max = None):
+    """
+    Create a constant SE3_curve at the given placement for the given duration
+    :param placement: the placement
+    :param t_min: the initial time
+    :param t_max: final time, if not provided the curve will have a duration of 0
+    :return: the constant curve
+    """
     if t_max is None:
         t_max = t_min
     rot = SO3Linear(placement.rotation, placement.rotation, t_min, t_max)

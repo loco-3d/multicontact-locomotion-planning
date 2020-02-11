@@ -3,7 +3,7 @@ from pinocchio import SE3
 import numpy.linalg
 import numpy as np
 import math
-from mlp.utils.util import stdVecToMatrix, createStateFromPhase, effectorPositionFromHPPPath, discretizeCurve
+from mlp.utils.util import createStateFromPhase, effectorPositionFromHPPPath, discretizeCurve
 import hpp_bezier_com_traj
 import hpp_bezier_com_traj as bezier_com
 from curves import bezier, piecewise_bezier, SE3Curve, piecewise_SE3
