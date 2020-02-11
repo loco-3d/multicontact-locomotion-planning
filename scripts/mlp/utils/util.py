@@ -4,7 +4,6 @@ from numpy.linalg import norm
 import pinocchio
 from pinocchio import SE3, Quaternion, Motion
 from pinocchio.utils import rpyToMatrix, rotate
-import mlp.config as cfg #TODO : remove cfg from here and only take it as argument when required
 from curves import polynomial, SE3Curve, SO3Linear
 import math
 import types
@@ -299,7 +298,7 @@ def computeContactNormal(placement):
 
 
 
-def rootOrientationFromFeetPlacement(phase_prev, phase, phase_next):
+def rootOrientationFromFeetPlacement(Robot, phase_prev, phase, phase_next):
     """
     Compute an initial and final root orientation for the ContactPhase
     The initial orientation is a mean between both feet contact position in the current (or previous) phase
@@ -314,19 +313,19 @@ def rootOrientationFromFeetPlacement(phase_prev, phase, phase_next):
     ql = None
     patchR = None
     patchL = None
-    if phase.isEffectorInContact(cfg.Robot.rfoot):
-        patchR = phase.contactPatch(cfg.Robot.rfoot)
-    elif phase_prev is not None and phase_prev.isEffectorInContact(cfg.Robot.rfoot):
-        patchR = phase_prev.contactPatch(cfg.Robot.rfoot)
+    if phase.isEffectorInContact(Robot.rfoot):
+        patchR = phase.contactPatch(Robot.rfoot)
+    elif phase_prev is not None and phase_prev.isEffectorInContact(Robot.rfoot):
+        patchR = phase_prev.contactPatch(Robot.rfoot)
     if patchR is not None:
         qr = Quaternion(patchR.placement.rotation)
         qr.x = 0
         qr.y = 0
         qr.normalize()
-    if phase.isEffectorInContact(cfg.Robot.lfoot):
-        patchL = phase.contactPatch(cfg.Robot.lfoot)
-    elif phase_prev is not None and phase_prev.isEffectorInContact(cfg.Robot.lfoot):
-        patchL = phase_prev.contactPatch(cfg.Robot.lfoot)
+    if phase.isEffectorInContact(Robot.lfoot):
+        patchL = phase.contactPatch(Robot.lfoot)
+    elif phase_prev is not None and phase_prev.isEffectorInContact(Robot.lfoot):
+        patchL = phase_prev.contactPatch(Robot.lfoot)
     if patchL is not None:
         ql = Quaternion(patchL.placement.rotation)
         ql.x = 0
@@ -345,13 +344,13 @@ def rootOrientationFromFeetPlacement(phase_prev, phase, phase_next):
 
     # compute the final orientation :
     if phase_next:
-        if not phase.isEffectorInContact(cfg.Robot.rfoot) and phase_next.isEffectorInContact(cfg.Robot.rfoot):
-            qr = Quaternion(phase_next.contactPatch(cfg.Robot.rfoot).placement.rotation)
+        if not phase.isEffectorInContact(Robot.rfoot) and phase_next.isEffectorInContact(Robot.rfoot):
+            qr = Quaternion(phase_next.contactPatch(Robot.rfoot).placement.rotation)
             qr.x = 0
             qr.y = 0
             qr.normalize()
-        if not phase.isEffectorInContact(cfg.Robot.lfoot) and phase_next.isEffectorInContact(cfg.Robot.lfoot):
-            ql = Quaternion(phase_next.contactPatch(cfg.Robot.lfoot).placement.rotation)
+        if not phase.isEffectorInContact(Robot.lfoot) and phase_next.isEffectorInContact(Robot.lfoot):
+            ql = Quaternion(phase_next.contactPatch(Robot.lfoot).placement.rotation)
             ql.x = 0
             ql.y = 0
             ql.normalize()

@@ -62,7 +62,7 @@ class Requirements():
         return True
 
     @classmethod
-    def requireRootTrajectories(cls, cs, cfg = None):
+    def requireRootTrajectories(cls, cs, cfg):
         if not cs.haveRootTrajectories():
             print("- Contact sequence do not have consistent root trajectories.")
             cls.requireTimings(cs, cfg)
@@ -71,7 +71,7 @@ class Requirements():
                 cs_tools.computeRootTrajFromConfigurations(cs)
             else:
                 print("Compute it from the contact placements ...")
-                cs_tools.computeRootTrajFromContacts(cs)
+                cs_tools.computeRootTrajFromContacts(cfg.Robot, cs)
             if not cs.haveRootTrajectories():
                 print("An error occurred in during root trajectory computation.")
                 return False

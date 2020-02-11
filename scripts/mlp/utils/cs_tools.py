@@ -472,7 +472,7 @@ def computeRootTrajFromConfigurations(cs):
         phase.root_t = SE3Curve(p_init, p_final, phase.timeInitial, phase.timeFinal)
 
 
-def computeRootTrajFromContacts(cs):
+def computeRootTrajFromContacts(Robot, cs):
     #Quaternion(rootOrientationFromFeetPlacement(phase, None)[0].rotation)
     for pid in range(cs.size()):
         phase = cs.contactPhases[pid]
@@ -485,7 +485,7 @@ def computeRootTrajFromContacts(cs):
         else:
             next_phase = None
 
-        p_init, p_final = rootOrientationFromFeetPlacement(previous_phase, phase, next_phase)
+        p_init, p_final = rootOrientationFromFeetPlacement(Robot, previous_phase, phase, next_phase)
         phase.root_t = SE3Curve(p_init, p_final, phase.timeInitial, phase.timeFinal)
 
 
