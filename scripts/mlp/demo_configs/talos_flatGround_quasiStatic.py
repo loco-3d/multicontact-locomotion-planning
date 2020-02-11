@@ -1,15 +1,14 @@
 TIMEOPT_CONFIG_FILE = "cfg_softConstraints_talos.yaml"
-from .common_talos_fixedUpper import *
+from .common_talos import *
 SCRIPT_PATH = "demos"
 ENV_NAME = "multicontact/ground"
-DEMO_NAME = "talos_flatGround"
 centroidal_method = "quasistatic"
 
 DURATION_INIT = 3.  # Time to init the motion
 DURATION_FINAL = 3.  # Time to stop the robot
 DURATION_FINAL_SS = 1.
-DURATION_SS = 3.
-DURATION_DS = 3.
+DURATION_SS = 2.
+DURATION_DS = 2.
 DURATION_TS = 0.4
 DURATION_CONNECT_GOAL = 1.
 
