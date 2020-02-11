@@ -4,7 +4,6 @@ from multicontact_api import ContactSequence, ContactPatch
 import mlp.viewer.display_tools as display_tools
 from pinocchio import SE3
 from numpy import array
-import mlp.config as cfg
 
 from talos_rbprm.talos import Robot  # change robot here
 multicontact_api.switchToNumpyArray()
@@ -94,7 +93,7 @@ display_tools.displaySteppingStones(cs, gui, sceneName, fb)
 print("Number of contact phases : ", cs.size())
 
 # serialize the contact sequence:
-DEMO_NAME = "talos_flatGround"
-filename = cfg.CONTACT_SEQUENCE_PATH + "/" + DEMO_NAME + ".cs"
+filename = "talos_flatGround.cs"
 print("Write contact sequence binary file : ", filename)
 cs.saveAsBinary(filename)
+
