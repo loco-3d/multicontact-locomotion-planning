@@ -347,7 +347,7 @@ def plotALLFromWB(cs_ref, cs ,cfg):
         plotKneeTorque(cs, dt, cfg.Robot.kneeIds, offset)
     if cs.haveContactForcesTrajectories():
         plotContactForces(cs, dt)
-    if cs.haveEffectorsTrajectories(1e-3):
+    if cs.haveEffectorsTrajectories(1e-1):
         plotEffectorTrajectoryWithReference(cs_ref, cs, dt)
         plotEffectorError(cs_ref, cs, dt)
     else:
