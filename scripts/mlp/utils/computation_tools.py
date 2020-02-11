@@ -34,7 +34,7 @@ def computeFloorAltitude(cs, t, Robot):
                     LF_moved = True
                 else:
                     assert "Must never happened"
-            else:  #look for the inactive contact in the next phase and assume cyclic gait for the last couple of phases
+            elif id_phase < cs.size()-1:  #look for the inactive contact in the next phase and assume cyclic gait for the last couple of phases
                 pnext = cs.contactPhases[id_phase + 1]
                 if not pnext.isEffectorInContact(Robot.rfoot):
                     LF_moved = True
@@ -42,6 +42,8 @@ def computeFloorAltitude(cs, t, Robot):
                     LF_moved = False
                 else:
                     assert "Must never happened"
+            else:
+                LF_moved = False
             # linear interp of the altitude (from the feet which are going to move to the one that stay)
             if LF_moved:
                 p0 = Mrf.translation[2]

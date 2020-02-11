@@ -34,27 +34,28 @@ def plotEffectorTrajectoryWithReference(cs_ref, cs, dt):
 
     for eeName in cs.getAllEffectorsInContact():
         traj = cs.concatenateEffectorTrajectories(eeName)
-        pos, timeline = discretizeSE3CurveTranslation(traj, dt)
-        vel = discretizeDerivateCurve(traj, dt, 1)[0][:3, :]
-        acc = discretizeDerivateCurve(traj, dt, 2)[0][:3, :]
-        values = np.vstack([pos, vel, acc])
-        traj_ref = cs_ref.concatenateEffectorTrajectories(eeName)
-        pos_ref = discretizeSE3CurveTranslation(traj_ref, dt)[0]
-        vel_ref = discretizeDerivateCurve(traj_ref, dt, 1)[0][:3, :]
-        acc_ref = discretizeDerivateCurve(traj_ref, dt, 2)[0][:3, :]
-        values_ref = np.vstack([pos_ref, vel_ref, acc_ref])
-        fig, ax = plt.subplots(3, 3)
-        fig.canvas.set_window_title("Trajectory for effector " + eeName + " (dashed = reference)")
-        fig.suptitle("Trajectory for effector " + eeName + " (dashed = reference)", fontsize=20)
-        for i in range(3):  # line = pos,vel,acc
-            for j in range(3):  # col = x,y,z
-                ax_sub = ax[i, j]
-                ax_sub.plot(timeline.T, values[i * 3 + j, :].T, color=colors[j])
-                ax_sub.plot(timeline.T, values_ref[i * 3 + j, :].T, color=colors[j], linestyle=":")
-                ax_sub.set_xlabel('time (s)')
-                ax_sub.set_ylabel(labels[i * 3 + j])
-                addVerticalLineContactSwitch(cs, ax_sub)
-                ax_sub.grid(False)
+        if traj.num_curves() > 0:
+            pos, timeline = discretizeSE3CurveTranslation(traj, dt)
+            vel = discretizeDerivateCurve(traj, dt, 1)[0][:3, :]
+            acc = discretizeDerivateCurve(traj, dt, 2)[0][:3, :]
+            values = np.vstack([pos, vel, acc])
+            traj_ref = cs_ref.concatenateEffectorTrajectories(eeName)
+            pos_ref = discretizeSE3CurveTranslation(traj_ref, dt)[0]
+            vel_ref = discretizeDerivateCurve(traj_ref, dt, 1)[0][:3, :]
+            acc_ref = discretizeDerivateCurve(traj_ref, dt, 2)[0][:3, :]
+            values_ref = np.vstack([pos_ref, vel_ref, acc_ref])
+            fig, ax = plt.subplots(3, 3)
+            fig.canvas.set_window_title("Trajectory for effector " + eeName + " (dashed = reference)")
+            fig.suptitle("Trajectory for effector " + eeName + " (dashed = reference)", fontsize=20)
+            for i in range(3):  # line = pos,vel,acc
+                for j in range(3):  # col = x,y,z
+                    ax_sub = ax[i, j]
+                    ax_sub.plot(timeline.T, values[i * 3 + j, :].T, color=colors[j])
+                    ax_sub.plot(timeline.T, values_ref[i * 3 + j, :].T, color=colors[j], linestyle=":")
+                    ax_sub.set_xlabel('time (s)')
+                    ax_sub.set_ylabel(labels[i * 3 + j])
+                    addVerticalLineContactSwitch(cs, ax_sub)
+                    ax_sub.grid(False)
     plt.show(block=False)
 
 
