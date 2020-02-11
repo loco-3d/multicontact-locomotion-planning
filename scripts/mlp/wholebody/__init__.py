@@ -4,7 +4,7 @@ import mlp.config as cfg
 method = cfg.wholebody_method
 
 if method == "load":
-    from .fromNPZfile import generateWholeBodyMotion, Inputs, Outputs
+    from .fromCSWBfile import generateWholeBodyMotion, Inputs, Outputs
 elif method == "tsid":
     from .tsid_invdyn import generateWholeBodyMotion, Inputs, Outputs
 elif method == "croccodyl":

@@ -1,8 +1,14 @@
 import mlp.config as cfg
 from rospkg import RosPack
-from mlp.utils import wholebody_result
+from multicontact_api import ContactSequence
+from mlp.utils.requirements import Requirements as Inputs
 import pinocchio as pin
 
+class Outputs(Inputs):
+    consistentContacts = True
+    timings = True
+    configurationValues = True
+    jointsTrajectories = True
 
 def generateWholeBodyMotion(cs, fullBody=None, viewer=None):
     rp = RosPack()
@@ -12,7 +18,7 @@ def generateWholeBodyMotion(cs, fullBody=None, viewer=None):
     robot = pin.RobotWrapper.BuildFromURDF(urdf, pin.StdVec_StdString(), pin.JointModelFreeFlyer(), False)
     if cfg.WB_VERBOSE:
         print("robot loaded.")
-    filename = cfg.EXPORT_PATH + "/npz/" + cfg.DEMO_NAME + ".npz"
-    print("Load npz file : ", filename)
-    res = wholebody_result.loadFromNPZ(filename)
-    return res, robot
+    cs_wb = ContactSequence()
+    print("Load wholebody contact sequence from  file : ", cfg.WB_FILENAME)
+    cs_wb.loadFromBinary(cfg.WB_FILENAME)
+    return cs_wb, robot

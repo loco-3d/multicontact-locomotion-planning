@@ -4,7 +4,7 @@ import os
 contact_generation_method_available = ["none", "load", "rbprm", "sl1m"]
 centroidal_initGuess_method_available = ["none", "geometric", "croc", "timeopt", "quasistatic"]
 centroidal_method_available = ["load", "geometric", "croc", "timeopt", "quasistatic", "muscod", "none"]
-end_effector_initGuess_method_available = ["none","load","smoothedFoot", "bezierPredef"]
+end_effector_initGuess_method_available = ["load","smoothedFoot", "bezierPredef"]
 end_effector_method_available = ["limbRRT", "limbRRToptimized"]
 wholebody_method_available = ["load", "tsid", "croccodyl", "none"]
 
@@ -144,6 +144,11 @@ if not (end_effector_initGuess_method in end_effector_initGuess_method_available
 if contact_generation_method == "none" and centroidal_method != "load":
     raise ValueError("Cannot skip contact_generation phase if centroidal trajectory is not loaded from file")
 
+CS_FILENAME = CONTACT_SEQUENCE_PATH + "/" + DEMO_NAME + ".cs"
+COM_FILENAME = CONTACT_SEQUENCE_PATH + "/" + DEMO_NAME + "_COM.cs"
+REF_FILENAME = CONTACT_SEQUENCE_PATH + "/" + DEMO_NAME + "_REF.cs"
+WB_FILENAME = CONTACT_SEQUENCE_PATH + "/" + DEMO_NAME + "_WB.cs"
+
 
 # skip useless ethod when loading motion from file:
 if contact_generation_method == "load":
@@ -153,6 +158,7 @@ if centroidal_method == "load":
     centroidal_initGuess_method = "none"
     SAVE_CS = False
     SAVE_CS_COM = False
+    CS_FILENAME = COM_FILENAME
 if end_effector_initGuess_method == "load":
     contact_generation_method = "load"
     centroidal_initGuess_method = "none"
@@ -160,14 +166,21 @@ if end_effector_initGuess_method == "load":
     SAVE_CS = False
     SAVE_CS_COM = False
     SAVE_CS_REF = False
+    CS_FILENAME = REF_FILENAME
+    COM_FILENAME = REF_FILENAME
 if wholebody_method == "load":
     contact_generation_method = "load"
     centroidal_initGuess_method = "none"
     centroidal_method = "load"
+    end_effector_initGuess_method = "load"
     SAVE_CS = False
     SAVE_CS_COM = False
     SAVE_CS_WB = False
     EXPORT_NPZ = False
+    if not os.path.isfile(REF_FILENAME):
+        REF_FILENAME = WB_FILENAME
+    CS_FILENAME = REF_FILENAME
+    COM_FILENAME = REF_FILENAME
 
 if centroidal_method == "none":
     wholebody_method = "none"

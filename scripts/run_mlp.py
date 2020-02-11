@@ -35,7 +35,7 @@ if cfg.DISPLAY_CS:
 if cfg.SAVE_CS:
     if not os.path.exists(cfg.CONTACT_SEQUENCE_PATH):
         os.makedirs(cfg.CONTACT_SEQUENCE_PATH)
-    filename = cfg.CONTACT_SEQUENCE_PATH + "/" + cfg.DEMO_NAME + ".cs"
+    filename = cfg.CS_FILENAME
     print("Write contact sequence binary file : ", filename)
     cs.saveAsBinary(filename)
 
@@ -68,7 +68,7 @@ if cfg.WRITE_STATUS:
 if cfg.SAVE_CS_COM:
     if not os.path.exists(cfg.CONTACT_SEQUENCE_PATH):
         os.makedirs(cfg.CONTACT_SEQUENCE_PATH)
-    filename = cfg.CONTACT_SEQUENCE_PATH + "/" + cfg.DEMO_NAME + "_COM.cs"
+    filename = cfg.COM_FILENAME
     print("Write contact sequence binary file with centroidal trajectory : ", filename)
     cs_com.saveAsBinary(filename)
 if cfg.DISPLAY_COM_TRAJ:
@@ -92,7 +92,7 @@ effectorsInitGuess.Outputs.assertRequirements(cs_ref)
 if cfg.SAVE_CS_REF:
     if not os.path.exists(cfg.CONTACT_SEQUENCE_PATH):
         os.makedirs(cfg.CONTACT_SEQUENCE_PATH)
-    filename = cfg.CONTACT_SEQUENCE_PATH + "/" + cfg.DEMO_NAME + "_REF.cs"
+    filename = cfg.REF_FILENAME
     print("Write contact sequence binary file with centroidal and end effector trajectories: ", filename)
     cs_ref.saveAsBinary(filename)
 
@@ -112,14 +112,14 @@ wholeBody.Outputs.assertRequirements(cs_wb)
 if cfg.SAVE_CS_REF:
     if not os.path.exists(cfg.CONTACT_SEQUENCE_PATH):
         os.makedirs(cfg.CONTACT_SEQUENCE_PATH)
-    filename = cfg.CONTACT_SEQUENCE_PATH + "/" + cfg.DEMO_NAME + "_REF.cs"
+    filename = cfg.REF_FILENAME
     print("Write contact sequence binary file with centroidal and end effector trajectories: ", filename)
     cs_ref.saveAsBinary(filename)
 
 if cfg.SAVE_CS_WB:
     if not os.path.exists(cfg.CONTACT_SEQUENCE_PATH):
         os.makedirs(cfg.CONTACT_SEQUENCE_PATH)
-    filename = cfg.CONTACT_SEQUENCE_PATH + "/" + cfg.DEMO_NAME + "_WB.cs"
+    filename = cfg.WB_FILENAME
     print("Write contact sequence binary file with wholebody trajectories: ", filename)
     cs_wb.saveAsBinary(filename)
 

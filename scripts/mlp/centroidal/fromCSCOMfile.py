@@ -14,7 +14,6 @@ class Outputs(Inputs):
 
 def generateCentroidalTrajectory(cs, cs_initGuess=None, fullBody=None, viewer=None):
     cs_res = ContactSequence(0)
-    filename = cfg.CONTACT_SEQUENCE_PATH + "/" + cfg.DEMO_NAME + "_COM.cs"
-    cs_res.loadFromBinary(filename)
-    print("Import contact sequence binary file : ", filename)
+    cs_res.loadFromBinary(cfg.COM_FILENAME)
+    print("Import contact sequence binary file : ", cfg.COM_FILENAME)
     return cs_res

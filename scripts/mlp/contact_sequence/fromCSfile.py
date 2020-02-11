@@ -11,8 +11,7 @@ class Outputs(Requirements):
 def generateContactSequence():
     fb, v = display_tools.initScene(cfg.Robot, cfg.ENV_NAME)
     cs = ContactSequence(0)
-    filename = cfg.CONTACT_SEQUENCE_PATH + "/" + cfg.DEMO_NAME + ".cs"
-    print("Import contact sequence binary file : ", filename)
-    cs.loadFromBinary(filename)
+    print("Import contact sequence binary file : ", cfg.CS_FILENAME)
+    cs.loadFromBinary(cfg.CS_FILENAME)
     display_tools.displayWBconfig(v, cs.contactPhases[0].q_init)
     return cs, fb, v
