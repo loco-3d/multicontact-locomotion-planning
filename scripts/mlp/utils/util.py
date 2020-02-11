@@ -133,20 +133,6 @@ def rotateFromRPY(placement, rpy):
     return placement.act(trans)
 
 
-# get the joint position for the given phase with the given effector name
-# Note that if the effector is not in contact the phase placement may be uninitialized (==Identity)
-def JointPatchForEffector(phase, eeName, Robot=None):
-    if not Robot:
-        Robot = cfg.Robot
-    patch = phase.contactPatch(eeName)
-    patch.placement = patch.placement.act(Robot.dict_offset[eeName].inverse())
-    return patch
-
-
-def JointPlacementForEffector(phase, eeName, Robot=None):
-    return JointPatchForEffector(phase, eeName, Robot).placement
-
-
 
 
 def effectorPositionFromHPPPath(fb, problem, eeName, pid, t):
@@ -321,13 +307,6 @@ def computeContactNormal(placement):
 def computeContactNormalForPhase(phase, eeName):
     return computeContactNormal(getContactPlacement(phase, eeName))
 
-
-def effectorStatePositionFromWB(Robot, wb_result, id, eeName):
-    placement = SE3FromVec(wb_result.effector_references[eeName][:, id])
-    pos = placement.act(Robot.dict_offset[eeName]).translation
-    vel = wb_result.d_effector_references[eeName][0:3, id]
-    acc = wb_result.dd_effector_references[eeName][0:3, id]
-    return np.vstack([pos, vel, acc])
 
 
 def getPhaseEffTrajectoryByName(phase, eeName, Robot):

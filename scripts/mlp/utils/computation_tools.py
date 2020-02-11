@@ -1,7 +1,6 @@
 import numpy as np
 import pinocchio as pin
 from pinocchio import SE3, Motion, Force
-from mlp.utils.util import JointPlacementForEffector
 from curves import piecewise, polynomial
 from rospkg import RosPack
 from pinocchio.robot_wrapper import RobotWrapper
@@ -15,17 +14,13 @@ def pacthSameAltitude(M1, M2, eps=1e-3):
 #Only consider the feet :
 # - if only one feet in contact, return it's z coordinate
 # - if both feet in contact, make a linear interp between both feet altitude wrt to which feet will move next
-def computeFloorAltitude(cs, t, Robot, useJointLevel=False):
+def computeFloorAltitude(cs, t, Robot):
     id_phase = cs.phaseIdAtTime(t)
     phase = cs.contactPhases[id_phase]
 
     if phase.isEffectorInContact(Robot.rfoot) and phase.isEffectorInContact(Robot.lfoot):
-        if useJointLevel:
-            Mrf = JointPlacementForEffector(phase, Robot.rfoot)
-            Mlf = JointPlacementForEffector(phase, Robot.lfoot)
-        else:
-            Mrf = phase.contactPatch(Robot.rfoot).placement
-            Mlf = phase.contactPatch(Robot.lfoot).placement
+        Mrf = phase.contactPatch(Robot.rfoot).placement
+        Mlf = phase.contactPatch(Robot.lfoot).placement
         if pacthSameAltitude(Mrf, Mlf):
             floor_altitude = 0.5 * (Mrf.translation + Mlf.translation)[2]
         else:
@@ -62,27 +57,21 @@ def computeFloorAltitude(cs, t, Robot, useJointLevel=False):
             floor_altitude = p0 + s * (p1 - p0)
             pass
     elif phase.isEffectorInContact(Robot.rfoot):
-        if useJointLevel:
-            Mrf = JointPlacementForEffector(phase, Robot.rfoot)
-        else:
-            Mrf = phase.contactPatch(Robot.rfoot).placement
+        Mrf = phase.contactPatch(Robot.rfoot).placement
         floor_altitude = Mrf.translation[2]
 
     elif phase.isEffectorInContact(Robot.lfoot):
-        if useJointLevel:
-            Mlf = JointPlacementForEffector(phase, Robot.lfoot)
-        else:
-            Mlf = phase.contactPatch(Robot.lfoot).placement
+        Mlf = phase.contactPatch(Robot.lfoot).placement
         floor_altitude = Mlf.translation[2]
     else:
         assert "Must never happened"
     return floor_altitude
 
 
-def shiftZMPtoFloorAltitude(cs, t, phi0, Robot, useJointLevel=False):
+def shiftZMPtoFloorAltitude(cs, t, phi0, Robot):
     Mshift = SE3.Identity()
     shift = Mshift.translation
-    floor_altitude = computeFloorAltitude(cs, t, Robot, useJointLevel)
+    floor_altitude = computeFloorAltitude(cs, t, Robot)
     shift[2] = floor_altitude
     Mshift.translation = shift
     #print "phi0",phi0

@@ -257,8 +257,7 @@ def generateLimbRRTOptimizedTraj(time_interval,
             from hpp.gepetto import PathPlayer
             pp = PathPlayer(viewer)
             pp.displayPath(current_limbRRT_id,
-                           jointName=fullBody.getLinkNames(eeName)[0],
-                           offset=cfg.Robot.dict_offset[eeName].translation.tolist())
+                           jointName=fullBody.getLinkNames(eeName)[0])
 
     # find weight and number of variable to use from the numTry :
     for offset in reversed(recompute_rrt_at_tries):

@@ -2,7 +2,7 @@ import multicontact_api
 from multicontact_api import ContactSequence, ContactPhase, ContactPatch
 from curves import piecewise, polynomial, SE3Curve
 from pinocchio import SE3, Quaternion
-from mlp.utils.util import SE3FromConfig,  computeContactNormal, JointPlacementForEffector, rootOrientationFromFeetPlacement
+from mlp.utils.util import SE3FromConfig,  computeContactNormal, rootOrientationFromFeetPlacement
 from mlp.utils.util import computeEffectorTranslationBetweenStates, computeEffectorRotationBetweenStates
 import numpy as np
 import types
@@ -28,7 +28,7 @@ def createPhaseFromConfig(fb, q, limbsInContact, t_init = -1):
     for limb in limbsInContact:
         eeName = fb.dict_limb_joint[limb]
         q_j = fb.getJointPosition(eeName)
-        placement = SE3FromConfig(q_j).act(fb.dict_offset[eeName])
+        placement = SE3FromConfig(q_j)
         patch = ContactPatch(placement)  # TODO set friction / other parameters here
         phase.addContact(eeName, patch)
     return phase
@@ -96,7 +96,7 @@ def generateConfigFromPhase(fb, phase, projectCOM=False):
     for limbId in contacts:
         eeName = fb.dict_limb_joint[limbId]
         placement_fb = SE3FromConfig(fb.getJointPosition(eeName))
-        placement_phase = JointPlacementForEffector(phase, eeName, fb)
+        placement_phase = phase.contactPatch(eeName).placement
         if placement_fb != placement_phase:  # add a threshold instead of 0 ? how ?
             # need to project the new contact :
             placement = phase.contactPatch(eeName).placement
