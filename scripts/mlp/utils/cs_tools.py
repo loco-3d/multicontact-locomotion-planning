@@ -578,3 +578,13 @@ def setAllUninitializedFrictionCoef(cs, mu):
         for eeName in phase.effectorsInContact():
             if phase.contactPatch(eeName).friction <= 0 :
                 phase.contactPatch(eeName).friction = mu
+
+def generateZeroAMreference(cs):
+    """
+    For all phases in the sequence, set an L_t and dL_t trajectory constant at 0 with the right duration
+    :param cs:
+    :return:
+    """
+    for phase in cs.contactPhases:
+        phase.L_t = polynomial(np.zeros(3), np.zeros(3), phase.timeInitial, phase.timeFinal)
+        phase.dL_t = polynomial(np.zeros(3), np.zeros(3), phase.timeInitial, phase.timeFinal)
