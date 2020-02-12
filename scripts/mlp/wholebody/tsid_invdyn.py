@@ -425,32 +425,44 @@ def generateWholeBodyMotion(cs_ref, cfg, fullBody=None, viewer=None):
     ### Initialize all task used  ###
     if cfg.WB_VERBOSE:
         print("initialize tasks : ")
-    comTask = tsid.TaskComEquality("task-com", robot)
-    comTask.setKp(cfg.kp_com * np.ones(3))
-    comTask.setKd(2.0 * np.sqrt(cfg.kp_com) * np.ones(3))
-    invdyn.addMotionTask(comTask, cfg.w_com, cfg.level_com, 0.0)
+    if cfg.w_com > 0. :
+        comTask = tsid.TaskComEquality("task-com", robot)
+        comTask.setKp(cfg.kp_com * np.ones(3))
+        comTask.setKd(2.0 * np.sqrt(cfg.kp_com) * np.ones(3))
+        invdyn.addMotionTask(comTask, cfg.w_com, cfg.level_com, 0.0)
+    else:
+        comTask = None
 
-    amTask = tsid.TaskAMEquality("task-am", robot)
-    amTask.setKp(cfg.kp_am * np.array([1., 1., 0.]))
-    amTask.setKd(2.0 * np.sqrt(cfg.kp_am * np.array([1., 1., 0.])))
-    invdyn.addTask(amTask, cfg.w_am, cfg.level_am)
+    if cfg.w_am > 0.:
+        amTask = tsid.TaskAMEquality("task-am", robot)
+        amTask.setKp(cfg.kp_am * np.array([1., 1., 0.]))
+        amTask.setKd(2.0 * np.sqrt(cfg.kp_am * np.array([1., 1., 0.])))
+        invdyn.addTask(amTask, cfg.w_am, cfg.level_am)
+    else:
+        amTask = None
 
-    postureTask = tsid.TaskJointPosture("task-joint-posture", robot)
-    postureTask.setKp(cfg.kp_posture * cfg.gain_vector)
-    postureTask.setKd(2.0 * np.sqrt(cfg.kp_posture * cfg.gain_vector))
-    postureTask.mask(cfg.masks_posture)
-    invdyn.addMotionTask(postureTask, cfg.w_posture, cfg.level_posture, 0.0)
-    q_ref = cfg.IK_REFERENCE_CONFIG
-    samplePosture = tsid.TrajectorySample(q_ref.shape[0] - 7)
-    samplePosture.pos(q_ref[7:]) # -7 because we remove the freeflyer part
+    if cfg.w_posture > 0.:
+        postureTask = tsid.TaskJointPosture("task-joint-posture", robot)
+        postureTask.setKp(cfg.kp_posture * cfg.gain_vector)
+        postureTask.setKd(2.0 * np.sqrt(cfg.kp_posture * cfg.gain_vector))
+        postureTask.mask(cfg.masks_posture)
+        invdyn.addMotionTask(postureTask, cfg.w_posture, cfg.level_posture, 0.0)
+        q_ref = cfg.IK_REFERENCE_CONFIG
+        samplePosture = tsid.TrajectorySample(q_ref.shape[0] - 7)
+        samplePosture.pos(q_ref[7:]) # -7 because we remove the freeflyer part
+    else :
+        postureTask = None
 
-    orientationRootTask = tsid.TaskSE3Equality("task-orientation-root", robot, 'root_joint')
-    mask = np.ones(6)
-    mask[0:3] = 0
-    mask[5] = cfg.YAW_ROT_GAIN
-    orientationRootTask.setKp(cfg.kp_rootOrientation * mask)
-    orientationRootTask.setKd(2.0 * np.sqrt(cfg.kp_rootOrientation * mask))
-    invdyn.addMotionTask(orientationRootTask, cfg.w_rootOrientation, cfg.level_rootOrientation, 0.0)
+    if cfg.w_rootOrientation > 0. :
+        orientationRootTask = tsid.TaskSE3Equality("task-orientation-root", robot, 'root_joint')
+        mask = np.ones(6)
+        mask[0:3] = 0
+        mask[5] = cfg.YAW_ROT_GAIN
+        orientationRootTask.setKp(cfg.kp_rootOrientation * mask)
+        orientationRootTask.setKd(2.0 * np.sqrt(cfg.kp_rootOrientation * mask))
+        invdyn.addMotionTask(orientationRootTask, cfg.w_rootOrientation, cfg.level_rootOrientation, 0.0)
+    else:
+        orientationRootTask = None
 
     # init effector task objects :
     usedEffectors = cs.getAllEffectorsInContact()
@@ -561,20 +573,24 @@ def generateWholeBodyMotion(cs_ref, cfg, fullBody=None, viewer=None):
 
                 # set traj reference for current time :
                 # com
-                sampleCom = curvesToTSID(com_traj,t)
-                comTask.setReference(sampleCom)
+                if comTask is not None:
+                    sampleCom = curvesToTSID(com_traj,t)
+                    comTask.setReference(sampleCom)
 
                 # am
-                sampleAM =  curvesToTSID(am_traj,t)
-                amTask.setReference(sampleAM)
+                if amTask is not None:
+                    sampleAM =  curvesToTSID(am_traj,t)
+                    amTask.setReference(sampleAM)
 
                 # posture
                 #print "postural task ref : ",samplePosture.pos()
-                postureTask.setReference(samplePosture)
+                if postureTask is not None:
+                    postureTask.setReference(samplePosture)
 
                 # root orientation :
-                sampleRoot = curveSE3toTSID(root_traj,t)
-                orientationRootTask.setReference(sampleRoot)
+                if orientationRootTask is not None:
+                    sampleRoot = curveSE3toTSID(root_traj,t)
+                    orientationRootTask.setReference(sampleRoot)
 
                 if cfg.WB_VERBOSE == 2:
                     print("### references given : ###")
