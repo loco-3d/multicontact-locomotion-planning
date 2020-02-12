@@ -106,7 +106,7 @@ print("### MLP : whole-body  ###")
 import mlp.wholebody as wholeBody
 if not wholeBody.Inputs.checkAndFillRequirements(cs_ref,cfg,fullBody):
     raise RuntimeError("The current contact sequence cannot be given as input to the wholeBody method selected.")
-cs_wb, robot = wholeBody.generateWholeBodyMotion(cs_ref, fullBody, viewer)
+cs_wb, robot = wholeBody.generateWholeBodyMotion(cs_ref,cfg, fullBody, viewer)
 wholeBody.Outputs.assertRequirements(cs_wb)
 
 if cfg.SAVE_CS_REF:

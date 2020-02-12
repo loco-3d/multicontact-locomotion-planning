@@ -6,7 +6,6 @@ from numpy.linalg import norm as norm
 import os
 from rospkg import RosPack
 import time
-import mlp.config as cfg
 import multicontact_api
 from multicontact_api import ContactPhase, ContactSequence
 from curves import SE3Curve, piecewise, piecewise_SE3, polynomial
@@ -20,36 +19,8 @@ from mlp.utils.cs_tools import deleteAllTrajectories, deletePhaseWBtrajectories,
 from mlp.utils.requirements import Requirements
 eigenpy.switchToNumpyArray()
 
-class Inputs(Requirements):
-    consistentContacts = True
-    friction = True
-    timings = True
-    centroidalTrajectories = True
-    effectorTrajectories = True
-    rootTrajectories = True
 
-class Outputs(Requirements):
-    consistentContacts = True
-    timings = True
-    jointsTrajectories = True
-    if cfg.IK_store_joints_derivatives:
-        jointsDerivativesTrajectories = True
-    if cfg.IK_store_joints_torque:
-        torqueTrajectories = True
-    if cfg.IK_store_centroidal:
-        centroidalTrajectories = True
-    if cfg.IK_store_effector:
-        effectorTrajectories = True
-    if cfg.IK_store_contact_forces:
-        contactForcesTrajectories = False
-    if cfg.IK_store_zmp:
-        ZMPtrajectories = True
-
-
-
-def buildRectangularContactPoints(eeName):
-    size = cfg.IK_eff_size[eeName]
-    transform = cfg.Robot.dict_offset[eeName]
+def buildRectangularContactPoints(size, transform):
     # build matrices with corners of the feet
     lxp = size[0] / 2. + transform.translation[0]  # foot length in positive x direction
     lxn = size[0] / 2. - transform.translation[0]  # foot length in negative x direction
@@ -90,7 +61,7 @@ def getCurrentEffectorAcceleration(robot, data, eeName):
         return robot.frameAcceleration(data, id)
 
 
-def createContactForEffector(invdyn, robot, eeName, patch):
+def createContactForEffector(cfg, invdyn, robot, eeName, patch):
     """
     Add a contact task in invdyn for the given effector, at it's current placement
     :param invdyn:
@@ -106,7 +77,7 @@ def createContactForEffector(invdyn, robot, eeName, patch):
         mask = np.ones(3)
         contact.useLocalFrame(False)
     else:
-        contact_Points = buildRectangularContactPoints(eeName)
+        contact_Points = buildRectangularContactPoints(cfg.IK_eff_size[eeName],cfg.Robot.dict_offset[eeName] )
         contact = tsid.Contact6d("contact_" + eeName, robot, eeName, contact_Points, contactNormal, patch.friction, cfg.fMin,
                                  cfg.fMax)
         mask = np.ones(6)
@@ -126,7 +97,7 @@ def createContactForEffector(invdyn, robot, eeName, patch):
     return contact
 
 
-def createEffectorTasksDic(effectorsNames, robot):
+def createEffectorTasksDic(cfg, effectorsNames, robot):
     """
     Build a dic with keys = effector names, value = Effector tasks objects
     :param effectorsNames:
@@ -189,15 +160,12 @@ def adjustEndEffectorTrajectoryIfNeeded(phase, robot, data, eeName):
     current_placement = getCurrentEffectorPosition(robot, data, eeName)
     ref_placement = phase.effectorTrajectory(eeName).evaluateAsSE3(phase.timeInitial)
     if not current_placement.isApprox(ref_placement, 1e-4):
-        if cfg.WB_VERBOSE:
-            print("End effector trajectory need to be adjusted")
-
-    placement_end = phase.effectorTrajectory(eeName).evaluateAsSE3(phase.timeFinal)
-    ref_traj = generateEndEffectorTraj([phase.timeInitial, phase.timeFinal], current_placement, placement_end, 0)
-    phase.addEffectorTrajectory(eeName, ref_traj)
+        placement_end = phase.effectorTrajectory(eeName).evaluateAsSE3(phase.timeFinal)
+        ref_traj = generateEndEffectorTraj([phase.timeInitial, phase.timeFinal], current_placement, placement_end, 0)
+        phase.addEffectorTrajectory(eeName, ref_traj)
 
 
-def generateWholeBodyMotion(cs_ref, fullBody=None, viewer=None):
+def generateWholeBodyMotion(cs_ref, cfg, fullBody=None, viewer=None):
     """
     Generate the whole body motion corresponding to the given contactSequence
     :param cs: Contact sequence containing the references,
@@ -447,7 +415,7 @@ def generateWholeBodyMotion(cs_ref, fullBody=None, viewer=None):
         # replace the initial contact patch placements if needed to match exactly the current position in the problem:
         updateContactPlacement(cs, 0, eeName, getCurrentEffectorPosition(robot, invdyn.data(), eeName))
         # create the contacts :
-        contact = createContactForEffector(invdyn, robot, eeName, phase0.contactPatch(eeName))
+        contact = createContactForEffector(cfg, invdyn, robot, eeName, phase0.contactPatch(eeName))
         dic_contacts.update({eeName: contact})
 
     if cfg.EFF_CHECK_COLLISION:  # initialise object needed to check the motion
@@ -486,7 +454,7 @@ def generateWholeBodyMotion(cs_ref, fullBody=None, viewer=None):
 
     # init effector task objects :
     usedEffectors = cs.getAllEffectorsInContact()
-    dic_effectors_tasks = createEffectorTasksDic(usedEffectors, robot)
+    dic_effectors_tasks = createEffectorTasksDic(cfg, usedEffectors, robot)
 
 
     solver = tsid.SolverHQuadProg("qp solver")
@@ -560,7 +528,7 @@ def generateWholeBodyMotion(cs_ref, fullBody=None, viewer=None):
                 invdyn.removeTask(dic_effectors_tasks[eeName].name, 0.0)  # remove pin task for this contact
                 if cfg.WB_VERBOSE:
                     print("remove se3 effector task : " + dic_effectors_tasks[eeName].name)
-                contact = createContactForEffector(invdyn, robot, eeName, phase.contactPatch(eeName))
+                contact = createContactForEffector(cfg, invdyn, robot, eeName, phase.contactPatch(eeName))
                 dic_contacts.update({eeName: contact})
                 if cfg.WB_VERBOSE:
                     print("Create contact for : " + eeName)

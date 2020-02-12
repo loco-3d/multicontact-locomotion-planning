@@ -1,4 +1,3 @@
-import mlp.config as cfg
 from rospkg import RosPack
 from multicontact_api import ContactSequence
 from mlp.utils.requirements import Requirements as Inputs
@@ -10,7 +9,7 @@ class Outputs(Inputs):
     configurationValues = True
     jointsTrajectories = True
 
-def generateWholeBodyMotion(cs, fullBody=None, viewer=None):
+def generateWholeBodyMotion(cs, cfg, fullBody=None, viewer=None):
     rp = RosPack()
     urdf = rp.get_path(cfg.Robot.packageName) + '/urdf/' + cfg.Robot.urdfName + cfg.Robot.urdfSuffix + '.urdf'
     if cfg.WB_VERBOSE:
