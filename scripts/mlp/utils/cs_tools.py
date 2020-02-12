@@ -440,7 +440,7 @@ def connectPhaseTrajToInitialState(phase, duration):
     c_final = phase.c_t(t_final)
     dc_final = phase.dc_t(t_final)
     ddc_final = phase.ddc_t(t_final)
-    L_final = phase.c_t(t_final)
+    L_final = phase.L_t(t_final)
     dL_final = phase.dL_t(t_final)
     com_t = polynomial( phase.c_init, phase.dc_init, phase.ddc_init,c_final, dc_final, ddc_final, t_init, t_final)
     L_t = polynomial(phase.L_init, phase.dL_init, L_final, dL_final, t_init, t_final)
