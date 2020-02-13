@@ -151,7 +151,7 @@ def adjustEndEffectorTrajectoryIfNeeded(phase, robot, data, eeName):
     """
     Check that the reference trajectory correctly start close enough to the current effector position
     and adjust it if required to start at the current position
-    :param phase_ref:
+    :param phase:
     :param robot:
     :param data:
     :param eeName:
@@ -159,7 +159,8 @@ def adjustEndEffectorTrajectoryIfNeeded(phase, robot, data, eeName):
     """
     current_placement = getCurrentEffectorPosition(robot, data, eeName)
     ref_placement = phase.effectorTrajectory(eeName).evaluateAsSE3(phase.timeInitial)
-    if not current_placement.isApprox(ref_placement, 1e-4):
+    if not current_placement.isApprox(ref_placement, 1e-9):
+        print("- End effector trajectory need to be adjusted.")
         placement_end = phase.effectorTrajectory(eeName).evaluateAsSE3(phase.timeFinal)
         ref_traj = generateEndEffectorTraj([phase.timeInitial, phase.timeFinal], current_placement, placement_end, 0)
         phase.addEffectorTrajectory(eeName, ref_traj)
@@ -518,8 +519,8 @@ def generateWholeBodyMotion(cs_ref, cfg, fullBody=None, viewer=None):
                 if cfg.WB_VERBOSE:
                     print("add se3 task for " + eeName)
                 task = dic_effectors_tasks[eeName]
-                invdyn.addMotionTask(task, cfg.w_eff, cfg.level_eff, 0.0)
-                adjustEndEffectorTrajectoryIfNeeded(phase, robot, invdyn.data(), eeName)
+                invdyn.addMotionTask(task, cfg.w_eff, cfg.level_eff, 0.)
+                adjustEndEffectorTrajectoryIfNeeded(phase_ref, robot, invdyn.data(), eeName)
                 if cfg.WB_VERBOSE:
                     print("t interval : ", time_interval)
 
@@ -540,6 +541,7 @@ def generateWholeBodyMotion(cs_ref, cfg, fullBody=None, viewer=None):
                 invdyn.removeTask(dic_effectors_tasks[eeName].name, 0.0)  # remove pin task for this contact
                 if cfg.WB_VERBOSE:
                     print("remove se3 effector task : " + dic_effectors_tasks[eeName].name)
+                updateContactPlacement(cs, pid, eeName, getCurrentEffectorPosition(robot, invdyn.data(), eeName))
                 contact = createContactForEffector(cfg, invdyn, robot, eeName, phase.contactPatch(eeName))
                 dic_contacts.update({eeName: contact})
                 if cfg.WB_VERBOSE:
