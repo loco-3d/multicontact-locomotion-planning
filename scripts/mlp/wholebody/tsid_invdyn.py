@@ -529,7 +529,7 @@ def generateWholeBodyMotion(cs_ref, cfg, fullBody=None, viewer=None):
         # (This tell the solver that it should start minimizing the contact force on this contact, and ideally get to 0 at the given time)
         for eeName, contact in dic_contacts.items():
             if phase_next is not None and phase.isEffectorInContact(eeName) and not phase_next.isEffectorInContact(eeName):
-                transition_time = phase.timeFinal - t
+                transition_time = phase.duration + dt/2.
                 if cfg.WB_VERBOSE:
                     print("\nTime %.3f Start breaking contact %s. transition time : %.3f\n" %
                           (t, contact.name, transition_time))
