@@ -4,15 +4,18 @@ import os
 contact_generation_method_available = ["none", "load", "rbprm", "sl1m"]
 centroidal_initGuess_method_available = ["none", "geometric", "croc", "timeopt", "quasistatic"]
 centroidal_method_available = ["load", "geometric", "croc", "timeopt", "quasistatic", "muscod", "none"]
+end_effector_initGuess_method_available = ["load","smoothedFoot", "bezierPredef"]
+end_effector_method_available = ["limbRRT", "limbRRToptimized"]
 wholebody_method_available = ["load", "tsid", "croccodyl", "none"]
-end_effector_method_available = ["smoothedFoot", "bezierPredef", "limbRRT", "limbRRToptimized"]
+
 
 ## methods setting : choose which method will be used to solve each subproblem : 
-contact_generation_method = "rbprm"
-centroidal_initGuess_method = "geometric" 
-centroidal_method = "timeopt"#"load"# 
-wholebody_method = "tsid" 
-end_effector_method = "limbRRToptimized" 
+contact_generation_method = "load"
+centroidal_initGuess_method = "none"
+centroidal_method = "timeopt" # TODO : fix load method ...
+end_effector_initGuess_method = "bezierPredef"
+end_effector_method = "limbRRToptimized"
+wholebody_method = "tsid"
 
 ## PATHS settings :
 PKG_PATH = os.path.dirname(os.path.realpath(__file__)).rstrip("/scripts/mlp")
@@ -25,12 +28,13 @@ EXPORT_PATH = OUTPUT_DIR + "/export"
 ## Export setting
 SAVE_CS = True
 SAVE_CS_COM = True
+SAVE_CS_REF = True
+SAVE_CS_WB = True
 EXPORT_GAZEBO = False
 EXPORT_NPZ = True
 EXPORT_BLENDER = False
 EXPORT_SOT = False
 EXPORT_OPENHRP = False
-EXPORT_EFF_IN_CS = False
 openHRP_useZMPref = False  # if true : in the export_openHRP, use the zmp computed by the centroidal solver and the one computed from the wholebody
 WRITE_STATUS = False
 ##DISPLAY settings :
@@ -40,10 +44,10 @@ DISPLAY_INIT_GUESS_TRAJ = False
 DISPLAY_WP_COST = True  # display waypoints found by the planner and used in the cost function of the centroidal dynamic solver
 DISPLAY_COM_TRAJ = True
 DISPLAY_FEET_TRAJ = True  # display the feet trajectories used in the final motion
-DISPLAY_ALL_FEET_TRAJ = False  # display all the trajectory used as reference, even the invalid ones
+DISPLAY_ALL_FEET_TRAJ = True  # display all the trajectory used as reference, even the invalid ones
 DISPLAY_WB_MOTION = False  # display whole body motion automatically once it's computed
 DT_DISPLAY = 0.05  # dt used to display the wb motion (one configuration every dt is sent to the viewer) It have to be greater than IK_dt
-PLOT = False  # Generate plot for various data
+PLOT = True  # Generate plot for various data
 PLOT_CENTROIDAL = False  # plot COM trajectory computed by the centroidal dynamic solver, before trying to compute the wholebody motion
 DISPLAY_PLOT = PLOT and True  # display plot directly
 SAVE_PLOT = PLOT and True  #save plot as svg in OUTPUT_DIR/plot/demo_name_*
@@ -55,9 +59,9 @@ SL1M_USE_INTERPOLATED_ORIENTATION = True  # Only matter if SL1M_USE_ORIENTATION=
 # if False, it interpolate the orientation and adapt it depending if the feet is in the inside or outside of the turn
 
 ### Settings for centroidal script :
-GRAVITY = np.matrix([0, 0, -9.81]).T
+GRAVITY = np.array([0, 0, -9.81])
 MU = 0.5  # Friction coefficient. hardcoded in timeOpt_configs files, must match this one !
-SOLVER_DT = 0.05  # hardcoded in timeOpt_configs files, must match this one !
+SOLVER_DT = 0.01  # hardcoded in timeOpt_configs files, must match this one !
 # Hardcoded height change of the COM before the beginning of the motion (value in m and time allowed to make this motion)
 # This is used because for some robot, the reference configuration is really close to the kinematic limits of the robot.
 COM_SHIFT_Z = 0.0
@@ -72,20 +76,19 @@ WB_RETURN_INVALID = not WB_ABORT_WHEN_INVALID and True  # stop wb script when st
 
 ##  Settings for whole body :
 YAW_ROT_GAIN = 1.  # gain for the orientation task of the root orientation, along the yaw axis (wrt to the other axis of the orientation task)
-USE_PLANNING_ROOT_ORIENTATION = True  # if true, the reference for the root orientation is the one given by the planning (stored in phase.reference_configurations) if false, use the one of q_init for all the motion.
 WB_VERBOSE = 0  # 0,1 or 2 Verbosity level for the output of the wholebody script
 WB_STOP_AT_EACH_PHASE = False  # wait for user input between each phase
-IK_dt = 0.001  # controler time step (in second)
+IK_dt = 0.01  # controler time step (in second)
 IK_PRINT_N = 500  # print state of the problem every IK_PRINT_N time steps (if verbose >= 1)
 CHECK_FINAL_MOTION = True  # After computation of the motion, check the complete motion for {self-}collision and joints limits
 ### The following settings enable the computation of various values stored in the wholeBody_result struct.
 # Enabling them increase the computation time of the wholeBody script
-IK_store_centroidal = False  # c,dc,ddc,L,dL (of the computed wholebody motion)
-IK_store_reference_centroidal = False
-IK_store_zmp = False  # need store_centroidal
-IK_store_effector = False
-IK_store_reference_effector = False
-IK_store_contact_forces = False
+IK_store_centroidal = True  # c,dc,ddc,L,dL (of the computed wholebody motion)
+IK_store_zmp = True
+IK_store_effector = True
+IK_store_contact_forces = True
+IK_store_joints_derivatives = True
+IK_store_joints_torque = True
 
 # import specific settings for the selected demo. This settings may override default ones.
 import importlib
@@ -136,10 +139,16 @@ if not (wholebody_method in wholebody_method_available):
     raise ValueError("wholebody method must be choosed from : " + str(wholebody_method_available))
 if not (end_effector_method in end_effector_method_available):
     raise ValueError("end effector method must be choosed from : " + str(end_effector_method_available))
+if not (end_effector_initGuess_method in end_effector_initGuess_method_available):
+    raise ValueError("end effector method must be choosed from : " + str(end_effector_initGuess_method_available))
 if contact_generation_method == "none" and centroidal_method != "load":
     raise ValueError("Cannot skip contact_generation phase if centroidal trajectory is not loaded from file")
-if centroidal_method == "timeopt" and centroidal_initGuess_method != "geometric":
-    raise ValueError("In current implementation of timeopt, the initGuess must be geometric (FIXME)")
+
+CS_FILENAME = CONTACT_SEQUENCE_PATH + "/" + DEMO_NAME + ".cs"
+COM_FILENAME = CONTACT_SEQUENCE_PATH + "/" + DEMO_NAME + "_COM.cs"
+REF_FILENAME = CONTACT_SEQUENCE_PATH + "/" + DEMO_NAME + "_REF.cs"
+WB_FILENAME = CONTACT_SEQUENCE_PATH + "/" + DEMO_NAME + "_WB.cs"
+
 
 # skip useless ethod when loading motion from file:
 if contact_generation_method == "load":
@@ -149,13 +158,29 @@ if centroidal_method == "load":
     centroidal_initGuess_method = "none"
     SAVE_CS = False
     SAVE_CS_COM = False
-if wholebody_method == "load":
+    CS_FILENAME = COM_FILENAME
+if end_effector_initGuess_method == "load":
     contact_generation_method = "load"
     centroidal_initGuess_method = "none"
     centroidal_method = "load"
     SAVE_CS = False
     SAVE_CS_COM = False
+    SAVE_CS_REF = False
+    CS_FILENAME = REF_FILENAME
+    COM_FILENAME = REF_FILENAME
+if wholebody_method == "load":
+    contact_generation_method = "load"
+    centroidal_initGuess_method = "none"
+    centroidal_method = "load"
+    end_effector_initGuess_method = "load"
+    SAVE_CS = False
+    SAVE_CS_COM = False
+    SAVE_CS_WB = False
     EXPORT_NPZ = False
+    if not os.path.isfile(REF_FILENAME):
+        REF_FILENAME = WB_FILENAME
+    CS_FILENAME = REF_FILENAME
+    COM_FILENAME = REF_FILENAME
 
 if centroidal_method == "none":
     wholebody_method = "none"
@@ -164,8 +189,11 @@ if centroidal_method == "none":
     DISPLAY_COM_TRAJ = False
     PLOT_CENTROIDAL = False
     WRITE_STATUS = False
+if end_effector_initGuess_method == "none":
+    SAVE_CS_REF = False
 if wholebody_method == "none":
     EXPORT_NPZ = False
+    SAVE_CS_WB = False
     CHECK_FINAL_MOTION = False
     DISPLAY_WB_MOTION = False
     PLOT = False

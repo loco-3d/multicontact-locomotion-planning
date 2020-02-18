@@ -253,8 +253,8 @@ def writeKinematicsData(res, path, project_name):
     file_acc.close()
     print("write file : ", filename_acc)
 
-
-def export(cs, res):
+# FIXME : not update to date anymore since the switch to mcAPI v2
+def export(cs_com, cs_wb):
     rp = RosPack()
     urdf = rp.get_path(cfg.Robot.packageName) + '/urdf/' + cfg.Robot.urdfName + cfg.Robot.urdfSuffix + '.urdf'
     if cfg.WB_VERBOSE:

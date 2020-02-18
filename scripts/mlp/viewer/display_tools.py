@@ -1,11 +1,14 @@
 import pinocchio as pin
 from pinocchio import SE3, Quaternion
-import multicontact_api
-from multicontact_api import WrenchCone, SOC6, ContactPatch, ContactPhaseHumanoid, ContactSequenceHumanoid
-pin.switchToNumpyArray()
-import numpy as np
 import time
-from mlp.utils.util import stdVecToMatrix, numpy2DToList, hppConfigFromMatrice
+from mlp.utils.util import numpy2DToList, hppConfigFromMatrice, discretizeCurve
+from mlp.utils.requirements import Requirements
+pin.switchToNumpyArray()
+
+
+class DisplayContactSequenceRequirements(Requirements):
+    configurationValues = True
+
 STONE_HEIGHT = 0.005
 STONE_GROUP = "stepping_stones"
 STONE_RF = STONE_GROUP + "/" + "RF"
@@ -91,24 +94,24 @@ def displaySteppingStones(cs, gui, sceneName, Robot):
     id_RH = 0
     id_LH = 0
 
-    for phase in cs.contact_phases:
-        if phase.LF_patch.active:
-            addSteppingStone(gui, phase.LF_patch.placement * Robot.dict_display_offset[Robot.lfoot],
+    for phase in cs.contactPhases:
+        if phase.isEffectorInContact(Robot.lfoot):
+            addSteppingStone(gui, phase.contactPatch(Robot.lfoot).placement * Robot.dict_display_offset[Robot.lfoot],
                              name_LF + str(id_LF), STONE_LF, Robot.dict_size[Robot.lfoot],
                              Robot.dict_limb_color_traj[Robot.lfoot])
             id_LF += 1
-        if phase.RF_patch.active:
-            addSteppingStone(gui, phase.RF_patch.placement * Robot.dict_display_offset[Robot.rfoot],
+        if phase.isEffectorInContact(Robot.rfoot):
+            addSteppingStone(gui, phase.contactPatch(Robot.rfoot).placement * Robot.dict_display_offset[Robot.rfoot],
                              name_RF + str(id_RF), STONE_RF, Robot.dict_size[Robot.rfoot],
                              Robot.dict_limb_color_traj[Robot.rfoot])
             id_RF += 1
-        if phase.LH_patch.active:
-            addSteppingStone(gui, phase.LH_patch.placement * Robot.dict_display_offset[Robot.lhand],
+        if phase.isEffectorInContact(Robot.lhand):
+            addSteppingStone(gui, phase.contactPatch(Robot.lhand).placement * Robot.dict_display_offset[Robot.lhand],
                              name_LH + str(id_LH), STONE_LH, Robot.dict_size[Robot.lhand],
                              Robot.dict_limb_color_traj[Robot.lhand])
             id_LH += 1
-        if phase.RH_patch.active:
-            addSteppingStone(gui, phase.RH_patch.placement * Robot.dict_display_offset[Robot.rhand],
+        if phase.isEffectorInContact(Robot.rhand):
+            addSteppingStone(gui, phase.contactPatch(Robot.rhand).placement * Robot.dict_display_offset[Robot.rhand],
                              name_RH + str(id_RH), STONE_RH, Robot.dict_size[Robot.rhand],
                              Robot.dict_limb_color_traj[Robot.rhand])
             id_RH += 1
@@ -121,30 +124,20 @@ def displaySteppingStones(cs, gui, sceneName, Robot):
     gui.refresh()
 
 
-def comPosListFromState(state_traj):
-    state = stdVecToMatrix(state_traj)
-    c = state[:3, :]
-    return numpy2DToList(c)
 
-
-def displayCOMTrajForPhase(p, gui, name, name_group, color):
-    c = comPosListFromState(p.state_trajectory)
+def displayCOMTrajForPhase(phase, gui, name, name_group, color, dt):
+    c = numpy2DToList(discretizeCurve(phase.c_t, dt)[0])
     gui.addCurve(name, c, color)
     gui.addToGroup(name, name_group)
 
 
-def displayCOMTrajectory(cs, gui, sceneName, colors=[0, 0, 0, 1], nameGroup=""):
+def displayCOMTrajectory(cs, gui, sceneName, dt, colors=[0, 0, 0, 1], nameGroup=""):
     name_group = TRAJ_GROUP + nameGroup
     gui.createGroup(name_group)
-    for pid in range(len(cs.contact_phases)):
-        phase = cs.contact_phases[pid]
-        if pid < len(cs.contact_phases) - 1:
-            phase_next = cs.contact_phases[pid + 1]
-        else:
-            phase_next = None
-        name = name_group + "/" + '%.2f' % phase.time_trajectory[0] + "-" + '%.2f' % phase.time_trajectory[-1]
+    for pid,phase in enumerate(cs.contactPhases):
+        name = name_group + "/" + '%.2f' % phase.timeInitial + "-" + '%.2f' % phase.timeFinal
         color = colors[pid % len(colors)]
-        displayCOMTrajForPhase(phase, gui, name, name_group, color)
+        displayCOMTrajForPhase(phase, gui, name, name_group, color, dt)
     gui.addToGroup(name_group, sceneName)
     gui.refresh()
 
@@ -171,32 +164,39 @@ def displaySE3Traj(traj, gui, sceneName, name, color, time_interval, offset=SE3.
     gui.addToGroup(name, sceneName)
     gui.refresh()
 
+def displayEffectorTrajectories(cs, viewer, Robot, suffixe = "", colorAlpha = 1):
+    effectors = cs.getAllEffectorsInContact()
+    for pid,phase in enumerate(cs.contactPhases):
+        for eeName in effectors:
+            if phase.effectorHaveAtrajectory(eeName):
+                color = Robot.dict_limb_color_traj[eeName]
+                color[-1] = colorAlpha
+                displaySE3Traj(phase.effectorTrajectory(eeName), viewer.client.gui, viewer.sceneName,
+                                 eeName + "_traj_"+ suffixe + str(pid), color,
+                                 [phase.timeInitial, phase.timeFinal], Robot.dict_offset[eeName])
 
 def displayWBconfig(viewer, q_matrix):
     viewer(hppConfigFromMatrice(viewer.robot, q_matrix))
 
 
-def displayWBatT(viewer, res, t):
-    viewer(hppConfigFromMatrice(viewer.robot, res.qAtT(t)))
+def displayWBatT(viewer, cs_wb, t):
+    q = cs_wb.phaseAtTime(t).q_t(t)
+    viewer(hppConfigFromMatrice(viewer.robot,q))
 
 
-def displayWBmotion(viewer, q_t, dt, dt_display):
-    id = 0
-    step = dt_display / dt
-    assert step % 1 == 0, "display dt shouldbe a multiple of ik dt"
-    # check if robot have extradof :
-    step = int(step)
-    while id < q_t.shape[1]:
+def displayWBmotion(viewer, q_t, dt_display):
+    t = q_t.min()
+    while t <= q_t.max():
         t_start = time.time()
-        displayWBconfig(viewer, q_t[:, id])
-        id += step
+        displayWBconfig(viewer, q_t(t))
+        t += dt_display
         elapsed = time.time() - t_start
         if elapsed > dt_display:
             print("Warning : display not real time ! choose a greater time step for the display.")
         else:
             time.sleep(dt_display - elapsed)
     # display last config if the total duration is not a multiple of the dt
-    displayWBconfig(viewer, q_t[:, -1])
+    displayWBconfig(viewer, q_t(q_t.max()))
 
 
 def displayFeetTrajFromResult(gui, sceneName, res, Robot):
@@ -214,9 +214,10 @@ def displayFeetTrajFromResult(gui, sceneName, res, Robot):
 
 
 def displayContactSequence(v, cs, step=0.2):
-    for p in cs.contact_phases:
-        displayWBconfig(v, p.reference_configurations[0])
+    for p in cs.contactPhases:
+        displayWBconfig(v, p.q_init)
         time.sleep(step)
+    displayWBconfig(v, cs.contactPhases[-1].q_final)
 
 
 def initScene(Robot, envName="multicontact/ground", genLimbsDB=True):

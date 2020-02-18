@@ -1,22 +1,22 @@
-from __future__ import absolute_import
 from pinocchio.utils import *
 import mlp.config as cfg
 import importlib
 import multicontact_api
-from multicontact_api import ContactSequenceHumanoid
-from mlp.utils.cs_tools import addPhaseFromConfig, moveEffectorToPlacement, setFinalState
+from multicontact_api import ContactSequence
+from mlp.utils.cs_tools import addPhaseFromConfig, setFinalState
 from mlp.viewer.display_tools import initScene, displaySteppingStones
-import pinocchio
 from pinocchio.utils import matrixToRpy
 from pinocchio import Quaternion, SE3
 from tools.surfaces_from_path import getSurfacesFromGuideContinuous
 import random
 from sl1m.planner import *
+from mlp.utils.requirements import Requirements
+multicontact_api.switchToNumpyArray()
 
-import eigenpy
-pinocchio.switchToNumpyArray()
+class Outputs(Requirements):
+    consistentContacts = True
 
-Z_AXIS = np.array([0, 0, 1]).T
+Z_AXIS = np.array([0, 0, 1])
 VERBOSE = False
 EPS_Z = 0.005  # offset added to feet z position, otherwise there is collisions with the ground
 
@@ -231,7 +231,7 @@ def runLPScript():
 def generateContactSequence():
     #RF,root_init,pb, coms, footpos, allfeetpos, res = runLPScript()
     RF, root_init, root_end, pb, coms, footpos, allfeetpos, res = runLPFromGuideScript()
-
+    multicontact_api.switchToNumpyArray()
     # load scene and robot
     fb, v = initScene(cfg.Robot, cfg.ENV_NAME, True)
     q_init = cfg.IK_REFERENCE_CONFIG.tolist() + [0] * 6
@@ -246,12 +246,12 @@ def generateContactSequence():
 
     # init contact sequence with first phase : q_ref move at the right root pose and with both feet in contact
     # FIXME : allow to customize that first phase
-    cs = ContactSequenceHumanoid(0)
-    addPhaseFromConfig(fb, v, cs, q_init, [fb.rLegId, fb.lLegId])
+    cs = ContactSequence(0)
+    addPhaseFromConfig(fb, cs, q_init, [fb.rLegId, fb.lLegId])
 
     # loop over all phases of pb and add them to the cs :
     for pId in range(2, len(pb["phaseData"])):  # start at 2 because the first two ones are already done in the q_init
-        prev_contactPhase = cs.contact_phases[-1]
+        prev_contactPhase = cs.contactPhases[-1]
         #n = normal(pb["phaseData"][pId])
         phase = pb["phaseData"][pId]
         moving = phase["moving"]
@@ -262,28 +262,32 @@ def generateContactSequence():
         pos[2] += EPS_Z  # FIXME it shouldn't be required !!
         # compute desired foot rotation :
         if cfg.SL1M_USE_ORIENTATION:
-            if cfg.SL1M_USE_INTERPOLATED_ORIENTATION and pId < len(pb["phaseData"]) - 1:
-                quat0 = Quaternion(pb["phaseData"][pId]["rootOrientation"])
+            quat0 = Quaternion(pb["phaseData"][pId]["rootOrientation"])
+            if pId < len(pb["phaseData"]) - 1:
                 quat1 = Quaternion(pb["phaseData"][pId + 1]["rootOrientation"])
+            else:
+                quat1 = Quaternion(pb["phaseData"][pId]["rootOrientation"])
+            if cfg.SL1M_USE_INTERPOLATED_ORIENTATION :
                 rot = quat0.slerp(0.5, quat1)
                 # check if feets do not cross :
                 if moving == RF:
                     qr = rot
-                    ql = Quaternion(prev_contactPhase.LF_patch.placement.rotation)
+                    ql = Quaternion(prev_contactPhase.contactPatch(fb.lfoot).placement.rotation)
                 else:
                     ql = rot
-                    qr = Quaternion(prev_contactPhase.RF_patch.placement.rotation)
+                    qr = Quaternion(prev_contactPhase.contactPatch(fb.rfoot).placement.rotation)
                 rpy = matrixToRpy((qr * (ql.inverse())).matrix())  # rotation from the left foot pose to the right one
                 if rpy[2, 0] > 0:  # yaw positive, feet are crossing
-                    rot = Quaternion(phase["rootOrientation"])  # rotation of the root, from the guide
+                    rot = quat0  # rotation of the root, from the guide
             else:
-                rot = Quaternion(phase["rootOrientation"])  # rotation of the root, from the guide
+                rot = quat0  # rotation of the root, from the guide
         else:
             rot = Quaternion.Identity()
         placement = SE3()
         placement.translation = np.array(pos).T
         placement.rotation = rot.matrix()
-        moveEffectorToPlacement(fb, v, cs, movingID, placement, initStateCenterSupportPolygon=True)
+        cs.moveEffectorToPlacement(movingID, placement)
+
     # final phase :
     # fixme : assume root is in the middle of the last 2 feet pos ...
     q_end = cfg.IK_REFERENCE_CONFIG.tolist() + [0] * 6
@@ -295,7 +299,9 @@ def generateContactSequence():
     print("feet height final = ", feet_height_end)
     q_end[2] = feet_height_end + cfg.IK_REFERENCE_CONFIG[2]
     q_end[2] += EPS_Z
-    setFinalState(cs, q=q_end)
+    fb.setCurrentConfig(q_end)
+    com = fb.getCenterOfMass()
+    setFinalState(cs, com, q=q_end)
     if cfg.DISPLAY_CS_STONES:
         displaySteppingStones(cs, v.client.gui, v.sceneName, fb)
 

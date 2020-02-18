@@ -4,15 +4,18 @@ import mlp.config as cfg
 
 def export(q_t):
     path = cfg.EXPORT_PATH + "/gazebo"
+    print ("Export motion to "+path+" ... ")
     if not os.path.exists(path):
         os.makedirs(path)
     filename = path + "/" + cfg.DEMO_NAME + ".posture"
     dt = cfg.IK_dt
     with open(filename, 'w') as f:
-        for i in range(len(q_t)):
-            q = q_t[i]
-            line = str(dt * i) + " "
+        t = q_t.min()
+        while t <= q_t.max():
+            q = q_t(t)
+            line = str(t - q_t.min()) + " "
             for k in range(7, len(q)):
-                line += str(q[k, 0]) + " "
+                line += str(q[k]) + " "
             f.write(line + "\n")
+            t += dt
     print("Motion exported in : ", filename)

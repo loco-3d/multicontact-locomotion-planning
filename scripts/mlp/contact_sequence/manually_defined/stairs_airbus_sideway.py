@@ -1,20 +1,22 @@
-from mlp.utils.cs_tools import addPhaseFromConfig, moveEffectorOf, setFinalState, removeContact, moveEffectorToPlacement
+from mlp.utils.cs_tools import addPhaseFromConfig, setFinalState
 import multicontact_api
-from multicontact_api import ContactSequenceHumanoid
+from multicontact_api import ContactSequence
 import mlp.viewer.display_tools as display_tools
 import mlp.config as cfg
 from pinocchio import SE3
-from mlp.utils.util import rotatePlacement
+from mlp.utils.util import rotatePlacement, computeContactNormal
 from talos_rbprm.talos import Robot  # change robot here
-from mlp.utils.cs_tools import moveEffectorToPlacement
-import numpy as np
+from numpy import array
 from hpp.corbaserver.rbprm.rbprmstate import State, StateHelper
 multicontact_api.switchToNumpyArray()
 
 ENV_NAME = "multicontact/stairsAirbus_noRamp"
 
 fb, v = display_tools.initScene(Robot, ENV_NAME, False)
-cs = ContactSequenceHumanoid(0)
+gui = v.client.gui
+sceneName = v.sceneName
+
+cs = ContactSequence(0)
 
 #Create an initial contact phase :
 q_ref = [
@@ -89,25 +91,32 @@ fb.setReferenceConfig(q_ref)
 fb.setPostureWeights(fb.postureWeights_straff[::] + [0] * 6)
 v(q_ref)
 
-addPhaseFromConfig(fb, v, cs, q_ref, [fb.rLegId, fb.lLegId, fb.rArmId, fb.lArmId])
+addPhaseFromConfig(fb, cs, q_ref, [fb.rLegId, fb.lLegId, fb.rArmId, fb.lArmId])
 
 num_steps = 1
 step_height = 0.22
 step_width = 0.207
 
+displacement = SE3.Identity()
+displacement.translation = array([step_width, 0, step_height])
+
 gait = [fb.rhand, fb.lhand, fb.rfoot, fb.lfoot]
 for i in range(num_steps):
     for eeName in gait:
-        moveEffectorOf(fb, v, cs, eeName, [step_width, 0, step_height])
+        cs.moveEffectorOf(eeName, displacement )
 
-removeContact(fb, cs, fb.rhand)
-removeContact(fb, cs, fb.lhand)
+cs.breakContact(fb.rhand)
+cs.breakContact(fb.lhand)
 
 q_end = q_ref[::]
 q_end[0] += 0.15 + num_steps * step_width
 q_end[2] += num_steps * step_height
+fb.setCurrentConfig(q_end)
+com = fb.getCenterOfMass()
+setFinalState(cs, com, q=q_end)
 
-setFinalState(cs, q=q_end)
+display_tools.displaySteppingStones(cs, gui, sceneName, fb)
+
 
 DEMO_NAME = "talos_stairsAirbus"
 filename = cfg.CONTACT_SEQUENCE_PATH + "/" + DEMO_NAME + ".cs"
