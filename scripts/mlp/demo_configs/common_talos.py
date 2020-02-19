@@ -21,7 +21,7 @@ TIME_SHIFT_COM = 2.
 fMin = 1.0  # minimum normal force
 fMax = 1000.  # maximum normal force
 w_com = 1.0  # weight of center of mass task
-w_am = 1.
+w_am = 1e-2
 w_posture = 0.1  # weight of joint posture task
 w_rootOrientation = 1.  # weight of the root's orientation task
 w_forceRef = 1e-3  # weight of force regularization task
@@ -64,10 +64,10 @@ gain_vector = np.array(  # gain vector for postural task
         1.,
         1.,
         10.,  #rleg
+        5000.,
+        5000.,  #chest
         500.,
-        500.,  #chest
-        50.,
-        100.,
+        1000.,
         10.,
         10.,
         10.,

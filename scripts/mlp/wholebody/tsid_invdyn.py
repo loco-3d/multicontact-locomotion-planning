@@ -438,7 +438,7 @@ def generateWholeBodyMotion(cs_ref, cfg, fullBody=None, viewer=None):
         amTask = tsid.TaskAMEquality("task-am", robot)
         amTask.setKp(cfg.kp_am * np.array([1., 1., 0.]))
         amTask.setKd(2.0 * np.sqrt(cfg.kp_am * np.array([1., 1., 0.])))
-        invdyn.addTask(amTask, cfg.w_am, cfg.level_am)
+        invdyn.addMotionTask(amTask, cfg.w_am, cfg.level_am, 0.)
     else:
         amTask = None
 
@@ -581,8 +581,12 @@ def generateWholeBodyMotion(cs_ref, cfg, fullBody=None, viewer=None):
 
                 # am
                 if amTask is not None:
-                    sampleAM =  curvesToTSID(am_traj,t)
+                    if cfg.IK_trackAM:
+                        sampleAM =  curvesToTSID(am_traj,t)
+                    else:
+                        sampleAM = tsid.TrajectorySample(3)
                     amTask.setReference(sampleAM)
+
 
                 # posture
                 #print "postural task ref : ",samplePosture.pos()
