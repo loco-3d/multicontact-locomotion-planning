@@ -1,319 +1,237 @@
-import numpy as np
-from numpy.linalg import norm
-import os
 import timeopt
 import multicontact_api
-from multicontact_api import WrenchCone,SOC6,ContactPatch, ContactPhaseHumanoid, ContactSequenceHumanoid
-import time
 import mlp.config as cfg
+from multicontact_api import ContactSequence
+import time
 import mlp.viewer.display_tools as display
-from mlp.utils.util import *
+from mlp.utils.cs_tools import setCOMtrajectoryFromPoints, setAMtrajectoryFromPoints, connectPhaseTrajToFinalState, connectPhaseTrajToInitialState
+import numpy as np
+from numpy import array, append
+from numpy.linalg import norm
+from pinocchio import SE3
+from mlp.utils.requirements import Requirements
 
-CONTACT_ANKLE_LEVEL = False # probably only required for hrp2, as the center of the feet is not the center of the flexibility ...
+multicontact_api.switchToNumpyArray()
+CONTACT_ANKLE_LEVEL = False  # probably only required for hrp2, as the center of the feet is not the center of the flexibility ...
 
-def isContactEverActive(cs,eeName):
-    for phase in cs.contact_phases:
-        if eeName == timeopt.EndeffectorID.RF :
-            if phase.RF_patch.active:
-                return True
-        elif eeName == timeopt.EndeffectorID.LF :
-            if phase.LF_patch.active:
-                return True
-        elif eeName == timeopt.EndeffectorID.RH :
-            if phase.RH_patch.active:
-                return True
-        elif eeName == timeopt.EndeffectorID.LH :
-            if phase.LH_patch.active:
-                return True
-        else :
-            raise Exception("Unknown effector name") 
-    return False
+class Inputs(Requirements):
+    timings = True
+    consistentContacts = True
+    COMvalues = True
+
+class Outputs(Inputs):
+    centroidalTrajectories = True
+
+
+dict_ee_to_timeopt = {cfg.Robot.rfoot : timeopt.EndeffectorID.RF,
+                    cfg.Robot.lfoot : timeopt.EndeffectorID.LF ,
+                    cfg.Robot.rhand : timeopt.EndeffectorID.RH,
+                    cfg.Robot.lhand : timeopt.EndeffectorID.LH}
 
 
 ## check if two given timeOpt adjacent indices belong to the same phase or not
 # by checking the contact forces of each effector
-def isNewPhaseFromContact(tp,k0,k1):
+def isNewPhase(tp, k0, k1):
     isNew = False
     for i in range(4):
-        if norm(tp.getContactForce(i, k0)) > 2. and norm(tp.getContactForce(i, k1)) <= 2.:
+        if norm(tp.getContactForce(i, k0)) > 1e-2 and norm(tp.getContactForce(i, k1)) <= 1e-3:
             isNew = True
-        if norm(tp.getContactForce(i, k1)) > 2. and norm(tp.getContactForce(i, k0)) <= 2.:
+        if norm(tp.getContactForce(i, k1)) > 1e-2 and norm(tp.getContactForce(i, k0)) <= 1e-3:
             isNew = True
-    return isNew 
+    return isNew
 
-# check if k is the first id of a new phase, by comparing to the lengths in the initial guess
-def isNewPhaseFromCS(cs_com,cs_initGuess,p_id):
-    """
-    id = 0
-    for phase in cs.contact_phases :
-        if id == 0:
-            id += len(phase.time_trajectory)
-        else :
-            id += len(phase.time_trajectory) - 1             
-        if k1 == id :
-            return True
-        if k1 < id :
-            return False
-    return False
-    """
-    if len(cs_com.contact_phases[p_id].time_trajectory) == len(cs_initGuess.contact_phases[p_id].time_trajectory):
-        return True
-    else :
-        return False
-    
-def isNewPhase(tp,k0,k1,cs_com,cs_initGuess,p_id):
-    if cs_initGuess :
-        return isNewPhaseFromCS(cs_com,cs_initGuess,p_id)
-    else : 
-        return isNewPhaseFromContact(tp,k0,k1)
- 
-def fillCSFromTimeopt(cs,cs_initGuess,tp):
-    cs_com = ContactSequenceHumanoid(cs)
-    
-    # extract infos from tp to fill cs.contact_phases struct
-    u = [0] * 6
-    x = [0] * 9
+
+
+def fillCSFromTimeopt(cs, cs_initGuess, tp, t_init = 0.):
+    cs_com = ContactSequence(cs)
+
+    # extract infos from tp to fill cs.contactPhases struct
     MASS = tp.getMass()
-    p_id = 0 # phase id in cs
-    k_id = 1 # id in the current phase
-    # tp.getTime(0) == dt !! not 0 
-    p0 = cs_com.contact_phases[0]
-    init_state = p0.init_state
-    init_state[0:3] = tp.getInitialCOM()
-    p0.init_state = init_state 
-    state = p0.init_state
-    appendOrReplace(p0.time_trajectory,0,0.)
-    appendOrReplace(p0.state_trajectory,0,state)
-    appendOrReplace(p0.control_trajectory,0,np.matrix(np.zeros(6)).T)
+    p_id = 0  # phase id in cs
+    # tp.getTime(0) == dt !! not 0
+    p0 = cs_com.contactPhases[0]
+    c_init = tp.getInitialCOM()
+    p0.timeInitial = t_init
+    # build column matrix of discretized points for the centroidal values of each phases
+    c_t = c_init.reshape(3,1)
+    dc_t = p0.dc_init.reshape(3,1)
+    ddc_t = p0.ddc_init.reshape(3,1)
+    L_t = p0.L_init.reshape(3,1)
+    dL_t = p0.dL_init.reshape(3,1)
+    times = array(t_init)
     for k in range(tp.getTrajectorySize()):
-        appendOrReplace(cs_com.contact_phases[p_id].time_trajectory,k_id,tp.getTime(k))
-        #extract x and u from tp : 
+        #extract states values from tp :
         if k == 0:
-            u[0:3] = ((tp.getLMOM(k)/MASS) / tp.getTime(k)).tolist() # acceleration
-            u[3:6] = ((tp.getAMOM(k))/(tp.getTime(k))).tolist() # angular momentum variation
-        else :
-            u[0:3] = (((tp.getLMOM(k)/MASS) - (tp.getLMOM(k-1)/MASS)) / (tp.getTime(k)-tp.getTime(k-1))).tolist()#acceleration
-            u[3:6] = ((tp.getAMOM(k) - tp.getAMOM(k-1))/(tp.getTime(k)-tp.getTime(k-1))).tolist() # angular momentum variation
-        #print "control = ",np.matrix(u)    
-        x[0:3] = tp.getCOM(k).tolist() # position
-        x[3:6] = (tp.getLMOM(k)/MASS).tolist() # velocity
-        x[6:9] = tp.getAMOM(k).tolist() # angular momentum        
-        
-        appendOrReplace(cs_com.contact_phases[p_id].control_trajectory,k_id,np.matrix(u))
-        appendOrReplace(cs_com.contact_phases[p_id].state_trajectory,k_id,np.matrix(x))
-        
-        if k > 0 and isNewPhase(tp,k-1,k,cs_com,cs_initGuess,p_id) and p_id < cs_com.size()-1:
+            ddc = (tp.getLMOM(k) / MASS) / tp.getTime(k) # acceleration
+            dL = tp.getAMOM(k) / (tp.getTime(k))  # angular momentum variation
+        else:
+            ddc = ((tp.getLMOM(k) / MASS) - (tp.getLMOM(k - 1) / MASS)) / (tp.getTime(k) - tp.getTime(k - 1))
+            dL = (tp.getAMOM(k) - tp.getAMOM(k - 1)) / (tp.getTime(k) - tp.getTime(k - 1))
+        c = tp.getCOM(k) # position
+        dc = tp.getLMOM(k) / MASS # velocity
+        L = tp.getAMOM(k)  # angular momentum
+        # stack the values in the arrays:
+        c_t = append(c_t, c.reshape(3,1), axis = 1)
+        dc_t = append(dc_t, dc.reshape(3,1), axis = 1)
+        ddc_t = append(ddc_t, ddc.reshape(3,1), axis = 1)
+        L_t = append(L_t, L.reshape(3,1), axis = 1)
+        dL_t = append(dL_t, dL.reshape(3,1), axis = 1)
+        times = append(times, tp.getTime(k) + t_init)
+
+        if k > 0 and isNewPhase(tp, k - 1, k) and p_id < cs_com.size() - 1:
             #last k of current phase, first k of next one (same state_traj and time)
-            # set final state of current phase : 
-            cs_com.contact_phases[p_id].final_state = np.matrix(x)
-            # first k of the current phase
-            p_id += 1                            
-            k_id = 0
-            cs_com.contact_phases[p_id].init_state = np.matrix(x)                
-            appendOrReplace(cs_com.contact_phases[p_id].time_trajectory,k_id,tp.getTime(k))
-            appendOrReplace(cs_com.contact_phases[p_id].control_trajectory,k_id,np.matrix(u))
-            appendOrReplace(cs_com.contact_phases[p_id].state_trajectory,k_id,np.matrix(x))                
-        k_id +=1
-    if cfg.DURATION_CONNECT_GOAL > 0 :
+            # set the trajectories for the current phase from the arrays :
+            phase = cs_com.contactPhases[p_id]
+            setCOMtrajectoryFromPoints(phase, c_t,dc_t,ddc_t,times, overwriteInit= (p_id > 0))
+            setAMtrajectoryFromPoints(phase, L_t,dL_t,times)
+            # set final time :
+            phase.timeFinal = times[-1]
+            # Start new phase :
+            p_id += 1
+            phase = cs_com.contactPhases[p_id]
+            # set initial time :
+            phase.timeInitial = times[-1]
+            # reset arrays of values to only the last point :
+            c_t = c_t[:,-1].reshape(3,1)
+            dc_t = dc_t[:,-1].reshape(3,1)
+            ddc_t = ddc_t[:,-1].reshape(3,1)
+            L_t = L_t[:,-1].reshape(3,1)
+            dL_t = dL_t[:,-1].reshape(3,1)
+            times = times[-1]
+
+    # set final phase :
+    phase = cs_com.contactPhases[-1]
+    setCOMtrajectoryFromPoints(phase, c_t, dc_t, ddc_t, times, overwriteFinal = (cfg.DURATION_CONNECT_GOAL == 0))
+    setAMtrajectoryFromPoints(phase, L_t, dL_t, times)
+    # set final time :
+    phase.timeFinal = times[-1]
+
+    if cfg.DURATION_CONNECT_GOAL > 0:
         # timeopt solution is not guarantee to end at the desired final state.
-        # so we add a final phase here, with a smooth motion from the final state atteined by timeopt to the desired one      
-        connectPhaseTrajToFinalState(cs_com.contact_phases[-1],cfg.DURATION_CONNECT_GOAL)
+        # so we add a final phase here, with a smooth motion from the final state atteined by timeopt to the desired one
+        connectPhaseTrajToFinalState(cs_com.contactPhases[-1], cfg.DURATION_CONNECT_GOAL)
     return cs_com
-        
-# helper method to make the link between timeopt.EndEffector and cs.Patch        
-def getPhasePatchforEE(phase,ee):
-    if ee == timeopt.EndeffectorID.RF:
-        if CONTACT_ANKLE_LEVEL :
-            return JointPatchForEffector(phase,cfg.Robot.rfoot)
-        else:
-            return phase.RF_patch
-    if ee == timeopt.EndeffectorID.LF:
-        if CONTACT_ANKLE_LEVEL :
-            return JointPatchForEffector(phase,cfg.Robot.lfoot)
-        else:
-            return phase.LF_patch        
-    if ee == timeopt.EndeffectorID.RH:
-        if CONTACT_ANKLE_LEVEL :
-            return JointPatchForEffector(phase,cfg.Robot.rhand)
-        else:
-            return phase.RH_patch        
-    if ee == timeopt.EndeffectorID.LH:
-        if CONTACT_ANKLE_LEVEL :
-            return JointPatchForEffector(phase,cfg.Robot.lhand)
-        else:
-            return phase.LH_patch        
-    
-# extract a list of effector phase (t start, t end, placement) (as defined by timeopt) from cs struct
-def extractEffectorPhasesFromCS(cs,ee):
-    ee_phases = []    
-    pid =0 
-    # find a first active patch or given effector : 
-    while pid < cs.size() :
-        p = cs.contact_phases[pid]
-        patch = getPhasePatchforEE(p,ee)        
-        if patch.active: 
-            previous_patch = patch
-            t_start = p.time_trajectory[0]
-            t_end = p.time_trajectory[-1]
+
+
+def extractEffectorPhasesFromCS(cs, eeName):
+    """
+    extract a list of effector phase (t start, t end, placement) (as defined by timeopt) from a ContactSequence
+    :param cs:
+    :param eeName: the effector name (CS notation)
+    :return:
+    """
+    ee_phases = []
+    pid = 0
+    # find a first active patch or given effector :
+    while pid < cs.size():
+        p = cs.contactPhases[pid]
+        if p.isEffectorInContact(eeName):
+            previous_placement = p.contactPatch(eeName).placement # first patch where this contact begin
+            t_start = p.timeInitial
+            t_end = p.timeFinal
             # find the last phase where the same patch is active
-            pid += 1            
-            while patch.active and patch.placement == previous_patch.placement and pid <= cs.size():                     
-                t_end = p.time_trajectory[-1]
+            pid += 1
+            while p.isEffectorInContact(eeName) and p.contactPatch(eeName).placement == previous_placement \
+                    and pid <= cs.size():
+                t_end = p.timeFinal
                 if pid < cs.size():
-                    p = cs.contact_phases[pid]            
-                    patch = getPhasePatchforEE(p,ee)
-                pid += 1                     
-            pid -=1
-            ee_phases += [[t_start,t_end,previous_patch.placement]]
+                    p = cs.contactPhases[pid]
+                pid += 1
+            pid -= 1
+            ee_phases += [[t_start, t_end, previous_placement]]
         pid += 1
     return ee_phases
 
-def extractEffectorPhasesFromCSWithoutInitGuess(cs,ee):
-    #TODO : same as above but take hardcoded duration (depending on the type of phases instead of the one inside the trajectory)
-    raise Exception("Not implemented yet.")
-
-def addCOMviapoints(tp,cs,cs_initGuess,viewer = None) :
-    phase_previous =None
-    for pid in range(1,cs.size()-1) : 
-        phase = cs.contact_phases[pid]
-        phase_previous = cs.contact_phases[pid-1]
-        phase_next = cs.contact_phases[pid+1]
-        if phase_previous and (phase_previous.numActivePatches() < phase.numActivePatches()) and phase_next and (phase_next.numActivePatches() < phase.numActivePatches()) : 
-            com = phase.init_state[0 : 3]
-            tp.setViapoint(cs_initGuess.contact_phases[pid].time_trajectory[0],com)
-            if viewer and cfg.DISPLAY_WP_COST :
-                display.displaySphere(viewer,com.T.tolist()[0])
 
 
+def addCOMviapoints(tp, cs, viewer=None):
+    for pid in range(1, cs.size() - 1):
+        phase = cs.contactPhases[pid]
+        phase_previous = cs.contactPhases[pid - 1]
+        phase_next = cs.contactPhases[pid + 1]
+        if (phase_previous.numContacts() < phase.numContacts())  and (phase_next.numContacts() < phase.numContacts()):
+            com = phase.c_init
+            tp.setViapoint(phase.timeInitial, com)
+            if viewer and cfg.DISPLAY_WP_COST:
+                display.displaySphere(viewer, com.tolist())
 
-def extractAllEffectorsPhasesFromCS(cs,cs_initGuess,ee_ids):
+
+def extractAllEffectorsPhasesFromCS(cs, eeNames):
+    """
+    Create a dict with the effectors phase (with timeopt format) of each effector
+    :param cs: the Cntact sequence
+    :param ee_ids: the list of effectors names used (CS notation)
+    :return:
+    """
     effectors_phases = {}
     size = 0
-    for ee in ee_ids:
+    for eeName in eeNames:
         #print "looking for phases for effector : ",ee
-        if cs_initGuess != None :
-            ee_phases = extractEffectorPhasesFromCS(cs_initGuess,ee)
-        else :
-            ee_phases = extractEffectorPhasesFromCSWithoutInitGuess(cs,ee)
+        ee_phases = extractEffectorPhasesFromCS(cs, eeName)
         #print ee_phases
         #print "num of phases : ",len(ee_phases)
         size += len(ee_phases)
-        if len(ee_phases) > 0 :
-            effectors_phases.update({ee:ee_phases})
-    return effectors_phases,size
-
-## fill state trajectory and time trajectory with a linear trajectory connecting init_state to final_state
-## the trajectories vectors must be empty when calling this method ! 
-#def generateLinearInterpTraj(phase,duration,t_total):
-    #com0 = phase.init_state[0:3]
-    #com1 = phase.final_state[0:3]
-    #vel = (com1-com0)/duration
-    #acc = np.matrix(np.zeros(3)).T
-    #L = np.matrix(np.zeros(3)).T
-    #dL = np.matrix(np.zeros(3)).T
-    #state = np.matrix(np.zeros(9)).T
-    #control = np.matrix(np.zeros(6)).T    
-    #t = 0.
-    #while t < duration - 0.0001 :
-        #u = t/duration
-        #com = com0*(1.-u) + com1*(u)
-        #state[0:3] = com
-        #state[3:6] = vel
-        #state[6:9] = L
-        #control[0:3] = acc
-        #control[3:6] = dL
-        #phase.state_trajectory.append(state)
-        #phase.control_trajectory.append(control)        
-        #phase.time_trajectory.append(t_total)
-        #t += cfg.SOLVER_DT
-        #t_total +=cfg.SOLVER_DT
-    #state[0:3] = com1
-    #state[3:6] = vel
-    #state[6:9] = L
-    #control[0:3] = acc
-    #control[3:6] = dL    
-    #phase.state_trajectory.append(state)
-    #phase.control_trajectory.append(control)            
-    #phase.time_trajectory.append(t_total)
-    #return phase
+        if len(ee_phases) > 0:
+            effectors_phases.update({eeName: ee_phases})
+    return effectors_phases, size
 
 
-# add an initial and final phase that only move the COM along z from the given distance
-def addInitShift(cs):
-    # shit all times of TIME_SHIFT_COM
-    for k in range(cs.size()):
-        phase = cs.contact_phases[k]
-        # shift times to take in account the new duration of init phase : 
-        for i in range(len(phase.time_trajectory)):
-            phase.time_trajectory[i] += cfg.TIME_SHIFT_COM
-        
-    # now add new first phase :    
-    prev_phase_init = cs.contact_phases[0]
-    phase_init = ContactPhaseHumanoid()
-    copyPhaseContacts(prev_phase_init,phase_init)
-    phase_init.reference_configurations = prev_phase_init.reference_configurations
-    # generate trajectory for the 'shift' part : 
-    s_final = prev_phase_init.init_state.copy()
-    s_init = s_final.copy()
-    s_init[2] -= cfg.COM_SHIFT_Z
-    phase_init.init_state = s_init
-    phase_init.final_state = s_final
-    genSplinesForPhase(phase_init,0.,cfg.TIME_SHIFT_COM)
-    # fill the rest of the phase with the trajectory in previous_phase
-    for i in range(1,len(prev_phase_init.time_trajectory)): # values for id = 0 are aready the last point in the trajectory computed by genSplinesForPhase
-        phase_init.time_trajectory.append(prev_phase_init.time_trajectory[i])
-        phase_init.state_trajectory.append(prev_phase_init.state_trajectory[i])
-        phase_init.control_trajectory.append(prev_phase_init.control_trajectory[i])
-    cs.contact_phases[0] = phase_init 
-    return cs
-    
 
-def generateCentroidalTrajectory(cs,cs_initGuess = None,fullBody=None, viewer =None):
+def generateCentroidalTrajectory(cs, cs_initGuess=None, fullBody=None, viewer=None):
     if cs_initGuess:
-        print "WARNING : in current implementation of timeopt.generateCentroidalTrajectory the initial guess is ignored. (TODO)"
-    q_init = cs.contact_phases[0].reference_configurations[0].copy()
-    num_phases = cs.size()
-    ee_ids = [timeopt.EndeffectorID.RF, timeopt.EndeffectorID.LF,timeopt.EndeffectorID.RH,timeopt.EndeffectorID.LH]
-    
-    effectors_phases,size = extractAllEffectorsPhasesFromCS(cs,cs_initGuess,ee_ids)
+        print("WARNING : in current implementation of timeopt.generateCentroidalTrajectory"
+              " the initial guess is ignored. (TODO)")
+    eeNames = cs.getAllEffectorsInContact()
+    timeopt_ee_names = [timeopt.EndeffectorID.RF, timeopt.EndeffectorID.LF, timeopt.EndeffectorID.RH, timeopt.EndeffectorID.LH]
+
+    effectors_phases, size = extractAllEffectorsPhasesFromCS(cs, eeNames)
     #print "final dic : ",effectors_phases
-    print "final number of phases : ", size    
-    # initialize timeopt problem : 
+    print("final number of phases : ", size)
+    # initialize timeopt problem :
     tp = timeopt.problem(size)
-    com_init = cs.contact_phases[0].init_state[:3]
-    vel_init = cs.contact_phases[0].init_state[3:6]
-    com_end = cs.contact_phases[-1].final_state[:3]
+    com_init = cs.contactPhases[0].c_init
+    vel_init = cs.contactPhases[0].dc_init
+    com_end = cs.contactPhases[-1].c_final
     com_init[2] += cfg.COM_SHIFT_Z
     tp.setInitialCOM(com_init)
-    tp.setInitialLMOM(vel_init*cfg.MASS)
-    tp.setFinalCOM(com_end)    
-    p0= cs.contact_phases[0]
-    for ee in ee_ids:
-        patch = getPhasePatchforEE(p0,ee)
-        tp.setInitialPose(isContactEverActive(cs,ee), patch.placement.translation, patch.placement.rotation, ee)
-    tp.setMass(cfg.MASS);#FIXME
-    tp.getMass();
-    
-    #add all effector phases to the problem : 
+    tp.setInitialLMOM(vel_init * cfg.MASS)
+    tp.setFinalCOM(com_end)
+    p0 = cs.contactPhases[0]
+    for eeName in eeNames:
+        timeopt_id = dict_ee_to_timeopt[eeName]
+        placement = p0.contactPatch(eeName).placement
+        tp.setInitialPose(True, placement.translation, placement.rotation, timeopt_id)
+        timeopt_ee_names.remove(timeopt_id)
+    placement = SE3.Identity()
+    for ee_id in timeopt_ee_names:
+        # id never used for contact (they need to be set anyway)
+        tp.setInitialPose(False, placement.translation, placement.rotation, ee_id)
+
+    tp.setMass(cfg.MASS)
+    #FIXME
+    tp.getMass()
+
+    #add all effector phases to the problem :
     i = 0
-    for ee in effectors_phases.keys():
-        for phase in effectors_phases[ee]:
-            tp.setPhase(i, timeopt.phase(ee, phase[0],  phase[1],  phase[2].translation,  phase[2].rotation))
+    for eeName in effectors_phases.keys():
+        timeopt_id = dict_ee_to_timeopt[eeName]
+        for phase in effectors_phases[eeName]:
+            tp.setPhase(i, timeopt.phase(timeopt_id, phase[0], phase[1], phase[2].translation, phase[2].rotation))
             i += 1
     if cfg.USE_WP_COST:
-        addCOMviapoints(tp,cs,cs_initGuess,viewer)
-    cfg_path=cfg.TIME_OPT_CONFIG_PATH + '/'+  cfg.TIMEOPT_CONFIG_FILE
-    print "set configuration file for time-optimization : ",cfg_path
+        addCOMviapoints(tp, cs, viewer)
+    cfg_path = cfg.TIME_OPT_CONFIG_PATH + '/' + cfg.TIMEOPT_CONFIG_FILE
+    print("set configuration file for time-optimization : ", cfg_path)
     tp.setConfigurationFile(cfg_path)
     tp.setTimeoptSolver(cfg_path)
     tStart = time.time()
     tp.solve()
     tTimeOpt = time.time() - tStart
-    print "timeopt problem solved in : "+str(tTimeOpt)+" s"
-    print "write results in cs"
-    
-    cs_result = fillCSFromTimeopt(cs,cs_initGuess,tp)
-    if cfg.TIME_SHIFT_COM > 0 :
-        cs_result = addInitShift(cs_result)
-    
+    print("timeopt problem solved in : " + str(tTimeOpt) + " s")
+    print("write results in cs")
+
+    cs_result = fillCSFromTimeopt(cs, cs_initGuess, tp,cfg.TIME_SHIFT_COM )
+    if cfg.TIME_SHIFT_COM > 0:
+        connectPhaseTrajToInitialState(cs_result.contactPhases[0], cfg.TIME_SHIFT_COM)
+
     return cs_result

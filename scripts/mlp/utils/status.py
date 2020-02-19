@@ -1,25 +1,25 @@
 import os
 from ast import literal_eval
 
+
 class Status:
-    def __init__(self,filename=None):
+    def __init__(self, filename=None):
         self.q_init = []
         self.q_goal = []
         self.planning_success = False
-        self.cg_success= False
-        self.cg_reach_goal= False
-        self.cg_too_many_states= None
-        self.gen_cs_success= False
-        self.centroidal_success= False
-        self.wholebody_success= False
-        self.wholebody_reach_goal= False
-        self.motion_valid= False    
+        self.cg_success = False
+        self.cg_reach_goal = False
+        self.cg_too_many_states = None
+        self.gen_cs_success = False
+        self.centroidal_success = False
+        self.wholebody_success = False
+        self.wholebody_reach_goal = False
+        self.motion_valid = False
         if filename is not None:
             self.__loadFromFile__(filename)
-            
-        
-    def __loadFromFile__(self,filename):
-        f = open(filename,"r")
+
+    def __loadFromFile__(self, filename):
+        f = open(filename, "r")
         for line in f.readlines():
             tab = line.rstrip("\n").split(" ")
             if tab[0].startswith("q_init"):
@@ -44,6 +44,3 @@ class Status:
                 self.wholebody_reach_goal = literal_eval(tab[1].rstrip(' '))
             if tab[0].startswith("motion_valid"):
                 self.motion_valid = literal_eval(tab[1].rstrip(' '))
-    
-    
-                    
