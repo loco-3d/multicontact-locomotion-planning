@@ -12,7 +12,7 @@ wholebody_method_available = ["load", "tsid", "croccodyl", "none"]
 ## methods setting : choose which method will be used to solve each subproblem : 
 contact_generation_method = "load"
 centroidal_initGuess_method = "none"
-centroidal_method = "timeopt" # TODO : fix load method ...
+centroidal_method = "timeopt"
 end_effector_initGuess_method = "bezierPredef"
 end_effector_method = "limbRRToptimized"
 wholebody_method = "tsid"
@@ -31,7 +31,7 @@ SAVE_CS_COM = True
 SAVE_CS_REF = True
 SAVE_CS_WB = True
 EXPORT_GAZEBO = False
-EXPORT_NPZ = True
+EXPORT_NPZ = False
 EXPORT_BLENDER = False
 EXPORT_SOT = False
 EXPORT_OPENHRP = False
@@ -143,6 +143,8 @@ if not (end_effector_initGuess_method in end_effector_initGuess_method_available
     raise ValueError("end effector method must be choosed from : " + str(end_effector_initGuess_method_available))
 if contact_generation_method == "none" and centroidal_method != "load":
     raise ValueError("Cannot skip contact_generation phase if centroidal trajectory is not loaded from file")
+
+
 
 CS_FILENAME = CONTACT_SEQUENCE_PATH + "/" + DEMO_NAME + ".cs"
 COM_FILENAME = CONTACT_SEQUENCE_PATH + "/" + DEMO_NAME + "_COM.cs"
