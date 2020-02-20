@@ -2,8 +2,8 @@ import numpy as np
 import os
 
 contact_generation_method_available = ["none", "load", "rbprm", "sl1m"]
-centroidal_initGuess_method_available = ["none", "geometric", "croc", "timeopt", "quasistatic"]
-centroidal_method_available = ["load", "geometric", "croc", "timeopt", "quasistatic", "muscod", "none"]
+centroidal_initGuess_method_available = ["none", "geometric", "croc", "momentumopt", "quasistatic"]
+centroidal_method_available = ["load", "geometric", "croc", "momentumopt", "quasistatic", "muscod", "none"]
 end_effector_initGuess_method_available = ["load","smoothedFoot", "bezierPredef"]
 end_effector_method_available = ["limbRRT", "limbRRToptimized"]
 wholebody_method_available = ["load", "tsid", "croccodyl", "none"]
@@ -12,7 +12,7 @@ wholebody_method_available = ["load", "tsid", "croccodyl", "none"]
 ## methods setting : choose which method will be used to solve each subproblem : 
 contact_generation_method = "load"
 centroidal_initGuess_method = "none"
-centroidal_method = "timeopt"
+centroidal_method = "momentumopt"
 end_effector_initGuess_method = "bezierPredef"
 end_effector_method = "limbRRToptimized"
 wholebody_method = "tsid"
@@ -22,7 +22,7 @@ PKG_PATH = os.path.dirname(os.path.realpath(__file__)).rstrip("/scripts/mlp")
 print ("PKG_PATH = ",PKG_PATH)
 OUTPUT_DIR = PKG_PATH+"/res"
 CONTACT_SEQUENCE_PATH = OUTPUT_DIR + "/contact_sequences"
-TIME_OPT_CONFIG_PATH = PKG_PATH + '/timeOpt_configs'
+TIME_OPT_CONFIG_PATH = PKG_PATH + '/momentumopt_configs'
 STATUS_FILENAME = OUTPUT_DIR + "/infos.log"
 EXPORT_PATH = OUTPUT_DIR + "/export"
 ## Export setting
@@ -60,8 +60,8 @@ SL1M_USE_INTERPOLATED_ORIENTATION = True  # Only matter if SL1M_USE_ORIENTATION=
 
 ### Settings for centroidal script :
 GRAVITY = np.array([0, 0, -9.81])
-MU = 0.5  # Friction coefficient. hardcoded in timeOpt_configs files, must match this one !
-SOLVER_DT = 0.01  # hardcoded in timeOpt_configs files, must match this one !
+MU = 0.5  # Friction coefficient.
+SOLVER_DT = 0.01  # time step used for centroidal methods
 # Hardcoded height change of the COM before the beginning of the motion (value in m and time allowed to make this motion)
 # This is used because for some robot, the reference configuration is really close to the kinematic limits of the robot.
 COM_SHIFT_Z = 0.0

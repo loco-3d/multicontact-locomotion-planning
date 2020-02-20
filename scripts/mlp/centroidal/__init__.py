@@ -1,6 +1,6 @@
 import mlp.config as cfg
 
-#centroidal_method_available = ["load", "geometric", "croc", "timeopt", "quasistatic", "muscod"]
+#centroidal_method_available = ["load", "geometric", "croc", "momentumopt", "quasistatic", "muscod"]
 
 method = cfg.centroidal_method
 
@@ -10,8 +10,8 @@ elif method == "geometric":
     from .geometric import generateCentroidalTrajectory, Inputs, Outputs
 elif method == "croc":
     from .croc import generateCentroidalTrajectory, Inputs, Outputs
-elif method == "timeopt":
-    from .topt import generateCentroidalTrajectory, Inputs, Outputs
+elif method == "momentumopt":
+    from .momentumopt import generateCentroidalTrajectory, Inputs, Outputs
 elif method == "quasistatic":
     from .quasiStatic import generateCentroidalTrajectory, Inputs, Outputs
 elif method == "muscod":
