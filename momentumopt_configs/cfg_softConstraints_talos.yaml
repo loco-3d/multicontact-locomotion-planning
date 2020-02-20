@@ -1,14 +1,21 @@
 planner_variables:
 
+  load_kinematics: false
+  display_motion: false
+
+  floor_height: 0.0
+  # minimum allowed distance from the robot base to the floor
+  min_rel_height: 0.75
+
   heuristic: TrustRegion  # Types: TrustRegion, SoftConstraint, TimeOptimization #
   n_act_eefs: 2
   time_step: 0.01
-  time_horizon: 9.5
+  time_horizon: 0.
   external_force: [0.00, 0.00, 0.00]
   com_displacement: [0., 0., 0.]
   num_com_viapoints: 0
   com_viapoints:
-  max_time_iterations: 10000
+  max_time_iterations: 1000
   max_time_residual_tolerance: 1e-3
   min_time_residual_improvement: 1e-5
 
@@ -25,25 +32,28 @@ planner_variables:
   cop_range_lf: [-0.03,  0.03, -0.03,  0.03]
   cop_range_rh: [-0.01,  0.01, -0.01,  0.01]
   cop_range_lh: [-0.01,  0.01, -0.01,  0.01]
-  max_eef_lengths: [0.86,  0.86,  0.9,  0.9]
+  max_eef_lengths: [0.87,  0.87,  0.9,  0.9]
 
-  w_trq_arm:       1.000
-  w_trq_leg:       1.000
-  w_com:           [ 1000,  1000,  1000]
+  w_trq_arm:       0.000
+  w_trq_leg:       0.000
+  w_time_penalty: 0.000
+  w_time: 1000.0
+  w_com:           [ 1000,  100000,  10000]
   w_amom:          [ 0.500,  0.500,  0.500]
   w_lmom:          [ 0.010,  0.001,  0.001]
   w_amomd:         [ 0.100,  0.400,  0.100]
   w_lmomd:         [ 0.015,  0.015,  0.015]
   w_amom_final:    [ 10.00,  10.00,  10.00]
   w_lmom_final:    [ 10.00,  10.00,  10.00]
-  w_com_via:       [ 0.2,  0.2,  500.000]
+  w_com_via:       [ 1.,  1.,  50000.000]
   w_frc_arm:       [ 0.001,  0.001,  0.001]
   w_frc_leg:       [ 0.001,  0.001,  0.001]
   w_dfrc_arm:      [ 0.000,  0.000,  0.000]
   w_dfrc_leg:      [ 0.000,  0.000,  0.000]
-  w_amom_track:    [ 0.000,  0.000,  0.000]
+  w_com_track:     [ 0.000,  0.000,  0.000]
+  w_amom_track:    [ 1.000,  1.000,  1.000]
   w_lmom_track:    [ 0.00,  0.000,  0.000]
 
 
-  store_data: True
+  store_data: False
   use_default_solver_setting: True
