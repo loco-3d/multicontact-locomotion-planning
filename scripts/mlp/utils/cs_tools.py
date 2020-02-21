@@ -588,3 +588,24 @@ def generateZeroAMreference(cs):
     for phase in cs.contactPhases:
         phase.L_t = polynomial(np.zeros(3), np.zeros(3), phase.timeInitial, phase.timeFinal)
         phase.dL_t = polynomial(np.zeros(3), np.zeros(3), phase.timeInitial, phase.timeFinal)
+
+def copyEffectorTrajectories(cs_eff, cs):
+    """
+    Copy all the effector trajectories contained in cs_eff in a copy of cs
+    :param cs_eff:
+    :param cs:
+    :return: A new ContactSequence, which is a copy of cs with the addition of the trajectories from cs_eff
+    Return None if the phases do not have the same duration in cs_eff and cs
+    """
+    if cs_eff.size() != cs.size():
+        return None
+    cs_res = ContactSequence(cs)
+    for pid, phase_eff in enumerate(cs_eff.contactPhases):
+        if len(phase_eff.effectorsWithTrajectory()) > 0:
+            phase = cs_res.contactPhases[pid]
+            if phase.timeInitial != phase_eff.timeInitial or phase.timeFinal != phase_eff.timeFinal:
+                print("Unable to copy effector trajectories, the phase duration have changed")
+                return None
+            for eeName, traj in phase_eff.effectorTrajectories().items():
+                phase.addEffectorTrajectory(eeName, traj)
+    return cs_res
