@@ -232,7 +232,7 @@ def initScene(Robot, envName="multicontact/ground", genLimbsDB=True):
     fullBody.setPostureWeights(fullBody.postureWeights[::] + [0] * 6)
     try:
         if genLimbsDB:
-            fullBody.loadAllLimbs("static")
+            fullBody.loadAllLimbs("static", nbSamples=100)
         else:
             fullBody.loadAllLimbs("static", nbSamples=1)
     except AttributeError:
