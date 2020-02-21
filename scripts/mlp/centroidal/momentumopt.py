@@ -241,7 +241,7 @@ def CSfromMomentumopt(planner_setting, cs, init_state, dyn_states, t_init = 0):
             # set the trajectories for the current phase from the arrays :
             phase = cs_com.contactPhases[p_id]
             setCOMtrajectoryFromPoints(phase, c_t, dc_t, ddc_t, times, overwriteInit= (p_id > 0))
-            setAMtrajectoryFromPoints(phase, L_t, dL_t, times)
+            setAMtrajectoryFromPoints(phase, L_t, dL_t, times, overwriteInit= (p_id > 0))
             # set final time :
             phase.timeFinal = times[-1]
             # Start new phase :
@@ -259,8 +259,8 @@ def CSfromMomentumopt(planner_setting, cs, init_state, dyn_states, t_init = 0):
 
     # set final phase :
     phase = cs_com.contactPhases[-1]
-    setCOMtrajectoryFromPoints(phase, c_t, dc_t, ddc_t, times, overwriteFinal = (cfg.DURATION_CONNECT_GOAL == 0))
-    setAMtrajectoryFromPoints(phase, L_t, dL_t, times)
+    setCOMtrajectoryFromPoints(phase, c_t, dc_t, ddc_t, times, overwriteFinal = (cfg.DURATION_CONNECT_GOAL == 0.))
+    setAMtrajectoryFromPoints(phase, L_t, dL_t, times, overwriteFinal = (cfg.DURATION_CONNECT_GOAL == 0.))
     # set final time :
     phase.timeFinal = times[-1]
 

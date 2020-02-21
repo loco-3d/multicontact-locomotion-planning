@@ -306,21 +306,21 @@ def setCOMtrajectoryFromPoints(phase, c, dc, ddc, timeline, overwriteInit = True
     phase.c_t = piecewise.FromPointsList(c,timeline.T)
     phase.dc_t = piecewise.FromPointsList(dc,timeline.T)
     phase.ddc_t = piecewise.FromPointsList(ddc,timeline.T)
-    if overwriteInit or not phase.c_init.any():
+    if overwriteInit:
         phase.c_init = c[:,0]
-    if overwriteInit or not phase.dc_init.any():
+    if overwriteInit:
         phase.dc_init = dc[:,0]
-    if overwriteInit or not phase.ddc_init.any():
+    if overwriteInit:
         phase.ddc_init = ddc[:,0]
-    if overwriteFinal or not phase.c_final.any():
+    if overwriteFinal:
         phase.c_final = c[:,-1]
-    if overwriteFinal or not phase.dc_final.any():
+    if overwriteFinal:
         phase.dc_final= dc[:,-1]
-    if overwriteFinal or not phase.ddc_final.any():
+    if overwriteFinal:
         phase.ddc_final = ddc[:,-1]
 
 
-def setAMtrajectoryFromPoints(phase, L, dL, timeline, overwrite = True):
+def setAMtrajectoryFromPoints(phase, L, dL, timeline, overwriteInit = True, overwriteFinal = True):
     """
     Define the AM  value and it's time derivative trajectories as a linear interpolation between each points
     Also set the initial / final values for L and dL to match the ones in the trajectory
@@ -333,13 +333,13 @@ def setAMtrajectoryFromPoints(phase, L, dL, timeline, overwrite = True):
     """
     phase.L_t = piecewise.FromPointsList(L,timeline.T)
     phase.dL_t = piecewise.FromPointsList(dL,timeline.T)
-    if overwrite or not phase.L_init.any():
+    if overwriteInit:
         phase.L_init = L[:,0]
-    if overwrite or not phase.dL_init.any():
+    if overwriteInit:
         phase.dL_init = dL[:,0]
-    if overwrite or not phase.L_final.any():
+    if overwriteFinal:
         phase.L_final = L[:,-1]
-    if overwrite or not phase.dL_final.any():
+    if overwriteFinal:
         phase.dL_final= dL[:,-1]
 
 def setJointsTrajectoryFromPoints(phase, q, dq, ddq, timeline, overwrite=True):
