@@ -61,7 +61,7 @@ SL1M_USE_INTERPOLATED_ORIENTATION = True  # Only matter if SL1M_USE_ORIENTATION=
 ### Settings for centroidal script :
 GRAVITY = np.array([0, 0, -9.81])
 MU = 0.5  # Friction coefficient.
-SOLVER_DT = 0.01  # time step used for centroidal methods
+SOLVER_DT = 0.05  # time step used for centroidal methods
 # Hardcoded height change of the COM before the beginning of the motion (value in m and time allowed to make this motion)
 # This is used because for some robot, the reference configuration is really close to the kinematic limits of the robot.
 COM_SHIFT_Z = 0.0
