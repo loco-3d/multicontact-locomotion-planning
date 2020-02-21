@@ -174,6 +174,29 @@ def buildEmptyKinSequence(planner_setting):
     kin_sequence.resize(planner_setting.get(mopt.PlannerIntParam_NumTimesteps), 1)
     return kin_sequence
 
+def buildKinSequenceFromCS(planner_setting, cs):
+    """
+    Build a KinematicSequence and fill it with values from the centroidal trajectory stored in CS.
+    :param planner_setting:
+    :param cs:
+    :return: a pymomentum.KinematicsSequence
+    """
+    kin_sequence = KinematicsSequence()
+    kin_sequence.resize(planner_setting.get(mopt.PlannerIntParam_NumTimesteps), 1)
+    dt = planner_setting.get(mopt.PlannerDoubleParam_TimeStep)
+    MASS = planner_setting.get(mopt.PlannerDoubleParam_RobotMass)
+    states = kin_sequence.kinematics_states
+    # fill centroidal trajectories values :
+    c_t = cs.concatenateCtrajectories()
+    dc_t = cs.concatenateDCtrajectories()
+    L_t = cs.concatenateLtrajectories()
+    for id, state in enumerate(states):
+        t = id * dt
+        #state.com = c_t(t)
+        #state.lmom = dc_t(t) * MASS
+        state.amom = L_t(t)
+    return kin_sequence
+
 def isNewPhase(ds1, ds2):
     """
     Check if two dynamicsState have the same contacts
@@ -289,13 +312,16 @@ def generateCentroidalTrajectory(cs, cs_initGuess=None, fullBody=None, viewer=No
         addCOMviapoints(planner_setting, cs, viewer)
 
     ini_state = initStateFromPhase(cs.contactPhases[0])
-    kin_sequence = buildEmptyKinSequence(planner_setting)
+    if first_iter:
+        kin_sequence = buildEmptyKinSequence(planner_setting)
+    else:
+        kin_sequence = buildKinSequenceFromCS(planner_setting, cs_initGuess)
 
     # build the dynamic optimizer:
     dyn_opt = DynamicsOptimizer()
     dyn_opt.initialize(planner_setting)
     # optimize the motion
-    code = dyn_opt.optimize(ini_state, contact_plan, kin_sequence, False)
+    code = dyn_opt.optimize(ini_state, contact_plan, kin_sequence, not first_iter)
     print("Momentumopt internal solving time: " + str(dyn_opt.solveTime() / 1000.) + " s")
     if code != ExitCode.Optimal:
         print("!! WARNING: momentumopt exit with a non Optimal status: ", code)
