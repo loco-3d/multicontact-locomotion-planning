@@ -225,7 +225,7 @@ class Requirements():
 
     @classmethod
     def assertRequirements(cls, cs):
-        print("# Assert requirements : ")
+        #print("# Assert requirements : ")
         if cls.timings:
             assert cs.haveTimings(), "Contact sequence do not have consistent timings."
         if cls.consistentContacts:
@@ -260,7 +260,7 @@ class Requirements():
             assert cs.haveEffectorsTrajectories(1e-2), "Contact sequence do not have consistent effector trajectories."
         if cls.contactForcesTrajectories:
             assert cs.haveContactForcesTrajectories(), "Contact sequence do not have consistent contact forces trajectories."
-        print("# Assert requirements done.")
+        #print("# Assert requirements done.")
 
     @classmethod
     def checkAndFillRequirements(cls, cs, cfg, fullBody = None):
@@ -272,7 +272,7 @@ class Requirements():
         :param fullBody: rbprm.FullBody instance with a robot loaded
         :return: True if either it satisfy the requirement or it managed to set them to default values, False otherwise
         """
-        print("# check requirements : ")
+        #print("# check requirements : ")
 
         if cls.timings:
             if not cls.requireTimings(cs, cfg):
@@ -325,6 +325,6 @@ class Requirements():
         if cls.contactForcesTrajectories:
             if not cls.requireContactForcesTrajectories(cs):
                 return False
-        print("# check requirements done. ")
+        #print("# check requirements done. ")
 
         return True
