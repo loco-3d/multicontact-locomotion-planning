@@ -117,6 +117,7 @@ def createEffectorTasksDic(cfg, effectorsNames, robot):
         mask = np.ones(6)
         if cfg.Robot.cType == "_3_DOF":
             mask[3:6] = np.zeros(3) # ignore rotation for contact points
+        effectorTask.setMask(mask)
         effectorTask.setKp(cfg.kp_Eff * mask)
         effectorTask.setKd(2.0 * np.sqrt(cfg.kp_Eff) * mask)
         res.update({eeName: effectorTask})
@@ -465,6 +466,7 @@ def generateWholeBodyMotion(cs_ref, cfg, fullBody=None, viewer=None):
         mask = np.ones(6)
         mask[0:3] = 0
         mask[5] = cfg.YAW_ROT_GAIN
+        orientationRootTask.setMask(mask)
         orientationRootTask.setKp(cfg.kp_rootOrientation * mask)
         orientationRootTask.setKd(2.0 * np.sqrt(cfg.kp_rootOrientation * mask))
         invdyn.addMotionTask(orientationRootTask, cfg.w_rootOrientation, cfg.level_rootOrientation, 0.0)
