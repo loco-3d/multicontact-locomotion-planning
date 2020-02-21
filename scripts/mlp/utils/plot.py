@@ -112,12 +112,12 @@ def plotEffectorError(cs_ref, cs, dt):
             addVerticalLineContactSwitch(cs, ax_sub)
 
 
-def plotCOMError(cs_ref, cs, dt):
+def plotCOMdifference(cs_ref, cs, dt, name):
     labels = ["x (m)", "y (m)", "z (m)"]
     colors = ['r', 'g', 'b']
     fig, ax = plt.subplots(3, 1)
-    fig.canvas.set_window_title("COM tracking error")
-    fig.suptitle("COM tracking error", fontsize=20)
+    fig.canvas.set_window_title(name)
+    fig.suptitle(name, fontsize=20)
     traj = cs.concatenateCtrajectories()
     traj_ref = cs_ref.concatenateCtrajectories()
     pos, timeline = discretizeCurve(traj, dt)
@@ -132,12 +132,12 @@ def plotCOMError(cs_ref, cs, dt):
         addVerticalLineContactSwitch(cs, ax_sub)
 
 
-def plotAMError(cs_ref, cs, dt):
+def plotAMdifference(cs_ref, cs, dt, name):
     labels = ["x", "y", "z"]
     colors = ['r', 'g', 'b']
     fig, ax = plt.subplots(3, 1)
-    fig.canvas.set_window_title("AM tracking error")
-    fig.suptitle("AM tracking error", fontsize=20)
+    fig.canvas.set_window_title(name)
+    fig.suptitle(name, fontsize=20)
     traj = cs.concatenateLtrajectories()
     traj_ref = cs_ref.concatenateLtrajectories()
     pos, timeline = discretizeCurve(traj, dt)
@@ -152,16 +152,21 @@ def plotAMError(cs_ref, cs, dt):
         addVerticalLineContactSwitch(cs, ax_sub)
 
 
-def plotZMP(cs_ref, cs, dt):
+def plotZMP(cs_ref, cs_iters, dt, circle_radius = 0.):
     fig = plt.figure("ZMP-CoM (xy)")
     ax = fig.gca()
-    plt.suptitle("ZMP-CoM (xy) red = CoM ; black = ZMP (dashed = reference); green = feet placements")
-    ZMP_t = discretizeCurve(cs.concatenateZMPtrajectories(), dt)[0]
+    plt.suptitle("ZMP-CoM (xy) black = CoM ; dashed = ZMP reference ; colors = ZMP ; green = feet placements")
+    ZMPs_t = []
+    for cs in cs_iters:
+        ZMPs_t += [discretizeCurve(cs.concatenateZMPtrajectories(), dt)[0]]
     ZMP_ref = discretizeCurve(cs_ref.concatenateZMPtrajectories(), dt)[0]
     pcom_t = discretizeCurve(cs.concatenateCtrajectories(), dt)[0]
-    plt.plot(ZMP_t[0, :].T, ZMP_t[1, :].T, color='k')
+    colors = ['b', 'g','r', 'c', 'm', 'y']
+    for k, ZMP_t in enumerate(ZMPs_t):
+        plt.plot(ZMP_t[0, :].T, ZMP_t[1, :].T, color=colors[k], label="iter "+str(k))
+
     plt.plot(ZMP_ref[0, :].T, ZMP_ref[1, :].T, color='k', linestyle=':')
-    plt.plot(pcom_t[0, :].T, pcom_t[1, :].T, color='r')
+    plt.plot(pcom_t[0, :].T, pcom_t[1, :].T, color='k')
     plt.xlabel("x position (m)")
     plt.ylabel("y position (m)")
     plt.axis('equal')
@@ -175,9 +180,9 @@ def plotZMP(cs_ref, cs, dt):
             pos = p.contactPatch(eeName).placement.translation
             color = colors_circles[effector_list.index(eeName)]
             plt.plot(pos[0], pos[1], marker="x", markersize=20, color=color)
-            circle_r = plt.Circle((pos[0], pos[1]), 0.01, color='g', fill=False)
+            circle_r = plt.Circle((pos[0], pos[1]), circle_radius, color='g', fill=False)
             ax.add_artist(circle_r)
-
+    ax.legend()
 
 
 def plotCOMTrajWithReferences(cs_ref, cs, dt):
@@ -207,14 +212,14 @@ def plotCOMTrajWithReferences(cs_ref, cs, dt):
             addVerticalLineContactSwitch(cs, ax_sub)
 
 
-def plotCOMTraj(cs, dt):
+def plotCOMTraj(cs, dt, name_suffixe = ""):
     labels = [
         "x (m)", "y (m)", "z (m)", "dx (m/s)", "dy (m/s)", "dz (m/s)", "ddx (m/s^2)", "ddy (m/s^2)", "ddz (m/s^2)"
     ]
     colors = ['r', 'g', 'b']
     fig, ax = plt.subplots(3, 3)
-    fig.canvas.set_window_title("COM trajectory")
-    fig.suptitle("COM trajectory", fontsize=20)
+    fig.canvas.set_window_title("COM trajectory"+name_suffixe)
+    fig.suptitle("COM trajectory"+name_suffixe, fontsize=20)
     c_t, timeline = discretizeCurve(cs.concatenateCtrajectories(), dt)
     dc_t = discretizeCurve(cs.concatenateDCtrajectories(), dt)[0]
     ddc_t = discretizeCurve(cs.concatenateDDCtrajectories(), dt)[0]
@@ -228,6 +233,34 @@ def plotCOMTraj(cs, dt):
             ax_sub.set_ylabel(labels[i * 3 + j])
             ax_sub.yaxis.grid()
             addVerticalLineContactSwitch(cs, ax_sub)
+
+
+def plotCOMTrajChanges(cs0, cs1, dt):
+    labels = [
+        "x (m)", "y (m)", "z (m)", "dx (m/s)", "dy (m/s)", "dz (m/s)", "ddx (m/s^2)", "ddy (m/s^2)", "ddz (m/s^2)"
+    ]
+    colors = ['r', 'g', 'b']
+    fig, ax = plt.subplots(3, 3)
+    fig.canvas.set_window_title("Comparison of CoM trajectories.")
+    fig.suptitle("Comparison of CoM trajectories. dashed: before dynamic filter, line: after", fontsize=20)
+    c0_t, timeline = discretizeCurve(cs0.concatenateCtrajectories(), dt)
+    dc0_t = discretizeCurve(cs0.concatenateDCtrajectories(), dt)[0]
+    ddc0_t = discretizeCurve(cs0.concatenateDDCtrajectories(), dt)[0]
+    values0 = np.vstack([c0_t, dc0_t, ddc0_t])
+    c1_t = discretizeCurve(cs1.concatenateCtrajectories(), dt)[0]
+    dc1_t = discretizeCurve(cs1.concatenateDCtrajectories(), dt)[0]
+    ddc1_t = discretizeCurve(cs1.concatenateDDCtrajectories(), dt)[0]
+    values1 = np.vstack([c1_t, dc1_t, ddc1_t])
+
+    for i in range(3):  # line = pos,vel,acc
+        for j in range(3):  # col = x,y,z
+            ax_sub = ax[i, j]
+            ax_sub.plot(timeline.T, values0[i * 3 + j, :].T, color=colors[j], linestyle=":")
+            ax_sub.plot(timeline.T, values1[i * 3 + j, :].T, color=colors[j])
+            ax_sub.set_xlabel('time (s)')
+            ax_sub.set_ylabel(labels[i * 3 + j])
+            ax_sub.yaxis.grid()
+            addVerticalLineContactSwitch(cs0, ax_sub)
 
 
 def plotAMTrajWithReferences(cs_ref, cs, dt):
@@ -254,12 +287,12 @@ def plotAMTrajWithReferences(cs_ref, cs, dt):
             addVerticalLineContactSwitch(cs, ax_sub)
 
 
-def plotAMTraj(cs, dt):
+def plotAMTraj(cs, dt, name_suffixe = ""):
     labels = ["x", "y", "z", "dx", "dy", "dz"]
     colors = ['r', 'g', 'b']
     fig, ax = plt.subplots(2, 3)
-    fig.canvas.set_window_title("AM trajectory")
-    fig.suptitle("AM trajectory", fontsize=20)
+    fig.canvas.set_window_title("AM trajectory"+name_suffixe)
+    fig.suptitle("AM trajectory"+name_suffixe, fontsize=20)
     L_t, timeline = discretizeCurve(cs.concatenateLtrajectories(), dt)
     dL_t = discretizeCurve(cs.concatenateDLtrajectories(), dt)[0]
     values = np.vstack([L_t, dL_t])
@@ -272,6 +305,29 @@ def plotAMTraj(cs, dt):
             ax_sub.set_ylabel(labels[i * 3 + j])
             ax_sub.yaxis.grid()
             addVerticalLineContactSwitch(cs, ax_sub)
+
+
+def plotAMTrajChanges(cs0, cs1, dt):
+    labels = ["x", "y", "z", "dx", "dy", "dz"]
+    colors = ['r', 'g', 'b']
+    fig, ax = plt.subplots(2, 3)
+    fig.canvas.set_window_title("Comparison of AM trajectories. dashed: before dynamic filter, line: after")
+    fig.suptitle("Comparison of AM trajectories.", fontsize=20)
+    L0_t, timeline = discretizeCurve(cs0.concatenateLtrajectories(), dt)
+    dL0_t = discretizeCurve(cs0.concatenateDLtrajectories(), dt)[0]
+    values0 = np.vstack([L0_t, dL0_t])
+    L1_t = discretizeCurve(cs1.concatenateLtrajectories(), dt)[0]
+    dL1_t = discretizeCurve(cs1.concatenateDLtrajectories(), dt)[0]
+    values1 = np.vstack([L1_t, dL1_t])
+    for i in range(2):  # line = L,dL
+        for j in range(3):  # col = x,y,z
+            ax_sub = ax[i, j]
+            ax_sub.plot(timeline.T, values0[i * 3 + j, :].T, color=colors[j], linestyle=":")
+            ax_sub.plot(timeline.T, values1[i * 3 + j, :].T, color=colors[j])
+            ax_sub.set_xlabel('time (s)')
+            ax_sub.set_ylabel(labels[i * 3 + j])
+            ax_sub.yaxis.grid()
+            addVerticalLineContactSwitch(cs0, ax_sub)
 
 
 def plotContactForces(cs, dt):
@@ -319,7 +375,8 @@ def saveAllFigures(path_dir):
         fig.savefig(path_dir + "/" + str(fig._suptitle.get_text()) + ".eps", dpi=600)
 
 
-def plotALLFromWB(cs_ref, cs ,cfg):
+def plotALLFromWB(cs_ref, cs_iters ,cfg):
+    cs = cs_iters[-1]
     print("Plotting ...")
     plt.rcParams['axes.linewidth'] = plt.rcParams['font.size'] / 30.
     plt.rcParams['lines.linewidth'] = plt.rcParams['font.size'] / 30.
@@ -330,19 +387,19 @@ def plotALLFromWB(cs_ref, cs ,cfg):
     if cs_ref.haveCOMtrajectories():
         if cs.haveCOMtrajectories():
             plotCOMTrajWithReferences(cs_ref, cs, dt)
-            plotCOMError(cs_ref, cs, dt)
+            plotCOMdifference(cs_ref, cs, dt,"CoM tracking error")
         elif not cfg.PLOT_CENTROIDAL:
             plotCOMTraj(cs_ref, dt)
         # else : it's already plotted
     if cs_ref.haveAMtrajectories():
         if cs.haveAMtrajectories():
             plotAMTrajWithReferences(cs_ref, cs, dt)
-            plotAMError(cs_ref, cs, dt)
+            plotAMdifference(cs_ref, cs, dt, "AM tracking error")
         elif not cfg.PLOT_CENTROIDAL:
             plotAMTraj(cs_ref, dt)
         # else : it's already plotted
     if cs.haveZMPtrajectories() and Requirements.requireZMPtrajectories(cs_ref, cfg):
-        plotZMP(cs_ref, cs, dt)
+        plotZMP(cs_ref, cs_iters, dt, cfg.PLOT_CIRCLE_RADIUS)
     if cs.haveTorquesTrajectories():
         offset = cs.contactPhases[0].q_t.dim() - cs.contactPhases[0].tau_t.dim()
         plotKneeTorque(cs, dt, cfg.Robot.kneeIds, offset)
@@ -359,3 +416,19 @@ def plotALLFromWB(cs_ref, cs ,cfg):
     if save and path:
         saveAllFigures(path)
     print("Plotting Done.")
+
+def compareCentroidal(cs_iters, cfg):
+    plt.rcParams['axes.linewidth'] = plt.rcParams['font.size'] / 30.
+    plt.rcParams['lines.linewidth'] = plt.rcParams['font.size'] / 30.
+    display = cfg.DISPLAY_PLOT
+    save = cfg.SAVE_PLOT
+    path = cfg.OUTPUT_DIR + "/plot/" + cfg.DEMO_NAME
+    dt = cfg.SOLVER_DT
+    plotAMdifference(cs_iters[0], cs_iters[-1], dt, "Dynamic filter changes on AM trajectory")
+    plotCOMdifference(cs_iters[0], cs_iters[-1], dt, "Dynamic filter changes on CoM trajectory")
+    plotCOMTrajChanges(cs_iters[0], cs_iters[-1], dt)
+    plotAMTrajChanges(cs_iters[0], cs_iters[-1], dt)
+    if display:
+        plt.show(block=False)
+    if save and path:
+        saveAllFigures(path)

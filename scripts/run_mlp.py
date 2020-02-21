@@ -183,7 +183,9 @@ if cfg.DISPLAY_WB_MOTION:
 
 if cfg.PLOT:
     from mlp.utils import plot
-    plot.plotALLFromWB(cs_ref, cs_wb, cfg)
+    plot.plotALLFromWB(cs_ref, cs_wb_iters, cfg)
+    if cfg.ITER_DYNAMIC_FILTER > 0:
+        plot.compareCentroidal(cs_com_iters, cfg)
 
 if cfg.EXPORT_OPENHRP and motion_valid:
     from mlp.export import openHRP
