@@ -8,9 +8,7 @@ except ImportError:
     message += "See https://github.com/machines-in-motion/kino_dynamic_opt"
     raise ImportError(message)
 from math import floor
-import numpy as np
 import multicontact_api
-import mlp.config as cfg
 from multicontact_api import ContactSequence
 import time
 import mlp.viewer.display_tools as display
@@ -19,6 +17,7 @@ import numpy as np
 from numpy import array, append
 from numpy.linalg import norm
 from pinocchio import SE3
+import mlp.config as cfg
 from mlp.utils.requirements import Requirements
 
 multicontact_api.switchToNumpyArray()
@@ -267,10 +266,14 @@ def CSfromMomentumopt(planner_setting, cs, init_state, dyn_states, t_init = 0):
     return cs_com
 
 
-def generateCentroidalTrajectory(cs, cs_initGuess=None, fullBody=None, viewer=None):
-    if cs_initGuess:
+def generateCentroidalTrajectory(cs, cs_initGuess=None, fullBody=None, viewer=None, first_iter = True):
+    if cs_initGuess is not None and first_iter:
         print("WARNING : in current implementation of timeopt.generateCentroidalTrajectory"
               " the initial guess is ignored. (TODO)")
+    if not first_iter:
+        if cs_initGuess is None or not cs_initGuess.haveCentroidalValues():
+            raise RuntimeError("Centroidal.momentumopt called after a first iteration without a valid reference ContactSequence provided.")
+
     tStart = time.time()
     # load planner settings from yaml:
     planner_setting = PlannerSetting()

@@ -19,7 +19,7 @@ elif method == "muscod":
 elif method == "none":
     from  mlp.utils.requirements import Requirements as Inputs
     from  mlp.utils.requirements import Requirements as Outputs
-    def generateCentroidalTrajectory(cs, cs_initGuess=None, fullBody=None, viewer=None):
+    def generateCentroidalTrajectory(cs, cs_initGuess=None, fullBody=None, viewer=None, first_iter = True):
         print("Centroidal trajectory not computed !")
         return None
 else:
