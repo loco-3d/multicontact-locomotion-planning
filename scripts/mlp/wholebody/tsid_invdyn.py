@@ -1,6 +1,12 @@
 import pinocchio as pin
 from pinocchio import SE3, Quaternion, Force, Motion
-import tsid
+try:
+    import tsid
+except ImportError:
+    message = "ERROR: Cannot import TSID python library.\n"
+    message += "Did you correctly installed it?\n"
+    message +="See https://github.com/stack-of-tasks/tsid"
+    raise ImportError(message)
 import numpy as np
 from numpy.linalg import norm as norm
 import os

@@ -1,6 +1,12 @@
-import pymomentum as mopt
-from pymomentum import PlannerSetting, ContactPlanFromFile,ContactState, DynamicsOptimizer, DynamicsState, ContactType, EffId, KinematicsSequence
-from pysolver import ExitCode
+try:
+    import pymomentum as mopt
+    from pymomentum import PlannerSetting, ContactPlanFromFile,ContactState, DynamicsOptimizer, DynamicsState, ContactType, EffId, KinematicsSequence
+    from pysolver import ExitCode
+except ImportError:
+    message = "ERROR: Cannot import momentumopt python library.\n"
+    message += "Did you correctly installed it?\n"
+    message += "See https://github.com/machines-in-motion/kino_dynamic_opt"
+    raise ImportError(message)
 from math import floor
 import numpy as np
 import multicontact_api
