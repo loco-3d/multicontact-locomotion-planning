@@ -51,6 +51,7 @@ def setDuration(planner_setting, cs):
     n_time_steps = int(floor(duration/dt))
     planner_setting.set(mopt.PlannerDoubleParam_TimeHorizon, duration)
     planner_setting.set(mopt.PlannerIntParam_NumTimesteps, n_time_steps)
+    planner_setting.set(mopt.PlannerDoubleParam_TimeStep, dt)
 
 
 def extractEffectorPhasesFromCS(cs, eeName):
