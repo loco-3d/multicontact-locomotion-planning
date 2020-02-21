@@ -2,6 +2,7 @@ import mlp.config as cfg
 import mlp.viewer.display_tools as display_tools
 import os
 import eigenpy
+import time
 import pinocchio
 import curves
 import multicontact_api
@@ -13,7 +14,7 @@ try:
 except NameError:
     pass
 
-
+tStart = time.time()
 print("### MLP : contact sequence ###")
 import mlp.contact_sequence as contactGeneration
 cs, fullBody, viewer = contactGeneration.generateContactSequence()
@@ -159,6 +160,10 @@ elif cs_wb is not None and cs_wb.size() > 0:
     motion_valid = True
 else:
     motion_valid = False
+
+tTotal = time.time() - tStart
+print("### Complete motion generation time: "+ str(tTotal) + " s")
+
 if cfg.DISPLAY_WB_MOTION:
     input("Press Enter to display the whole body motion ...")
     display_tools.displayWBmotion(viewer, cs_wb.concatenateQtrajectories(), cfg.DT_DISPLAY)
