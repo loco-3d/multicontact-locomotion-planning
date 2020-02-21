@@ -166,7 +166,7 @@ def adjustEndEffectorTrajectoryIfNeeded(phase, robot, data, eeName):
     """
     current_placement = getCurrentEffectorPosition(robot, data, eeName)
     ref_placement = phase.effectorTrajectory(eeName).evaluateAsSE3(phase.timeInitial)
-    if not current_placement.isApprox(ref_placement, 1e-9):
+    if not current_placement.isApprox(ref_placement, 1e-3):
         print("- End effector trajectory need to be adjusted.")
         placement_end = phase.effectorTrajectory(eeName).evaluateAsSE3(phase.timeFinal)
         ref_traj = generateEndEffectorTraj([phase.timeInitial, phase.timeFinal], current_placement, placement_end, 0)
