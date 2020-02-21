@@ -303,7 +303,7 @@ def generateCentroidalTrajectory(cs, cs_initGuess=None, fullBody=None, viewer=No
     cfg_path = cfg.TIME_OPT_CONFIG_PATH + '/' + cfg.TIMEOPT_CONFIG_FILE
     print("Use configuration file for momentumopt : ", cfg_path)
     planner_setting.initialize(cfg_path)
-
+    planner_setting.set(mopt.PlannerIntParam_NumActiveEndeffectors, len(cs.getAllEffectorsInContact()))
     setDuration(planner_setting, cs)
     contact_plan = contactPlanFromCS(planner_setting, cs)
     setFinalCOM(planner_setting, cs)
