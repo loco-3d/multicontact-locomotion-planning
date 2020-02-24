@@ -72,7 +72,7 @@ ITER_DYNAMIC_FILTER = 2 # if > 0 the solution of the wholebody method is send ba
 
 ## Settings for end effector :
 EFF_CHECK_COLLISION = True  # After generating of whole body motion for a phase with an effector motion, check collision and joints limits for this motion and retry if invalid and if choosen method allow it
-CHECK_DT = 0.02  # time step (in seconds) at which the (self-)collision and joints limits are tested
+CHECK_DT = 0.01  # time step (in seconds) at which the (self-)collision and joints limits are tested
 WB_ABORT_WHEN_INVALID = False  # stop wb script when stuck with an invalid motion and return the VALID part (before the phase with collision)
 WB_RETURN_INVALID = not WB_ABORT_WHEN_INVALID and True  # stop wb script when stuck with an invalid motion and return  the computed part of motion, incuding the last INVALID phase
 
