@@ -87,7 +87,7 @@ The user should never modify the main script (run_mlp.py) but only the various c
   
 #### External configuration file for specific solvers:
 
-Some solvers called as external library by this package may require other configuration files, they are stored in specific folders (eg. timeOpt_configs for timeOpt solver). The file(s) used by this solvers are choosen inside the  mlp/demo_configs/DEMO_NAME.py configuration file (https://github.com/loco-3d/multicontact-locomotion-planning/blob/master/scripts/mlp/demo_configs/talos_circle.py#L1).
+Some solvers called as external library by this package may require other configuration files, they are stored in specific folders (eg. momentumopt_configs for momentumopt solver). The file(s) used by this solvers are choosen inside the  mlp/demo_configs/DEMO_NAME.py configuration file (https://github.com/loco-3d/multicontact-locomotion-planning/blob/master/scripts/mlp/demo_configs/talos_circle.py#L1).
 
 ## Load motion from files:
 
@@ -111,7 +111,7 @@ Currently supported method for each subproblem, you need to install the packages
 
 ## Centroidal trajectory optimization : 
 
-* timeoptimization (https://git-amd.tuebingen.mpg.de/bponton/timeoptimization and it's wrapper https://github.com/ggory15/timeopt )
+* momentumopt (https://github.com/machines-in-motion/kino_dynamic_opt)
 * CROC (https://hal.archives-ouvertes.fr/hal-01726155), included in RBPRM
 * 2-PAC (quasi-static) (https://hal.archives-ouvertes.fr/hal-01609055) included in RBPRM
 
