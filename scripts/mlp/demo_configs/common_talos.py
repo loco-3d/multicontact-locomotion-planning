@@ -5,8 +5,8 @@ GUIDE_STEP_SIZE = 1.
 GUIDE_MAX_YAW = 0.6
 
 ## predef duration of contact phases :
-DURATION_INIT = 1.  # Time to init the motion
-DURATION_FINAL = 1.  # Time to stop the robot
+DURATION_INIT = 2.  # Time to init the motion
+DURATION_FINAL = 2.  # Time to stop the robot
 DURATION_FINAL_SS = 1.  # duration of the final phase if it's a single support phase
 DURATION_SS = 1.4  # duration of the single support phases
 DURATION_DS = 0.2  # duration of the double support phases
@@ -29,8 +29,8 @@ w_forceRef = 1e-3  # weight of force regularization task
 w_eff = 1.0  # weight of the effector motion task
 kp_contact = 30.0  # proportional gain of contact constraint
 kp_com = 20.  # proportional gain of center of mass task
-kp_am = 1. # gain used for the minimization of the Angular momentum
-kp_am_track = 1. # gain used for the tracking of the Angular momentum
+kp_am = 10. # gain used for the minimization of the Angular momentum
+kp_am_track = 10. # gain used for the tracking of the Angular momentum
 kp_posture = 1.  # proportional gain of joint posture task
 kp_rootOrientation = 1000.  # proportional gain of the root's orientation task
 kp_Eff = 20.  # proportional gain of the effectors motion task
@@ -40,7 +40,7 @@ level_posture = 1
 level_rootOrientation = 1
 level_am = 1
 
-IK_dt = 0.01
+#IK_dt = 0.001
 IK_eff_size = Robot.dict_size.copy()
 PLOT_CIRCLE_RADIUS = 0.05 # radius of the circle used to display the contacts
 #IK_eff_size={Robot.rfoot:[0.1 , 0.06], Robot.lfoot:[0.1 , 0.06],Robot.rhand:[0.1, 0.1],Robot.lhand:[0.1, 0.1]}
