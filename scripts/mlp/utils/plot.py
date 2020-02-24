@@ -152,25 +152,26 @@ def plotAMdifference(cs_ref, cs, dt, name):
         addVerticalLineContactSwitch(cs, ax_sub)
 
 
-def plotZMP(cs_ref, cs_iters, dt, circle_radius = 0.):
-    fig = plt.figure("ZMP-CoM (xy)")
+def plotZMP(cs_ref_iters, cs_iters, dt, circle_radius = 0.):
+    fig = plt.figure("ZMP(xy)")
     ax = fig.gca()
-    plt.suptitle("ZMP-CoM (xy) black = CoM ; dashed = ZMP reference ; colors = ZMP ; green = feet placements")
+    plt.suptitle("ZMP(xy); dashed = ZMP reference ; lines = ZMP from wholebody ; green = feet placements")
     ZMPs_t = []
+    ZMPs_ref = []
     for cs in cs_iters:
         ZMPs_t += [discretizeCurve(cs.concatenateZMPtrajectories(), dt)[0]]
-    ZMP_ref = discretizeCurve(cs_ref.concatenateZMPtrajectories(), dt)[0]
-    pcom_t = discretizeCurve(cs.concatenateCtrajectories(), dt)[0]
+    for cs_ref in cs_ref_iters:
+        ZMPs_ref += [discretizeCurve(cs_ref.concatenateZMPtrajectories(), dt)[0]]
+
     colors = ['b', 'g','r', 'c', 'm', 'y']
     for k, ZMP_t in enumerate(ZMPs_t):
         plt.plot(ZMP_t[0, :].T, ZMP_t[1, :].T, color=colors[k], label="iter "+str(k))
-
-    plt.plot(ZMP_ref[0, :].T, ZMP_ref[1, :].T, color='k', linestyle=':')
-    plt.plot(pcom_t[0, :].T, pcom_t[1, :].T, color='k')
+    for k, ZMP_ref in enumerate(ZMPs_ref):
+        plt.plot(ZMP_ref[0, :].T, ZMP_ref[1, :].T, color=colors[k], linestyle='dashed')
     plt.xlabel("x position (m)")
     plt.ylabel("y position (m)")
     plt.axis('equal')
-    plt.grid(True)
+    plt.grid(False)
     colors_circles = ['g', 'r', 'b', 'y']
     effector_list = cs.getAllEffectorsInContact()
     for p in cs.contactPhases:
@@ -183,6 +184,24 @@ def plotZMP(cs_ref, cs_iters, dt, circle_radius = 0.):
             circle_r = plt.Circle((pos[0], pos[1]), circle_radius, color='g', fill=False)
             ax.add_artist(circle_r)
     ax.legend()
+
+def plotZMPdifferences(cs_ref_iters, cs_iters, dt):
+    fig, ax = plt.subplots(len(cs_ref_iters), 2)
+    fig.canvas.set_window_title("Difference between the ZMP trajectories")
+    plt.suptitle("Difference between the ZMP trajectories from the centroidal solver and the wholebody after iterations of the dynamic filter.")
+    labels = ["X", "Y"]
+    for i, cs in enumerate(cs_iters):
+        ref, timeline = discretizeCurve(cs_ref_iters[i].concatenateZMPtrajectories(), dt)
+        zmp = discretizeCurve(cs.concatenateZMPtrajectories(), dt)[0]
+        diff = zmp - ref
+        for j in range(2):
+            ax_sub = ax[i, j]
+            ax_sub.plot(timeline.T, diff[j,:])
+            ax_sub.set_xlabel('time (s)')
+            ax_sub.set_ylabel(labels[j]+" values for iter " + str(i))
+
+
+
 
 
 def plotCOMTrajWithReferences(cs_ref, cs, dt):
@@ -375,8 +394,9 @@ def saveAllFigures(path_dir):
         fig.savefig(path_dir + "/" + str(fig._suptitle.get_text()) + ".eps", dpi=600)
 
 
-def plotALLFromWB(cs_ref, cs_iters ,cfg):
+def plotALLFromWB(cs_ref_iters, cs_iters ,cfg):
     cs = cs_iters[-1]
+    cs_ref = cs_ref_iters[-1]
     print("Plotting ...")
     plt.rcParams['axes.linewidth'] = plt.rcParams['font.size'] / 30.
     plt.rcParams['lines.linewidth'] = plt.rcParams['font.size'] / 30.
@@ -398,8 +418,11 @@ def plotALLFromWB(cs_ref, cs_iters ,cfg):
         elif not cfg.PLOT_CENTROIDAL:
             plotAMTraj(cs_ref, dt)
         # else : it's already plotted
-    if cs.haveZMPtrajectories() and Requirements.requireZMPtrajectories(cs_ref, cfg):
-        plotZMP(cs_ref, cs_iters, dt, cfg.PLOT_CIRCLE_RADIUS)
+    if cs.haveZMPtrajectories():
+        for cs_ref in cs_ref_iters:
+            Requirements.requireZMPtrajectories(cs_ref, cfg)
+        plotZMP(cs_ref_iters, cs_iters, dt, cfg.PLOT_CIRCLE_RADIUS)
+        plotZMPdifferences(cs_ref_iters, cs_iters, dt)
     if cs.haveTorquesTrajectories():
         offset = cs.contactPhases[0].q_t.dim() - cs.contactPhases[0].tau_t.dim()
         plotKneeTorque(cs, dt, cfg.Robot.kneeIds, offset)
