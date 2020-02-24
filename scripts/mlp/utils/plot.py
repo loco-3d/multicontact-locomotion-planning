@@ -51,7 +51,7 @@ def plotEffectorTrajectoryWithReference(cs_ref, cs, dt):
                 for j in range(3):  # col = x,y,z
                     ax_sub = ax[i, j]
                     ax_sub.plot(timeline.T, values[i * 3 + j, :].T, color=colors[j])
-                    ax_sub.plot(timeline.T, values_ref[i * 3 + j, :].T, color=colors[j], linestyle=":")
+                    ax_sub.plot(timeline.T, values_ref[i * 3 + j, :].T, color=colors[j], linestyle="dashed")
                     ax_sub.set_xlabel('time (s)')
                     ax_sub.set_ylabel(labels[i * 3 + j])
                     addVerticalLineContactSwitch(cs, ax_sub)
@@ -224,7 +224,7 @@ def plotCOMTrajWithReferences(cs_ref, cs, dt):
         for j in range(3):  # col = x,y,z
             ax_sub = ax[i, j]
             ax_sub.plot(timeline.T, values[i * 3 + j, :].T, color=colors[j])
-            ax_sub.plot(timeline.T, values_ref[i * 3 + j, :].T, color=colors[j], linestyle=":")
+            ax_sub.plot(timeline.T, values_ref[i * 3 + j, :].T, color=colors[j], linestyle="dashed")
             ax_sub.set_xlabel('time (s)')
             ax_sub.set_ylabel(labels[i * 3 + j])
             ax_sub.yaxis.grid()
@@ -260,7 +260,7 @@ def plotCOMTrajChanges(cs0, cs1, dt):
     ]
     colors = ['r', 'g', 'b']
     fig, ax = plt.subplots(3, 3)
-    fig.canvas.set_window_title("Comparison of CoM trajectories.")
+    fig.canvas.set_window_title("Comparison of CoM trajectories")
     fig.suptitle("Comparison of CoM trajectories. dashed: before dynamic filter, line: after", fontsize=20)
     c0_t, timeline = discretizeCurve(cs0.concatenateCtrajectories(), dt)
     dc0_t = discretizeCurve(cs0.concatenateDCtrajectories(), dt)[0]
@@ -274,7 +274,7 @@ def plotCOMTrajChanges(cs0, cs1, dt):
     for i in range(3):  # line = pos,vel,acc
         for j in range(3):  # col = x,y,z
             ax_sub = ax[i, j]
-            ax_sub.plot(timeline.T, values0[i * 3 + j, :].T, color=colors[j], linestyle=":")
+            ax_sub.plot(timeline.T, values0[i * 3 + j, :].T, color=colors[j], linestyle="dashed")
             ax_sub.plot(timeline.T, values1[i * 3 + j, :].T, color=colors[j])
             ax_sub.set_xlabel('time (s)')
             ax_sub.set_ylabel(labels[i * 3 + j])
@@ -299,7 +299,7 @@ def plotAMTrajWithReferences(cs_ref, cs, dt):
         for j in range(3):  # col = x,y,z
             ax_sub = ax[i, j]
             ax_sub.plot(timeline.T, values[i * 3 + j, :].T, color=colors[j])
-            ax_sub.plot(timeline.T, values_ref[i * 3 + j, :].T, color=colors[j], linestyle=":")
+            ax_sub.plot(timeline.T, values_ref[i * 3 + j, :].T, color=colors[j], linestyle="dashed")
             ax_sub.set_xlabel('time (s)')
             ax_sub.set_ylabel(labels[i * 3 + j])
             ax_sub.yaxis.grid()
@@ -330,8 +330,8 @@ def plotAMTrajChanges(cs0, cs1, dt):
     labels = ["x", "y", "z", "dx", "dy", "dz"]
     colors = ['r', 'g', 'b']
     fig, ax = plt.subplots(2, 3)
-    fig.canvas.set_window_title("Comparison of AM trajectories. dashed: before dynamic filter, line: after")
-    fig.suptitle("Comparison of AM trajectories.", fontsize=20)
+    fig.canvas.set_window_title("Comparison of AM trajectories")
+    fig.suptitle("Comparison of AM trajectories.  dashed: before dynamic filter, line: after", fontsize=20)
     L0_t, timeline = discretizeCurve(cs0.concatenateLtrajectories(), dt)
     dL0_t = discretizeCurve(cs0.concatenateDLtrajectories(), dt)[0]
     values0 = np.vstack([L0_t, dL0_t])
@@ -341,7 +341,7 @@ def plotAMTrajChanges(cs0, cs1, dt):
     for i in range(2):  # line = L,dL
         for j in range(3):  # col = x,y,z
             ax_sub = ax[i, j]
-            ax_sub.plot(timeline.T, values0[i * 3 + j, :].T, color=colors[j], linestyle=":")
+            ax_sub.plot(timeline.T, values0[i * 3 + j, :].T, color=colors[j], linestyle="dashed")
             ax_sub.plot(timeline.T, values1[i * 3 + j, :].T, color=colors[j])
             ax_sub.set_xlabel('time (s)')
             ax_sub.set_ylabel(labels[i * 3 + j])
