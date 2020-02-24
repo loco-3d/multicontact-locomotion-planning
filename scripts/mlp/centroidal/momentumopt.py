@@ -174,11 +174,12 @@ def buildEmptyKinSequence(planner_setting):
     kin_sequence.resize(planner_setting.get(mopt.PlannerIntParam_NumTimesteps), 1)
     return kin_sequence
 
-def buildKinSequenceFromCS(planner_setting, cs):
+def buildKinSequenceFromCS(planner_setting, cs, t_init):
     """
     Build a KinematicSequence and fill it with values from the centroidal trajectory stored in CS.
     :param planner_setting:
     :param cs:
+    :param t_init: time at which the centroidal trajectory start in the CS
     :return: a pymomentum.KinematicsSequence
     """
     kin_sequence = KinematicsSequence()
@@ -187,11 +188,11 @@ def buildKinSequenceFromCS(planner_setting, cs):
     MASS = planner_setting.get(mopt.PlannerDoubleParam_RobotMass)
     states = kin_sequence.kinematics_states
     # fill centroidal trajectories values :
-    c_t = cs.concatenateCtrajectories()
-    dc_t = cs.concatenateDCtrajectories()
+    #c_t = cs.concatenateCtrajectories()
+    #dc_t = cs.concatenateDCtrajectories()
     L_t = cs.concatenateLtrajectories()
     for id, state in enumerate(states):
-        t = id * dt
+        t = t_init + (id+1) * dt
         #state.com = c_t(t)
         #state.lmom = dc_t(t) * MASS
         state.amom = L_t(t)
@@ -315,7 +316,7 @@ def generateCentroidalTrajectory(cs, cs_initGuess=None, fullBody=None, viewer=No
     if first_iter:
         kin_sequence = buildEmptyKinSequence(planner_setting)
     else:
-        kin_sequence = buildKinSequenceFromCS(planner_setting, cs_initGuess)
+        kin_sequence = buildKinSequenceFromCS(planner_setting, cs_initGuess, cfg.TIME_SHIFT_COM)
 
     # build the dynamic optimizer:
     dyn_opt = DynamicsOptimizer()
