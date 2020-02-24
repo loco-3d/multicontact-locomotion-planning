@@ -55,8 +55,8 @@ for iterDynFilter in range(cfg.ITER_DYNAMIC_FILTER + 1):
     if iterDynFilter > 0:
         print("\n########################################")
         print("#### Iter " + str(iterDynFilter) + " of the dynamic filter.  #### ")
-        print("######################################### \n")
-        cfg.IK_trackAM = True
+        print("######################################## \n")
+        cfg.IK_trackAM = False
         cfg.w_am = cfg.w_am_track
         cfg.kp_am = cfg.kp_am_track
         if cs_wb is not None:
