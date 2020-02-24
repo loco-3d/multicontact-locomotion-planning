@@ -50,9 +50,10 @@ cs_ref = None
 cs_wb = None
 cs_wb_iters = []
 cs_com_iters = []
+cs_ref_iters = []
 for iterDynFilter in range(cfg.ITER_DYNAMIC_FILTER + 1):
     if iterDynFilter > 0:
-        print("\n#########################################")
+        print("\n########################################")
         print("#### Iter " + str(iterDynFilter) + " of the dynamic filter.  #### ")
         print("######################################### \n")
         cfg.IK_trackAM = True
@@ -97,7 +98,7 @@ for iterDynFilter in range(cfg.ITER_DYNAMIC_FILTER + 1):
             raise RuntimeError("The current contact sequence cannot be given as input to the end effector method selected.")
         cs_ref = effectorsInitGuess.generateEffectorTrajectoriesForSequence(cs_com, fullBody)
         effectorsInitGuess.Outputs.assertRequirements(cs_ref)
-
+    cs_ref_iters += [cs_ref]
 
     if cfg.DISPLAY_ALL_FEET_TRAJ:
         from mlp.viewer.display_tools import displayEffectorTrajectories
@@ -183,9 +184,9 @@ if cfg.DISPLAY_WB_MOTION:
 
 if cfg.PLOT:
     from mlp.utils import plot
-    plot.plotALLFromWB(cs_ref, cs_wb_iters, cfg)
+    plot.plotALLFromWB(cs_ref_iters, cs_wb_iters, cfg)
     if cfg.ITER_DYNAMIC_FILTER > 0:
-        plot.compareCentroidal(cs_com_iters, cfg)
+        plot.compareCentroidal(cs, cs_com_iters, cfg)
 
 if cfg.EXPORT_OPENHRP and motion_valid:
     from mlp.export import openHRP
