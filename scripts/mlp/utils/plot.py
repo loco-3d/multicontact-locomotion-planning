@@ -385,6 +385,29 @@ def plotKneeTorque(cs, dt, kneeIds, offset):
     addVerticalLineContactSwitch(cs, ax)
     ax.legend()
 
+def plotTimingChanges(cs, cs_iters, cfg):
+    sequences = [cs] + cs_iters
+    values = []
+    for cs in sequences:
+        timings = []
+        for phase in cs.contactPhases:
+            timings += [phase.duration]
+        values += [np.array(timings)]
+    colors =  ['k', 'b', 'g','r', 'c', 'm', 'y']
+    fig = plt.figure("Evolution of phase duration with dynamic filter")
+    plt.suptitle("Evolution of phase duration dynamic filter")
+    bar_width = 0.2
+    ax = fig.gca()
+    ax.set_xlabel('phase id')
+    ax.set_ylabel("duration(s)")
+    ax.yaxis.grid()
+    x_axis = np.arange(cs.size())
+    for i, val in enumerate(values):
+        plt.bar(x_axis + bar_width * i, val, bar_width, color=colors[i], edgecolor='k')
+    labels = ["init guess"] + ["iter "+str(i) for i in range(len(values)-1)]
+    ax.legend(labels)
+    ax.legend()
+
 
 def saveAllFigures(path_dir):
     if not os.path.exists(path_dir):
@@ -440,17 +463,21 @@ def plotALLFromWB(cs_ref_iters, cs_iters ,cfg):
         saveAllFigures(path)
     print("Plotting Done.")
 
-def compareCentroidal(cs_iters, cfg):
+def compareCentroidal(cs, cs_iters, cfg):
     plt.rcParams['axes.linewidth'] = plt.rcParams['font.size'] / 30.
     plt.rcParams['lines.linewidth'] = plt.rcParams['font.size'] / 30.
     display = cfg.DISPLAY_PLOT
     save = cfg.SAVE_PLOT
     path = cfg.OUTPUT_DIR + "/plot/" + cfg.DEMO_NAME
     dt = cfg.SOLVER_DT
-    plotAMdifference(cs_iters[0], cs_iters[-1], dt, "Dynamic filter changes on AM trajectory")
-    plotCOMdifference(cs_iters[0], cs_iters[-1], dt, "Dynamic filter changes on CoM trajectory")
-    plotCOMTrajChanges(cs_iters[0], cs_iters[-1], dt)
-    plotAMTrajChanges(cs_iters[0], cs_iters[-1], dt)
+    if cs_iters[0].contactPhases[-1].timeFinal != cs_iters[-1].contactPhases[-1].timeFinal:
+        print("Cannot plot differences, the two curves do not have the same duration.")
+        plotTimingChanges(cs, cs_iters, cfg)
+    else:
+        plotAMdifference(cs_iters[0], cs_iters[-1], dt, "Dynamic filter changes on AM trajectory")
+        plotCOMdifference(cs_iters[0], cs_iters[-1], dt, "Dynamic filter changes on CoM trajectory")
+        plotCOMTrajChanges(cs_iters[0], cs_iters[-1], dt)
+        plotAMTrajChanges(cs_iters[0], cs_iters[-1], dt)
     if display:
         plt.show(block=False)
     if save and path:
