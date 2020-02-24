@@ -9,7 +9,7 @@ DURATION_FINAL_SS = 0.8
 DURATION_SS = 0.8
 DURATION_DS = 0.2
 DURATION_TS = 0.4
-SOLVER_DT = 0.02  # hardcoded in timeOpt_configs files, must match this one !
+SOLVER_DT = 0.02  # hardcoded in momentumopt_configs files, must match this one !
 
 ## Settings for end effectors :
 EFF_T_PREDEF = 0.2

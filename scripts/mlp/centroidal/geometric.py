@@ -19,7 +19,7 @@ class Outputs(Inputs):
     COMvalues = True
 
 
-def generateCentroidalTrajectory(cs, cs_initGuess=None, fullBody=None, viewer=None):
+def generateCentroidalTrajectory(cs, cs_initGuess=None, fullBody=None, viewer=None, first_iter = True):
     """
     Generate straight line trajectories from the center of the support polygon of one phase
     to the center in the next phase.
@@ -33,6 +33,8 @@ def generateCentroidalTrajectory(cs, cs_initGuess=None, fullBody=None, viewer=No
     """
     if cs_initGuess:
         print("WARNING : in centroidal.geometric, initial guess is ignored.")
+    if not first_iter:
+        print("WARNING : in centroidal.geometric, it is useless to iterate several times.")
 
     if cs.haveCOMvalues():
         # do not overwrite com values in input sequence

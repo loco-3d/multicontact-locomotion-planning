@@ -1,0 +1,83 @@
+solver_variables:
+
+  ###########################
+  # Branch and Bound solver #
+  ###########################
+
+  BnB_verbose: false
+  BnB_max_iterations: 1000
+  BnB_integer_tolerance: 1e-4
+  BnB_absolute_suboptimality_gap: 1e-3
+  BnB_relative_suboptimality_gap: 1e-6
+
+  ##########################
+  # Convergence tolerances #
+  ##########################
+
+  feasibility_tolerance: 1e-7
+  max_residual_tolerance: 1e-3
+  absolute_suboptimality_gap: 1e-7
+  relative_suboptimality_gap: 1e-6
+  max_indeterminate_tolerance: 1e-9
+  feasibility_tolerance_inaccurate: 1e-4
+  absolute_suboptimality_gap_inaccurate: 5e-5
+  relative_suboptimality_gap_inaccurate: 5e-5
+
+  ############################
+  # Equilibration parameters #
+  ############################
+
+  equil_iterations: 3
+  scaling_factor: 1.0
+  equil_upper_bound: 1.0e3
+  equil_lower_bound: 1.0e-3
+
+  ############################
+  # Linear System parameters #
+  ############################
+
+  dyn_reg_thresh: 1e-13
+  lin_sys_accuracy: 1e-14
+  err_reduction_factor: 6.0
+  num_iter_ref_lin_solve: 9
+  static_regularization: 7e-8
+  dynamic_regularization: 2e-7
+
+  cg_step_rate: 2.0
+  cg_full_precision: 1e-9
+  cg_residual_bound: 1e-18
+  cg_reduced_precision: 1e-1
+
+  ########################
+  # Algorithm parameters #
+  ########################
+
+  safeguard: 500.0
+  min_step_length: 1e-6
+  max_step_length: 0.999
+  min_centering_step: 1e-4
+  max_centering_step: 1.00
+  step_length_scaling: 0.99
+
+  over_relaxation: 1.5
+  optinfo_interval: 100
+  converged_interval: 20
+  consensus_penalty: 1e-3
+
+  ####################
+  # Model parameters #
+  ####################
+
+  verbose: false
+  warm_start: false
+
+  max_iters: 500
+  ipsolver_max_iters: 100
+  ipsolver_warm_iters: 100
+  conicsolver_max_iters: 300
+  conicsolver_warm_iters: 300
+
+  num_itrefs_trustregion: 2
+  trust_region_threshold: 0.15
+  soft_constraint_weight_full: 1.0e4
+  soft_constraint_weight_reduced: 1.0e4

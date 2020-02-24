@@ -44,11 +44,13 @@ def getTargetCOMPosition(fullBody, id_state):
 
 
 
-def generateCentroidalTrajectory(cs, cs_initGuess=None, fullBody=None, viewer=None):
+def generateCentroidalTrajectory(cs, cs_initGuess=None, fullBody=None, viewer=None, first_iter = True):
     if cs_initGuess:
         print("WARNING : in centroidal.quasiStatic, initial guess is ignored.")
     if not fullBody:
         raise ValueError("quasiStatic called without fullBody object.")
+    if not first_iter:
+        print("WARNING : in centroidal.quasiStatic, it is useless to iterate several times.")
     beginId, endId = createFullbodyStatesFromCS(cs, fullBody)
     print("beginid = ", beginId)
     print("endId   = ", endId)

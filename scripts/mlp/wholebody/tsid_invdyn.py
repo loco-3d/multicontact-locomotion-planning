@@ -1,6 +1,12 @@
 import pinocchio as pin
 from pinocchio import SE3, Quaternion, Force, Motion
-import tsid
+try:
+    import tsid
+except ImportError:
+    message = "ERROR: Cannot import TSID python library.\n"
+    message += "Did you correctly installed it?\n"
+    message +="See https://github.com/stack-of-tasks/tsid"
+    raise ImportError(message)
 import numpy as np
 from numpy.linalg import norm as norm
 import os
@@ -111,6 +117,7 @@ def createEffectorTasksDic(cfg, effectorsNames, robot):
         mask = np.ones(6)
         if cfg.Robot.cType == "_3_DOF":
             mask[3:6] = np.zeros(3) # ignore rotation for contact points
+        effectorTask.setMask(mask)
         effectorTask.setKp(cfg.kp_Eff * mask)
         effectorTask.setKd(2.0 * np.sqrt(cfg.kp_Eff) * mask)
         res.update({eeName: effectorTask})
@@ -159,7 +166,7 @@ def adjustEndEffectorTrajectoryIfNeeded(phase, robot, data, eeName):
     """
     current_placement = getCurrentEffectorPosition(robot, data, eeName)
     ref_placement = phase.effectorTrajectory(eeName).evaluateAsSE3(phase.timeInitial)
-    if not current_placement.isApprox(ref_placement, 1e-9):
+    if not current_placement.isApprox(ref_placement, 1e-3):
         print("- End effector trajectory need to be adjusted.")
         placement_end = phase.effectorTrajectory(eeName).evaluateAsSE3(phase.timeFinal)
         ref_traj = generateEndEffectorTraj([phase.timeInitial, phase.timeFinal], current_placement, placement_end, 0)
@@ -459,6 +466,7 @@ def generateWholeBodyMotion(cs_ref, cfg, fullBody=None, viewer=None):
         mask = np.ones(6)
         mask[0:3] = 0
         mask[5] = cfg.YAW_ROT_GAIN
+        orientationRootTask.setMask(mask)
         orientationRootTask.setKp(cfg.kp_rootOrientation * mask)
         orientationRootTask.setKd(2.0 * np.sqrt(cfg.kp_rootOrientation * mask))
         invdyn.addMotionTask(orientationRootTask, cfg.w_rootOrientation, cfg.level_rootOrientation, 0.0)

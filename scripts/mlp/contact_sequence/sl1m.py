@@ -1,3 +1,10 @@
+try:
+    from sl1m.planner import *
+except ImportError:
+    message = "ERROR: Cannot import SL1M python library.\n"
+    message += "Did you correctly installed it?\n"
+    message +="See https://gepgitlab.laas.fr/loco-3d/sl1m"
+    raise ImportError(message)
 from pinocchio.utils import *
 import mlp.config as cfg
 import importlib
@@ -9,7 +16,6 @@ from pinocchio.utils import matrixToRpy
 from pinocchio import Quaternion, SE3
 from tools.surfaces_from_path import getSurfacesFromGuideContinuous
 import random
-from sl1m.planner import *
 from mlp.utils.requirements import Requirements
 multicontact_api.switchToNumpyArray()
 

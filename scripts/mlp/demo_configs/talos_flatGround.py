@@ -3,8 +3,8 @@ from .common_talos import *
 SCRIPT_PATH = "demos"
 ENV_NAME = "multicontact/ground"
 
-DURATION_SS = 1.2
-DURATION_DS = 0.2
+DURATION_SS = 2.
+DURATION_DS = 0.5
 
 EFF_T_PREDEF = 0.2
 EFF_T_DELAY = 0.05

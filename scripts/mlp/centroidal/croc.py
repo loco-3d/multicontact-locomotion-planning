@@ -54,11 +54,13 @@ def setCOMfromCurve(phase, curve_normalized):
 
 
 # Not generic .... assume that there is always 2 contact phases for each state in fullBody
-def generateCentroidalTrajectory(cs, cs_initGuess=None, fb=None, viewer=None):
+def generateCentroidalTrajectory(cs, cs_initGuess=None, fb=None, viewer=None, first_iter = True):
     if cs_initGuess:
         print("WARNING : in centroidal.croc, initial guess is ignored.")
     if not fb:
         raise ValueError("CROC called without fullBody object.")
+    if not first_iter:
+        print("WARNING: in centroidal.croc, it is useless to iterate several times.")
     beginId, endId = createFullbodyStatesFromCS(cs, fb)
     print("beginid = ", beginId)
     print("endId   = ", endId)
