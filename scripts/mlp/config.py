@@ -164,6 +164,7 @@ if centroidal_method == "load":
     SAVE_CS = False
     SAVE_CS_COM = False
     CS_FILENAME = COM_FILENAME
+    ITER_DYNAMIC_FILTER = 0
 if end_effector_initGuess_method == "load":
     contact_generation_method = "load"
     centroidal_initGuess_method = "none"
@@ -182,6 +183,7 @@ if wholebody_method == "load":
     SAVE_CS_COM = False
     SAVE_CS_WB = False
     EXPORT_NPZ = False
+    ITER_DYNAMIC_FILTER = 0
     if not os.path.isfile(REF_FILENAME):
         REF_FILENAME = WB_FILENAME
     CS_FILENAME = REF_FILENAME
