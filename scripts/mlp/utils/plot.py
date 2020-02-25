@@ -190,18 +190,26 @@ def plotZMPdifferences(cs_ref_iters, cs_iters, dt):
     fig.canvas.set_window_title("Difference between the ZMP trajectories")
     plt.suptitle("Difference between the ZMP trajectories from the centroidal solver and the wholebody after iterations of the dynamic filter.")
     labels = ["X", "Y"]
+    colors = ['r', 'g', 'b']
+    max_values = [0, 0] # store the maximal value for each axis, used to set the y_axis range
+    min_values = [0, 0]
     for i, cs in enumerate(cs_iters):
         ref, timeline = discretizeCurve(cs_ref_iters[i].concatenateZMPtrajectories(), dt)
         zmp = discretizeCurve(cs.concatenateZMPtrajectories(), dt)[0]
         diff = zmp - ref
         for j in range(2):
             ax_sub = ax[i, j]
-            ax_sub.plot(timeline.T, diff[j,:])
+            ax_sub.plot(timeline.T, diff[j,:], color = colors[j])
             ax_sub.set_xlabel('time (s)')
             ax_sub.set_ylabel(labels[j]+" values for iter " + str(i))
-
-
-
+            max_values[j] = max(np.amax(diff[j,:]), max_values[j])
+            min_values[j] = min(np.amin(diff[j,:]), min_values[j])
+            addVerticalLineContactSwitch(cs, ax_sub)
+    # set the ranges of each subplot
+    for i in range(len(cs_iters)):
+        for j in range(2):
+            ax_sub = ax[i, j]
+            ax_sub.set_ylim([min_values[j]*1.1, max_values[j]*1.1])
 
 
 def plotCOMTrajWithReferences(cs_ref, cs, dt):
