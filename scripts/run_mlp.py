@@ -110,7 +110,7 @@ for iterDynFilter in range(cfg.ITER_DYNAMIC_FILTER + 1):
     import mlp.wholebody as wholeBody
     if not wholeBody.Inputs.checkAndFillRequirements(cs_ref,cfg,fullBody):
         raise RuntimeError("The current contact sequence cannot be given as input to the wholeBody method selected.")
-    cs_wb, robot = wholeBody.generateWholeBodyMotion(cs_ref,cfg, fullBody, viewer)
+    cs_wb = wholeBody.generateWholeBodyMotion(cs_ref,cfg, fullBody, viewer)
     wholeBody.Outputs.assertRequirements(cs_wb)
     cs_wb_iters += [cs_wb]
 

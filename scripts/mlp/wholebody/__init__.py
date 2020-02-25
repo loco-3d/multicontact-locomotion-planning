@@ -43,6 +43,6 @@ elif method == "none":
     from  mlp.utils.requirements import Requirements as Outputs
     def generateWholeBodyMotion(cs_ref, cfg, fullBody=None, viewer=None):
         print("Whole body motion not computed !")
-        return None, None
+        return None
 else:
     raise ValueError("method type " + str(method) + " doesn't exist for wholeBody motion generation")

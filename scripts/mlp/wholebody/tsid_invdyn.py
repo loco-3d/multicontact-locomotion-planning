@@ -373,11 +373,11 @@ def generateWholeBodyMotion(cs_ref, cfg, fullBody=None, viewer=None):
         if cfg.WB_ABORT_WHEN_INVALID:
             # cut the sequence up to the last phase
             cs.resize(pid-2)
-            return cs, pinRobot
+            return cs
         elif cfg.WB_RETURN_INVALID:
             # cut the sequence up to the current phase
             cs.resize(pid-1)
-            return cs, pinRobot
+            return cs
 
     ### End of nested functions definitions ###
 
@@ -708,4 +708,4 @@ def generateWholeBodyMotion(cs_ref, cfg, fullBody=None, viewer=None):
         print("\nFinal COM Position  ", robot.com(invdyn.data()))
         print("Desired COM Position", cs.contactPhases[-1].c_final)
 
-    return cs, pinRobot
+    return cs
