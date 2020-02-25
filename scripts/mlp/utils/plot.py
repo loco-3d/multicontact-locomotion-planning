@@ -185,6 +185,34 @@ def plotZMP(cs_ref_iters, cs_iters, dt, circle_radius = 0.):
             ax.add_artist(circle_r)
     ax.legend()
 
+def plotZMP_t(cs_ref_iters, cs_iters, dt):
+    fig, ax = plt.subplots(len(cs_ref_iters), 2)
+    fig.canvas.set_window_title("Comparison between the ZMP trajectories")
+    plt.suptitle("Comparison between the ZMP trajectories after iterations of the dynamic filter. Dashed =  from the centroidal solver ; line = from the wholebody")
+    labels = ["X", "Y"]
+    colors = ['r', 'g', 'b']
+    max_values = [0, 0] # store the maximal value for each axis, used to set the y_axis range
+    min_values = [0, 0]
+    for i, cs in enumerate(cs_iters):
+        ref, timeline = discretizeCurve(cs_ref_iters[i].concatenateZMPtrajectories(), dt)
+        zmp = discretizeCurve(cs.concatenateZMPtrajectories(), dt)[0]
+        for j in range(2):
+            ax_sub = ax[i, j]
+            ax_sub.plot(timeline.T, zmp[j,:], color = colors[j])
+            ax_sub.plot(timeline.T, ref[j,:], linestyle=':', color = colors[j])
+            ax_sub.set_xlabel('time (s)')
+            ax_sub.set_ylabel(labels[j]+" values for iter " + str(i))
+            max_value = max(np.amax(zmp[j,:]), np.amax(ref[j,:]))
+            max_values[j] = max(max_value, max_values[j])
+            min_value = min(np.amin(zmp[j,:]), np.amin(ref[j,:]))
+            min_values[j] = min(min_value, min_values[j])
+            addVerticalLineContactSwitch(cs, ax_sub)
+    # set the ranges of each subplot
+    for i in range(len(cs_iters)):
+        for j in range(2):
+            ax_sub = ax[i, j]
+            ax_sub.set_ylim([min_values[j]*1.1, max_values[j]*1.1])
+
 def plotZMPdifferences(cs_ref_iters, cs_iters, dt):
     fig, ax = plt.subplots(len(cs_ref_iters), 2)
     fig.canvas.set_window_title("Difference between the ZMP trajectories")
@@ -453,6 +481,7 @@ def plotALLFromWB(cs_ref_iters, cs_iters ,cfg):
         for cs_ref in cs_ref_iters:
             Requirements.requireZMPtrajectories(cs_ref, cfg)
         plotZMP(cs_ref_iters, cs_iters, dt, cfg.PLOT_CIRCLE_RADIUS)
+        plotZMP_t(cs_ref_iters, cs_iters, dt)
         plotZMPdifferences(cs_ref_iters, cs_iters, dt)
     if cs.haveTorquesTrajectories():
         offset = cs.contactPhases[0].q_t.dim() - cs.contactPhases[0].tau_t.dim()
