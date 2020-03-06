@@ -450,15 +450,15 @@ def saveAllFigures(path_dir):
         os.makedirs(path_dir)
     for i in plt.get_fignums():
         fig = plt.figure(i)
-        fig.savefig(path_dir + "/" + str(fig._suptitle.get_text()) + ".eps", dpi=600)
+        fig.savefig(path_dir + "/" + str(fig._suptitle.get_text()) + ".eps", dpi=3000)
 
 
 def plotALLFromWB(cs_ref_iters, cs_iters ,cfg):
     cs = cs_iters[-1]
     cs_ref = cs_ref_iters[-1]
     print("Plotting ...")
-    plt.rcParams['axes.linewidth'] = plt.rcParams['font.size'] / 30.
-    plt.rcParams['lines.linewidth'] = plt.rcParams['font.size'] / 30.
+    plt.rcParams['axes.linewidth'] = plt.rcParams['font.size'] / 50.
+    plt.rcParams['lines.linewidth'] = plt.rcParams['font.size'] / 50.
     display = cfg.DISPLAY_PLOT
     save = cfg.SAVE_PLOT
     path = cfg.OUTPUT_DIR + "/plot/" + cfg.DEMO_NAME
