@@ -285,7 +285,7 @@ def generateContactSequence():
                     ql = rot
                     qr = Quaternion(prev_contactPhase.contactPatch(fb.rfoot).placement.rotation)
                 rpy = matrixToRpy((qr * (ql.inverse())).matrix())  # rotation from the left foot pose to the right one
-                if rpy[2, 0] > 0:  # yaw positive, feet are crossing
+                if rpy[2] > 0:  # yaw positive, feet are crossing
                     rot = quat0  # rotation of the root, from the guide
             else:
                 rot = quat0  # rotation of the root, from the guide
