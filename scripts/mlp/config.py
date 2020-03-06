@@ -26,6 +26,7 @@ CONTACT_SEQUENCE_PATH = OUTPUT_DIR + "/contact_sequences"
 TIME_OPT_CONFIG_PATH = PKG_PATH + '/momentumopt_configs'
 STATUS_FILENAME = OUTPUT_DIR + "/infos.log"
 EXPORT_PATH = OUTPUT_DIR + "/export"
+RBPRM_SCRIPT_PATH = "hpp.corbaserver.rbprm.scenarios" # if absolute script path is given for rbprm, this path is prepended
 ## Export setting
 SAVE_CS = True
 SAVE_CS_COM = True

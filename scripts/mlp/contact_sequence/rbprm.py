@@ -105,18 +105,20 @@ def runRBPRMScript():
     if hasattr(cfg, 'SCRIPT_ABSOLUTE_PATH'):
         scriptName = cfg.SCRIPT_ABSOLUTE_PATH
     else:
-        scriptName = 'scenarios.' + cfg.SCRIPT_PATH + '.' + cfg.DEMO_NAME
+        scriptName = cfg.RBPRM_SCRIPT_PATH + "." + cfg.SCRIPT_PATH + '.' + cfg.DEMO_NAME
     print("Run RBPRM script : ", scriptName)
-    cp = importlib.import_module(scriptName)
-    if hasattr(cp, 'beginId'):
-        beginId = cp.beginId
+    module = importlib.import_module(scriptName)
+    cg = module.ContactGenerator()
+    cg.run()
+    if hasattr(cg, 'beginId'):
+        beginId = cg.beginId
     else:
         beginId = 0
-    if hasattr(cp, 'endId'):
-        endId = cp.endId
+    if hasattr(cg, 'endId'):
+        endId = cg.endId
     else:
-        endId = len(cp.configs) - 1
-    return cp.fullBody, cp.v, beginId, endId
+        endId = len(cg.configs) - 1
+    return cg.fullbody, cg.v, beginId, endId
 
 
 def contactSequenceFromRBPRMConfigs(fb, beginId, endId):
