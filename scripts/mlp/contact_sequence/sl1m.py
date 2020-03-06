@@ -14,7 +14,7 @@ from mlp.utils.cs_tools import addPhaseFromConfig, setFinalState
 from mlp.viewer.display_tools import initScene, displaySteppingStones
 from pinocchio.utils import matrixToRpy
 from pinocchio import Quaternion, SE3
-from tools.surfaces_from_path import getSurfacesFromGuideContinuous
+from hpp.corbaserver.rbprm.tools.surfaces_from_path import getSurfacesFromGuideContinuous
 import random
 from mlp.utils.requirements import Requirements
 multicontact_api.switchToNumpyArray()

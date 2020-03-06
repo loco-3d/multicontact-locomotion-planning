@@ -76,7 +76,7 @@ state = State(fb, q=q_ref, limbsIncontact=[fb.rLegId, fb.lLegId])
 pLHand = [-2.75, -1.235, 1.02]
 pRHand = [-2.75, -2.28, 1.02]
 """
-from tools.display_tools import *
+from hpp.corbaserver.rbprm.tools.display_tools import *
 createSphere('s',v)
 moveSphere('s',v,pLHand)
 """

@@ -11,12 +11,12 @@ import numpy as np
 from numpy import array, dot, vstack, hstack, asmatrix, identity
 from numpy.linalg import norm, inv
 from scipy.spatial import ConvexHull
-from tools.disp_bezier import *
+from hpp.corbaserver.rbprm.tools.disp_bezier import *
 import curves
 import hpp_bezier_com_traj as bezier_com
 from mlp.utils import trajectories
 import math
-from tools.disp_bezier import *
+from hpp.corbaserver.rbprm.tools.disp_bezier import *
 import eigenpy
 import quadprog
 from mlp.end_effector.bezier_predef import generatePredefBeziers, generateSmoothBezierTraj
