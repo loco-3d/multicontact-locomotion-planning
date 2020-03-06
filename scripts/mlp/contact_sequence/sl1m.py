@@ -160,9 +160,9 @@ def gen_pb(root_init, R, surfaces):
     return res
 
 
-def solve(tp):
+def solve(planner):
     from sl1m.fix_sparsity import solveL1
-    #surfaces_dict = getAllSurfacesDict(tp.afftool)
+    #surfaces_dict = getAllSurfacesDict(planner.afftool)
     success = False
     maxIt = 50
     it = 0
@@ -170,29 +170,29 @@ def solve(tp):
     step = defaultStep
     variation = 0.4  # FIXME : put it in config file, +- bounds on the step size
     pathId = 0
-    if hasattr(tp, "pathId"):
-        pathId = tp.pathId
-    elif hasattr(tp, "pId"):
-        pathId = tp.pId
+    if hasattr(planner, "pathId"):
+        pathId = planner.pathId
+    elif hasattr(planner, "pId"):
+        pathId = planner.pId
     else:
-        pathId = tp.ps.numberPaths() - 1
+        pathId = planner.ps.numberPaths() - 1
     while not success and it < maxIt:
         if it > 0:
             step = defaultStep + random.uniform(-variation, variation)
-        #configs = getConfigsFromPath (tp.ps, tp.pathId, step)
-        #getSurfacesFromPath(tp.rbprmBuilder, configs, surfaces_dict, tp.v, True, False)
-        viewer = tp.v
+        #configs = getConfigsFromPath (planner.ps, planner.pathId, step)
+        #getSurfacesFromPath(planner.rbprmBuilder, configs, surfaces_dict, planner.v, True, False)
+        viewer = planner.v
         if not hasattr(viewer, "client"):
             viewer = None
-        R, surfaces = getSurfacesFromGuideContinuous(tp.rbprmBuilder,
-                                                     tp.ps,
-                                                     tp.afftool,
+        R, surfaces = getSurfacesFromGuideContinuous(planner.rbprmBuilder,
+                                                     planner.ps,
+                                                     planner.afftool,
                                                      pathId,
                                                      viewer,
                                                      step,
                                                      useIntersection=True,
                                                      max_yaw=cfg.GUIDE_MAX_YAW)
-        pb = gen_pb(tp.q_init, R, surfaces)
+        pb = gen_pb(planner.q_init, R, surfaces)
         try:
             pb, coms, footpos, allfeetpos, res = solveL1(pb, surfaces, None)
             success = True
@@ -209,14 +209,16 @@ def runLPFromGuideScript():
     if hasattr(cfg, 'SCRIPT_ABSOLUTE_PATH'):
         scriptName = cfg.SCRIPT_ABSOLUTE_PATH
     else:
-        scriptName = 'scenarios.' + cfg.SCRIPT_PATH + '.' + cfg.DEMO_NAME
+        scriptName = cfg.RBPRM_SCRIPT_PATH + "." + cfg.SCRIPT_PATH + '.' + cfg.DEMO_NAME
     scriptName += "_path"
     print("Run Guide script : ", scriptName)
-    tp = importlib.import_module(scriptName)
+    module = importlib.import_module(scriptName)
+    planner = module.PathPlanner()
+    planner.run()
     # compute sequence of surfaces from guide path
-    pathId, pb, coms, footpos, allfeetpos, res = solve(tp)
-    root_init = tp.ps.configAtParam(pathId, 0.001)[0:7]
-    root_end = tp.ps.configAtParam(pathId, tp.ps.pathLength(pathId) - 0.001)[0:7]
+    pathId, pb, coms, footpos, allfeetpos, res = solve(planner)
+    root_init = planner.ps.configAtParam(pathId, 0.001)[0:7]
+    root_end = planner.ps.configAtParam(pathId, planner.ps.pathLength(pathId) - 0.001)[0:7]
     return RF, root_init, root_end, pb, coms, footpos, allfeetpos, res
 
 
