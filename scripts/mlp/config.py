@@ -7,7 +7,7 @@ centroidal_method_available = ["load", "geometric", "croc", "momentumopt", "quas
 end_effector_initGuess_method_available = ["load","smoothedFoot", "bezierPredef"]
 end_effector_method_available = ["limbRRT", "limbRRToptimized"]
 wholebody_method_available = ["load", "tsid", "croccodyl", "none"]
-
+simulator_available = ["pinocchioIntegration"]
 
 ## methods setting : choose which method will be used to solve each subproblem : 
 contact_generation_method = "load"
@@ -16,6 +16,7 @@ centroidal_method = "momentumopt"
 end_effector_initGuess_method = "bezierPredef"
 end_effector_method = "limbRRToptimized"
 wholebody_method = "tsid"
+simulator_method = "pinocchioIntegration"
 
 ## PATHS settings :
 PKG_PATH = os.path.dirname(os.path.realpath(__file__)).rstrip("/scripts/mlp")
@@ -144,6 +145,8 @@ if not (end_effector_method in end_effector_method_available):
     raise ValueError("end effector method must be choosed from : " + str(end_effector_method_available))
 if not (end_effector_initGuess_method in end_effector_initGuess_method_available):
     raise ValueError("end effector method must be choosed from : " + str(end_effector_initGuess_method_available))
+if not (simulator_method in simulator_available):
+    raise ValueError("Simulator method must be choosed from : " + str(simulator_available))
 if contact_generation_method == "none" and centroidal_method != "load":
     raise ValueError("Cannot skip contact_generation phase if centroidal trajectory is not loaded from file")
 

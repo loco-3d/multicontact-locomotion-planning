@@ -400,10 +400,9 @@ def generateWholeBodyMotion(cs_ref, cfg, fullBody=None, viewer=None):
     robot = tsid.RobotWrapper(urdf, pin.StdVec_StdString(), pin.JointModelFreeFlyer(), False)
     if cfg.WB_VERBOSE:
         print("robot loaded in tsid.")
-    # FIXME : tsid robotWrapper don't have all the required methods, only pinocchio have them
-    pinRobot = pin.RobotWrapper.BuildFromURDF(urdf, package_path, pin.JointModelFreeFlyer(), cfg.WB_VERBOSE == 2)
-    if cfg.WB_VERBOSE:
-        print("pinocchio robot loaded from urdf.")
+    from mlp.simulator import Simulator
+    simulator = Simulator(urdf, package_path, cfg.IK_dt)
+    pinRobot = simulator.robot
 
     ### Define initial state of the robot ###
     phase0 = cs.contactPhases[0]
@@ -416,6 +415,7 @@ def generateWholeBodyMotion(cs_ref, cfg, fullBody=None, viewer=None):
     # init states list with initial state (assume joint velocity is null for t=0)
     invdyn = tsid.InverseDynamicsFormulationAccForce("tsid", robot, False)
     invdyn.computeProblemData(t, q, v)
+    simulator.init(q, v)
 
     # add initial contacts :
     dic_contacts = {}
@@ -633,11 +633,7 @@ def generateWholeBodyMotion(cs_ref, cfg, fullBody=None, viewer=None):
                 dv = invdyn.getAccelerations(sol)
 
                 storeData(k_t == 0)
-
-                # update state by integrating the acceleration computed
-                v_mean = v + 0.5 * dt * dv
-                v += dt * dv
-                q = pin.integrate(robot.model(), q, dt * v_mean)
+                q, v = simulator.simulate(dv)
                 t += dt
                 k_t += 1
                 if t >= phase.timeFinal - (dt / 2.):
