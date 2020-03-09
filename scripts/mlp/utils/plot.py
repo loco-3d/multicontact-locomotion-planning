@@ -197,7 +197,10 @@ def plotZMP_t(cs_ref_iters, cs_iters, dt):
         ref, timeline = discretizeCurve(cs_ref_iters[i].concatenateZMPtrajectories(), dt)
         zmp = discretizeCurve(cs.concatenateZMPtrajectories(), dt)[0]
         for j in range(2):
-            ax_sub = ax[i, j]
+            if len(cs_ref_iters) > 1:
+                ax_sub = ax[i, j]
+            else:
+                ax_sub = ax[j]
             ax_sub.plot(timeline.T, zmp[j,:], color = colors[j])
             ax_sub.plot(timeline.T, ref[j,:], linestyle=':', color = colors[j])
             ax_sub.set_xlabel('time (s)')
@@ -210,7 +213,10 @@ def plotZMP_t(cs_ref_iters, cs_iters, dt):
     # set the ranges of each subplot
     for i in range(len(cs_iters)):
         for j in range(2):
-            ax_sub = ax[i, j]
+            if len(cs_ref_iters) > 1:
+                ax_sub = ax[i, j]
+            else:
+                ax_sub = ax[j]
             ax_sub.set_ylim([min_values[j]*1.1, max_values[j]*1.1])
 
 def plotZMPdifferences(cs_ref_iters, cs_iters, dt):
@@ -482,7 +488,8 @@ def plotALLFromWB(cs_ref_iters, cs_iters ,cfg):
             Requirements.requireZMPtrajectories(cs_ref, cfg)
         plotZMP(cs_ref_iters, cs_iters, dt, cfg.PLOT_CIRCLE_RADIUS)
         plotZMP_t(cs_ref_iters, cs_iters, dt)
-        plotZMPdifferences(cs_ref_iters, cs_iters, dt)
+        if len(cs_ref_iters) > 1:
+            plotZMPdifferences(cs_ref_iters, cs_iters, dt)
     if cs.haveTorquesTrajectories():
         offset = cs.contactPhases[0].q_t.dim() - cs.contactPhases[0].tau_t.dim()
         plotKneeTorque(cs, dt, cfg.Robot.kneeIds, offset)
