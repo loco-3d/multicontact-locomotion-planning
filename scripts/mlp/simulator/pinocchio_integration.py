@@ -22,5 +22,5 @@ class PinocchioIntegration:
         """
         v_mean = self.v + 0.5 * self.dt * dv
         self.v += self.dt * dv
-        self.q = pin.integrate(self.robot.model(), self.q, self.dt * v_mean)
+        self.q = pin.integrate(self.robot.model, self.q, self.dt * v_mean)
         return self.q, self.v
