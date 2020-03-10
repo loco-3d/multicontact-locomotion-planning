@@ -1,7 +1,7 @@
-import mlp.config as cfg
+from mlp.config import Config
 import mlp.viewer.display_tools as display_tools
 from mlp.viewer.display_tools import displayEffectorTrajectories
-import os
+import os, sys, argparse
 import eigenpy
 import time
 import pinocchio
@@ -41,7 +41,7 @@ class LocoPlanner:
     def run_contact_generation(self):
         print("### MLP : contact sequence ###")
         import mlp.contact_sequence as contactGeneration
-        self.cs, self.fullBody, self.viewer = contactGeneration.generateContactSequence()
+        self.cs, self.fullBody, self.viewer = contactGeneration.generateContactSequence(self.cfg)
         contactGeneration.Outputs.assertRequirements(self.cs)
         self.gui = self.viewer.client.gui
 
@@ -64,7 +64,9 @@ class LocoPlanner:
         if not centroidalInitGuess.Inputs.checkAndFillRequirements(self.cs, self.cfg, self.fullBody):
             raise RuntimeError(
                 "The current contact sequence cannot be given as input to the centroidalInitGuess method selected.")
-        self.cs_initGuess = centroidalInitGuess.generateCentroidalTrajectory(self.cs, fullBody=self.fullBody, viewer=self.viewer)
+        self.cs_initGuess = centroidalInitGuess.generateCentroidalTrajectory(self.cfg, self.cs,
+                                                                             fullBody=self.fullBody,
+                                                                             viewer=self.viewer)
         centroidalInitGuess.Outputs.assertRequirements(self.cs_initGuess)
 
         if cfg.DISPLAY_INIT_GUESS_TRAJ and self.cs_initGuess:
@@ -81,7 +83,7 @@ class LocoPlanner:
         if iter_dynamic_filter > 0:
             if self.cs_wb is not None:
                 self.cs_initGuess = self.cs_wb
-        self.cs_com = centroidal.generateCentroidalTrajectory(self.cs, self.cs_initGuess,
+        self.cs_com = centroidal.generateCentroidalTrajectory(self.cfg, self.cs, self.cs_initGuess,
                                                              self.fullBody, self.viewer,
                                                              iter_dynamic_filter == 0)
         centroidal.Outputs.assertRequirements(self.cs_com)
@@ -110,7 +112,7 @@ class LocoPlanner:
             if not effectorsInitGuess.Inputs.checkAndFillRequirements(self.cs_com, self.cfg, self.fullBody):
                 raise RuntimeError(
                     "The current contact sequence cannot be given as input to the end effector method selected.")
-            self.cs_ref = effectorsInitGuess.generateEffectorTrajectoriesForSequence(self.cs_com, self.fullBody)
+            self.cs_ref = effectorsInitGuess.generateEffectorTrajectoriesForSequence(self.cfg, self.cs_com, self.fullBody)
             effectorsInitGuess.Outputs.assertRequirements(self.cs_ref)
         self.cs_ref_iters += [self.cs_ref]
 
@@ -129,7 +131,7 @@ class LocoPlanner:
             self.cfg.w_am = self.cfg.w_am_track
             self.cfg.kp_am = self.cfg.kp_am_track
 
-        self.cs_wb = wholeBody.generateWholeBodyMotion(self.cs_ref, self.cfg, self.fullBody, self.viewer)
+        self.cs_wb = wholeBody.generateWholeBodyMotion(self.cfg, self.cs_ref, self.fullBody, self.viewer)
         wholeBody.Outputs.assertRequirements(self.cs_wb)
         self.cs_wb_iters += [self.cs_wb]
 
@@ -202,16 +204,16 @@ class LocoPlanner:
             self.cs_wb.saveAsBinary(filename)
 
         if cfg.EXPORT_OPENHRP and self.motion_valid:
-            openHRP.export(self.cs_com, self.cs_wb)  # FIXME
+            openHRP.export(self.cfg, self.cs_com, self.cs_wb)  # FIXME
         if cfg.EXPORT_GAZEBO and self.motion_valid:
-            gazebo.export(self.cs_wb.concatenateQtrajectories())
+            gazebo.export(self.cfg, self.cs_wb.concatenateQtrajectories())
         if cfg.EXPORT_NPZ and self.motion_valid:
-            npz.export(self.cs_ref, self.cs_wb, cfg)
+            npz.export(self.cfg, self.cs_ref, self.cs_wb, cfg)
         if cfg.EXPORT_BLENDER:
-            blender.export(self.cs_wb.concatenateQtrajectories(), self.viewer)
+            blender.export(self.cfg, self.cs_wb.concatenateQtrajectories(), self.viewer)
             blender.exportSteppingStones(self.viewer)
         if cfg.EXPORT_SOT:
-            sotTalosBalance.export(self.cs_wb)  # TODO
+            sotTalosBalance.export(self.cfg, self.cs_wb)  # FIXME
 
     def display_cs(self, step=0.2):
         display_tools.displayContactSequence(self.viewer, self.cs, step)
@@ -245,9 +247,34 @@ class LocoPlanner:
 
 
 if __name__ == "__main__":
-    loco_planner = LocoPlanner()
+    parser = argparse.ArgumentParser(description="todo")
+    parser.add_argument('demo_name', type=str, help="The name of the demo configuration file to load. "
+                                                    "Must be a valid python file, either inside the PYTHONPATH"
+                                                    "or inside the mlp.demo_configs folder. ")
+    args = parser.parse_args()
+    demo_name = args.demo_name
+
+    cfg = Config()
+    cfg.load_scenario_config(demo_name)
+
+    loco_planner = LocoPlanner(cfg)
     loco_planner.run()
 
+
+"""
+if len(sys.argv) < 2:
+    print(
+        "## WARNING : script called without specifying a demo config file (one of the file contained in mlp.demo_config)"
+    )
+    print("## Available demo files : ")
+    configs_path = cfg.PKG_PATH + "/scripts/mlp/demo_configs"
+    demos_list = os.listdir(configs_path)
+    for f in demos_list:
+        if f.endswith(".py") and not f.startswith("__") and not f.startswith("common"):
+            print(f.rstrip(".py"))
+    print("## Some data will be missing, scripts may fails. (cfg.Robot will not exist)")
+    
+"""
 
 """
 #record gepetto-viewer 
