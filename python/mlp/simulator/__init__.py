@@ -1,4 +1,5 @@
-import mlp.config as cfg
+from mlp.config import Config
+cfg = Config()
 
 #["pinocchioIntegration"]
 method = cfg.simulator_method
