@@ -244,7 +244,9 @@ class LocoPlanner:
         self.export_all()
 
 
-
+if __name__ == "__main__":
+    loco_planner = LocoPlanner()
+    loco_planner.run()
 
 
 """
