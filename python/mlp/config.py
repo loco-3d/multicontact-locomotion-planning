@@ -211,5 +211,6 @@ class Config:
     def get_contact_generation_method(self):
         module = import_module('contact_sequence.'+self.contact_generation_method)
         method = getattr(module, 'generate_contact_sequence_'+self.contact_generation_method)
-        Outputs = getattr(module, 'Outputs')
+        Outputs = getattr(module, 'Outputs'+self.contact_generation_method.capitalize())
         return method, Outputs
+

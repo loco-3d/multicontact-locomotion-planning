@@ -18,7 +18,7 @@ import random
 from mlp.utils.requirements import Requirements
 multicontact_api.switchToNumpyArray()
 
-class Outputs(Requirements):
+class OutputsSl1m(Requirements):
     consistentContacts = True
 
 Z_AXIS = np.array([0, 0, 1])

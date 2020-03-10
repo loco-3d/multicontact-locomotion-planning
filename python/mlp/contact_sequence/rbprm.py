@@ -14,8 +14,7 @@ multicontact_api.switchToNumpyArray()
 
 VERBOSE = True
 
-
-class Outputs(Requirements):
+class OutputsRbprm(Requirements):
     consistentContacts = True
     COMvalues = True
     configurationValues = True
