@@ -10,7 +10,7 @@ wholebody_method_available = ["load", "tsid", "croccodyl", "none"]
 simulator_available = ["pinocchioIntegration"]
 
 ## methods setting : choose which method will be used to solve each subproblem : 
-contact_generation_method = "load"
+contact_generation_method = "sl1m"
 centroidal_initGuess_method = "none"
 centroidal_method = "momentumopt"
 end_effector_initGuess_method = "bezierPredef"
@@ -63,7 +63,7 @@ SL1M_USE_INTERPOLATED_ORIENTATION = True  # Only matter if SL1M_USE_ORIENTATION=
 ### Settings for centroidal script :
 GRAVITY = np.array([0, 0, -9.81])
 MU = 0.5  # Friction coefficient.
-SOLVER_DT = 0.05  # time step used for centroidal methods
+SOLVER_DT = 0.01  # time step used for centroidal methods
 # Hardcoded height change of the COM before the beginning of the motion (value in m and time allowed to make this motion)
 # This is used because for some robot, the reference configuration is really close to the kinematic limits of the robot.
 COM_SHIFT_Z = 0.0
@@ -83,7 +83,7 @@ YAW_ROT_GAIN = 1.  # gain for the orientation task of the root orientation, alon
 IK_trackAM = False #If True, the Wb algorithm take the Angular momentum computed by te centroidal block as reference. If False it try to minimize the angular momentum
 WB_VERBOSE = 0  # 0,1 or 2 Verbosity level for the output of the wholebody script
 WB_STOP_AT_EACH_PHASE = False  # wait for user input between each phase
-IK_dt = 0.01  # controler time step (in second)
+IK_dt = 0.001  # controler time step (in second)
 IK_PRINT_N = 500  # print state of the problem every IK_PRINT_N time steps (if verbose >= 1)
 CHECK_FINAL_MOTION = True  # After computation of the motion, check the complete motion for {self-}collision and joints limits
 ### The following settings enable the computation of various values stored in the wholeBody_result struct.
