@@ -1,4 +1,6 @@
-import mlp.config as cfg
+from mlp.config import Config
+cfg = Config()
+
 #centroidal_initGuess_method_available = ["none", "geometric", "croc", "timeopt", "quasistatic"]
 
 method_initGuess = cfg.centroidal_initGuess_method

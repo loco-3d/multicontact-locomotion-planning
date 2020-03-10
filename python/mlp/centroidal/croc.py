@@ -1,5 +1,4 @@
 import numpy as np
-import mlp.config as cfg
 import multicontact_api
 from multicontact_api import ContactPhase, ContactSequence
 from curves import bezier, piecewise
@@ -54,7 +53,7 @@ def setCOMfromCurve(phase, curve_normalized):
 
 
 # Not generic .... assume that there is always 2 contact phases for each state in fullBody
-def generateCentroidalTrajectory(cs, cs_initGuess=None, fb=None, viewer=None, first_iter = True):
+def generateCentroidalTrajectory(cfg, cs, cs_initGuess=None, fb=None, viewer=None, first_iter = True):
     if cs_initGuess:
         print("WARNING : in centroidal.croc, initial guess is ignored.")
     if not fb:

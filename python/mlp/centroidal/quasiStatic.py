@@ -1,5 +1,4 @@
 import numpy as np
-import mlp.config as cfg
 import multicontact_api
 from multicontact_api import ContactPhase, ContactSequence
 from mlp.utils.util import createFullbodyStatesFromCS
@@ -22,7 +21,7 @@ class Outputs(Inputs):
 ## The trajectory of the CoM is a quintic spline with initial and final velocity/acceleration constrained to 0
 
 
-def getTargetCOMPosition(fullBody, id_state):
+def getTargetCOMPosition(fullBody, id_state, com_shift_z):
     print("call 2-pac for ids : "+str(id_state)+ " ; "+str(id_state+1))
     tab = fullBody.isReachableFromState(id_state, id_state + 1, True, False)
     print("tab results : ",tab)
@@ -38,13 +37,13 @@ def getTargetCOMPosition(fullBody, id_state):
         print("shape c else : ",c.shape)
 
     print("c before shift : ", c)
-    c[2] += cfg.COM_SHIFT_Z
+    c[2] += com_shift_z
     print("c after  shift : ", c)
     return c
 
 
 
-def generateCentroidalTrajectory(cs, cs_initGuess=None, fullBody=None, viewer=None, first_iter = True):
+def generateCentroidalTrajectory(cfg, cs, cs_initGuess=None, fullBody=None, viewer=None, first_iter = True):
     if cs_initGuess:
         print("WARNING : in centroidal.quasiStatic, initial guess is ignored.")
     if not fullBody:
@@ -70,7 +69,7 @@ def generateCentroidalTrajectory(cs, cs_initGuess=None, fullBody=None, viewer=No
         if id_state == endId:
             c = phase_fixed.c_final
         else:
-            c = getTargetCOMPosition(fullBody, id_state)
+            c = getTargetCOMPosition(fullBody, id_state, cfg.COM_SHIFT_Z)
             # set 'c' the final position of current phase :
             phase_fixed.c_final = c
         phase_fixed.dc_final = np.zeros(3)

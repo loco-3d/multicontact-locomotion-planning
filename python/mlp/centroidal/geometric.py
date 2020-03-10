@@ -1,5 +1,4 @@
 import numpy as np
-import mlp.config as cfg
 import multicontact_api
 from multicontact_api import ContactPhase, ContactSequence
 from mlp.utils.requirements import Requirements
@@ -19,7 +18,7 @@ class Outputs(Inputs):
     COMvalues = True
 
 
-def generateCentroidalTrajectory(cs, cs_initGuess=None, fullBody=None, viewer=None, first_iter = True):
+def generateCentroidalTrajectory(cfg, cs, cs_initGuess=None, fullBody=None, viewer=None, first_iter = True):
     """
     Generate straight line trajectories from the center of the support polygon of one phase
     to the center in the next phase.

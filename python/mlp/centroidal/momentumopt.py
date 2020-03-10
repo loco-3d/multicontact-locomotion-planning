@@ -17,7 +17,6 @@ import numpy as np
 from numpy import array, append
 from numpy.linalg import norm
 from pinocchio import SE3
-import mlp.config as cfg
 from mlp.utils.requirements import Requirements
 
 multicontact_api.switchToNumpyArray()
@@ -32,32 +31,28 @@ class Outputs(Inputs):
     centroidalTrajectories = True
 
 
-dict_ee_to_timeopt = {cfg.Robot.rfoot : EffId.right_foot.value(),
-                    cfg.Robot.lfoot : EffId.left_foot.value() ,
-                    cfg.Robot.rhand : EffId.right_hand.value(),
-                    cfg.Robot.lhand : EffId.left_hand.value()}
 
-
-def setDuration(planner_setting, cs):
+def setDuration(planner_setting, cs, dt):
     """
     Update the planner_setting with the time_horizon, dt and number of steps from the CS and the config file
     :param planner_setting:
     :param cs:
+    :param dt: discretization step used
     :return:
     """
     duration = cs.contactPhases[-1].timeFinal
-    dt = cfg.SOLVER_DT
     n_time_steps = int(floor(duration/dt))
     planner_setting.set(mopt.PlannerDoubleParam_TimeHorizon, duration)
     planner_setting.set(mopt.PlannerIntParam_NumTimesteps, n_time_steps)
     planner_setting.set(mopt.PlannerDoubleParam_TimeStep, dt)
 
 
-def extractEffectorPhasesFromCS(cs, eeName):
+def extractEffectorPhasesFromCS(cs, eeName, dt):
     """
     extract a list of effector phase (t start, t end, placement) (as defined by momentumopt) from a ContactSequence
     :param cs:
     :param eeName: the effector name (CS notation)
+    :param dt: discretization step used
     :return:
     """
     t_last = cs.contactPhases[-1].timeFinal
@@ -82,17 +77,20 @@ def extractEffectorPhasesFromCS(cs, eeName):
             if t_end == t_last:
                 # increase the duration of the last contact by one dt,
                 # otherwise momentumopt break the contact at the last iteration
-                t_end += cfg.SOLVER_DT
+                t_end += dt
             ee_phases += [[t_start, t_end, previous_placement]]
         pid += 1
 
     return ee_phases
 
-def contactPlanFromCS(planner_setting, cs):
+def contactPlanFromCS(planner_setting, cs, dict_ee_to_timeopt, dt):
     """
     Create a pymomentum.ContactPlan from the multicontact_api.ContactSequence
     :param planner_setting:
     :param cs: a multicontact_api ContactSequence
+    :param dict_ee_to_timeopt: a dictionnary with key = effector names in ContactSequence,
+     value = effector ID in momentumopt
+    :param dt: discretization step used
     :return: the ContactPlan
     """
     contact_plan = ContactPlanFromFile()
@@ -101,7 +99,7 @@ def contactPlanFromCS(planner_setting, cs):
 
     eeNames = cs.getAllEffectorsInContact()
     for eeName in eeNames:
-        phases = extractEffectorPhasesFromCS(cs, eeName)
+        phases = extractEffectorPhasesFromCS(cs, eeName, dt)
         mopt_cs_ee = mopt_cs.contact_states(dict_ee_to_timeopt[eeName])
         for phase in phases:
             cp = ContactState()
@@ -125,12 +123,13 @@ def setFinalCOM(planner_setting, cs):
     planner_setting.set(mopt.PlannerVectorParam_CenterOfMassMotion,com_motion)
 
 
-def addCOMviapoints(planner_setting, cs, viewer=None):
+def addCOMviapoints(planner_setting, cs, viewer=None, display_wp = False):
     """
     Add CoM viapoint to the momentumopt problem. Computed for each double support phases from the planned configuration
     :param planner_setting:
-    :param cs:
-    :param viewer:
+    :param cs: the ContactSequence
+    :param viewer: an instance of the gepetto-gui
+    :param display_wp: if True and a viewer is provided, display black sphere at the position of the waypoints used
     :return:
     """
     com_viapoints = []
@@ -141,21 +140,26 @@ def addCOMviapoints(planner_setting, cs, viewer=None):
         if (phase_previous.numContacts() < phase.numContacts())  and (phase_next.numContacts() < phase.numContacts()):
             com = phase.c_init
             com_viapoints += [np.array([phase.timeInitial, com[0], com[1], com[2]])]
-            if viewer and cfg.DISPLAY_WP_COST:
+            if viewer and display_wp:
                 display.displaySphere(viewer, com.tolist())
     planner_setting.set(mopt.PlannerCVectorParam_Viapoints, com_viapoints)
     planner_setting.set(mopt.PlannerIntParam_NumViapoints, len(com_viapoints))
 
-def initStateFromPhase(phase):
+def initStateFromPhase(phase, time_shift_com, com_shift_z, dict_ee_to_timeopt):
     """
     Create a momentumopt initial state from a multicontact_api contact phase
+
     :param phase: a multicontact_api ContactPhase
+    :param time_shift_com: the duration allowed to move the CoM from com_shift_z
+    :param com_shift_z: the distance along the z axis from which the CoM is moved before the beginning of the motion
+    :param dict_ee_to_timeopt: a dictionnary with key = effector names in ContactSequence,
+     value = effector ID in momentumopt
     :return: a pymomentum DynamicsState
     """
     ini_state = DynamicsState()
     com = phase.c_init
-    if cfg.TIME_SHIFT_COM > 0.:
-        com[2] += cfg.COM_SHIFT_Z
+    if time_shift_com > 0.:
+        com[2] += com_shift_z
     ini_state.com = com
     force_distribution = 1./phase.numContacts() # assume contact forces are distributed between all contacts
     for eeName, patch in phase.contactPatches().items():
@@ -213,7 +217,7 @@ def isNewPhase(ds1, ds2):
     return False
 
 
-def CSfromMomentumopt(planner_setting, cs, init_state, dyn_states, t_init = 0):
+def CSfromMomentumopt(planner_setting, cs, init_state, dyn_states, t_init = 0, connect_goal = True):
     """
     Create a ContactSequence and fill it with the results from momentumopt
     :param planner_setting:
@@ -282,21 +286,26 @@ def CSfromMomentumopt(planner_setting, cs, init_state, dyn_states, t_init = 0):
 
     # set final phase :
     phase = cs_com.contactPhases[-1]
-    setCOMtrajectoryFromPoints(phase, c_t, dc_t, ddc_t, times, overwriteFinal = (cfg.DURATION_CONNECT_GOAL == 0.))
-    setAMtrajectoryFromPoints(phase, L_t, dL_t, times, overwriteFinal = (cfg.DURATION_CONNECT_GOAL == 0.))
+    setCOMtrajectoryFromPoints(phase, c_t, dc_t, ddc_t, times, overwriteFinal = not connect_goal)
+    setAMtrajectoryFromPoints(phase, L_t, dL_t, times, overwriteFinal = not connect_goal)
     # set final time :
     phase.timeFinal = times[-1]
 
     return cs_com
 
 
-def generateCentroidalTrajectory(cs, cs_initGuess=None, fullBody=None, viewer=None, first_iter = True):
+def generateCentroidalTrajectory(cfg, cs, cs_initGuess=None, fullBody=None, viewer=None, first_iter = True):
     if cs_initGuess is not None and first_iter:
         print("WARNING : in current implementation of timeopt.generateCentroidalTrajectory"
               " the initial guess is ignored. (TODO)")
     if not first_iter:
         if cs_initGuess is None or not cs_initGuess.haveCentroidalValues():
             raise RuntimeError("Centroidal.momentumopt called after a first iteration without a valid reference ContactSequence provided.")
+
+    dict_ee_to_timeopt = {cfg.Robot.rfoot: EffId.right_foot.value(),
+                          cfg.Robot.lfoot: EffId.left_foot.value(),
+                          cfg.Robot.rhand: EffId.right_hand.value(),
+                          cfg.Robot.lhand: EffId.left_hand.value()}
 
     tStart = time.time()
     # load planner settings from yaml:
@@ -305,14 +314,14 @@ def generateCentroidalTrajectory(cs, cs_initGuess=None, fullBody=None, viewer=No
     print("Use configuration file for momentumopt : ", cfg_path)
     planner_setting.initialize(cfg_path)
     planner_setting.set(mopt.PlannerIntParam_NumActiveEndeffectors, len(cs.getAllEffectorsInContact()))
-    setDuration(planner_setting, cs)
-    contact_plan = contactPlanFromCS(planner_setting, cs)
+    setDuration(planner_setting, cs, cfg.SOLVER_DT)
+    contact_plan = contactPlanFromCS(planner_setting, cs, dict_ee_to_timeopt, cfg.SOLVER_DT)
     setFinalCOM(planner_setting, cs)
 
     if cfg.USE_WP_COST:
-        addCOMviapoints(planner_setting, cs, viewer)
+        addCOMviapoints(planner_setting, cs, viewer, cfg.DISPLAY_WP_COST)
 
-    ini_state = initStateFromPhase(cs.contactPhases[0])
+    ini_state = initStateFromPhase(cs.contactPhases[0], cfg.TIME_SHIFT_COM, cfg.COM_SHIFT_Z, dict_ee_to_timeopt)
     if first_iter:
         kin_sequence = buildEmptyKinSequence(planner_setting)
     else:
@@ -328,7 +337,8 @@ def generateCentroidalTrajectory(cs, cs_initGuess=None, fullBody=None, viewer=No
         print("!! WARNING: momentumopt exit with a non Optimal status: ", code)
 
     # now build a new multicontact_api contactSequence from the results of momentumopt:
-    cs_result = CSfromMomentumopt(planner_setting, cs, ini_state, dyn_opt.dynamicsSequence().dynamics_states, cfg.TIME_SHIFT_COM)
+    cs_result = CSfromMomentumopt(planner_setting, cs, ini_state, dyn_opt.dynamicsSequence().dynamics_states,
+                                  cfg.TIME_SHIFT_COM, connect_goal= (cfg.DURATION_CONNECT_GOAL > 0.))
 
     if cfg.TIME_SHIFT_COM > 0:
         connectPhaseTrajToInitialState(cs_result.contactPhases[0], cfg.TIME_SHIFT_COM)

@@ -1,4 +1,5 @@
-import mlp.config as cfg
+from mlp.config import Config
+cfg = Config()
 
 #centroidal_method_available = ["load", "geometric", "croc", "momentumopt", "quasistatic", "muscod"]
 
