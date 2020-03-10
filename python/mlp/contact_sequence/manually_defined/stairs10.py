@@ -4,7 +4,6 @@ from numpy import array
 import multicontact_api
 from multicontact_api import ContactSequence
 import mlp.viewer.display_tools as display_tools
-import mlp.config as cfg
 from talos_rbprm.talos import Robot  # change robot here
 
 multicontact_api.switchToNumpyArray()
@@ -43,6 +42,6 @@ display_tools.displaySteppingStones(cs, gui, sceneName, fb)
 
 
 DEMO_NAME = "talos_stairs10"
-filename = cfg.CONTACT_SEQUENCE_PATH + "/" + DEMO_NAME + ".cs"
+filename = DEMO_NAME + ".cs"
 print("Write contact sequence binary file : ", filename)
 cs.saveAsBinary(filename)

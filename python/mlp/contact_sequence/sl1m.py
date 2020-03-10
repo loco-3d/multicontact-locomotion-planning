@@ -6,7 +6,6 @@ except ImportError:
     message +="See https://gepgitlab.laas.fr/loco-3d/sl1m"
     raise ImportError(message)
 from pinocchio.utils import *
-import mlp.config as cfg
 import importlib
 import multicontact_api
 from multicontact_api import ContactSequence
@@ -119,12 +118,11 @@ def quatToConfig(quat):
 
 
 # FIXME : HARDCODED stuff for talos in this method !
-def gen_pb(root_init, R, surfaces):
+def gen_pb(root_init, R, surfaces, ref_root_height):
     #print "surfaces = ",surfaces
     print("number of surfaces : ", len(surfaces))
     print("number of rotation matrix for root : ", len(R))
     nphases = len(surfaces)
-    ref_root_height = cfg.IK_REFERENCE_CONFIG[2]
     lf_0 = array(root_init[0:3]) + array([0, 0.085, -ref_root_height])  # values for talos !
     rf_0 = array(root_init[0:3]) + array([0, -0.085, -ref_root_height])  # values for talos !
     #init_floor_height = surfaces[0][0][2][0]
@@ -160,16 +158,15 @@ def gen_pb(root_init, R, surfaces):
     return res
 
 
-def solve(planner):
+def solve(planner, guide_step_size, guide_max_yaw, ref_root_height):
     from sl1m.fix_sparsity import solveL1
     #surfaces_dict = getAllSurfacesDict(planner.afftool)
     success = False
     maxIt = 50
     it = 0
-    defaultStep = cfg.GUIDE_STEP_SIZE
+    defaultStep = guide_step_size
     step = defaultStep
     variation = 0.4  # FIXME : put it in config file, +- bounds on the step size
-    pathId = 0
     if hasattr(planner, "pathId"):
         pathId = planner.pathId
     elif hasattr(planner, "pId"):
@@ -191,8 +188,8 @@ def solve(planner):
                                                      viewer,
                                                      step,
                                                      useIntersection=True,
-                                                     max_yaw=cfg.GUIDE_MAX_YAW)
-        pb = gen_pb(planner.q_init, R, surfaces)
+                                                     max_yaw=guide_max_yaw)
+        pb = gen_pb(planner.q_init, R, surfaces, ref_root_height)
         try:
             pb, coms, footpos, allfeetpos, res = solveL1(pb, surfaces, None)
             success = True
@@ -204,7 +201,7 @@ def solve(planner):
     return pathId, pb, coms, footpos, allfeetpos, res
 
 
-def runLPFromGuideScript():
+def runLPFromGuideScript(cfg):
     #the following script must produce a
     if hasattr(cfg, 'SCRIPT_ABSOLUTE_PATH'):
         scriptName = cfg.SCRIPT_ABSOLUTE_PATH
@@ -216,13 +213,14 @@ def runLPFromGuideScript():
     planner = module.PathPlanner()
     planner.run()
     # compute sequence of surfaces from guide path
-    pathId, pb, coms, footpos, allfeetpos, res = solve(planner)
+    pathId, pb, coms, footpos, allfeetpos, res = solve(planner, cfg.GUIDE_STEP_SIZE, cfg.GUIDE_MAX_YAW,
+                                                       cfg.IK_REFERENCE_CONFIG[2])
     root_init = planner.ps.configAtParam(pathId, 0.001)[0:7]
     root_end = planner.ps.configAtParam(pathId, planner.ps.pathLength(pathId) - 0.001)[0:7]
     return RF, root_init, root_end, pb, coms, footpos, allfeetpos, res
 
 
-def runLPScript():
+def runLPScript(cfg):
     #the following script must produce a
     if hasattr(cfg, 'SCRIPT_ABSOLUTE_PATH'):
         scriptName = cfg.SCRIPT_ABSOLUTE_PATH
@@ -236,9 +234,9 @@ def runLPScript():
     return cp.RF, root_init, root_end, pb, coms, footpos, allfeetpos, res
 
 
-def generateContactSequence():
-    #RF,root_init,pb, coms, footpos, allfeetpos, res = runLPScript()
-    RF, root_init, root_end, pb, coms, footpos, allfeetpos, res = runLPFromGuideScript()
+def generateContactSequence(cfg):
+    #RF,root_init,pb, coms, footpos, allfeetpos, res = runLPScript(cfg)
+    RF, root_init, root_end, pb, coms, footpos, allfeetpos, res = runLPFromGuideScript(cfg)
     multicontact_api.switchToNumpyArray()
     # load scene and robot
     fb, v = initScene(cfg.Robot, cfg.ENV_NAME, True)

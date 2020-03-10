@@ -1,4 +1,5 @@
-import mlp.config as cfg
+from mlp.config import Config
+cfg = Config()
 
 # contact_generation_method_available = ["none","load", "rbprm"]
 

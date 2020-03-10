@@ -2,7 +2,6 @@ from mlp.utils.cs_tools import addPhaseFromConfig, setFinalState
 import multicontact_api
 from multicontact_api import ContactSequence, ContactPatch
 import mlp.viewer.display_tools as display_tools
-import mlp.config as cfg
 from pinocchio import SE3
 from mlp.utils.util import rotatePlacement
 from talos_rbprm.talos import Robot  # change robot here
@@ -71,6 +70,6 @@ display_tools.displaySteppingStones(cs, gui, sceneName, fb)
 
 
 DEMO_NAME = "talos_stairsAirbus"
-filename = cfg.CONTACT_SEQUENCE_PATH + "/" + DEMO_NAME + ".cs"
+filename =  DEMO_NAME + ".cs"
 print("Write contact sequence binary file : ", filename)
 cs.saveAsBinary(filename)

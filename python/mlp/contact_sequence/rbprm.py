@@ -2,7 +2,6 @@ import pinocchio as pin
 from pinocchio import SE3, Quaternion
 from pinocchio.utils import *
 import inspect
-import mlp.config as cfg
 import multicontact_api
 from multicontact_api import ContactPhase, ContactSequence, ContactPatch
 from mlp.utils.util import SE3FromConfig
@@ -98,7 +97,7 @@ def setPhaseFinalValues(fb, stateId, phase):
     phase.ddc_final = acc
 
 
-def runRBPRMScript():
+def runRBPRMScript(cfg):
     #the following script must produce a sequence of configurations in contact (configs)
     # with exactly one contact change between each configurations
     # It must also initialise a FullBody object name fullBody and optionnaly a Viewer object named V
@@ -168,8 +167,8 @@ def contactSequenceFromRBPRMConfigs(fb, beginId, endId):
     return cs
 
 
-def generateContactSequence():
-    fb, viewer, beginId, endId = runRBPRMScript()
+def generateContactSequence(cfg):
+    fb, viewer, beginId, endId = runRBPRMScript(cfg)
     cs = contactSequenceFromRBPRMConfigs(fb, beginId, endId)
     return cs, fb, viewer
 
