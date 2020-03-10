@@ -1,8 +1,7 @@
 import os
-import mlp.config as cfg
 
 
-def export(q_t):
+def export(cfg, q_t):
     path = cfg.EXPORT_PATH + "/gazebo"
     print ("Export motion to "+path+" ... ")
     if not os.path.exists(path):

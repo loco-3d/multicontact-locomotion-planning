@@ -2,7 +2,7 @@ import os
 from mlp.utils.wholebody_result import Result, FromContactSequenceWB
 from mlp.utils.requirements import Requirements
 
-def export(cs_ref, cs, cfg):
+def export(cfg, cs_ref, cs):
     dt = cfg.IK_dt
     path = cfg.EXPORT_PATH + "/npz"
     name = cfg.DEMO_NAME + ".npz"

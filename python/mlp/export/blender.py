@@ -1,12 +1,11 @@
 import os
-import mlp.config as cfg
 import mlp.viewer.display_tools as display_tools
 
 # export at 25 fps
 dt_display = 0.04
 
 
-def export(q_t, v):
+def export(cfg, q_t, v):
     path = cfg.EXPORT_PATH + "/blender"
     if not os.path.exists(path):
         os.makedirs(path)

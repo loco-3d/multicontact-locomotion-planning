@@ -2,7 +2,6 @@
 ## ONLY WORK FOR HRP-2 !!
 
 import os
-import mlp.config as cfg
 import pinocchio as pin
 from pinocchio import SE3, rnea
 from pinocchio.utils import *
@@ -254,7 +253,7 @@ def writeKinematicsData(res, path, project_name):
     print("write file : ", filename_acc)
 
 # FIXME : not update to date anymore since the switch to mcAPI v2
-def export(cs_com, cs_wb):
+def export(cfg, cs_com, cs_wb):
     rp = RosPack()
     urdf = rp.get_path(cfg.Robot.packageName) + '/urdf/' + cfg.Robot.urdfName + cfg.Robot.urdfSuffix + '.urdf'
     if cfg.WB_VERBOSE:
