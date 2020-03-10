@@ -1,4 +1,3 @@
-import mlp.config as cfg
 from pinocchio import SE3
 import numpy.linalg
 import numpy as np
@@ -113,13 +112,13 @@ def generateLimbRRTPath(q_init, q_end, phase_previous, phase, phase_next, fullBo
         fullBody.setCurrentConfig(fullBody.getConfigAtState(s0))
         print("contact at init state : ", contacts)
         for contact in contacts:
-            effName = cfg.Robot.dict_limb_joint[contact]
+            effName = fullBody.dict_limb_joint[contact]
             print("contact position for joint " + str(effName) + " = " + str(fullBody.getJointPosition(effName)[0:3]))
         contacts = fullBody.getAllLimbsInContact(s1)
         fullBody.setCurrentConfig(fullBody.getConfigAtState(s1))
         print("contact at end  state : ", contacts)
         for contact in contacts:
-            effName = cfg.Robot.dict_limb_joint[contact]
+            effName = fullBody.dict_limb_joint[contact]
             print("contact position for joint " + str(effName) + " = " + str(fullBody.getJointPosition(effName)[0:3]))
 
     # create a path in hpp corresponding to the discretized trajectory in phase :
@@ -178,7 +177,8 @@ def generateLimbRRTPath(q_init, q_end, phase_previous, phase, phase_next, fullBo
     return path_rrt_id
 
 
-def generateLimbRRTTraj(time_interval,
+def generateLimbRRTTraj(cfg,
+                        time_interval,
                         placement_init,
                         placement_end,
                         numTry,
@@ -213,7 +213,8 @@ def computeDistanceCostMatrices(fb, pathId, pData, T, eeName, numPoints=50):
     return bezier_com.computeEndEffectorDistanceCost(pData, T, numPoints, pts)
 
 
-def generateLimbRRTOptimizedTraj(time_interval,
+def generateLimbRRTOptimizedTraj(cfg,
+                                 time_interval,
                                  placement_init,
                                  placement_end,
                                  numTry,
@@ -225,14 +226,14 @@ def generateLimbRRTOptimizedTraj(time_interval,
                                  eeName=None,
                                  viewer=None):
     if numTry == 0:
-        return generateSmoothBezierTraj(time_interval, placement_init, placement_end)
+        return generateSmoothBezierTraj(cfg, time_interval, placement_init, placement_end)
     else:
         if q_t is None or phase_previous is None or phase is None or phase_next is None or not fullBody or not eeName:
             raise ValueError("Cannot compute LimbRRTOptimizedTraj for try >= 1 without optionnal arguments")
     if cfg.EFF_T_PREDEF > 0:
-        predef_curves = generatePredefBeziers(time_interval, placement_init, placement_end)
+        predef_curves = generatePredefBeziers(cfg, time_interval, placement_init, placement_end)
     else:
-        predef_curves = generateSmoothBezierTraj(time_interval, placement_init, placement_end)
+        predef_curves = generateSmoothBezierTraj(cfg, time_interval, placement_init, placement_end)
     id_middle = int(math.floor(predef_curves.num_curves() / 2.))
     predef_middle = predef_curves.curve_at_index(id_middle).translation_curve()
     pos_init = predef_middle(predef_middle.min())

@@ -1,4 +1,5 @@
-import mlp.config as cfg
+from mlp.config import Config
+cfg = Config()
 
 #end_effector_method = ["smoothedFoot", "bezierPredef", "bezierConstrained", "limbRRT", "limbRRToptimized"]
 method = cfg.end_effector_method

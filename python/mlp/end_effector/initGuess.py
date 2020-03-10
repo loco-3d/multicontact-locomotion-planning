@@ -1,4 +1,6 @@
-import mlp.config as cfg
+from mlp.config import Config
+cfg = Config()
+
 from mlp.utils.requirements import Requirements
 from multicontact_api import ContactSequence
 from mlp.utils.util import SE3FromConfig
@@ -25,7 +27,7 @@ elif method_initGuess != "load":
 
 if method_initGuess == "load":
 
-    def generateEffectorTrajectoriesForSequence(cs, fullBody=None):
+    def generateEffectorTrajectoriesForSequence(cfg, cs, fullBody=None):
         cs_ref = ContactSequence()
         filename = cfg.REF_FILENAME
         print("Load contact sequence with end effector trajectories from : ", filename)
@@ -44,7 +46,7 @@ else:
         return SE3FromConfig(fullBody.getJointPosition(eeName))
 
 
-    def generateEffectorTrajectoriesForSequence(cs, fullBody = None):
+    def generateEffectorTrajectoriesForSequence(cfg, cs, fullBody = None):
         """
         Generate an effector trajectory for each effectors which are going to be in contact in the next phase
         :param cs:
@@ -69,7 +71,7 @@ else:
                     else:
                         placement_init = effectorPlacementFromPhaseConfig(phase,eeName,fullBody)
                     # build the trajectory :
-                    traj = generateEndEffectorTraj(time_interval,placement_init,placement_end)
+                    traj = generateEndEffectorTraj(cfg, time_interval,placement_init,placement_end)
                     phase.addEffectorTrajectory(eeName,traj)
 
 

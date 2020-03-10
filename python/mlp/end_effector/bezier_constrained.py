@@ -1,5 +1,4 @@
 # DEPRECATED
-import mlp.config as cfg
 import time
 import os
 import pinocchio as pin
@@ -741,7 +740,7 @@ def computeProblemConstraints(pData, fullBody, pathId, t, eeName, viewer):
     return pDef
 
 
-def generateConstrainedBezierTraj(time_interval,
+def generateConstrainedBezierTraj(cfg, time_interval,
                                   placement_init,
                                   placement_end,
                                   numTry,
@@ -753,12 +752,12 @@ def generateConstrainedBezierTraj(time_interval,
                                   eeName=None,
                                   viewer=None):
     if numTry == 0:
-        return generateSmoothBezierTraj(time_interval, placement_init, placement_end)
+        return generateSmoothBezierTraj(cfg, time_interval, placement_init, placement_end)
     else:
         if not q_t or not phase_previous or not phase or not phase_next or not fullBody or not eeName:
             raise ValueError("Cannot compute LimbRRTOptimizedTraj for try >= 1 without optionnal arguments")
 
-    predef_curves = generatePredefBeziers(time_interval, placement_init, placement_end)
+    predef_curves = generatePredefBeziers(cfg, time_interval, placement_init, placement_end)
     bezier_takeoff = predef_curves.curves[predef_curves.idFirstNonZero()]
     bezier_landing = predef_curves.curves[predef_curves.idLastNonZero()]
     id_middle = int(math.floor(len(predef_curves.curves) / 2.))

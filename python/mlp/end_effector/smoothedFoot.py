@@ -6,7 +6,8 @@ class Inputs(Requirements):
 class Outputs(Inputs):
     effectorTrajectories = True
 
-def generateEndEffectorTraj(time_interval,
+def generateEndEffectorTraj(cfg,
+                            time_interval,
                             placement_init,
                             placement_end,
                             numTry=None,
