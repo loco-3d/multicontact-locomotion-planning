@@ -10,12 +10,12 @@ class Config:
     """
 
     # possible choices for each subproblem
-    contact_generation_method_available = ["none", "load", "rbprm", "sl1m"]
+    contact_generation_method_available = ["load", "rbprm", "sl1m"]
     centroidal_initGuess_method_available = ["none", "geometric", "croc", "momentumopt", "quasistatic"]
-    centroidal_method_available = ["load", "geometric", "croc", "momentumopt", "quasistatic", "muscod", "none"]
+    centroidal_method_available = ["load", "geometric", "croc", "momentumopt", "quasistatic", "muscod"]
     end_effector_initGuess_method_available = ["load","smoothedFoot", "bezierPredef"]
     end_effector_method_available = ["limbRRT", "limbRRToptimized"]
-    wholebody_method_available = ["load", "tsid", "croccodyl", "none"]
+    wholebody_method_available = ["load", "tsid", "croccodyl"]
     simulator_available = ["pinocchioIntegration"]
 
 
@@ -172,8 +172,7 @@ class Config:
             raise ValueError("end effector method must be choosed from : " + str(self.end_effector_initGuess_method_available))
         if not (self.simulator_method in self.simulator_available):
             raise ValueError("Simulator method must be choosed from : " + str(self.simulator_available))
-        if self.contact_generation_method == "none" and self.centroidal_method != "load":
-            raise ValueError("Cannot skip contact_generation phase if centroidal trajectory is not loaded from file")
+
 
         # skip useless method when loading motion from file:
         if self.contact_generation_method == "load":
@@ -209,17 +208,3 @@ class Config:
             self.CS_FILENAME = self.REF_FILENAME
             self.COM_FILENAME = self.REF_FILENAME
 
-        if self.centroidal_method == "none":
-            self.wholebody_method = "none"
-            self.SAVE_CS = False
-            self.SAVE_CS_COM = False
-            self.DISPLAY_COM_TRAJ = False
-            self.PLOT_CENTROIDAL = False
-            self.WRITE_STATUS = False
-        if self.end_effector_initGuess_method == "none":
-            self.SAVE_CS_REF = False
-        if self.wholebody_method == "none":
-            self.SAVE_CS_WB = False
-            self.CHECK_FINAL_MOTION = False
-            self.DISPLAY_WB_MOTION = False
-            self.PLOT = False

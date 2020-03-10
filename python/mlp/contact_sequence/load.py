@@ -7,7 +7,7 @@ class Outputs(Requirements):
 
 
 
-def generateContactSequence(cfg):
+def generateContactSequenceLoad(cfg):
     fb, v = display_tools.initScene(cfg.Robot, cfg.ENV_NAME)
     cs = ContactSequence(0)
     print("Import contact sequence binary file : ", cfg.CS_FILENAME)
