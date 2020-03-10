@@ -154,7 +154,7 @@ def curveSE3toTSID(curve,t, computeAcc = False):
         sample.acc(MotiontoVec(acc))
     return sample
 
-def adjustEndEffectorTrajectoryIfNeeded(phase, robot, data, eeName):
+def adjustEndEffectorTrajectoryIfNeeded(cfg, phase, robot, data, eeName):
     """
     Check that the reference trajectory correctly start close enough to the current effector position
     and adjust it if required to start at the current position
@@ -169,11 +169,11 @@ def adjustEndEffectorTrajectoryIfNeeded(phase, robot, data, eeName):
     if not current_placement.isApprox(ref_placement, 1e-3):
         print("- End effector trajectory need to be adjusted.")
         placement_end = phase.effectorTrajectory(eeName).evaluateAsSE3(phase.timeFinal)
-        ref_traj = generateEndEffectorTraj([phase.timeInitial, phase.timeFinal], current_placement, placement_end, 0)
+        ref_traj = generateEndEffectorTraj(cfg, [phase.timeInitial, phase.timeFinal], current_placement, placement_end, 0)
         phase.addEffectorTrajectory(eeName, ref_traj)
 
 
-def generateWholeBodyMotion(cs_ref, cfg, fullBody=None, viewer=None):
+def generateWholeBodyMotion(cfg, cs_ref, fullBody=None, viewer=None):
     """
     Generate the whole body motion corresponding to the given contactSequence
     :param cs: Contact sequence containing the references,
@@ -528,7 +528,7 @@ def generateWholeBodyMotion(cs_ref, cfg, fullBody=None, viewer=None):
                     print("add se3 task for " + eeName)
                 task = dic_effectors_tasks[eeName]
                 invdyn.addMotionTask(task, cfg.w_eff, cfg.level_eff, 0.)
-                adjustEndEffectorTrajectoryIfNeeded(phase_ref, robot, invdyn.data(), eeName)
+                adjustEndEffectorTrajectoryIfNeeded(cfg, phase_ref, robot, invdyn.data(), eeName)
                 if cfg.WB_VERBOSE:
                     print("t interval : ", time_interval)
 
@@ -672,7 +672,7 @@ def generateWholeBodyMotion(cs_ref, cfg, fullBody=None, viewer=None):
                             for eeName, ref_traj in phase_ref.effectorTrajectories().items():
                                 placement_init = ref_traj.evaluateAsSE3(phase.timeInitial)
                                 placement_end = ref_traj.evaluateAsSE3(phase.timeFinal)
-                                traj = generateEndEffectorTraj(time_interval, placement_init, placement_end,
+                                traj = generateEndEffectorTraj(cfg, time_interval, placement_init, placement_end,
                                                                    iter_for_phase + 1, first_q_t, phase_prev,
                                                                    phase_ref, phase_next, fullBody, eeName, viewer)
                                 # save the new trajectory in the phase with the references

@@ -1,4 +1,5 @@
-import mlp.config as cfg
+from mlp.config import Config
+cfg = Config()
 
 #wholebody_method_available = ["load", "tsid", "croccodyl"]
 method = cfg.wholebody_method
