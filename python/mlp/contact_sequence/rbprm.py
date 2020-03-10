@@ -167,7 +167,7 @@ def contactSequenceFromRBPRMConfigs(fb, beginId, endId):
     return cs
 
 
-def generateContactSequence(cfg):
+def generate_contact_sequence_rbprm(cfg):
     fb, viewer, beginId, endId = runRBPRMScript(cfg)
     cs = contactSequenceFromRBPRMConfigs(fb, beginId, endId)
     return cs, fb, viewer

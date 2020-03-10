@@ -2,12 +2,13 @@ from multicontact_api import ContactSequence
 import mlp.viewer.display_tools as display_tools
 from mlp.utils.requirements import Requirements
 
+
 class Outputs(Requirements):
     consistentContacts = True
 
 
 
-def generateContactSequenceLoad(cfg):
+def generate_contact_sequence_load(cfg):
     fb, v = display_tools.initScene(cfg.Robot, cfg.ENV_NAME)
     cs = ContactSequence(0)
     print("Import contact sequence binary file : ", cfg.CS_FILENAME)

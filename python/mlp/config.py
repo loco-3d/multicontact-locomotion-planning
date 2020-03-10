@@ -1,7 +1,6 @@
 import numpy as np
 import os
-import importlib
-
+from importlib import import_module
 
 
 class Config:
@@ -129,14 +128,14 @@ class Config:
         print("# Load demo config : ", demo_name)
         # Import the module
         try:
-            demo_cfg = importlib.import_module(demo_name)
+            demo_cfg = import_module(demo_name)
         except ImportError as e:
             print("Cannot load config file '" + demo_name + "', error : ")
             print(e)
             print("Try to prepend path 'mlp.demo_configs.'")
             demo_name = "mlp.demo_configs." + demo_name
             try:
-                demo_cfg = importlib.import_module(demo_name)
+                demo_cfg = import_module(demo_name)
             except ImportError as e:
                 print("Cannot load config file '" + demo_name + "', error : ")
                 print(e)
@@ -208,3 +207,9 @@ class Config:
             self.CS_FILENAME = self.REF_FILENAME
             self.COM_FILENAME = self.REF_FILENAME
 
+
+    def get_contact_generation_method(self):
+        module = import_module('contact_sequence.'+self.contact_generation_method)
+        method = getattr(module, 'generate_contact_sequence_'+self.contact_generation_method)
+        Outputs = getattr(module, 'Outputs')
+        return method, Outputs

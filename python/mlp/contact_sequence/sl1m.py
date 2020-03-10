@@ -234,7 +234,7 @@ def runLPScript(cfg):
     return cp.RF, root_init, root_end, pb, coms, footpos, allfeetpos, res
 
 
-def generateContactSequence(cfg):
+def generate_contact_sequence_sl1m(cfg):
     #RF,root_init,pb, coms, footpos, allfeetpos, res = runLPScript(cfg)
     RF, root_init, root_end, pb, coms, footpos, allfeetpos, res = runLPFromGuideScript(cfg)
     multicontact_api.switchToNumpyArray()

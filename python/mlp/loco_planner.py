@@ -40,9 +40,9 @@ class LocoPlanner:
 
     def run_contact_generation(self):
         print("### MLP : contact sequence ###")
-        import mlp.contact_sequence as contactGeneration
-        self.cs, self.fullBody, self.viewer = contactGeneration.generateContactSequence(self.cfg)
-        contactGeneration.Outputs.assertRequirements(self.cs)
+        generate_contact_sequence, ContactGenerationOutputs = cfg.get_contact_generation_method()
+        self.cs, self.fullBody, self.viewer = generate_contact_sequence(self.cfg)
+        ContactGenerationOutputs.assertRequirements(self.cs)
         self.gui = self.viewer.client.gui
 
         if self.cfg.WRITE_STATUS:
