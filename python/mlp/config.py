@@ -29,12 +29,18 @@ class Config:
         self.simulator_method = "pinocchio_integration"
 
         ## PATHS settings :
-        pkg_path = pathlib.Path(__file__).parent.parent.parent.absolute()
-        self.PKG_PATH = str(pkg_path)
+        self.PKG_PATH = pathlib.Path(__file__).parent.parent.parent.absolute()
+        # check if run from the source folder or from the installed directory
+        is_installed = self.PKG_PATH.parent.name == "lib"
         print ("PKG_PATH = ",self.PKG_PATH)
-        self.OUTPUT_DIR = str(pkg_path / "res")
+        if is_installed:
+            self.OUTPUT_DIR = str(self.PKG_PATH.parent.parent / "share" / "mlp" / "res")
+            self.TIME_OPT_CONFIG_PATH = str(self.PKG_PATH.parent.parent / "share" / "mlp" / "momentumopt_configs")
+        else:
+            self.OUTPUT_DIR = str(self.PKG_PATH / "res")
+            self.TIME_OPT_CONFIG_PATH = str(self.PKG_PATH / "momentumopt_configs")
+
         self.CONTACT_SEQUENCE_PATH = self.OUTPUT_DIR + "/contact_sequences"
-        self.TIME_OPT_CONFIG_PATH = str(pkg_path / "momentumopt_configs")
 
         self.STATUS_FILENAME = self.OUTPUT_DIR + "/infos.log"
         self.EXPORT_PATH = self.OUTPUT_DIR + "/export"
