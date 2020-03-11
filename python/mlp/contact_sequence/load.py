@@ -3,7 +3,7 @@ import mlp.viewer.display_tools as display_tools
 from mlp.utils.requirements import Requirements
 
 
-class OutputsLoad(Requirements):
+class ContactOutputsLoad(Requirements):
     consistentContacts = True
 
 

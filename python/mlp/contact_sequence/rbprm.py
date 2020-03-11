@@ -12,9 +12,9 @@ import enum
 import importlib
 multicontact_api.switchToNumpyArray()
 
-VERBOSE = True
+VERBOSE = False
 
-class OutputsRbprm(Requirements):
+class ContactOutputsRbprm(Requirements):
     consistentContacts = True
     COMvalues = True
     configurationValues = True
