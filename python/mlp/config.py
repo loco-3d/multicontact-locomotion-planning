@@ -1,7 +1,7 @@
 import numpy as np
 import os
 from importlib import import_module
-
+import pathlib
 
 class Config:
     """
@@ -29,11 +29,13 @@ class Config:
         self.simulator_method = "pinocchio_integration"
 
         ## PATHS settings :
-        self.PKG_PATH = os.path.dirname(os.path.realpath(__file__)).rstrip("/python/mlp")
+        pkg_path = pathlib.Path(__file__).parent.parent.parent.absolute()
+        self.PKG_PATH = str(pkg_path)
         print ("PKG_PATH = ",self.PKG_PATH)
-        self.OUTPUT_DIR = self.PKG_PATH+"/res"
+        self.OUTPUT_DIR = str(pkg_path / "res")
         self.CONTACT_SEQUENCE_PATH = self.OUTPUT_DIR + "/contact_sequences"
-        self.TIME_OPT_CONFIG_PATH = self.PKG_PATH + '/momentumopt_configs'
+        self.TIME_OPT_CONFIG_PATH = str(pkg_path / "momentumopt_configs")
+
         self.STATUS_FILENAME = self.OUTPUT_DIR + "/infos.log"
         self.EXPORT_PATH = self.OUTPUT_DIR + "/export"
         # if absolute script path is given for rbprm, this path is prepended
