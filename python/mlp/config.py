@@ -121,6 +121,12 @@ class Config:
         self.IK_store_joints_derivatives = False
         self.IK_store_joints_torque = False
 
+        self.DEMO_NAME = "undefined"
+        self.CS_FILENAME = self.CONTACT_SEQUENCE_PATH + "/" + self.DEMO_NAME + ".cs"
+        self.COM_FILENAME = self.CONTACT_SEQUENCE_PATH + "/" + self.DEMO_NAME + "_COM.cs"
+        self.REF_FILENAME = self.CONTACT_SEQUENCE_PATH + "/" + self.DEMO_NAME + "_REF.cs"
+        self.WB_FILENAME = self.CONTACT_SEQUENCE_PATH + "/" + self.DEMO_NAME + "_WB.cs"
+
         self.check_methods()
 
     def load_scenario_config(self, demo_name):
