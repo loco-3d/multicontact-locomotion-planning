@@ -211,6 +211,19 @@ class Config:
     def get_contact_generation_method(self):
         module = import_module('contact_sequence.'+self.contact_generation_method)
         method = getattr(module, 'generate_contact_sequence_'+self.contact_generation_method)
-        Outputs = getattr(module, 'Outputs'+self.contact_generation_method.capitalize())
+        Outputs = getattr(module, 'ContactOutputs'+self.contact_generation_method.capitalize())
         return method, Outputs
 
+    def get_centroidal_initguess_method(self):
+        module = import_module('centroidal.'+self.centroidal_initGuess_method)
+        method = getattr(module, 'generate_centroidal_'+self.centroidal_initGuess_method)
+        Inputs = getattr(module, 'CentroidalInputs'+self.centroidal_initGuess_method.capitalize())
+        Outputs = getattr(module, 'CentroidalOutputs'+self.centroidal_initGuess_method.capitalize())
+        return method, Inputs, Outputs
+
+    def get_centroidal_method(self):
+        module = import_module('centroidal.'+self.centroidal_method)
+        method = getattr(module, 'generate_centroidal_'+self.centroidal_method)
+        Inputs = getattr(module, 'CentroidalInputs'+self.centroidal_method.capitalize())
+        Outputs = getattr(module, 'CentroidalOutputs'+self.centroidal_method.capitalize())
+        return method, Inputs, Outputs

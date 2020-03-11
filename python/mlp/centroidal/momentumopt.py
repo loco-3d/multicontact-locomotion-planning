@@ -22,12 +22,12 @@ from mlp.utils.requirements import Requirements
 multicontact_api.switchToNumpyArray()
 
 
-class Inputs(Requirements):
+class CentroidalInputsMomentumopt(Requirements):
     timings = True
     consistentContacts = True
     COMvalues = True
 
-class Outputs(Inputs):
+class CentroidalOutputsMomentumopt(CentroidalInputsMomentumopt):
     centroidalTrajectories = True
 
 
@@ -294,7 +294,7 @@ def CSfromMomentumopt(planner_setting, cs, init_state, dyn_states, t_init = 0, c
     return cs_com
 
 
-def generateCentroidalTrajectory(cfg, cs, cs_initGuess=None, fullBody=None, viewer=None, first_iter = True):
+def generate_centroidal_momentumopt(cfg, cs, cs_initGuess=None, fullBody=None, viewer=None, first_iter = True):
     if cs_initGuess is not None and first_iter:
         print("WARNING : in current implementation of timeopt.generateCentroidalTrajectory"
               " the initial guess is ignored. (TODO)")

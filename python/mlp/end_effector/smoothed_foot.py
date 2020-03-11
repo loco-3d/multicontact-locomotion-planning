@@ -1,9 +1,10 @@
 from mlp.utils.trajectories import SmoothedFootTrajectory
 from  mlp.utils.requirements import Requirements
-class Inputs(Requirements):
+
+class EffectorInputsSmoothedfoot(Requirements):
     consistentContacts = True
     timings = True
-class Outputs(Inputs):
+class EffectorOutputsSmoothedfoot(EffectorInputsSmoothedfoot):
     effectorTrajectories = True
 
 def generateEndEffectorTraj(cfg,

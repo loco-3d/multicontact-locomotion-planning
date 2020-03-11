@@ -7,12 +7,12 @@ from mlp.utils.cs_tools import resetCOMtrajectories
 from mlp.utils.requirements import Requirements
 multicontact_api.switchToNumpyArray()
 
-class Inputs(Requirements):
+class CentroidalInputsCroc(Requirements):
     timings = True
     consistentContacts = True
     configurationValues = True
 
-class Outputs(Inputs):
+class CentroidalOutputsCroc(CentroidalInputsCroc):
     COMtrajectories = True
     COMvalues = True
 
@@ -53,7 +53,7 @@ def setCOMfromCurve(phase, curve_normalized):
 
 
 # Not generic .... assume that there is always 2 contact phases for each state in fullBody
-def generateCentroidalTrajectory(cfg, cs, cs_initGuess=None, fb=None, viewer=None, first_iter = True):
+def generate_centroidal_croc(cfg, cs, cs_initGuess=None, fb=None, viewer=None, first_iter = True):
     if cs_initGuess:
         print("WARNING : in centroidal.croc, initial guess is ignored.")
     if not fb:

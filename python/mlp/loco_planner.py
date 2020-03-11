@@ -60,14 +60,14 @@ class LocoPlanner:
     def run_centroidal_init_guess(self):
         print("------------------------------")
         print("### MLP : centroidal, initial Guess ###")
-        import mlp.centroidal.initGuess as centroidalInitGuess
-        if not centroidalInitGuess.Inputs.checkAndFillRequirements(self.cs, self.cfg, self.fullBody):
+        generate_centroidal_initguess, CentroidalInitGuessInputs, CentroidalInitGuessOutputs = cfg.get_centroidal_initguess_method()
+        if not CentroidalInitGuessInputs.checkAndFillRequirements(self.cs, self.cfg, self.fullBody):
             raise RuntimeError(
                 "The current contact sequence cannot be given as input to the centroidalInitGuess method selected.")
-        self.cs_initGuess = centroidalInitGuess.generateCentroidalTrajectory(self.cfg, self.cs,
+        self.cs_initGuess = generate_centroidal_initguess(self.cfg, self.cs,
                                                                              fullBody=self.fullBody,
                                                                              viewer=self.viewer)
-        centroidalInitGuess.Outputs.assertRequirements(self.cs_initGuess)
+        CentroidalInitGuessOutputs.assertRequirements(self.cs_initGuess)
 
         if cfg.DISPLAY_INIT_GUESS_TRAJ and self.cs_initGuess:
             colors = [self.viewer.color.red, self.viewer.color.yellow]
@@ -76,17 +76,17 @@ class LocoPlanner:
     def run_centroidal(self, iter_dynamic_filter = 0):
         print("------------------------------")
         print("### MLP : centroidal  ###")
-        import mlp.centroidal as centroidal
-        if not centroidal.Inputs.checkAndFillRequirements(self.cs, self.cfg, self.fullBody):
+        generate_centroidal, CentroidalInputs, CentroidalOutputs = cfg.get_centroidal_method()
+        if not CentroidalInputs.checkAndFillRequirements(self.cs, self.cfg, self.fullBody):
             raise RuntimeError(
                 "The current contact sequence cannot be given as input to the centroidal method selected.")
         if iter_dynamic_filter > 0:
             if self.cs_wb is not None:
                 self.cs_initGuess = self.cs_wb
-        self.cs_com = centroidal.generateCentroidalTrajectory(self.cfg, self.cs, self.cs_initGuess,
+        self.cs_com = generate_centroidal(self.cfg, self.cs, self.cs_initGuess,
                                                              self.fullBody, self.viewer,
                                                              iter_dynamic_filter == 0)
-        centroidal.Outputs.assertRequirements(self.cs_com)
+        CentroidalOutputs.assertRequirements(self.cs_com)
         self.cs_com_iters += [self.cs_com]
 
         if cfg.WRITE_STATUS and iter_dynamic_filter == 0:

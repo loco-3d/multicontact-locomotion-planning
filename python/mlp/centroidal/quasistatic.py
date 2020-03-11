@@ -6,12 +6,12 @@ from mlp.utils.cs_tools import connectPhaseTrajToFinalState, setInitialFromFinal
 from mlp.utils.requirements import Requirements
 multicontact_api.switchToNumpyArray()
 
-class Inputs(Requirements):
+class CentroidalInputsQuasistatic(Requirements):
     timings = True
     consistentContacts = True
     configurationValues = True
 
-class Outputs(Inputs):
+class CentroidalOutputsQuasistatic(CentroidalInputsQuasistatic):
     COMtrajectories = True
     COMvalues = True
 
@@ -43,7 +43,7 @@ def getTargetCOMPosition(fullBody, id_state, com_shift_z):
 
 
 
-def generateCentroidalTrajectory(cfg, cs, cs_initGuess=None, fullBody=None, viewer=None, first_iter = True):
+def generate_centroidal_quasistatic(cfg, cs, cs_initGuess=None, fullBody=None, viewer=None, first_iter = True):
     if cs_initGuess:
         print("WARNING : in centroidal.quasiStatic, initial guess is ignored.")
     if not fullBody:

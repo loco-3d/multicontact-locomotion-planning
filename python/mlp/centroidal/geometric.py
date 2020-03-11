@@ -9,16 +9,16 @@ VERBOSE = False
 
 multicontact_api.switchToNumpyArray()
 
-class Inputs(Requirements):
+class CentroidalInputsGeometric(Requirements):
     timings = True
     consistentContacts = True
 
-class Outputs(Inputs):
+class CentroidalOutputsGeometric(CentroidalInputsGeometric):
     centroidalTrajectories = True
     COMvalues = True
 
 
-def generateCentroidalTrajectory(cfg, cs, cs_initGuess=None, fullBody=None, viewer=None, first_iter = True):
+def generate_centroidal_geometric(cfg, cs, cs_initGuess=None, fullBody=None, viewer=None, first_iter = True):
     """
     Generate straight line trajectories from the center of the support polygon of one phase
     to the center in the next phase.
