@@ -413,6 +413,13 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
     robot = tsid.RobotWrapper(urdf, pin.StdVec_StdString(), pin.JointModelFreeFlyer(), False)
     if cfg.WB_VERBOSE:
         print("robot loaded in tsid.")
+    if cfg.IK_store_centroidal or cfg.IK_store_zmp:
+        if cfg.WB_VERBOSE:
+            print("load pinocchio robot ...")
+        # FIXME : tsid robotWrapper don't have all the required methods, only pinocchio have them
+        pinRobot = pin.RobotWrapper.BuildFromURDF(urdf, package_path, pin.JointModelFreeFlyer(), cfg.WB_VERBOSE == 2)
+        if cfg.WB_VERBOSE:
+            print("pinocchio robot loaded.")
 
     # get the selected end effector trajectory generation method
     effectorMethod, effectorCanRetry = cfg.get_effector_method()
