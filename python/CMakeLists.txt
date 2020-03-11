@@ -1,6 +1,7 @@
 
 SET(${PROJECT_NAME}_PYTHON_FILES
     __init__.py
+    __main__.py
     config.py
     loco_planner.py
     )
