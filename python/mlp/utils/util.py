@@ -157,6 +157,15 @@ def genCOMTrajFromPhaseStates(phase, constraintVelocity = True, constraintAccele
     phase.ddc_t = com_traj.compute_derivate(2)
 
 
+def effectorPlacementFromPhaseConfig(phase, eeName, fullBody):
+    if fullBody is None :
+        raise RuntimeError("Cannot compute the effector placement from the configuration without initialized fullBody object.")
+    if not phase.q_init.any():
+        raise RuntimeError("Cannot compute the effector placement as the initial configuration is not initialized in the ContactPhase.")
+
+    fullBody.setCurrentConfig(phase.q_init.tolist())
+    return SE3FromConfig(fullBody.getJointPosition(eeName))
+
 
 
 def createStateFromPhase(fullBody, phase, q=None):

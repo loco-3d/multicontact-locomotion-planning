@@ -4,6 +4,7 @@ from curves import piecewise, polynomial, SE3Curve
 from pinocchio import SE3, Quaternion
 from mlp.utils.util import SE3FromConfig,  computeContactNormal, rootOrientationFromFeetPlacement
 from mlp.utils.util import computeEffectorTranslationBetweenStates, computeEffectorRotationBetweenStates
+from mlp.utils.util import effectorPlacementFromPhaseConfig
 import numpy as np
 import types
 from hpp.corbaserver.rbprm.rbprmstate import State, StateHelper
@@ -609,3 +610,40 @@ def copyEffectorTrajectories(cs_eff, cs):
             for eeName, traj in phase_eff.effectorTrajectories().items():
                 phase.addEffectorTrajectory(eeName, traj)
     return cs_res
+
+
+
+def generate_effector_trajectories_for_sequence(cfg, cs, generate_end_effector_traj, fullBody = None):
+    """
+    Generate an effector trajectory for each effectors which are going to be in contact in the next phase
+    :param cfg: an instance of the configuration class
+    :param cs: the contact sequence
+    :param generate_end_effector_traj: a pointer to the method used to generate an end effector trajectory for one phase
+    :param fullBody: an instance of rbprm FullBody
+    :return: a new contact sequence, containing the same data as the one given as input
+    plus the effector trajectories for each swing phases
+    """
+    cs_res = ContactSequence(cs)
+    effectors = cs_res.getAllEffectorsInContact()
+    previous_phase = None
+    for pid in range(cs_res.size()-1): # -1 as last phase never have effector trajectories
+        phase = cs_res.contactPhases[pid]
+        next_phase = cs_res.contactPhases[pid+1]
+        if pid > 0 :
+            previous_phase = cs_res.contactPhases[pid-1]
+
+        for eeName in effectors:
+            if not phase.isEffectorInContact(eeName) and next_phase.isEffectorInContact(eeName):
+                # eeName will be in compute in the next phase, a trajectory should be added in the current phase
+                placement_end = next_phase.contactPatch(eeName).placement
+                time_interval = [phase.timeInitial, phase.timeFinal]
+                if previous_phase is not None and previous_phase.isEffectorInContact(eeName):
+                    placement_init = previous_phase.contactPatch(eeName).placement
+                else:
+                    placement_init = effectorPlacementFromPhaseConfig(phase,eeName,fullBody)
+                # build the trajectory :
+                traj = generate_end_effector_traj(cfg, time_interval,placement_init,placement_end)
+                phase.addEffectorTrajectory(eeName,traj)
+    return cs_res
+
+
