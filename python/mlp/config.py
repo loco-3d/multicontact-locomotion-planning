@@ -106,12 +106,12 @@ class Config:
         self.CHECK_FINAL_MOTION = True  # After computation of the motion, check the complete motion for {self-}collision and joints limits
         ### The following settings enable the computation of various values stored in the wholeBody_result struct.
         # Enabling them increase the computation time of the wholeBody script
-        self.IK_store_centroidal = True  # c,dc,ddc,L,dL (of the computed wholebody motion)
-        self.IK_store_zmp = True
-        self.IK_store_effector = True
-        self.IK_store_contact_forces = True
-        self.IK_store_joints_derivatives = True
-        self.IK_store_joints_torque = True
+        self.IK_store_centroidal = False  # c,dc,ddc,L,dL (of the computed wholebody motion)
+        self.IK_store_zmp = False
+        self.IK_store_effector = False
+        self.IK_store_contact_forces = False
+        self.IK_store_joints_derivatives = False
+        self.IK_store_joints_torque = False
 
         self.check_methods()
 
