@@ -42,6 +42,11 @@ ADD_OPTIONAL_DEPENDENCY("momentumopt >= 1.0")
 #ADD_OPTIONAL_DEPENDENCY("sl1m >= 1.0") #TODO
 
 
+
+INSTALL(DIRECTORY momentumopt_configs
+  DESTINATION "share/mlp")
+
+
 ADD_SUBDIRECTORY(python)
 
 
