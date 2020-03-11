@@ -11,7 +11,7 @@ class CentroidalOutputsLoad(CentroidalInputsLoad):
     centroidalValues = True
 
 
-def generate_centroidal_load(cfg, cs, cs_initGuess=None, fullBody=None, viewer=None):
+def generate_centroidal_load(cfg, cs, cs_initGuess=None, fullBody=None, viewer=None, first_iter = True):
     cs_res = ContactSequence(0)
     cs_res.loadFromBinary(cfg.COM_FILENAME)
     print("Import contact sequence binary file : ", cfg.COM_FILENAME)
