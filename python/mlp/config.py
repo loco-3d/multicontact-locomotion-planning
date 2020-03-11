@@ -217,45 +217,45 @@ class Config:
 
 
     def get_contact_generation_method(self):
-        module = import_module('contact_sequence.'+self.contact_generation_method)
+        module = import_module('mlp.contact_sequence.'+self.contact_generation_method)
         method = getattr(module, 'generate_contact_sequence_'+self.contact_generation_method)
         Outputs = getattr(module, 'ContactOutputs'+self.contact_generation_method.capitalize())
         return method, Outputs
 
     def get_centroidal_initguess_method(self):
-        module = import_module('centroidal.'+self.centroidal_initGuess_method)
+        module = import_module('mlp.centroidal.'+self.centroidal_initGuess_method)
         method = getattr(module, 'generate_centroidal_'+self.centroidal_initGuess_method)
         Inputs = getattr(module, 'CentroidalInputs'+self.centroidal_initGuess_method.capitalize())
         Outputs = getattr(module, 'CentroidalOutputs'+self.centroidal_initGuess_method.capitalize())
         return method, Inputs, Outputs
 
     def get_centroidal_method(self):
-        module = import_module('centroidal.'+self.centroidal_method)
+        module = import_module('mlp.centroidal.'+self.centroidal_method)
         method = getattr(module, 'generate_centroidal_'+self.centroidal_method)
         Inputs = getattr(module, 'CentroidalInputs'+self.centroidal_method.capitalize())
         Outputs = getattr(module, 'CentroidalOutputs'+self.centroidal_method.capitalize())
         return method, Inputs, Outputs
 
     def get_effector_initguess_method(self):
-        module = import_module('end_effector.' + self.end_effector_initGuess_method)
+        module = import_module('mlp.end_effector.' + self.end_effector_initGuess_method)
         method = getattr(module, 'generate_effector_trajectories_for_sequence_' + self.end_effector_initGuess_method.split("_")[0])
         Inputs = getattr(module, 'EffectorInputs' + self.end_effector_initGuess_method.capitalize().split("_")[0])
         Outputs = getattr(module, 'EffectorOutputs' + self.end_effector_initGuess_method.capitalize().split("_")[0])
         return method, Inputs, Outputs
 
     def get_effector_method(self):
-        module = import_module('end_effector.' + self.end_effector_method)
+        module = import_module('mlp.end_effector.' + self.end_effector_method)
         method = getattr(module, 'generate_effector_trajectory_' + self.end_effector_method)
         can_retry = getattr(module, 'effectorCanRetry')
         return method, can_retry
 
     def get_wholebody_method(self):
-        module = import_module('wholebody.' + self.wholebody_method)
+        module = import_module('mlp.wholebody.' + self.wholebody_method)
         method = getattr(module, 'generate_wholebody_' + self.wholebody_method)
         Inputs = getattr(module, 'WholebodyInputs'+self.wholebody_method.capitalize())
         Outputs = getattr(module, 'WholebodyOutputs'+self.wholebody_method.capitalize())
         return method, Inputs, Outputs
 
     def get_simulator_class(self):
-        return getattr(import_module('simulator.' + self.simulator_method), self.simulator_method.title().replace("_",""))
+        return getattr(import_module('mlp.simulator.' + self.simulator_method), self.simulator_method.title().replace("_",""))
 

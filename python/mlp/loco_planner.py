@@ -40,14 +40,14 @@ class LocoPlanner:
 
     def run_contact_generation(self):
         print("### MLP : contact sequence ###")
-        generate_contact_sequence, ContactGenerationOutputs = cfg.get_contact_generation_method()
+        generate_contact_sequence, ContactGenerationOutputs = self.cfg.get_contact_generation_method()
         self.cs, self.fullBody, self.viewer = generate_contact_sequence(self.cfg)
         ContactGenerationOutputs.assertRequirements(self.cs)
         self.gui = self.viewer.client.gui
 
         if self.cfg.WRITE_STATUS:
             with open(self.cfg.STATUS_FILENAME, "a") as f:
-                f = open(cfg.STATUS_FILENAME, "a")
+                f = open(self.cfg.STATUS_FILENAME, "a")
                 f.write("gen_cs_success: True\n")
 
         if self.cfg.DISPLAY_CS_STONES:
@@ -60,7 +60,7 @@ class LocoPlanner:
     def run_centroidal_init_guess(self):
         print("------------------------------")
         print("### MLP : centroidal, initial Guess ###")
-        generate_centroidal_initguess, CentroidalInitGuessInputs, CentroidalInitGuessOutputs = cfg.get_centroidal_initguess_method()
+        generate_centroidal_initguess, CentroidalInitGuessInputs, CentroidalInitGuessOutputs = self.cfg.get_centroidal_initguess_method()
         if not CentroidalInitGuessInputs.checkAndFillRequirements(self.cs, self.cfg, self.fullBody):
             raise RuntimeError(
                 "The current contact sequence cannot be given as input to the centroidalInitGuess method selected.")
@@ -69,14 +69,14 @@ class LocoPlanner:
                                                                              viewer=self.viewer)
         CentroidalInitGuessOutputs.assertRequirements(self.cs_initGuess)
 
-        if cfg.DISPLAY_INIT_GUESS_TRAJ and self.cs_initGuess:
+        if self.cfg.DISPLAY_INIT_GUESS_TRAJ and self.cs_initGuess:
             colors = [self.viewer.color.red, self.viewer.color.yellow]
             display_tools.displayCOMTrajectory(self.cs_initGuess, self.gui, self.viewer.sceneName, self.cfg.SOLVER_DT, colors, "_init")
 
     def run_centroidal(self, iter_dynamic_filter = 0):
         print("------------------------------")
         print("### MLP : centroidal  ###")
-        generate_centroidal, CentroidalInputs, CentroidalOutputs = cfg.get_centroidal_method()
+        generate_centroidal, CentroidalInputs, CentroidalOutputs = self.cfg.get_centroidal_method()
         if not CentroidalInputs.checkAndFillRequirements(self.cs, self.cfg, self.fullBody):
             raise RuntimeError(
                 "The current contact sequence cannot be given as input to the centroidal method selected.")
@@ -89,14 +89,14 @@ class LocoPlanner:
         CentroidalOutputs.assertRequirements(self.cs_com)
         self.cs_com_iters += [self.cs_com]
 
-        if cfg.WRITE_STATUS and iter_dynamic_filter == 0:
+        if self.cfg.WRITE_STATUS and iter_dynamic_filter == 0:
             with open(self.cfg.STATUS_FILENAME, "a") as f:
                 f.write("centroidal_success: True\n")
 
-        if cfg.DISPLAY_COM_TRAJ:
+        if self.cfg.DISPLAY_COM_TRAJ:
             colors = [self.viewer.color.blue, self.viewer.color.green]
-            display_tools.displayCOMTrajectory(self.cs_com, self.gui, self.viewer.sceneName, cfg.DT_DISPLAY, colors)
-        if cfg.PLOT_CENTROIDAL:
+            display_tools.displayCOMTrajectory(self.cs_com, self.gui, self.viewer.sceneName, self.cfg.DT_DISPLAY, colors)
+        if self.cfg.PLOT_CENTROIDAL:
             plot.plotCOMTraj(self.cs_com, self.cfg.SOLVER_DT, " - iter " + str(iter_dynamic_filter))
             plot.plotAMTraj(self.cs_com, self.cfg.SOLVER_DT, " - iter " + str(iter_dynamic_filter))
             plot.plt.show(block=False)
@@ -108,7 +108,7 @@ class LocoPlanner:
             print("Try to copy from previous iteration.")
             self.cs_ref = copyEffectorTrajectories(self.cs_ref, self.cs_com)
         if self.cs_ref is None:
-            generate_effector_trajectories, EffectorInputs, EffectorOutputs = cfg.get_effector_initguess_method()
+            generate_effector_trajectories, EffectorInputs, EffectorOutputs = self.cfg.get_effector_initguess_method()
             if not EffectorInputs.checkAndFillRequirements(self.cs_com, self.cfg, self.fullBody):
                 raise RuntimeError(
                     "The current contact sequence cannot be given as input to the end effector method selected.")
@@ -116,13 +116,13 @@ class LocoPlanner:
             EffectorOutputs.assertRequirements(self.cs_ref)
         self.cs_ref_iters += [self.cs_ref]
 
-        if cfg.DISPLAY_ALL_FEET_TRAJ:
+        if self.cfg.DISPLAY_ALL_FEET_TRAJ:
             displayEffectorTrajectories(self.cs_ref, self.viewer, self.fullBody, "_ref", 0.6)
 
     def run_wholebody(self, iter_dynamic_filter = 0):
         print("------------------------------")
         print("### MLP : whole-body  ###")
-        generate_wholebody, WholebodyInputs, WholebodyOutputs = cfg.get_wholebody_method()
+        generate_wholebody, WholebodyInputs, WholebodyOutputs = self.cfg.get_wholebody_method()
         if not WholebodyInputs.checkAndFillRequirements(self.cs_ref, self.cfg, self.fullBody):
             raise RuntimeError(
                 "The current contact sequence cannot be given as input to the wholeBody method selected.")
@@ -136,9 +136,9 @@ class LocoPlanner:
         WholebodyOutputs.assertWholebodyData(self.cs_wb, self.cfg)
         self.cs_wb_iters += [self.cs_wb]
 
-        if cfg.WRITE_STATUS and iter_dynamic_filter == 0:
-            if not os.path.exists(cfg.OUTPUT_DIR):
-                os.makedirs(cfg.OUTPUT_DIR)
+        if self.cfg.WRITE_STATUS and iter_dynamic_filter == 0:
+            if not os.path.exists(self.cfg.OUTPUT_DIR):
+                os.makedirs(self.cfg.OUTPUT_DIR)
             with open(self.cfg.STATUS_FILENAME, "a") as f:
                 f.write("wholebody_success: True\n")
                 if self.cs_wb.size() == self.cs_ref.size():
@@ -148,7 +148,7 @@ class LocoPlanner:
 
     def finish_solve(self):
         if self.cfg.DISPLAY_FEET_TRAJ:
-            if cfg.IK_store_effector:
+            if self.cfg.IK_store_effector:
                 displayEffectorTrajectories(self.cs_wb, self.viewer, self.fullBody)
             else:
                 displayEffectorTrajectories(self.cs_ref, self.viewer, self.fullBody)
@@ -209,7 +209,7 @@ class LocoPlanner:
         if cfg.EXPORT_GAZEBO and self.motion_valid:
             gazebo.export(self.cfg, self.cs_wb.concatenateQtrajectories())
         if cfg.EXPORT_NPZ and self.motion_valid:
-            npz.export(self.cfg, self.cs_ref, self.cs_wb, cfg)
+            npz.export(self.cfg, self.cs_ref, self.cs_wb, self.cfg)
         if cfg.EXPORT_BLENDER:
             blender.export(self.cfg, self.cs_wb.concatenateQtrajectories(), self.viewer)
             blender.exportSteppingStones(self.viewer)
@@ -248,7 +248,7 @@ class LocoPlanner:
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="todo")
+    parser = argparse.ArgumentParser(description="Run a multicontact-locomotion-planning scenario")
     parser.add_argument('demo_name', type=str, help="The name of the demo configuration file to load. "
                                                     "Must be a valid python file, either inside the PYTHONPATH"
                                                     "or inside the mlp.demo_configs folder. ")
@@ -261,25 +261,3 @@ if __name__ == "__main__":
     loco_planner = LocoPlanner(cfg)
     loco_planner.run()
 
-
-"""
-if len(sys.argv) < 2:
-    print(
-        "## WARNING : script called without specifying a demo config file (one of the file contained in mlp.demo_config)"
-    )
-    print("## Available demo files : ")
-    configs_path = cfg.PKG_PATH + "/scripts/mlp/demo_configs"
-    demos_list = os.listdir(configs_path)
-    for f in demos_list:
-        if f.endswith(".py") and not f.startswith("__") and not f.startswith("common"):
-            print(f.rstrip(".py"))
-    print("## Some data will be missing, scripts may fails. (cfg.Robot will not exist)")
-    
-"""
-
-"""
-#record gepetto-viewer 
-viewer.startCapture("capture/capture","png")
-dispWB()
-viewer.stopCapture()
-"""
