@@ -27,7 +27,8 @@ SET(PROJECT_URL "https://github.com/loco-3d/multicontact-locomotion-planning")
 INCLUDE(cmake/base.cmake)
 INCLUDE(cmake/python.cmake)
 
-SETUP_PROJECT()
+COMPUTE_PROJECT_ARGS(PROJECT_ARGS LANGUAGES CXX)
+PROJECT(${PROJECT_NAME} ${PROJECT_ARGS})
 
 FINDPYTHON()
 
