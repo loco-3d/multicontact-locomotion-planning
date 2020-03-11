@@ -1,4 +1,4 @@
 
 
-def generateWholeBodyMotion(cs, cfg, fullBody=None, viewer=None):
+def generate_wholebody_croccodyl(cs, cfg, fullBody=None, viewer=None):
     raise NotImplemented("TODO")

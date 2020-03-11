@@ -263,6 +263,27 @@ class Requirements():
         #print("# Assert requirements done.")
 
     @classmethod
+    def assertWholebodyData(cls, cs, cfg):
+        """
+        Assert that the selected options in cfg.IK_store_* are correctly filled
+        :param cs: the ContactSequence
+        :param cfg: an instance of the configuration class
+        :return:
+        """
+        if cfg.IK_store_joints_derivatives:
+            assert cs.haveJointsDerivativesTrajectories(), "Contact sequence do not have consistent joints trajectories."
+        if cfg.IK_store_joints_torque:
+            assert cs.haveTorquesTrajectories(), "Contact sequence do not have consistent torques trajectories"
+        if cfg.IK_store_centroidal:
+            assert cs.haveCentroidalTrajectories (), "Contact sequence do not have consistent centroidal trajectories."
+        if cfg.IK_store_effector:
+            assert cs.haveEffectorsTrajectories(1e-2), "Contact sequence do not have consistent effector trajectories."
+        if cfg.IK_store_contact_forces:
+            assert cs.haveContactForcesTrajectories(), "Contact sequence do not have consistent contact forces trajectories."
+        if cfg.IK_store_zmp:
+            assert cs.haveZMPtrajectories(), "Contact sequence do not have consistent ZMP trajectories."
+
+    @classmethod
     def checkAndFillRequirements(cls, cs, cfg, fullBody = None):
         """
         Check if the given ContactSequence satisfy the requirement,

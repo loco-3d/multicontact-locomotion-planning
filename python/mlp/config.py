@@ -14,8 +14,8 @@ class Config:
     centroidal_method_available = ["load", "geometric", "croc", "momentumopt", "quasistatic", "muscod"]
     end_effector_initGuess_method_available = ["load","smoothed_foot", "bezier_predef"]
     end_effector_method_available = ["limb_rrt", "limb_rrt_optimized"]
-    wholebody_method_available = ["load", "tsid", "croccodyl"]
-    simulator_available = ["pinocchioIntegration"]
+    wholebody_method_available = ["load", "tsid", "croccodyl", "none"]
+    simulator_available = ["pinocchio_integration"]
 
 
     def __init__(self):
@@ -26,7 +26,7 @@ class Config:
         self.end_effector_initGuess_method = "bezier_predef"
         self.end_effector_method = "limb_rrt_optimized"
         self.wholebody_method = "tsid"
-        self.simulator_method = "pinocchioIntegration"
+        self.simulator_method = "pinocchio_integration"
 
         ## PATHS settings :
         self.PKG_PATH = os.path.dirname(os.path.realpath(__file__)).rstrip("/python/mlp")
@@ -240,3 +240,10 @@ class Config:
         method = getattr(module, 'generate_effector_trajectory_' + self.end_effector_method)
         can_retry = getattr(module, 'effectorCanRetry')
         return method, can_retry
+
+    def get_wholebody_method(self):
+        module = import_module('wholebody.' + self.wholebody_method)
+        method = getattr(module, 'generate_wholebody_' + self.wholebody_method)
+        Inputs = getattr(module, 'WholebodyInputs'+self.wholebody_method.capitalize())
+        Outputs = getattr(module, 'WholebodyOutputs'+self.wholebody_method.capitalize())
+        return method, Inputs, Outputs

@@ -122,8 +122,8 @@ class LocoPlanner:
     def run_wholebody(self, iter_dynamic_filter = 0):
         print("------------------------------")
         print("### MLP : whole-body  ###")
-        import mlp.wholebody as wholeBody
-        if not wholeBody.Inputs.checkAndFillRequirements(self.cs_ref, self.cfg, self.fullBody):
+        generate_wholebody, WholebodyInputs, WholebodyOutputs = cfg.get_wholebody_method()
+        if not WholebodyInputs.checkAndFillRequirements(self.cs_ref, self.cfg, self.fullBody):
             raise RuntimeError(
                 "The current contact sequence cannot be given as input to the wholeBody method selected.")
         if iter_dynamic_filter > 0:
@@ -131,8 +131,9 @@ class LocoPlanner:
             self.cfg.w_am = self.cfg.w_am_track
             self.cfg.kp_am = self.cfg.kp_am_track
 
-        self.cs_wb = wholeBody.generateWholeBodyMotion(self.cfg, self.cs_ref, self.fullBody, self.viewer)
-        wholeBody.Outputs.assertRequirements(self.cs_wb)
+        self.cs_wb = generate_wholebody(self.cfg, self.cs_ref, self.fullBody, self.viewer)
+        WholebodyOutputs.assertRequirements(self.cs_wb)
+        WholebodyOutputs.assertWholebodyData(self.cs_wb, self.cfg)
         self.cs_wb_iters += [self.cs_wb]
 
         if cfg.WRITE_STATUS and iter_dynamic_filter == 0:

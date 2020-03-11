@@ -33,6 +33,12 @@ class WholebodyInputsTsid(Requirements):
     effectorTrajectories = True
     rootTrajectories = True
 
+class WholebodyOutputsTsid(Requirements):
+    consistentContacts = True
+    timings = True
+    jointsTrajectories = True
+
+
 def buildRectangularContactPoints(size, transform):
     # build matrices with corners of the feet
     lxp = size[0] / 2. + transform.translation[0]  # foot length in positive x direction

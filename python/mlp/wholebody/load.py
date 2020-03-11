@@ -9,7 +9,7 @@ class Outputs(Inputs):
     configurationValues = True
     jointsTrajectories = True
 
-def generateWholeBodyMotion(cfg, cs, fullBody=None, viewer=None):
+def generate_wholebody_load(cfg, cs, fullBody=None, viewer=None):
     rp = RosPack()
     urdf = rp.get_path(cfg.Robot.packageName) + '/urdf/' + cfg.Robot.urdfName + cfg.Robot.urdfSuffix + '.urdf'
     if cfg.WB_VERBOSE:
