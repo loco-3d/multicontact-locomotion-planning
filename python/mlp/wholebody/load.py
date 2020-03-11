@@ -1,9 +1,9 @@
 from rospkg import RosPack
 from multicontact_api import ContactSequence
-from mlp.utils.requirements import Requirements as Inputs
+from mlp.utils.requirements import Requirements as WholebodyInputsLoad
 import pinocchio as pin
 
-class Outputs(Inputs):
+class WholebodyOutputsLoad(WholebodyInputsLoad):
     consistentContacts = True
     timings = True
     configurationValues = True
@@ -20,4 +20,4 @@ def generate_wholebody_load(cfg, cs, fullBody=None, viewer=None):
     cs_wb = ContactSequence()
     print("Load wholebody contact sequence from  file : ", cfg.WB_FILENAME)
     cs_wb.loadFromBinary(cfg.WB_FILENAME)
-    return cs_wb, robot
+    return cs_wb
