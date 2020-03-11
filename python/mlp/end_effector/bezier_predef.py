@@ -5,7 +5,17 @@ import numpy as np
 from curves import bezier, piecewise_bezier, SE3Curve, piecewise_SE3
 import hpp_bezier_com_traj as bezier_com
 import math
+from mlp.utils.requirements import Requirements
+from mlp.utils.cs_tools import generate_effector_trajectories_for_sequence
 pinocchio.switchToNumpyArray()
+
+class EffectorInputsBezier(Requirements):
+    consistentContacts = True
+    timings = True
+
+class EffectorOutputsBezier(EffectorInputsBezier):
+    effectorTrajectories = True
+
 
 def effectorCanRetry():
     return False
@@ -245,6 +255,8 @@ def generateSmoothBezierTraj(cfg,
     else:
         return generateSmoothBezierTrajWithoutPredef(cfg, time_interval, placement_init, placement_end)
 
+def generate_effector_trajectories_for_sequence_bezier(cfg, cs,  fullBody = None):
+    return generate_effector_trajectories_for_sequence(cfg, cs, generateSmoothBezierTraj, fullBody)
 
 """
 

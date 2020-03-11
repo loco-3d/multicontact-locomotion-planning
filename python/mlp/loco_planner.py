@@ -108,12 +108,12 @@ class LocoPlanner:
             print("Try to copy from previous iteration.")
             self.cs_ref = copyEffectorTrajectories(self.cs_ref, self.cs_com)
         if self.cs_ref is None:
-            import mlp.end_effector.initGuess as effectorsInitGuess
-            if not effectorsInitGuess.Inputs.checkAndFillRequirements(self.cs_com, self.cfg, self.fullBody):
+            generate_effector_trajectories, EffectorInputs, EffectorOutputs = cfg.get_effector_initguess_method()
+            if not EffectorInputs.checkAndFillRequirements(self.cs_com, self.cfg, self.fullBody):
                 raise RuntimeError(
                     "The current contact sequence cannot be given as input to the end effector method selected.")
-            self.cs_ref = effectorsInitGuess.generateEffectorTrajectoriesForSequence(self.cfg, self.cs_com, self.fullBody)
-            effectorsInitGuess.Outputs.assertRequirements(self.cs_ref)
+            self.cs_ref = generate_effector_trajectories(self.cfg, self.cs_com, self.fullBody)
+            EffectorOutputs.assertRequirements(self.cs_ref)
         self.cs_ref_iters += [self.cs_ref]
 
         if cfg.DISPLAY_ALL_FEET_TRAJ:

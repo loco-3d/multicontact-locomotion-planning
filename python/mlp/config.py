@@ -12,8 +12,8 @@ class Config:
     contact_generation_method_available = ["load", "rbprm", "sl1m"]
     centroidal_initGuess_method_available = ["none", "geometric", "croc", "momentumopt", "quasistatic"]
     centroidal_method_available = ["load", "geometric", "croc", "momentumopt", "quasistatic", "muscod"]
-    end_effector_initGuess_method_available = ["load","smoothedFoot", "bezierPredef"]
-    end_effector_method_available = ["limbRRT", "limbRRToptimized"]
+    end_effector_initGuess_method_available = ["load","smoothed_foot", "bezier_predef"]
+    end_effector_method_available = ["limb_rrt", "limb_rrt_optimized"]
     wholebody_method_available = ["load", "tsid", "croccodyl"]
     simulator_available = ["pinocchioIntegration"]
 
@@ -23,8 +23,8 @@ class Config:
         self.contact_generation_method = "rbprm"
         self.centroidal_initGuess_method = "none"
         self.centroidal_method = "momentumopt"
-        self.end_effector_initGuess_method = "bezierPredef"
-        self.end_effector_method = "limbRRToptimized"
+        self.end_effector_initGuess_method = "bezier_predef"
+        self.end_effector_method = "limb_rrt_optimized"
         self.wholebody_method = "tsid"
         self.simulator_method = "pinocchioIntegration"
 
@@ -227,3 +227,16 @@ class Config:
         Inputs = getattr(module, 'CentroidalInputs'+self.centroidal_method.capitalize())
         Outputs = getattr(module, 'CentroidalOutputs'+self.centroidal_method.capitalize())
         return method, Inputs, Outputs
+
+    def get_effector_initguess_method(self):
+        module = import_module('end_effector.' + self.end_effector_initGuess_method)
+        method = getattr(module, 'generate_effector_trajectories_for_sequence_' + self.end_effector_initGuess_method.split("_")[0])
+        Inputs = getattr(module, 'EffectorInputs' + self.end_effector_initGuess_method.capitalize().split("_")[0])
+        Outputs = getattr(module, 'EffectorOutputs' + self.end_effector_initGuess_method.capitalize().split("_")[0])
+        return method, Inputs, Outputs
+
+    def get_effector_method(self):
+        module = import_module('end_effector.' + self.end_effector_method)
+        method = getattr(module, 'generate_effector_trajectory_' + self.end_effector_method)
+        can_retry = getattr(module, 'effectorCanRetry')
+        return method, can_retry

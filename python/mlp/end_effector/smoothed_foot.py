@@ -1,10 +1,11 @@
 from mlp.utils.trajectories import SmoothedFootTrajectory
 from  mlp.utils.requirements import Requirements
+from mlp.utils.cs_tools import generate_effector_trajectories_for_sequence
 
-class EffectorInputsSmoothedfoot(Requirements):
+class EffectorInputsSmoothed(Requirements):
     consistentContacts = True
     timings = True
-class EffectorOutputsSmoothedfoot(EffectorInputsSmoothedfoot):
+class EffectorOutputsSmoothed(EffectorInputsSmoothedfoot):
     effectorTrajectories = True
 
 def generateEndEffectorTraj(cfg,
@@ -26,3 +27,6 @@ def generateEndEffectorTraj(cfg,
 
 def effectorCanRetry():
     return False
+
+def generate_effector_trajectories_for_sequence_smoothed_foot(cfg, cs,  fullBody = None):
+    return generate_effector_trajectories_for_sequence(cfg, cs, generateEndEffectorTraj, fullBody)

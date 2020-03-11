@@ -1,5 +1,5 @@
 import pinocchio as pin
-from pinocchio import SE3, Quaternion, Force, Motion
+from pinocchio import Force
 try:
     import tsid
 except ImportError:
@@ -12,19 +12,26 @@ from numpy.linalg import norm as norm
 import os
 from rospkg import RosPack
 import time
-import multicontact_api
 from multicontact_api import ContactPhase, ContactSequence
-from curves import SE3Curve, piecewise, piecewise_SE3, polynomial
+from curves import piecewise, piecewise_SE3, polynomial
 from mlp.utils.computation_tools import shiftZMPtoFloorAltitude
 import mlp.viewer.display_tools as display_tools
 import math
-from mlp.utils.util import constantSE3curve, SE3toVec, MotiontoVec, SE3FromConfig
-from mlp.end_effector import generateEndEffectorTraj, effectorCanRetry
+from mlp.utils.util import constantSE3curve, SE3toVec, MotiontoVec
+from mlp.utils.requirements import Requirements
 import eigenpy
 from mlp.utils.cs_tools import deleteAllTrajectories, deletePhaseWBtrajectories, updateContactPlacement
-from mlp.utils.requirements import Requirements
 eigenpy.switchToNumpyArray()
 
+
+
+class WholebodyInputsTsid(Requirements):
+    consistentContacts = True
+    friction = True
+    timings = True
+    centroidalTrajectories = True
+    effectorTrajectories = True
+    rootTrajectories = True
 
 def buildRectangularContactPoints(size, transform):
     # build matrices with corners of the feet
@@ -154,14 +161,15 @@ def curveSE3toTSID(curve,t, computeAcc = False):
         sample.acc(MotiontoVec(acc))
     return sample
 
-def adjustEndEffectorTrajectoryIfNeeded(cfg, phase, robot, data, eeName):
+def adjustEndEffectorTrajectoryIfNeeded(cfg, phase, robot, data, eeName, effectorMethod):
     """
     Check that the reference trajectory correctly start close enough to the current effector position
     and adjust it if required to start at the current position
-    :param phase:
-    :param robot:
-    :param data:
-    :param eeName:
+    :param phase: the ContactPhase used
+    :param robot: RobotWrapper instance
+    :param data: Robotwrapper.data instance
+    :param eeName: Name of the effector
+    :param effectorMethod: Pointer to the method used to generate end-effector trajectory for one phase
     :return:
     """
     current_placement = getCurrentEffectorPosition(robot, data, eeName)
@@ -169,11 +177,11 @@ def adjustEndEffectorTrajectoryIfNeeded(cfg, phase, robot, data, eeName):
     if not current_placement.isApprox(ref_placement, 1e-3):
         print("- End effector trajectory need to be adjusted.")
         placement_end = phase.effectorTrajectory(eeName).evaluateAsSE3(phase.timeFinal)
-        ref_traj = generateEndEffectorTraj(cfg, [phase.timeInitial, phase.timeFinal], current_placement, placement_end, 0)
+        ref_traj = effectorMethod(cfg, [phase.timeInitial, phase.timeFinal], current_placement, placement_end, 0)
         phase.addEffectorTrajectory(eeName, ref_traj)
 
 
-def generateWholeBodyMotion(cfg, cs_ref, fullBody=None, viewer=None):
+def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
     """
     Generate the whole body motion corresponding to the given contactSequence
     :param cs: Contact sequence containing the references,
@@ -396,10 +404,14 @@ def generateWholeBodyMotion(cfg, cs_ref, fullBody=None, viewer=None):
     urdf = package_path + '/urdf/' + cfg.Robot.urdfName + cfg.Robot.urdfSuffix + '.urdf'
     if cfg.WB_VERBOSE:
         print("load robot : ", urdf)
-    #srdf = "package://" + package + '/srdf/' +  cfg.Robot.urdfName+cfg.Robot.srdfSuffix + '.srdf'
     robot = tsid.RobotWrapper(urdf, pin.StdVec_StdString(), pin.JointModelFreeFlyer(), False)
     if cfg.WB_VERBOSE:
         print("robot loaded in tsid.")
+
+    # get the selected end effector trajectory generation method
+    effectorMethod, effectorCanRetry = cfg.get_effector_method()
+
+    # get the selected simulator method
     from mlp.simulator import Simulator
     simulator = Simulator(urdf, package_path, cfg.IK_dt)
     pinRobot = simulator.robot
@@ -528,7 +540,7 @@ def generateWholeBodyMotion(cfg, cs_ref, fullBody=None, viewer=None):
                     print("add se3 task for " + eeName)
                 task = dic_effectors_tasks[eeName]
                 invdyn.addMotionTask(task, cfg.w_eff, cfg.level_eff, 0.)
-                adjustEndEffectorTrajectoryIfNeeded(cfg, phase_ref, robot, invdyn.data(), eeName)
+                adjustEndEffectorTrajectoryIfNeeded(cfg, phase_ref, robot, invdyn.data(), eeName, effectorMethod)
                 if cfg.WB_VERBOSE:
                     print("t interval : ", time_interval)
 
@@ -672,7 +684,7 @@ def generateWholeBodyMotion(cfg, cs_ref, fullBody=None, viewer=None):
                             for eeName, ref_traj in phase_ref.effectorTrajectories().items():
                                 placement_init = ref_traj.evaluateAsSE3(phase.timeInitial)
                                 placement_end = ref_traj.evaluateAsSE3(phase.timeFinal)
-                                traj = generateEndEffectorTraj(cfg, time_interval, placement_init, placement_end,
+                                traj = effectorMethod(cfg, time_interval, placement_init, placement_end,
                                                                    iter_for_phase + 1, first_q_t, phase_prev,
                                                                    phase_ref, phase_next, fullBody, eeName, viewer)
                                 # save the new trajectory in the phase with the references
