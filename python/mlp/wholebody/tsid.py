@@ -419,8 +419,7 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
 
     # get the selected simulator method
     Simulator = cfg.get_simulator_class()
-    simulator = Simulator(urdf, package_path, cfg.IK_dt)
-    pinRobot = simulator.robot
+    simulator = Simulator(cfg.IK_dt, robot.model())
 
     ### Define initial state of the robot ###
     phase0 = cs.contactPhases[0]
