@@ -418,7 +418,7 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
     effectorMethod, effectorCanRetry = cfg.get_effector_method()
 
     # get the selected simulator method
-    from mlp.simulator import Simulator
+    Simulator = cfg.get_simulator_class()
     simulator = Simulator(urdf, package_path, cfg.IK_dt)
     pinRobot = simulator.robot
 

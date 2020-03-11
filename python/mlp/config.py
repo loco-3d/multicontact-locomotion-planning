@@ -247,3 +247,7 @@ class Config:
         Inputs = getattr(module, 'WholebodyInputs'+self.wholebody_method.capitalize())
         Outputs = getattr(module, 'WholebodyOutputs'+self.wholebody_method.capitalize())
         return method, Inputs, Outputs
+
+    def get_simulator_class(self):
+        return getattr(import_module('simulator.' + self.simulator_method), self.simulator_method.title().replace("_",""))
+
