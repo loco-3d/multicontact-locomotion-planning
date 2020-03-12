@@ -9,9 +9,11 @@ from mlp.utils.requirements import Requirements
 from mlp.utils.cs_tools import generate_effector_trajectories_for_sequence
 pinocchio.switchToNumpyArray()
 
+
 class EffectorInputsBezier(Requirements):
     consistentContacts = True
     timings = True
+
 
 class EffectorOutputsBezier(EffectorInputsBezier):
     effectorTrajectories = True
