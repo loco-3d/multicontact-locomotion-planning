@@ -211,6 +211,8 @@ def buildKinSequenceFromCS(planner_setting, cs, t_init):
     L_t = cs.concatenateLtrajectories()
     for id, state in enumerate(states):
         t = t_init + (id+1) * dt
+        if id == len(states)-1:
+            t = L_t.max()
         #state.com = c_t(t)
         #state.lmom = dc_t(t) * MASS
         state.amom = L_t(t)
