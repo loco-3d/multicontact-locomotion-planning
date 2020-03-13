@@ -20,6 +20,7 @@ from pinocchio import SE3
 from mlp.utils.requirements import Requirements
 
 multicontact_api.switchToNumpyArray()
+VERBOSE = False
 
 
 class CentroidalInputsMomentumopt(Requirements):
@@ -93,6 +94,8 @@ def contactPlanFromCS(planner_setting, cs, dict_ee_to_timeopt, dt):
     :param dt: discretization step used
     :return: the ContactPlan
     """
+    if VERBOSE:
+        print("Generate contact plan from CS ...")
     contact_plan = ContactPlanFromFile()
     contact_plan.initialize(planner_setting)
     mopt_cs = contact_plan.contactSequence()
@@ -110,6 +113,8 @@ def contactPlanFromCS(planner_setting, cs, dict_ee_to_timeopt, dt):
             cp.placement = phase[2].homogeneous
             mopt_cs_ee.append(cp)
 
+    if VERBOSE:
+        print("Generate contact plan from CS Done.")
     return contact_plan
 
 def setFinalCOM(planner_setting, cs):
@@ -132,6 +137,8 @@ def addCOMviapoints(planner_setting, cs, viewer=None, display_wp = False):
     :param display_wp: if True and a viewer is provided, display black sphere at the position of the waypoints used
     :return:
     """
+    if VERBOSE:
+        print("Add waypoints ...")
     com_viapoints = []
     for pid in range(1, cs.size() - 1):
         phase = cs.contactPhases[pid]
@@ -144,6 +151,8 @@ def addCOMviapoints(planner_setting, cs, viewer=None, display_wp = False):
                 display.displaySphere(viewer, com.tolist())
     planner_setting.set(mopt.PlannerCVectorParam_Viapoints, com_viapoints)
     planner_setting.set(mopt.PlannerIntParam_NumViapoints, len(com_viapoints))
+    if VERBOSE:
+        print("Add waypoints done.")
 
 def initStateFromPhase(phase, time_shift_com, com_shift_z, dict_ee_to_timeopt):
     """
@@ -186,6 +195,11 @@ def buildKinSequenceFromCS(planner_setting, cs, t_init):
     :param t_init: time at which the centroidal trajectory start in the CS
     :return: a pymomentum.KinematicsSequence
     """
+    if VERBOSE:
+        print("Build kinematic sequence from CS ...")
+    assert cs.haveAMtrajectories(), \
+        "In momentumopt, the given contact sequence do not have Angular momentum trajectories set. " \
+        "Check that  IK_store_centroidal = True"
     kin_sequence = KinematicsSequence()
     kin_sequence.resize(planner_setting.get(mopt.PlannerIntParam_NumTimesteps), 1)
     dt = planner_setting.get(mopt.PlannerDoubleParam_TimeStep)
@@ -200,6 +214,8 @@ def buildKinSequenceFromCS(planner_setting, cs, t_init):
         #state.com = c_t(t)
         #state.lmom = dc_t(t) * MASS
         state.amom = L_t(t)
+    if VERBOSE:
+        print("Build kinematic sequence from CS done.")
     return kin_sequence
 
 def isNewPhase(ds1, ds2):
@@ -226,6 +242,8 @@ def CSfromMomentumopt(planner_setting, cs, init_state, dyn_states, t_init = 0, c
     :param dyn_states: the results of momentumopt
     :return: a multicontact_api ContactSequence with centroidal trajectories
     """
+    if VERBOSE:
+        print("Start to convert result to mc-api ...")
     cs_com = ContactSequence(cs)
     MASS = planner_setting.get(mopt.PlannerDoubleParam_RobotMass)
     p_id = 0  # phase id in cs
@@ -290,7 +308,8 @@ def CSfromMomentumopt(planner_setting, cs, init_state, dyn_states, t_init = 0, c
     setAMtrajectoryFromPoints(phase, L_t, dL_t, times, overwriteFinal = not connect_goal)
     # set final time :
     phase.timeFinal = times[-1]
-
+    if VERBOSE:
+        print("Converting results to mc-api done.")
     return cs_com
 
 
@@ -331,6 +350,8 @@ def generate_centroidal_momentumopt(cfg, cs, cs_initGuess=None, fullBody=None, v
     dyn_opt = DynamicsOptimizer()
     dyn_opt.initialize(planner_setting)
     # optimize the motion
+    if VERBOSE:
+        print("Start optimization ...")
     code = dyn_opt.optimize(ini_state, contact_plan, kin_sequence, not first_iter)
     print("Momentumopt internal solving time: " + str(dyn_opt.solveTime() / 1000.) + " s")
     if code != ExitCode.Optimal:
