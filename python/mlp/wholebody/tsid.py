@@ -386,11 +386,11 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
     def stopHere():
         if cfg.WB_ABORT_WHEN_INVALID:
             # cut the sequence up to the last phase
-            cs.resize(pid-2)
+            cs.resize(pid)
             return cs
         elif cfg.WB_RETURN_INVALID:
             # cut the sequence up to the current phase
-            cs.resize(pid-1)
+            cs.resize(pid+1)
             return cs
 
     ### End of nested functions definitions ###
