@@ -7,6 +7,7 @@ import time
 import pinocchio
 import curves
 import multicontact_api
+from mlp.utils.requirements import Requirements
 from mlp.utils import plot
 from mlp.utils.cs_tools import copyEffectorTrajectories
 from mlp.utils import check_path
@@ -192,6 +193,7 @@ class LocoPlanner:
             print("Write contact sequence binary file with centroidal trajectory : ", filename)
             self.cs_com.saveAsBinary(filename)
         if cfg.SAVE_CS_REF:
+            Requirements.requireZMPtrajectories(self.cs_ref, self.cfg)
             if not os.path.exists(cfg.CONTACT_SEQUENCE_PATH):
                 os.makedirs(cfg.CONTACT_SEQUENCE_PATH)
             filename = cfg.REF_FILENAME
