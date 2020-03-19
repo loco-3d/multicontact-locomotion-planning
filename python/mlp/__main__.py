@@ -33,7 +33,6 @@ atexit.register(process_server.kill)
 
 # do the same for the viewer, exept if --no-viewer flag is set
 disable_viewer = args.no_viewer
-print("disable viewer : ", disable_viewer)
 if disable_viewer is None:
     subprocess.run(["killall", "gepetto-gui"])
     process_viewer = subprocess.Popen("gepetto-gui",
