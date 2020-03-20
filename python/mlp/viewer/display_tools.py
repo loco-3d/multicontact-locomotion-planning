@@ -239,7 +239,7 @@ def initScene(Robot, envName="multicontact/ground", genLimbsDB=True):
         print("WARNING initScene : fullBody do not have loadAllLimbs, some scripts may fails.")
     ps = ProblemSolver(fullBody)
     vf = ViewerFactory(ps)
-    vf.loadObstacleModel("hpp_environments", envName, "planning")
+    vf.loadObstacleModel("package://hpp_environments/urdf/" + envName + ".urdf", "planning")
     try:
         v = vf.createViewer(displayCoM=True)
         v(fullBody.getCurrentConfig())
