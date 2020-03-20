@@ -32,8 +32,7 @@ process_server = subprocess.Popen("hpp-rbprm-server",
 atexit.register(process_server.kill)
 
 # do the same for the viewer, exept if --no-viewer flag is set
-disable_viewer = args.no_viewer
-if disable_viewer is None:
+if not args.no_viewer:
     subprocess.run(["killall", "gepetto-gui"])
     process_viewer = subprocess.Popen("gepetto-gui",
                                       stdout=subprocess.PIPE,
