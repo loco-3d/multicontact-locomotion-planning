@@ -387,7 +387,7 @@ def discretizeCurve(curve,dt):
     :param dt: the discretization step
     :return: an array of shape (curve.dim(), numPoints) and an array corresponding to the timeline
     """
-    numPoints = math.ceil((curve.max() - curve.min()) / dt )
+    numPoints = round((curve.max() - curve.min()) / dt ) + 1
     res = np.zeros([curve.dim(), numPoints])
     timeline = np.zeros(numPoints)
     t = curve.min()
@@ -410,7 +410,7 @@ def discretizeDerivateCurve(curve,dt, order):
     :param dt: the discretization step
     :return: an array of shape (curve.dim(), numPoints) and an array corresponding to the timeline
     """
-    numPoints = math.ceil((curve.max() - curve.min()) / dt )
+    numPoints = round((curve.max() - curve.min()) / dt ) + 1
     res = np.zeros([curve.dim(), numPoints])
     timeline = np.zeros(numPoints)
     t = curve.min()
@@ -433,7 +433,7 @@ def discretizeSE3CurveTranslation(curve,dt):
     :param dt: the discretization step
     :return: an array of shape (3, numPoints) and an array corresponding to the timeline
     """
-    numPoints = math.ceil((curve.max() - curve.min()) / dt )
+    numPoints = round((curve.max() - curve.min()) / dt ) + 1
     res = np.zeros([3, numPoints])
     timeline = np.zeros(numPoints)
     t = curve.min()
@@ -456,7 +456,7 @@ def discretizeSE3CurveQuaternion(curve,dt):
     :param dt: the discretization step
     :return: an array of shape (3, numPoints) and an array corresponding to the timeline
     """
-    numPoints = math.ceil((curve.max() - curve.min()) / dt )
+    numPoints = round((curve.max() - curve.min()) / dt ) + 1
     res = np.zeros([4, numPoints])
     timeline = np.zeros(numPoints)
     t = curve.min()
@@ -478,7 +478,7 @@ def discretizeSE3CurveToVec(curve,dt):
     :param dt: the discretization step
     :return: an array of shape (12, numPoints) and an array corresponding to the timeline
     """
-    numPoints = math.ceil((curve.max() - curve.min()) / dt )
+    numPoints = round((curve.max() - curve.min()) / dt ) +1
     res = np.zeros([12, numPoints])
     timeline = np.zeros(numPoints)
     t = curve.min()
