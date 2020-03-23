@@ -599,6 +599,8 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
                 # reset values to their value at the beginning of the current phase
                 q = q_begin.copy()
                 v = v_begin.copy()
+                simulator.q = q
+                simulator.v = v
             iter_for_phase += 1
             if cfg.WB_VERBOSE:
                 print("Start computation for phase " + str(pid) + ", try number :  " + str(iter_for_phase))
