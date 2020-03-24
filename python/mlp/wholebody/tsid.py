@@ -703,6 +703,16 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
                                                                    phase_ref, phase_next, fullBody, eeName, viewer)
                                 # save the new trajectory in the phase with the references
                                 phase_ref.addEffectorTrajectory(eeName,traj)
+                                if cfg.DISPLAY_ALL_FEET_TRAJ and cfg.WB_VERBOSE:
+                                    color = fullBody.dict_limb_color_traj[eeName]
+                                    color[-1] = 0.6 # set small transparency
+                                    display_tools.displaySE3Traj(phase_ref.effectorTrajectory(eeName),
+                                                       viewer.client.gui,
+                                                       viewer.sceneName,
+                                                       eeName + "_traj_" + str(pid) + "_" + str(iter_for_phase),
+                                                       color,
+                                                       [phase.timeInitial, phase.timeFinal],
+                                                       fullBody.dict_offset[eeName])
                         except ValueError as e:
                             print("ERROR in generateEndEffectorTraj :")
                             print(e)

@@ -69,7 +69,7 @@ class Config:
         self.DISPLAY_WP_COST = True
         self.DISPLAY_COM_TRAJ = True
         self.DISPLAY_FEET_TRAJ = True  # display the feet trajectories used in the final motion
-        self.DISPLAY_ALL_FEET_TRAJ = True  # display all the trajectory used as reference, even the invalid ones
+        self.DISPLAY_ALL_FEET_TRAJ = False  # display all the trajectory used as reference, even the invalid ones
         self.DISPLAY_WB_MOTION = False  # display whole body motion automatically once it's computed
         # dt used to display the wb motion (one configuration every dt is displayed) It have to be greater than IK_dt
         self.DT_DISPLAY = 0.05
