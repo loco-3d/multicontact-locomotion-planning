@@ -10,7 +10,7 @@ class EffectorInputsLimbrrt(Requirements):
 class EffectorOutputsLimbrrt(EffectorInputsLimbrrt):
     effectorTrajectories = True
 
-VERBOSE = 1
+VERBOSE = 0
 DISPLAY_RRT_PATH = True
 DISPLAY_JOINT_LEVEL = True
 HPP_DT = 0.01 # dt used to discretize trajectory given to hpp
@@ -59,6 +59,9 @@ def generateLimbRRTPath(q_init, q_end, phase_previous, phase, phase_next, fullBo
         print ("c shape : ", c_t.shape)
         print ("v shape : ", v_t.shape)
         print ("a shape : ", a_t.shape)
+        print("c_t = ",c_t.T.tolist())
+        print("dc_t = ",v_t.T.tolist())
+        print("ddc_t = ",a_t.T.tolist())
 
     fullBody.setCurrentConfig(fullBody.getConfigAtState(s0))
     com0_fb = fullBody.getCenterOfMass()

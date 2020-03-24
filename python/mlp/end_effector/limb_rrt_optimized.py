@@ -27,7 +27,7 @@ for i in range(20):
 # store the last limbRRT path ID computed
 current_limbRRT_id = None
 
-VERBOSE = False
+VERBOSE = 1 # 0 : disabled, 1: only weight / num try, 2: all path infos, 3: quadprog inputs / outputs
 
 
 
@@ -56,7 +56,7 @@ def quadprog_solve_qp(P, q, G=None, h=None, C=None, d=None):
         qp_b = -h
         meq = 0
 
-    if VERBOSE > 1:
+    if VERBOSE > 2:
         print("quadprog matrix size : ")
         print("G : ", qp_G.shape)
         print("a : ", qp_a.shape)
@@ -68,7 +68,7 @@ def quadprog_solve_qp(P, q, G=None, h=None, C=None, d=None):
     qp_a = np.array(qp_a).flatten()
     qp_C = np.array(qp_C)
     qp_b = np.array(qp_b).flatten()
-    if VERBOSE > 1:
+    if VERBOSE > 2:
         print("quadprog array size : ")
         print("G : ", qp_G.shape)
         print("a : ", qp_a.shape)
@@ -119,12 +119,13 @@ def generate_effector_trajectory_limb_rrt_optimized(cfg,
     pos_end = predef_middle(predef_middle.max())
     if VERBOSE:
         print("generateLimbRRTOptimizedTraj, try number " + str(numTry))
+    if VERBOSE > 1:
         print("bezier takeoff end : ", pos_init)
         print("bezier landing init : ", pos_end)
     t_begin = predef_middle.min()
     t_end = predef_middle.max()
     t_middle = t_end - t_begin
-    if VERBOSE:
+    if VERBOSE > 1:
         print("t begin : ", t_begin)
         print("t end   : ", t_end)
     q_init = q_t(t_begin)
@@ -132,6 +133,8 @@ def generate_effector_trajectory_limb_rrt_optimized(cfg,
     global current_limbRRT_id
     # compute new limb-rrt path if needed:
     if not current_limbRRT_id or (numTry in recompute_rrt_at_tries):
+        if VERBOSE:
+            print("Compute new limb-rrt path ...")
         current_limbRRT_id = generateLimbRRTPath(q_init, q_end, phase_previous, phase, phase_next, fullBody)
         if viewer and cfg.DISPLAY_FEET_TRAJ and DISPLAY_RRT_PATH:
             from hpp.gepetto import PathPlayer
@@ -144,7 +147,7 @@ def generate_effector_trajectory_limb_rrt_optimized(cfg,
         if numTry >= offset:
             id = numTry - offset
             break
-    if VERBOSE:
+    if VERBOSE > 1:
         print("weights_var id = ", id)
     if id >= len(weights_vars):
         raise ValueError("Max number of try allow to find a collision-end effector trajectory reached.")
@@ -184,7 +187,7 @@ def generate_effector_trajectory_limb_rrt_optimized(cfg,
     _b = Constraints.b
     _H = ((1. - weight) * Cost_smooth.A + weight * Cost_distance.A)
     _g = ((1. - weight) * Cost_smooth.b + weight * Cost_distance.b)
-    if VERBOSE > 1:
+    if VERBOSE > 2:
         print("A = ", _A)
         print("b = ", _b)
         print("H = ", _H)
@@ -205,7 +208,7 @@ def generate_effector_trajectory_limb_rrt_optimized(cfg,
     P = _H * 2.
     q = (_g * 2.).flatten()
 
-    if VERBOSE > 1:
+    if VERBOSE > 2:
         print("G = ", G)
         print("h = ", h)
         print("P = ", P)
@@ -227,20 +230,24 @@ def generate_effector_trajectory_limb_rrt_optimized(cfg,
         raise ValueError(
             "Quadprog failed to solve QP for optimized limb-RRT end-effector trajectory, for try number " +
             str(numTry))
-    if VERBOSE:
+    if VERBOSE > 1:
         print("Quadprog solved.")
 
     # build a bezier curve from the result of quadprog :
     vars = np.split(res, numVars)
     wps = bezier_com.computeEndEffectorConstantWaypoints(pData, t_middle)  # one wp per column
-    if VERBOSE:
+    if VERBOSE > 1:
         print("Constant waypoints computed.")
     id_firstVar = 4  # depend on the flag defined above, but for end effector we always use this ones ...
     i = id_firstVar
     for x in vars:
         wps[:, i] = np.array(x)
+        if VERBOSE > 2:
+            print("waypoint number " + str(i) + " : ")
+            print(wps[:, i])
         i += 1
-    if VERBOSE:
+
+    if VERBOSE > 1:
         print("Variables waypoints replaced by quadprog results.")
     bezier_middle = bezier(wps,t_begin, t_end)
     # create concatenation with takeoff/landing
@@ -251,6 +258,6 @@ def generate_effector_trajectory_limb_rrt_optimized(cfg,
         else:
             pBezier.append(predef_curves.curve_at_index(ci))
 
-    if VERBOSE:
-        print("time interval     = ", time_interval[1] - time_interval[0])
+    if VERBOSE > 1:
+        print("time interval     = [" + str(pBezier.min()) + " ; " + str(pBezier.max()) + "]")
     return pBezier
