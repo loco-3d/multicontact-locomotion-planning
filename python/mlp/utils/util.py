@@ -6,6 +6,8 @@ from pinocchio import SE3, Quaternion, Motion
 from pinocchio.utils import rpyToMatrix, rotate
 from curves import polynomial, SE3Curve, SO3Linear
 import math
+from hpp.corbaserver.rbprm.rbprmstate import State, StateHelper
+from random import uniform
 import types
 pinocchio.switchToNumpyArray()
 
@@ -293,6 +295,23 @@ def createFullbodyStatesFromCS(cs, fb):
             phase_prev = phase
     return beginId, lastId
 
+def perturbateContactNormal(fb, state_id, epsilon = 1e-2):
+    """
+    Add a small variation (+- epsilon) to the contact normals of the given state
+    :param fb:
+    :param state_id:
+    :param epsilon:
+    :return: the new state ID, -1 if fail
+    """
+    state = State(fb, state_id)
+    for name in state.getLimbsInContact():
+        p, n = state.getCenterOfContactForLimb(name)
+        n[2] += uniform(-epsilon, epsilon)
+        n = np.array(n)
+        state, success = StateHelper.addNewContact(state,name, p, n.tolist())
+        if not success:
+            return -1
+    return state.sId
 
 
 def computeContactNormal(placement):
