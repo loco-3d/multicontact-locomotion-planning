@@ -1,7 +1,7 @@
 import numpy as np
 import multicontact_api
 from multicontact_api import ContactPhase, ContactSequence
-from mlp.utils.util import createFullbodyStatesFromCS
+from mlp.utils.util import createFullbodyStatesFromCS, perturbateContactNormal
 from mlp.utils.cs_tools import connectPhaseTrajToFinalState, setInitialFromFinalValues, copyPhaseInitToFinal
 from mlp.utils.requirements import Requirements
 multicontact_api.switchToNumpyArray()
@@ -22,10 +22,23 @@ class CentroidalOutputsQuasistatic(CentroidalInputsQuasistatic):
 
 
 def getTargetCOMPosition(fullBody, id_state, com_shift_z):
-    print("call 2-pac for ids : "+str(id_state)+ " ; "+str(id_state+1))
-    tab = fullBody.isReachableFromState(id_state, id_state + 1, True, False)
-    print("tab results : ",tab)
-    success = tab[0]
+    s_id_init = id_state
+    s_id_final = id_state+1
+    success = False
+    attempts = 10
+    while not success and attempts > 0:
+        print("call 2-pac for ids : "+str(s_id_init)+ " ; "+str(s_id_final+1))
+        tab = fullBody.isReachableFromState(s_id_init, s_id_final, True, False)
+        print("tab results : ",tab)
+        success = tab[0]
+        attempts -= 1
+        if not success:
+            # add a small perturbation in the contact normals
+            print("2-pac failed. Add perturbation and retry")
+            s_id_init = perturbateContactNormal(fullBody, id_state)
+            assert s_id_init > 0, "Failed to change contact normals."
+            s_id_final = perturbateContactNormal(fullBody, id_state+1)
+            assert s_id_final > 0, "Failed to change contact normals."
     assert success, "2-pac failed for state id : " + str(id_state)
     if len(tab) == 7:
         cBreak = np.array(tab[1:4]).reshape(-1)
