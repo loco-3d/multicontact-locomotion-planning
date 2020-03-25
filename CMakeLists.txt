@@ -49,6 +49,7 @@ INSTALL(DIRECTORY momentumopt_configs
 
 
 ADD_SUBDIRECTORY(python)
+ADD_SUBDIRECTORY(tests)
 
 
 

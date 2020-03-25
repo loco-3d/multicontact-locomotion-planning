@@ -20,3 +20,5 @@ FEET_MAX_ANG_VEL = 1.5
 p_max = 0.1
 
 COM_SHIFT_Z = -0.03
+
+GUIDE_STEP_SIZE = 0.6
