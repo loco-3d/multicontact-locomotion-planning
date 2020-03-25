@@ -242,10 +242,6 @@ def initScene(Robot, envName="multicontact/ground", genLimbsDB=True):
     ps = ProblemSolver(fullBody)
     vf = ViewerFactory(ps)
     vf.loadObstacleModel("package://hpp_environments/urdf/" + envName + ".urdf", "planning")
-    try:
-        v = vf.createViewer(displayCoM=True)
-        v(fullBody.getCurrentConfig())
-    except Exception:
-        print("In initScene : no Viewer started.")
-        v = None
+    v = vf.createViewer(ghost = True, displayCoM=True)
+    v(fullBody.getCurrentConfig())
     return fullBody, v
