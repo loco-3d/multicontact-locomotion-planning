@@ -235,12 +235,14 @@ class Config:
 
 
     def get_contact_generation_method(self):
+        self.check_methods()
         module = import_module('mlp.contact_sequence.'+self.contact_generation_method)
         method = getattr(module, 'generate_contact_sequence_'+self.contact_generation_method)
         Outputs = getattr(module, 'ContactOutputs'+self.contact_generation_method.capitalize())
         return method, Outputs
 
     def get_centroidal_initguess_method(self):
+        self.check_methods()
         module = import_module('mlp.centroidal.'+self.centroidal_initGuess_method)
         method = getattr(module, 'generate_centroidal_'+self.centroidal_initGuess_method)
         Inputs = getattr(module, 'CentroidalInputs'+self.centroidal_initGuess_method.capitalize())
@@ -248,6 +250,7 @@ class Config:
         return method, Inputs, Outputs
 
     def get_centroidal_method(self):
+        self.check_methods()
         module = import_module('mlp.centroidal.'+self.centroidal_method)
         method = getattr(module, 'generate_centroidal_'+self.centroidal_method)
         Inputs = getattr(module, 'CentroidalInputs'+self.centroidal_method.capitalize())
@@ -255,6 +258,7 @@ class Config:
         return method, Inputs, Outputs
 
     def get_effector_initguess_method(self):
+        self.check_methods()
         module = import_module('mlp.end_effector.' + self.end_effector_initGuess_method)
         method = getattr(module, 'generate_effector_trajectories_for_sequence_' + self.end_effector_initGuess_method.split("_")[0])
         Inputs = getattr(module, 'EffectorInputs' + self.end_effector_initGuess_method.capitalize().split("_")[0])
@@ -262,12 +266,14 @@ class Config:
         return method, Inputs, Outputs
 
     def get_effector_method(self):
+        self.check_methods()
         module = import_module('mlp.end_effector.' + self.end_effector_method)
         method = getattr(module, 'generate_effector_trajectory_' + self.end_effector_method)
         can_retry = getattr(module, 'effectorCanRetry')
         return method, can_retry
 
     def get_wholebody_method(self):
+        self.check_methods()
         module = import_module('mlp.wholebody.' + self.wholebody_method)
         method = getattr(module, 'generate_wholebody_' + self.wholebody_method)
         Inputs = getattr(module, 'WholebodyInputs'+self.wholebody_method.capitalize())
@@ -275,5 +281,6 @@ class Config:
         return method, Inputs, Outputs
 
     def get_simulator_class(self):
+        self.check_methods()
         return getattr(import_module('mlp.simulator.' + self.simulator_method), self.simulator_method.title().replace("_",""))
 
