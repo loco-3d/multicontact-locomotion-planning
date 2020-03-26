@@ -82,6 +82,9 @@ class Config:
         ###  Settings for generate_contact_sequence
         self.FORCE_STRAIGHT_LINE = False  # DEBUG ONLY should be false
         self.SL1M_USE_ORIENTATION = True  # sl1m method use the root orientation computed by the guide planning
+        self.GUIDE_STEP_SIZE = 1. # initial discretization step of the guide path used to find the surfaces for SL1M
+        self.GUIDE_MAX_YAW = 0.2 # maximal yaw rotation difference between two discretization step
+        self.MAX_SURFACE_AREA = 1. # if a contact surface is greater than this value, the intersection is used instead of the whole surface
         # Only matter if SL1M_USE_ORIENTATION=True, if false sl1m method use exactly the orientation from planning,
         # if False, it interpolate the orientation and adapt it depending if the feet is in the inside or outside of the turn
         self.SL1M_USE_INTERPOLATED_ORIENTATION = True
