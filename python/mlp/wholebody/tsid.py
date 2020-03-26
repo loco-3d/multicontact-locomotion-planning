@@ -20,7 +20,7 @@ import math
 from mlp.utils.util import constantSE3curve, SE3toVec, MotiontoVec
 from mlp.utils.requirements import Requirements
 import eigenpy
-from mlp.utils.cs_tools import deleteAllTrajectories, deletePhaseWBtrajectories, updateContactPlacement
+from mlp.utils.cs_tools import deleteAllTrajectories, deletePhaseWBtrajectories, updateContactPlacement, setPreviousFinalValues
 eigenpy.switchToNumpyArray()
 
 
@@ -205,11 +205,6 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
             phase.q_init = q
             phase.q_t = piecewise(polynomial(q.reshape(-1,1), t, t))
             #phase.root_t = piecewise_SE3(constantSE3curve(SE3FromConfig(q) ,t))
-            if phase_prev is not None:
-                phase_prev.q_final = q
-                if t > phase_prev.q_t.max():
-                    phase_prev.q_t.append(q, t)
-                    #phase_prev.root_t.append(SE3FromConfig(q), t)
         else:
             phase.q_t.append(q, t)
             #phase.root_t.append(SE3FromConfig(q), t)
@@ -218,10 +213,6 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
         if first_iter_for_phase:
             phase.dq_t = piecewise(polynomial(v.reshape(-1, 1), t, t))
             phase.ddq_t = piecewise(polynomial(dv.reshape(-1, 1), t, t))
-            if phase_prev is not None:
-                if t > phase_prev.dq_t.max():
-                    phase_prev.dq_t.append(v, t)
-                    phase_prev.ddq_t.append(dv, t)
         else:
             phase.dq_t.append(v, t)
             phase.ddq_t.append(dv, t)
@@ -230,9 +221,6 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
         tau = invdyn.getActuatorForces(sol)
         if first_iter_for_phase:
             phase.tau_t = piecewise(polynomial(tau.reshape(-1,1), t, t))
-            if phase_prev is not None:
-                if t > phase_prev.tau_t.max():
-                    phase_prev.tau_t.append(tau, t)
         else:
             phase.tau_t.append(tau, t)
 
@@ -251,18 +239,6 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
             phase.ddc_t = piecewise(polynomial(acom.reshape(-1,1), t, t))
             phase.L_t = piecewise(polynomial(L.reshape(-1,1), t, t))
             phase.dL_t = piecewise(polynomial(dL.reshape(-1,1), t, t))
-            if phase_prev is not None:
-                phase_prev.c_final = pcom
-                phase_prev.dc_final = vcom
-                phase_prev.ddc_final = acom
-                phase_prev.L_final = L
-                phase_prev.dL_final = dL
-                if t > phase_prev.c_t.max():
-                    phase_prev.c_t.append(pcom,t)
-                    phase_prev.dc_t.append(vcom,t)
-                    phase_prev.ddc_t.append(acom,t)
-                    phase_prev.L_t.append(L,t)
-                    phase_prev.dL_t.append(dL,t)
         else:
             phase.c_t.append(pcom, t)
             phase.dc_t.append(vcom, t)
@@ -280,9 +256,6 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
         if first_iter_for_phase:
             phase.zmp_t = piecewise(polynomial(zmp.reshape(-1,1), t, t))
             phase.wrench_t = piecewise(polynomial(wrench.reshape(-1,1), t, t))
-            if phase_prev is not None and t > phase_prev.zmp_t.max():
-                phase_prev.zmp_t.append(zmp, t)
-                phase_prev.wrench_t.append(wrench, t)
         else:
             phase.zmp_t.append(zmp, t)
             phase.wrench_t.append(wrench, t)
@@ -384,6 +357,7 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
             raise ValueError("ABORT : controler unstable at t = " + str(t))
 
     def stopHere():
+        setPreviousFinalValues(phase_prev, phase, cfg)
         if cfg.WB_ABORT_WHEN_INVALID:
             # cut the sequence up to the last phase
             cs.resize(pid)
@@ -725,6 +699,7 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
                 if cfg.WB_VERBOSE:
                     print("Phase " + str(pid) + " valid.")
             if phaseValid:
+                setPreviousFinalValues(phase_prev, phase, cfg)
                 # display the progress by moving the robot at the last configuration computed
                 if viewer:
                     display_tools.displayWBconfig(viewer,q)
@@ -734,6 +709,7 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
     phase_prev = phase
     phase = ContactPhase()
     storeData(True)
+    setPreviousFinalValues(phase_prev, phase, cfg)
     time_end = time.time() - time_start
     print("Whole body motion generated in : " + str(time_end) + " s.")
     if cfg.WB_VERBOSE:
