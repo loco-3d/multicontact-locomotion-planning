@@ -223,6 +223,15 @@ class Config:
                 self.REF_FILENAME = self.WB_FILENAME
             self.CS_FILENAME = self.REF_FILENAME
             self.COM_FILENAME = self.REF_FILENAME
+        if self.wholebody_method == "none":
+            self.IK_store_centroidal = False
+            self.IK_store_zmp = False
+            self.IK_store_effector = False
+            self.IK_store_contact_forces = False
+            self.IK_store_joints_derivatives = False
+            self.IK_store_joints_torque = False
+            self.SAVE_CS_WB = False
+
 
 
     def get_contact_generation_method(self):
