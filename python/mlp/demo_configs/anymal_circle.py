@@ -1,4 +1,4 @@
-TIMEOPT_CONFIG_FILE = "cfg_softConstraints_anymal_sidesteps.yaml"
+TIMEOPT_CONFIG_FILE = "cfg_softConstraints_anymal.yaml"
 from .common_anymal import *
 SCRIPT_PATH = "memmo"
 ENV_NAME = "multicontact/ground"
