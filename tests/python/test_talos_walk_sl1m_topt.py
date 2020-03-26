@@ -6,15 +6,15 @@ import time
 from mlp import LocoPlanner, Config
 from utils import check_motion
 
-class TestTalosWalkRbprmTopt(unittest.TestCase):
-    def test_talos_walk_rbprm_topt(self):
+class TestTalosWalkSl1mTopt(unittest.TestCase):
+    def test_talos_walk_sl1m_topt(self):
         subprocess.run(["killall", "hpp-rbprm-server"])
         process = subprocess.Popen("hpp-rbprm-server")
         time.sleep(3)
 
         cfg = Config()
         cfg.load_scenario_config("talos_flatGround")
-        cfg.contact_generation_method = "rbprm"
+        cfg.contact_generation_method = "sl1m"
         cfg.centroidal_method = "momentumopt"
         cfg.IK_store_centroidal = True
         cfg.IK_store_zmp = True

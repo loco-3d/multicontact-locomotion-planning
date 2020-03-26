@@ -4,6 +4,8 @@ SET(${PROJECT_NAME}_PYTHON_TESTS
   test_talos_walk_rbprm_mopt
   test_talos_walk_sl1m_mopt_dyn_filter
   test_talos_walk_sl1m_topt
+  test_talos_stairs_manual_limb_rrt
+  test_talos_stairs_sl1m_mopt
   )
 
 FOREACH(TEST ${${PROJECT_NAME}_PYTHON_TESTS})
