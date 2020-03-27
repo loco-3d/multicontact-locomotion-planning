@@ -161,7 +161,7 @@ def gen_pb(root_init, R, surfaces, ref_root_height):
     return res
 
 
-def solve(planner, guide_step_size, guide_max_yaw, max_surface_area, ref_root_height):
+def solve(planner, guide_step_size, guide_max_yaw, max_surface_area, ref_root_height, display_surfaces = False):
     from sl1m.fix_sparsity import solveL1
     #surfaces_dict = getAllSurfacesDict(planner.afftool)
     success = False
@@ -188,7 +188,7 @@ def solve(planner, guide_step_size, guide_max_yaw, max_surface_area, ref_root_he
                                                      planner.ps,
                                                      planner.afftool,
                                                      pathId,
-                                                     viewer,
+                                                     viewer if display_surfaces else None,
                                                      step,
                                                      useIntersection=True,
                                                      max_yaw=guide_max_yaw,
@@ -218,7 +218,8 @@ def runLPFromGuideScript(cfg):
     planner.run()
     # compute sequence of surfaces from guide path
     pathId, pb, coms, footpos, allfeetpos, res = solve(planner, cfg.GUIDE_STEP_SIZE, cfg.GUIDE_MAX_YAW,
-                                                       cfg.MAX_SURFACE_AREA,  cfg.IK_REFERENCE_CONFIG[2])
+                                                       cfg.MAX_SURFACE_AREA,  cfg.IK_REFERENCE_CONFIG[2],
+                                                       cfg.DISPLAY_SL1M_SURFACES)
     root_init = planner.ps.configAtParam(pathId, 0.001)[0:7]
     root_end = planner.ps.configAtParam(pathId, planner.ps.pathLength(pathId) - 0.001)[0:7]
     return RF, root_init, root_end, pb, coms, footpos, allfeetpos, res

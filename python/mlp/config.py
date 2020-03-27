@@ -63,6 +63,7 @@ class Config:
 
         ##DISPLAY settings :
         self.DISPLAY_CS = False  # display contact sequence from rbprm
+        self.DISPLAY_SL1M_SURFACES = False # display the candidates surfaces used by sl1m
         self.DISPLAY_CS_STONES = True  # display stepping stones
         self.DISPLAY_INIT_GUESS_TRAJ = False
         # display waypoints found by the planner and used in the cost function of the centroidal dynamic solver
