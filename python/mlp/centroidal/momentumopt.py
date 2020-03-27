@@ -125,6 +125,8 @@ def setFinalCOM(planner_setting, cs):
     :return:
     """
     com_motion = cs.contactPhases[-1].c_final - cs.contactPhases[0].c_init
+    if VERBOSE >= 2:
+        print("Desired com motion : ", com_motion)
     planner_setting.set(mopt.PlannerVectorParam_CenterOfMassMotion,com_motion)
 
 
@@ -152,12 +154,12 @@ def addCOMviapoints(planner_setting, cs, viewer=None, display_wp = False):
     planner_setting.set(mopt.PlannerIntParam_NumViapoints, len(com_viapoints))
     logger.info("Add waypoints done.")
 
-def initStateFromPhase(phase, time_shift_com, com_shift_z, dict_ee_to_timeopt):
+def initStateFromPhase(phase, use_shift_com, com_shift_z, dict_ee_to_timeopt, mass):
     """
     Create a momentumopt initial state from a multicontact_api contact phase
 
     :param phase: a multicontact_api ContactPhase
-    :param time_shift_com: the duration allowed to move the CoM from com_shift_z
+    :param use_shift_com: True if the offset to the CoM must be applied
     :param com_shift_z: the distance along the z axis from which the CoM is moved before the beginning of the motion
     :param dict_ee_to_timeopt: a dictionnary with key = effector names in ContactSequence,
      value = effector ID in momentumopt
@@ -165,9 +167,22 @@ def initStateFromPhase(phase, time_shift_com, com_shift_z, dict_ee_to_timeopt):
     """
     ini_state = DynamicsState()
     com = phase.c_init
-    if time_shift_com > 0.:
+    if use_shift_com:
         com[2] += com_shift_z
     ini_state.com = com
+    if not use_shift_com:
+        ini_state.lmom = phase.dc_init * mass
+        ini_state.lmomd = phase.ddc_init * mass
+        ini_state.amom = phase.L_init
+        ini_state.amomd = phase.dL_init
+        #otherwise, set them to 0 (default)
+    if VERBOSE >= 2:
+        print("Initial CoM : ", ini_state.com)
+        print("Initial lmom : ", ini_state.lmom)
+        print("Initial lmomd : ", ini_state.lmomd)
+        print("Initial amom : ", ini_state.amom)
+        print("Initial amomd : ", ini_state.amomd)
+
     force_distribution = 1./phase.numContacts() # assume contact forces are distributed between all contacts
     for eeName, patch in phase.contactPatches().items():
         ini_state.setEffPosition(dict_ee_to_timeopt[eeName], patch.placement.translation)
@@ -247,28 +262,28 @@ def CSfromMomentumopt(planner_setting, cs, init_state, dyn_states, t_init = 0., 
     # dyn_states[0] is at t == dt , not t == 0 ! use init_state for t == 0
     p0 = cs_com.contactPhases[0]
     c_init = init_state.com
+    dc_init = init_state.lmom / MASS
+    ddc_init = init_state.lmomd / MASS
+    L_init = init_state.amom
+    dL_init = init_state.amomd
     p0.timeInitial = t_init
 
     # init arrays to store the discrete points. one value per columns
     c_t = c_init.reshape(3, 1)
-    dc_t = p0.dc_init.reshape(3, 1)
-    ddc_t = p0.ddc_init.reshape(3, 1)
-    L_t = p0.L_init.reshape(3, 1)
-    dL_t = p0.dL_init.reshape(3, 1)
+    dc_t = dc_init.reshape(3, 1)
+    ddc_t = ddc_init.reshape(3, 1)
+    L_t = L_init.reshape(3, 1)
+    dL_t = dL_init.reshape(3, 1)
     times = array(t_init)
     current_t = t_init
     # loop for all dynamicsStates
     for k, ds in enumerate(dyn_states):
         #extract states values from ds :
-        if k == 0:
-            ddc = (ds.lmom / MASS) / ds.dt # acceleration
-            dL = ds.amom / ds.dt  # angular momentum variation
-        else:
-            ddc = ((ds.lmom/ MASS) - (dyn_states[k-1].lmom / MASS)) / ds.dt
-            dL = (ds.amom- dyn_states[k-1].amom) / ds.dt
         c = ds.com # position
         dc = ds.lmom / MASS # velocity
+        ddc = ds.lmomd / MASS  # acceleration
         L = ds.amom # angular momentum
+        dL = ds.amomd  # angular momentum variation
         # stack the values in the arrays:
         c_t = append(c_t, c.reshape(3,1), axis = 1)
         dc_t = append(dc_t, dc.reshape(3,1), axis = 1)
@@ -335,7 +350,8 @@ def generate_centroidal_momentumopt(cfg, cs, cs_initGuess=None, fullBody=None, v
     if cfg.USE_WP_COST:
         addCOMviapoints(planner_setting, cs, viewer, cfg.DISPLAY_WP_COST)
 
-    ini_state = initStateFromPhase(cs.contactPhases[0], cfg.TIME_SHIFT_COM, cfg.COM_SHIFT_Z, dict_ee_to_timeopt)
+    ini_state = initStateFromPhase(cs.contactPhases[0], cfg.TIME_SHIFT_COM > 0, cfg.COM_SHIFT_Z, dict_ee_to_timeopt,
+                                   planner_setting.get(mopt.PlannerDoubleParam_RobotMass))
     if first_iter:
         kin_sequence = buildEmptyKinSequence(planner_setting)
     else:
