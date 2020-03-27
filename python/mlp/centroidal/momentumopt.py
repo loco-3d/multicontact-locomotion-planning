@@ -44,7 +44,7 @@ def setDuration(planner_setting, cs, dt):
     :param dt: discretization step used
     :return:
     """
-    duration = cs.contactPhases[-1].timeFinal
+    duration = cs.contactPhases[-1].timeFinal - cs.contactPhases[0].timeInitial
     n_time_steps = int(floor(duration/dt))
     planner_setting.set(mopt.PlannerDoubleParam_TimeHorizon, duration)
     planner_setting.set(mopt.PlannerIntParam_NumTimesteps, n_time_steps)
@@ -101,15 +101,15 @@ def contactPlanFromCS(planner_setting, cs, dict_ee_to_timeopt, dt):
     contact_plan = ContactPlanFromFile()
     contact_plan.initialize(planner_setting)
     mopt_cs = contact_plan.contactSequence()
-
+    t_init = cs.contactPhases[0].timeInitial
     eeNames = cs.getAllEffectorsInContact()
     for eeName in eeNames:
         phases = extractEffectorPhasesFromCS(cs, eeName, dt)
         mopt_cs_ee = mopt_cs.contact_states(dict_ee_to_timeopt[eeName])
         for phase in phases:
             cp = ContactState()
-            cp.start_time = phase[0]
-            cp.end_time = phase[1]
+            cp.start_time = phase[0] - t_init
+            cp.end_time = phase[1] - t_init
             cp.contactType = ContactType.FlatContact # TODO: store/retrieve it from mcapi
             cp.active = True
             cp.placement = phase[2].homogeneous
@@ -353,7 +353,8 @@ def generate_centroidal_momentumopt(cfg, cs, cs_initGuess=None, fullBody=None, v
 
     # now build a new multicontact_api contactSequence from the results of momentumopt:
     cs_result = CSfromMomentumopt(planner_setting, cs, ini_state, dyn_opt.dynamicsSequence().dynamics_states,
-                                  cfg.TIME_SHIFT_COM, connect_goal= (cfg.DURATION_CONNECT_GOAL > 0.))
+                                  cs.contactPhases[0].timeInitial + cfg.TIME_SHIFT_COM,
+                                  connect_goal = (cfg.DURATION_CONNECT_GOAL > 0.))
 
     if cfg.TIME_SHIFT_COM > 0:
         connectPhaseTrajToInitialState(cs_result.contactPhases[0], cfg.TIME_SHIFT_COM)
