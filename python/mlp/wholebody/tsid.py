@@ -698,7 +698,7 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
             if phaseValid:
                 setPreviousFinalValues(phase_prev, phase, cfg)
                 # display the progress by moving the robot at the last configuration computed
-                if viewer:
+                if viewer and cfg.IK_SHOW_PROGRESS:
                     display_tools.displayWBconfig(viewer,q)
         #end while not phaseValid
     # end for all phases
