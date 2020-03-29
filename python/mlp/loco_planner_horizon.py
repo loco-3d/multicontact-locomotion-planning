@@ -10,7 +10,8 @@ from curves import piecewise, SE3Curve
 from multicontact_api import ContactSequence
 from mlp.utils.cs_tools import computePhasesTimings, setInitialFromFinalValues, setAllUninitializedFrictionCoef
 from mlp.utils.cs_tools import computePhasesCOMValues, computeRootTrajFromContacts
-from multiprocessing import Process, SimpleQueue
+from multiprocessing import Process, Queue
+from queue import Empty as queue_empty
 
 eigenpy.switchToNumpyArray()
 
@@ -18,8 +19,8 @@ def update_root_traj_timings(cs):
     for cp in cs.contactPhases:
         cp.root_t = SE3Curve(cp.root_t(cp.root_t.min()), cp.root_t(cp.root_t.max()), cp.timeInitial, cp.timeFinal)
 
-class LocoPlannerHorizon(LocoPlanner):
 
+class LocoPlannerHorizon(LocoPlanner):
 
     def __init__(self, cfg):
         cfg.DISPLAY_CS = False
@@ -47,13 +48,24 @@ class LocoPlannerHorizon(LocoPlanner):
         cfg.TIME_SHIFT_COM = 0.
         self.previous_connect_goal = cfg.DURATION_CONNECT_GOAL
         cfg.DURATION_CONNECT_GOAL = 0.
-        self.last_wb_phase = None
-        self.cs_com_list = [] # FIXME: remove after debug
         super().__init__(cfg)
         self.generate_centroidal, self.CentroidalInputs, self.CentroidalOutputs = self.cfg.get_centroidal_method()
         self.generate_effector_trajectories, self.EffectorInputs, self.EffectorOutputs = \
             self.cfg.get_effector_initguess_method()
         self.generate_wholebody, self.WholebodyInputs, self.WholebodyOutputs = self.cfg.get_wholebody_method()
+
+        self.process_centroidal = None
+        self.process_wholebody = None
+        self.process_viewer = None
+        self.queue_cs = None
+        self.queue_cs_com = None
+        self.queue_q_t = None
+
+        self.last_displayed_q = None # last config displayed
+        self.cs_iters = []
+        self.cs_com_iters = []
+        self.q_t = piecewise()
+
 
     def compute_centroidal(self, cs, previous_phase, last_iter=False):
         # update the initial state with the data from the previous intermediate state:
@@ -100,20 +112,64 @@ class LocoPlannerHorizon(LocoPlanner):
         # WholebodyOutputs.assertRequirements(cs_wb)
         return cs_wb.concatenateQtrajectories(), cs_wb.contactPhases[-1].q_t(cs_wb.contactPhases[-1].timeFinal)
 
-    def solve(self):
 
+    def loop_centroidal(self, queue_cs, queue_cs_com):
+        last_centroidal_phase = None
+        while True:
+            cs, last_iter = queue_cs.get()
+            print("## Run centroidal")
+            cs_com, last_centroidal_phase = self.compute_centroidal(cs,
+                                                                         last_centroidal_phase, last_iter)
+            queue_cs_com.put([cs_com, last_iter])
+
+
+    def loop_wholebody(self, queue_cs_com, queue_q_t):
+        last_q = None
+        while True:
+            cs_com, last_iter = queue_cs_com.get()
+            print("## Run wholebody")
+            q_t, last_q = self.compute_wholebody(cs_com, last_q, last_iter)
+            queue_q_t.put([q_t, self.last_q])
+
+
+    def loop_viewer(self, queue_q_t, q_t):
+        while True:
+            try:
+                c_id, self.last_displayed_q = queue_q_t.get(False, 0.01)
+                displayWBmotion(self.viewer, q_t.curve_at_index(c_id), self.cfg.DT_DISPLAY)
+            except queue_empty:
+                pass
+
+    def start_process(self):
+        if self.process_centroidal:
+            self.process_centroidal.terminate()
+        if self.process_wholebody:
+            self.process_wholebody.terminate()
+        self.queue_cs = Queue(10)
+        self.queue_cs_com = Queue(10)
+        self.queue_q_t = Queue(5)
+        self.last_displayed_q = None
+        self.cs_iters = []
+        self.cs_com_iters = []
+        self.q_t = piecewise()
+
+        self.process_centroidal = Process(target=self.loop_centroidal, args=(self.queue_cs, self.queue_cs_com))
+        self.process_centroidal.start()
+        self.process_wholebody = Process(target=self.loop_wholebody, args=(self.queue_cs_com, self.queue_q_t))
+        self.process_wholebody.start()
+        if not self.process_viewer:
+            self.process_viewer = Process(target=self.loop_viewer, args=(self.queue_q_t,))
+            self.process_viewer.start()
+
+    def solve(self):
         self.run_contact_generation()
-        self.cs
         self.cs = computePhasesTimings(self.cs, self.cfg)
         self.cs = computePhasesCOMValues(self.cs, self.cfg.Robot.DEFAULT_COM_HEIGHT)
         computeRootTrajFromContacts(self.fullBody, self.cs)
         setAllUninitializedFrictionCoef(self.cs, self.cfg.MU)
 
         pid_centroidal = 0
-        first_iter_centroidal = True
         last_iter_centroidal = False
-        last_q = None
-        last_centroidal_phase = None
         print("## Cs size = ", self.cs.size())
         while pid_centroidal + 5 < self.cs.size():
             print("## Current pid = ", pid_centroidal)
@@ -129,25 +185,15 @@ class LocoPlannerHorizon(LocoPlanner):
             # Extract the phases [pid_centroidal; pid_centroidal +num_phases] from cs_full
             cs_iter = ContactSequence(0)
             for i in range(pid_centroidal, pid_centroidal + num_phase):
-                print("-- Add phase : ", i)
+                #print("-- Add phase : ", i)
                 cs_iter.append(self.cs.contactPhases[i])
+            self.queue_cs.put([cs_iter, last_iter_centroidal])
 
-            # solve the current centroidal problem:
-            print("## Run centroidal")
-            cs_com, last_centroidal_phase = self.compute_centroidal(cs_iter, last_centroidal_phase, last_iter_centroidal)
-
-            print("## Run wholebody")
-            q_t, last_q = self.compute_wholebody(cs_com, last_q, last_iter_centroidal)
-
-            displayWBmotion(self.viewer, q_t, self.cfg.DT_DISPLAY)
-
-            if first_iter_centroidal:
-                first_iter_centroidal = False
-                self.cfg.COM_SHIFT_Z = 0.
-                self.cfg.TIME_SHIFT_COM = 0.
             pid_centroidal += 2
 
+
     def run(self):
+        self.start_process()
         self.solve()
 
 
