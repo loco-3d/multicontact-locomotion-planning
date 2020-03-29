@@ -42,6 +42,9 @@ class LocoPlannerHorizon(LocoPlanner):
         cfg.IK_store_joints_derivatives = False
         cfg.IK_store_joints_torque = False
         cfg.contact_generation_method = "sl1m"
+        cfg.Robot.DEFAULT_COM_HEIGHT += cfg.COM_SHIFT_Z
+        cfg.COM_SHIFT_Z = 0.
+        cfg.TIME_SHIFT_COM = 0.
         self.previous_connect_goal = cfg.DURATION_CONNECT_GOAL
         cfg.DURATION_CONNECT_GOAL = 0.
         self.last_wb_phase = None
