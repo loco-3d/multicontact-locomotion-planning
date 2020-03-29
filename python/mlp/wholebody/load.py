@@ -22,4 +22,4 @@ def generate_wholebody_load(cfg, cs, fullBody=None, viewer=None):
     cs_wb = ContactSequence()
     logger.warning("Load wholebody contact sequence from  file : %s", cfg.WB_FILENAME)
     cs_wb.loadFromBinary(cfg.WB_FILENAME)
-    return cs_wb
+    return cs_wb, robot
