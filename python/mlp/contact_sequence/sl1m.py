@@ -218,7 +218,7 @@ def runLPFromGuideScript(cfg):
     planner.run()
     # compute sequence of surfaces from guide path
     pathId, pb, coms, footpos, allfeetpos, res = solve(planner, cfg.GUIDE_STEP_SIZE, cfg.GUIDE_MAX_YAW,
-                                                       cfg.MAX_SURFACE_AREA,  cfg.IK_REFERENCE_CONFIG[2],
+                                                       cfg.MAX_SURFACE_AREA,  planner.rbprmBuilder.ref_height,
                                                        cfg.DISPLAY_SL1M_SURFACES)
     root_init = planner.ps.configAtParam(pathId, 0.001)[0:7]
     root_end = planner.ps.configAtParam(pathId, planner.ps.pathLength(pathId) - 0.001)[0:7]
