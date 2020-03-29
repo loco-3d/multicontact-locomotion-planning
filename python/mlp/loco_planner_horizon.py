@@ -116,14 +116,10 @@ def loop_wholebody( queue_cs_com, queue_q_t,
 
 def loop_viewer(queue_q_t, cfg):
     robot, gui = initScenePinocchio(cfg.Robot.urdfName + cfg.Robot.urdfSuffix , cfg.Robot.packageName, cfg.ENV_NAME)
-    proc_prev = None
     while True:
         q_t, last_displayed_q = queue_q_t.get()
-        proc = Process(target=disp_wb_pinocchio, args=(robot, q_t, cfg.DT_DISPLAY))
-        if proc_prev:
-            proc_prev.join()
-        proc.start()
-        proc_prev = proc
+        disp_wb_pinocchio(robot, q_t, cfg.DT_DISPLAY)
+
 
 
 class LocoPlannerHorizon(LocoPlanner):
