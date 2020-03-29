@@ -352,10 +352,10 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
             return cs
 
     ### End of nested functions definitions ###
-
     if not viewer:
         logger.warning("No viewer linked, cannot display end_effector trajectories.")
     logger.warning("Start TSID ... ")
+
 
     # copy the given contact sequence to keep it as reference :
     cs = ContactSequence(cs_ref)
