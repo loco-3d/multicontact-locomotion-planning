@@ -392,10 +392,12 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None, robot=None)
     q = phase0.q_init[:robot.nq].copy()
     if not q.any():
         raise RuntimeError("The contact sequence doesn't contain an initial whole body configuration")
-    v = np.zeros(robot.nv)
     t = phase0.timeInitial
+    if cs_ref.contactPhases[0].dq_t and cs_ref.contactPhases[0].dq_t.min() <= t <= cs_ref.contactPhases[0].dq_t.max():
+        v = cs_ref.contactPhases[0].dq_t(t)
+    else:
+        v = np.zeros(robot.nv)
 
-    # init states list with initial state (assume joint velocity is null for t=0)
     invdyn = tsid.InverseDynamicsFormulationAccForce("tsid", robot, False)
     invdyn.computeProblemData(t, q, v)
     simulator.init(q, v)
