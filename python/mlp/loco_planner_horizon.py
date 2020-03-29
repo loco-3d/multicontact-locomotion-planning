@@ -77,13 +77,16 @@ def loop_centroidal(queue_cs, queue_cs_com,
                     generate_centroidal, CentroidalInputs,  # CentroidalOutputs,
                     cfg):
     last_centroidal_phase = None
-    while True:
+    last_iter = False
+    while not last_iter:
         cs, last_iter = queue_cs.get()
         #print("## Run centroidal")
         cs_com, last_centroidal_phase = compute_centroidal(generate_centroidal, CentroidalInputs,  # CentroidalOutputs,
                                                            cfg, cs, last_centroidal_phase, last_iter)
         #print("-- Add a cs_com to the queue")
         queue_cs_com.put([cs_com, last_iter])
+    queue_cs_com.close()
+
 
 
 def loop_wholebody( queue_cs_com, queue_q_t,
@@ -91,7 +94,8 @@ def loop_wholebody( queue_cs_com, queue_q_t,
                     generate_wholebody, WholebodyInputs, #WholebodyOutputs,
                     cfg, fullBody):
     last_q = None
-    while True:
+    last_iter = False
+    while not last_iter:
         cs_com, last_iter = queue_cs_com.get()
         #print("## Run wholebody")
         cs_wb, last_q = compute_wholebody(generate_effector_trajectories, EffectorInputs,  # EffectorOutputs,
@@ -100,6 +104,7 @@ def loop_wholebody( queue_cs_com, queue_q_t,
                                             cs_com, last_q, last_iter)
         #print("-- Add a cs_wb to the queue")
         queue_q_t.put([cs_wb.concatenateQtrajectories(), last_q])
+    queue_q_t.close()
 
 
 def loop_viewer(queue_q_t, cfg):
@@ -194,6 +199,7 @@ class LocoPlannerHorizon(LocoPlanner):
             self.process_viewer = Process(target=loop_viewer, args=(self.queue_q_t,
                                                                          self.cfg))
             self.process_viewer.start()
+            atexit.register(self.process_viewer.terminate)
 
 
     def compute_from_cs(self):
@@ -217,9 +223,8 @@ class LocoPlannerHorizon(LocoPlanner):
                 #print("-- Add phase : ", i)
                 cs_iter.append(self.cs.contactPhases[i])
             self.queue_cs.put([cs_iter, last_iter_centroidal])
-
             pid_centroidal += 2
-
+        self.queue_cs.close()
 
     def run(self):
         self.run_contact_generation()
