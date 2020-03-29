@@ -68,7 +68,7 @@ def compute_wholebody(generate_effector_trajectories, EffectorInputs, #EffectorO
         raise RuntimeError(
             "The current contact sequence cannot be given as input to the wholeBody method selected.")
     cs_wb = generate_wholebody(cfg, cs_ref, fullBody)
-    print("-- compute whole body END")
+    #print("-- compute whole body END")
     # WholebodyOutputs.assertRequirements(cs_wb)
     return cs_wb, cs_wb.contactPhases[-1].q_t(cs_wb.contactPhases[-1].timeFinal)
 
@@ -79,10 +79,10 @@ def loop_centroidal(queue_cs, queue_cs_com,
     last_centroidal_phase = None
     while True:
         cs, last_iter = queue_cs.get()
-        print("## Run centroidal")
+        #print("## Run centroidal")
         cs_com, last_centroidal_phase = compute_centroidal(generate_centroidal, CentroidalInputs,  # CentroidalOutputs,
                                                            cfg, cs, last_centroidal_phase, last_iter)
-        print("-- Add a cs_com to the queue")
+        #print("-- Add a cs_com to the queue")
         queue_cs_com.put([cs_com, last_iter])
 
 
@@ -93,7 +93,7 @@ def loop_wholebody( queue_cs_com, queue_cs_wb,
     last_q = None
     while True:
         cs_com, last_iter = queue_cs_com.get()
-        print("## Run wholebody")
+        #print("## Run wholebody")
         cs_wb, last_q = compute_wholebody(generate_effector_trajectories, EffectorInputs,  # EffectorOutputs,
                                              generate_wholebody, WholebodyInputs,  # WholebodyOutputs,
                                              cfg, fullBody,
@@ -200,18 +200,18 @@ class LocoPlannerHorizon(LocoPlanner):
     def compute_from_cs(self):
         pid_centroidal = 0
         last_iter_centroidal = False
-        print("## Cs size = ", self.cs.size())
+        print("## Compute from cs,  size = ", self.cs.size())
         while pid_centroidal + 5 < self.cs.size():
-            print("## Current pid = ", pid_centroidal)
+            #print("## Current pid = ", pid_centroidal)
             if pid_centroidal + 7 >= self.cs.size():
-                print("## Last centroidal iter")
+                #print("## Last centroidal iter")
                 # last iter, take all the remaining phases
                 num_phase = self.cs.size() - pid_centroidal
                 last_iter_centroidal = True
                 cfg.DURATION_CONNECT_GOAL = self.previous_connect_goal
             else:
                 num_phase = 5
-            print("## Num phase = ", num_phase)
+            #print("## Num phase = ", num_phase)
             # Extract the phases [pid_centroidal; pid_centroidal +num_phases] from cs_full
             cs_iter = ContactSequence(0)
             for i in range(pid_centroidal, pid_centroidal + num_phase):
