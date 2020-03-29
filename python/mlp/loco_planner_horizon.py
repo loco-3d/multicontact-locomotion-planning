@@ -16,57 +16,6 @@ from mlp.utils.cs_tools import computePhasesCOMValues, computeRootTrajFromContac
 eigenpy.switchToNumpyArray()
 
 
-def compute_centroidal(generate_centroidal, CentroidalInputs, #CentroidalOutputs,
-                       cfg, fullBody, cs, previous_phase, last_iter = False):
-    # update the initial state with the data from the previous intermediate state:
-    if previous_phase is not None:
-        setInitialFromFinalValues(previous_phase, cs.contactPhases[0])
-
-    if not CentroidalInputs.checkAndFillRequirements(cs, cfg, fullBody):
-        raise RuntimeError(
-            "The current contact sequence cannot be given as input to the centroidal method selected.")
-    cs_full = generate_centroidal(cfg, cs, None, fullBody)
-    #CentroidalOutputs.assertRequirements(cs_full)
-    if last_iter:
-        return cs_full, None
-    else:
-        cs_cut = ContactSequence(0)
-        for i in range(3):
-            cs_cut.append(cs_full.contactPhases[i])
-        return cs_cut, cs_cut.contactPhases[1]
-
-
-def compute_wholebody(generate_effector_trajectories, EffectorInputs, #EffectorOutputs,
-                      generate_wholebody, WholebodyInputs, #WholebodyOutputs,
-                      cfg, fullBody, cs_com,
-                      last_q = None, last_iter = False):
-    ### Effector trajectory reference
-    if not EffectorInputs.checkAndFillRequirements(cs_com, cfg, fullBody):
-        raise RuntimeError(
-            "The current contact sequence cannot be given as input to the end effector method selected.")
-    cs_ref_full = generate_effector_trajectories(cfg, cs_com, fullBody)
-    #EffectorOutputs.assertRequirements(cs_ref_full)
-    if last_iter:
-        cs_ref = cs_ref_full
-    else:
-        cs_cut = ContactSequence()
-        for i in range(2):
-            cs_cut.append(cs_ref_full.contactPhases[i])
-        cs_ref = cs_cut
-
-    if last_q is not None:
-        cs_ref.contactPhases[0].q_init = last_q
-
-    ### Wholebody
-    if not WholebodyInputs.checkAndFillRequirements(cs_ref, cfg, fullBody):
-        raise RuntimeError(
-            "The current contact sequence cannot be given as input to the wholeBody method selected.")
-    cs_wb = generate_wholebody(cfg, cs_ref, fullBody)
-    #WholebodyOutputs.assertRequirements(cs_wb)
-    return cs_wb, cs_wb.contactPhases[-1].q_t(cs_wb.contactPhases[-1].timeFinal)
-
-
-
 class LocoPlannerHorizon(LocoPlanner):
 
 
@@ -101,6 +50,49 @@ class LocoPlannerHorizon(LocoPlanner):
             self.cfg.get_effector_initguess_method()
         self.generate_wholebody, self.WholebodyInputs, self.WholebodyOutputs = self.cfg.get_wholebody_method()
 
+    def compute_centroidal(self, cs, previous_phase, last_iter=False):
+        # update the initial state with the data from the previous intermediate state:
+        if previous_phase:
+            setInitialFromFinalValues(previous_phase, cs.contactPhases[0])
+
+        if not self.CentroidalInputs.checkAndFillRequirements(cs, self.cfg, self.fullBody):
+            raise RuntimeError(
+                "The current contact sequence cannot be given as input to the centroidal method selected.")
+        cs_full = self.generate_centroidal(self.cfg, cs, None, self.fullBody)
+        # CentroidalOutputs.assertRequirements(cs_full)
+        if last_iter:
+            return cs_full, None
+        else:
+            cs_cut = ContactSequence(0)
+            for i in range(3):
+                cs_cut.append(cs_full.contactPhases[i])
+            return cs_cut, cs_cut.contactPhases[1]
+
+    def compute_wholebody(self, cs_com, last_q=None, last_iter=False):
+        ### Effector trajectory reference
+        if not self.EffectorInputs.checkAndFillRequirements(cs_com, self.cfg, self.fullBody):
+            raise RuntimeError(
+                "The current contact sequence cannot be given as input to the end effector method selected.")
+        cs_ref_full = self.generate_effector_trajectories(self.cfg, cs_com, self.fullBody)
+        # EffectorOutputs.assertRequirements(cs_ref_full)
+        if last_iter:
+            cs_ref = cs_ref_full
+        else:
+            cs_cut = ContactSequence()
+            for i in range(2):
+                cs_cut.append(cs_ref_full.contactPhases[i])
+            cs_ref = cs_cut
+
+        if last_q:
+            cs_ref.contactPhases[0].q_init = last_q
+
+        ### Wholebody
+        if not self.WholebodyInputs.checkAndFillRequirements(cs_ref, self.cfg, self.fullBody):
+            raise RuntimeError(
+                "The current contact sequence cannot be given as input to the wholeBody method selected.")
+        cs_wb = self.generate_wholebody(self.cfg, cs_ref, self.fullBody)
+        # WholebodyOutputs.assertRequirements(cs_wb)
+        return cs_wb.concatenateQtrajectories(), cs_wb.contactPhases[-1].q_t(cs_wb.contactPhases[-1].timeFinal)
 
     def solve(self):
 
@@ -136,17 +128,12 @@ class LocoPlannerHorizon(LocoPlanner):
 
             # solve the current centroidal problem:
             print("## Run centroidal")
-            cs_com, last_centroidal_phase = compute_centroidal(self.generate_centroidal, self.CentroidalInputs,
-                                        self.cfg, self.fullBody, cs_iter, last_centroidal_phase, last_iter_centroidal)
+            cs_com, last_centroidal_phase = self.compute_centroidal(cs_iter, last_centroidal_phase, last_iter_centroidal)
 
             print("## Run wholebody")
-            cs_wb, last_q = compute_wholebody(self.generate_effector_trajectories, self.EffectorInputs,
-                                      self.generate_wholebody, self.WholebodyInputs,
-                                      self.cfg, self.fullBody, cs_com, last_q, last_iter_centroidal)
+            q_t, last_q = self.compute_wholebody(cs_com, last_q, last_iter_centroidal)
 
-
-            print("## Whole body solved, size : ", cs_wb.size())
-            displayWBmotion(self.viewer, cs_wb.concatenateQtrajectories(), self.cfg.DT_DISPLAY)
+            displayWBmotion(self.viewer, q_t, self.cfg.DT_DISPLAY)
 
             if first_iter_centroidal:
                 first_iter_centroidal = False
