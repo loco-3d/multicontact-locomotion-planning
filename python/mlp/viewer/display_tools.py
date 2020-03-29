@@ -270,17 +270,20 @@ def initScenePinocchio(urdf_name, package_name, env_name=None, env_package_name=
 
 def disp_wb_pinocchio(robot, q_t, dt_display = 0.04):
     t = q_t.min()
-    while t <= q_t.max():
+    while t < q_t.max():
         t_start = time.time()
         robot.display(q_t(t))
-        t += dt_display
         elapsed = time.time() - t_start
+        left = q_t.max() - t
+        if dt_display > left:
+            dt_display = left
         if elapsed > dt_display:
             print("Warning : display not real time ! choose a greater time step for the display.")
         else:
             time.sleep(dt_display - elapsed)
+        t += dt_display
     # display last config if the total duration is not a multiple of the dt
-    #robot.display(q_t(q_t.max()))
+    robot.display(q_t(q_t.max()))
 
 
 

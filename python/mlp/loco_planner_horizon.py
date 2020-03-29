@@ -152,6 +152,7 @@ class LocoPlannerHorizon(LocoPlanner):
         self.process_centroidal = None
         self.process_wholebody = None
         self.process_viewer = None
+        self.process_gepetto_gui = None
         self.queue_cs = None
         self.queue_cs_com = None
         self.queue_cs_wb = None
@@ -185,11 +186,11 @@ class LocoPlannerHorizon(LocoPlanner):
 
         if not self.process_viewer:
             subprocess.run(["killall", "gepetto-gui"])
-            process_viewer = subprocess.Popen("gepetto-gui",
+            self.process_gepetto_gui = subprocess.Popen("gepetto-gui",
                                               stdout=subprocess.PIPE,
                                               stderr=subprocess.DEVNULL,
                                               preexec_fn=os.setpgrp)
-            atexit.register(process_viewer.kill)
+            atexit.register(self.process_gepetto_gui.kill)
             time.sleep(3)
             self.process_viewer = Process(target=loop_viewer, args=(self.queue_cs_wb,
                                                                          self.cfg))
