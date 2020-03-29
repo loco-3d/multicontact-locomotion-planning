@@ -86,7 +86,7 @@ def loop_centroidal(queue_cs, queue_cs_com,
         queue_cs_com.put([cs_com, last_iter])
 
 
-def loop_wholebody( queue_cs_com, queue_cs_wb,
+def loop_wholebody( queue_cs_com, queue_q_t,
                     generate_effector_trajectories, EffectorInputs, #EffectorOutputs,
                     generate_wholebody, WholebodyInputs, #WholebodyOutputs,
                     cfg, fullBody):
@@ -98,16 +98,15 @@ def loop_wholebody( queue_cs_com, queue_cs_wb,
                                              generate_wholebody, WholebodyInputs,  # WholebodyOutputs,
                                              cfg, fullBody,
                                             cs_com, last_q, last_iter)
-        print("-- Add a cs_wb to the queue")
-        queue_cs_wb.put([cs_wb, last_q])
+        #print("-- Add a cs_wb to the queue")
+        queue_q_t.put([cs_wb.concatenateQtrajectories(), last_q])
 
 
-def loop_viewer(queue_cs_wb, cfg):
+def loop_viewer(queue_q_t, cfg):
     robot, gui = initScenePinocchio(cfg.Robot.urdfName + cfg.Robot.urdfSuffix , cfg.Robot.packageName, cfg.ENV_NAME)
     proc_prev = None
     while True:
-        cs_wb, last_displayed_q = queue_cs_wb.get()
-        q_t = cs_wb.concatenateQtrajectories()
+        q_t, last_displayed_q = queue_q_t.get()
         proc = Process(target=disp_wb_pinocchio, args=(robot, q_t, cfg.DT_DISPLAY))
         if proc_prev:
             proc_prev.join()
@@ -155,7 +154,7 @@ class LocoPlannerHorizon(LocoPlanner):
         self.process_gepetto_gui = None
         self.queue_cs = None
         self.queue_cs_com = None
-        self.queue_cs_wb = None
+        self.queue_q_t = None
 
         self.last_displayed_q = None # last config displayed
 
@@ -167,7 +166,7 @@ class LocoPlannerHorizon(LocoPlanner):
             self.process_wholebody.terminate()
         self.queue_cs = Queue(10)
         self.queue_cs_com = Queue(10)
-        self.queue_cs_wb = Queue(5)
+        self.queue_q_t = Queue(5)
         self.last_displayed_q = None
 
         self.process_centroidal = Process(target=loop_centroidal, args=(self.queue_cs, self.queue_cs_com,
@@ -175,7 +174,7 @@ class LocoPlannerHorizon(LocoPlanner):
                                                                              self.CentroidalInputs,
                                                                              self.cfg))
         self.process_centroidal.start()
-        self.process_wholebody = Process(target=loop_wholebody, args=(self.queue_cs_com, self.queue_cs_wb,
+        self.process_wholebody = Process(target=loop_wholebody, args=(self.queue_cs_com, self.queue_q_t,
                                                                            self.generate_effector_trajectories,
                                                                            self.EffectorInputs,
                                                                            self.generate_wholebody,
@@ -192,7 +191,7 @@ class LocoPlannerHorizon(LocoPlanner):
                                               preexec_fn=os.setpgrp)
             atexit.register(self.process_gepetto_gui.kill)
             time.sleep(3)
-            self.process_viewer = Process(target=loop_viewer, args=(self.queue_cs_wb,
+            self.process_viewer = Process(target=loop_viewer, args=(self.queue_q_t,
                                                                          self.cfg))
             self.process_viewer.start()
 
