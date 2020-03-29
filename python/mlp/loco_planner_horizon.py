@@ -44,7 +44,7 @@ def compute_centroidal(generate_centroidal, CentroidalInputs, #CentroidalOutputs
 
 def compute_wholebody(generate_effector_trajectories, EffectorInputs, #EffectorOutputs,
                       generate_wholebody, WholebodyInputs, #WholebodyOutputs,
-                      cfg, fullBody, cs_com,
+                      cfg, fullBody, robot, cs_com,
                       last_q = None, last_iter = False):    ### Effector trajectory reference
     if not EffectorInputs.checkAndFillRequirements(cs_com, cfg, fullBody):
         raise RuntimeError(
@@ -67,10 +67,10 @@ def compute_wholebody(generate_effector_trajectories, EffectorInputs, #EffectorO
     if not WholebodyInputs.checkAndFillRequirements(cs_ref, cfg, fullBody):
         raise RuntimeError(
             "The current contact sequence cannot be given as input to the wholeBody method selected.")
-    cs_wb = generate_wholebody(cfg, cs_ref, fullBody)
+    cs_wb, robot = generate_wholebody(cfg, cs_ref, fullBody, robot=robot)
     #print("-- compute whole body END")
     # WholebodyOutputs.assertRequirements(cs_wb)
-    return cs_wb, cs_wb.contactPhases[-1].q_t(cs_wb.contactPhases[-1].timeFinal)
+    return cs_wb, cs_wb.contactPhases[-1].q_t(cs_wb.contactPhases[-1].timeFinal), robot
 
 
 def loop_centroidal(queue_cs, queue_cs_com,
@@ -94,13 +94,14 @@ def loop_wholebody( queue_cs_com, queue_q_t,
                     generate_wholebody, WholebodyInputs, #WholebodyOutputs,
                     cfg, fullBody):
     last_q = None
+    robot = None
     last_iter = False
     while not last_iter:
         cs_com, last_iter = queue_cs_com.get()
         #print("## Run wholebody")
-        cs_wb, last_q = compute_wholebody(generate_effector_trajectories, EffectorInputs,  # EffectorOutputs,
+        cs_wb, last_q, robot = compute_wholebody(generate_effector_trajectories, EffectorInputs,  # EffectorOutputs,
                                              generate_wholebody, WholebodyInputs,  # WholebodyOutputs,
-                                             cfg, fullBody,
+                                             cfg, fullBody, robot,
                                             cs_com, last_q, last_iter)
         #print("-- Add a cs_wb to the queue")
         queue_q_t.put([cs_wb.concatenateQtrajectories(), last_q])
