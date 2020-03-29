@@ -20,6 +20,93 @@ def update_root_traj_timings(cs):
         cp.root_t = SE3Curve(cp.root_t(cp.root_t.min()), cp.root_t(cp.root_t.max()), cp.timeInitial, cp.timeFinal)
 
 
+def compute_centroidal(generate_centroidal, CentroidalInputs, #CentroidalOutputs,
+                       cfg, fullBody, cs, previous_phase, last_iter = False):    # update the initial state with the data from the previous intermediate state:
+    if previous_phase:
+        setInitialFromFinalValues(previous_phase, cs.contactPhases[0])
+
+    if not CentroidalInputs.checkAndFillRequirements(cs, cfg, fullBody):
+        raise RuntimeError(
+            "The current contact sequence cannot be given as input to the centroidal method selected.")
+    cs_full = generate_centroidal(cfg, cs, None, fullBody)
+    # CentroidalOutputs.assertRequirements(cs_full)
+    if last_iter:
+        return cs_full, None
+    else:
+        cs_cut = ContactSequence(0)
+        for i in range(3):
+            cs_cut.append(cs_full.contactPhases[i])
+        return cs_cut, cs_cut.contactPhases[1]
+
+def compute_wholebody(generate_effector_trajectories, EffectorInputs, #EffectorOutputs,
+                      generate_wholebody, WholebodyInputs, #WholebodyOutputs,
+                      cfg, fullBody, cs_com,
+                      last_q = None, last_iter = False):    ### Effector trajectory reference
+    if not EffectorInputs.checkAndFillRequirements(cs_com, cfg, fullBody):
+        raise RuntimeError(
+            "The current contact sequence cannot be given as input to the end effector method selected.")
+    cs_ref_full = generate_effector_trajectories(cfg, cs_com, fullBody)
+    # EffectorOutputs.assertRequirements(cs_ref_full)
+    if last_iter:
+        cs_ref = cs_ref_full
+    else:
+        cs_cut = ContactSequence()
+        for i in range(2):
+            cs_cut.append(cs_ref_full.contactPhases[i])
+        cs_ref = cs_cut
+
+    if last_q is not None:
+        cs_ref.contactPhases[0].q_init = last_q
+
+    ### Wholebody
+    update_root_traj_timings(cs_ref)
+    if not WholebodyInputs.checkAndFillRequirements(cs_ref, cfg, fullBody):
+        raise RuntimeError(
+            "The current contact sequence cannot be given as input to the wholeBody method selected.")
+    cs_wb = generate_wholebody(cfg, cs_ref, fullBody)
+    # WholebodyOutputs.assertRequirements(cs_wb)
+    return cs_wb, cs_wb.contactPhases[-1].q_t(cs_wb.contactPhases[-1].timeFinal)
+
+
+def loop_centroidal(queue_cs, queue_cs_com,
+                    generate_centroidal, CentroidalInputs,  # CentroidalOutputs,
+                    cfg, fullBody):
+    last_centroidal_phase = None
+    while True:
+        cs, last_iter = queue_cs.get()
+        print("## Run centroidal")
+        cs_com, last_centroidal_phase = compute_centroidal(generate_centroidal, CentroidalInputs,  # CentroidalOutputs,
+                                                           cfg, fullBody,
+                                                           cs, last_centroidal_phase, last_iter)
+        queue_cs_com.put([cs_com, last_iter])
+
+
+def loop_wholebody( queue_cs_com, queue_q_t,
+                    generate_effector_trajectories, EffectorInputs, #EffectorOutputs,
+                    generate_wholebody, WholebodyInputs, #WholebodyOutputs,
+                    cfg, fullBody):
+    last_q = None
+    while True:
+        cs_com, last_iter = queue_cs_com.get()
+        print("## Run wholebody")
+        cs_wb, last_q = compute_wholebody(generate_effector_trajectories, EffectorInputs,  # EffectorOutputs,
+                                             generate_wholebody, WholebodyInputs,  # WholebodyOutputs,
+                                             cfg, fullBody,
+                                            cs_com, last_q, last_iter)
+        queue_q_t.put([cs_wb, last_q])
+
+
+def loop_viewer(queue_q_t, viewer, dt_display):
+    while True:
+        try:
+            cs_wb, last_displayed_q = queue_q_t.get(False, 0.01)
+            q_t = cs_wb.concatenateQtrajectories()
+            displayWBmotion(viewer, q_t, dt_display)
+        except queue_empty:
+            pass
+
+
+
 class LocoPlannerHorizon(LocoPlanner):
 
     def __init__(self, cfg):
@@ -62,83 +149,7 @@ class LocoPlannerHorizon(LocoPlanner):
         self.queue_q_t = None
 
         self.last_displayed_q = None # last config displayed
-        self.cs_iters = []
-        self.cs_com_iters = []
-        self.q_t = piecewise()
 
-
-    def compute_centroidal(self, cs, previous_phase, last_iter=False):
-        # update the initial state with the data from the previous intermediate state:
-        if previous_phase:
-            setInitialFromFinalValues(previous_phase, cs.contactPhases[0])
-
-        if not self.CentroidalInputs.checkAndFillRequirements(cs, self.cfg, self.fullBody):
-            raise RuntimeError(
-                "The current contact sequence cannot be given as input to the centroidal method selected.")
-        cs_full = self.generate_centroidal(self.cfg, cs, None, self.fullBody)
-        # CentroidalOutputs.assertRequirements(cs_full)
-        if last_iter:
-            return cs_full, None
-        else:
-            cs_cut = ContactSequence(0)
-            for i in range(3):
-                cs_cut.append(cs_full.contactPhases[i])
-            return cs_cut, cs_cut.contactPhases[1]
-
-    def compute_wholebody(self, cs_com, last_q=None, last_iter=False):
-        ### Effector trajectory reference
-        if not self.EffectorInputs.checkAndFillRequirements(cs_com, self.cfg, self.fullBody):
-            raise RuntimeError(
-                "The current contact sequence cannot be given as input to the end effector method selected.")
-        cs_ref_full = self.generate_effector_trajectories(self.cfg, cs_com, self.fullBody)
-        # EffectorOutputs.assertRequirements(cs_ref_full)
-        if last_iter:
-            cs_ref = cs_ref_full
-        else:
-            cs_cut = ContactSequence()
-            for i in range(2):
-                cs_cut.append(cs_ref_full.contactPhases[i])
-            cs_ref = cs_cut
-
-        if last_q is not None:
-            cs_ref.contactPhases[0].q_init = last_q
-
-        ### Wholebody
-        update_root_traj_timings(cs_ref)
-        if not self.WholebodyInputs.checkAndFillRequirements(cs_ref, self.cfg, self.fullBody):
-            raise RuntimeError(
-                "The current contact sequence cannot be given as input to the wholeBody method selected.")
-        cs_wb = self.generate_wholebody(self.cfg, cs_ref, self.fullBody)
-        # WholebodyOutputs.assertRequirements(cs_wb)
-        return cs_wb.concatenateQtrajectories(), cs_wb.contactPhases[-1].q_t(cs_wb.contactPhases[-1].timeFinal)
-
-
-    def loop_centroidal(self, queue_cs, queue_cs_com):
-        last_centroidal_phase = None
-        while True:
-            cs, last_iter = queue_cs.get()
-            print("## Run centroidal")
-            cs_com, last_centroidal_phase = self.compute_centroidal(cs,
-                                                                         last_centroidal_phase, last_iter)
-            queue_cs_com.put([cs_com, last_iter])
-
-
-    def loop_wholebody(self, queue_cs_com, queue_q_t):
-        last_q = None
-        while True:
-            cs_com, last_iter = queue_cs_com.get()
-            print("## Run wholebody")
-            q_t, last_q = self.compute_wholebody(cs_com, last_q, last_iter)
-            queue_q_t.put([q_t, self.last_q])
-
-
-    def loop_viewer(self, queue_q_t, q_t):
-        while True:
-            try:
-                c_id, self.last_displayed_q = queue_q_t.get(False, 0.01)
-                displayWBmotion(self.viewer, q_t.curve_at_index(c_id), self.cfg.DT_DISPLAY)
-            except queue_empty:
-                pass
 
     def start_process(self):
         if self.process_centroidal:
@@ -149,16 +160,25 @@ class LocoPlannerHorizon(LocoPlanner):
         self.queue_cs_com = Queue(10)
         self.queue_q_t = Queue(5)
         self.last_displayed_q = None
-        self.cs_iters = []
-        self.cs_com_iters = []
-        self.q_t = piecewise()
 
-        self.process_centroidal = Process(target=self.loop_centroidal, args=(self.queue_cs, self.queue_cs_com))
+        self.process_centroidal = Process(target=loop_centroidal, args=(self.queue_cs, self.queue_cs_com,
+                                                                             self.generate_centroidal,
+                                                                             self.CentroidalInputs,
+                                                                             self.cfg, self.fullBody
+                                                                             ))
         self.process_centroidal.start()
-        self.process_wholebody = Process(target=self.loop_wholebody, args=(self.queue_cs_com, self.queue_q_t))
+        self.process_wholebody = Process(target=loop_wholebody, args=(self.queue_cs_com, self.queue_q_t,
+                                                                           self.generate_effector_trajectories,
+                                                                           self.EffectorInputs,
+                                                                           self.generate_wholebody,
+                                                                           self.WholebodyInputs,
+                                                                           self.cfg, self.fullBody
+                                                                           ))
         self.process_wholebody.start()
         if not self.process_viewer:
-            self.process_viewer = Process(target=self.loop_viewer, args=(self.queue_q_t,))
+            self.process_viewer = Process(target=loop_viewer, args=(self.queue_q_t,
+                                                                         self.viewer,
+                                                                         self.cfg.DT_DISPLAY))
             self.process_viewer.start()
 
     def solve(self):
@@ -211,9 +231,6 @@ if __name__ == "__main__":
 
     loco_planner = LocoPlannerHorizon(cfg)
     loco_planner.run()
-
-
-
 
 
 
