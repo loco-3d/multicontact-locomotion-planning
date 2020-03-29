@@ -88,7 +88,7 @@ class LocoPlannerHorizon(LocoPlanner):
                 cs_cut.append(cs_ref_full.contactPhases[i])
             cs_ref = cs_cut
 
-        if last_q:
+        if last_q is not None:
             cs_ref.contactPhases[0].q_init = last_q
 
         ### Wholebody
