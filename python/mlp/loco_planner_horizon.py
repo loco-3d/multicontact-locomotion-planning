@@ -1,20 +1,22 @@
 from mlp import LocoPlanner
 from mlp.config import Config
 from mlp.viewer.display_tools import displayWBmotion
-import os, sys, argparse
+import argparse
 import numpy as np
 np.set_printoptions(precision=6)
 import eigenpy
-import time
-import pinocchio
 import curves
-import multicontact_api
-from multicontact_api import ContactSequence, ContactPhase
+from curves import piecewise, SE3Curve
+from multicontact_api import ContactSequence
 from mlp.utils.cs_tools import computePhasesTimings, setInitialFromFinalValues, setAllUninitializedFrictionCoef
 from mlp.utils.cs_tools import computePhasesCOMValues, computeRootTrajFromContacts
+from multiprocessing import Process, SimpleQueue
 
 eigenpy.switchToNumpyArray()
 
+def update_root_traj_timings(cs):
+    for cp in cs.contactPhases:
+        cp.root_t = SE3Curve(cp.root_t(cp.root_t.min()), cp.root_t(cp.root_t.max()), cp.timeInitial, cp.timeFinal)
 
 class LocoPlannerHorizon(LocoPlanner):
 
@@ -87,6 +89,7 @@ class LocoPlannerHorizon(LocoPlanner):
             cs_ref.contactPhases[0].q_init = last_q
 
         ### Wholebody
+        update_root_traj_timings(cs_ref)
         if not self.WholebodyInputs.checkAndFillRequirements(cs_ref, self.cfg, self.fullBody):
             raise RuntimeError(
                 "The current contact sequence cannot be given as input to the wholeBody method selected.")
