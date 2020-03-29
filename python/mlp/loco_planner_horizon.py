@@ -1,7 +1,11 @@
 from mlp import LocoPlanner
 from mlp.config import Config
-from mlp.viewer.display_tools import displayWBmotion
+from mlp.viewer.display_tools import disp_wb_pinocchio, initScenePinocchio
 import argparse
+import atexit
+import subprocess
+import time
+import os
 import numpy as np
 np.set_printoptions(precision=6)
 import eigenpy
@@ -21,14 +25,14 @@ def update_root_traj_timings(cs):
 
 
 def compute_centroidal(generate_centroidal, CentroidalInputs, #CentroidalOutputs,
-                       cfg, fullBody, cs, previous_phase, last_iter = False):    # update the initial state with the data from the previous intermediate state:
+                       cfg, cs, previous_phase, last_iter = False):    # update the initial state with the data from the previous intermediate state:
     if previous_phase:
         setInitialFromFinalValues(previous_phase, cs.contactPhases[0])
 
-    if not CentroidalInputs.checkAndFillRequirements(cs, cfg, fullBody):
+    if not CentroidalInputs.checkAndFillRequirements(cs, cfg, None):
         raise RuntimeError(
             "The current contact sequence cannot be given as input to the centroidal method selected.")
-    cs_full = generate_centroidal(cfg, cs, None, fullBody)
+    cs_full = generate_centroidal(cfg, cs, None, None)
     # CentroidalOutputs.assertRequirements(cs_full)
     if last_iter:
         return cs_full, None
@@ -64,24 +68,25 @@ def compute_wholebody(generate_effector_trajectories, EffectorInputs, #EffectorO
         raise RuntimeError(
             "The current contact sequence cannot be given as input to the wholeBody method selected.")
     cs_wb = generate_wholebody(cfg, cs_ref, fullBody)
+    print("-- compute whole body END")
     # WholebodyOutputs.assertRequirements(cs_wb)
     return cs_wb, cs_wb.contactPhases[-1].q_t(cs_wb.contactPhases[-1].timeFinal)
 
 
 def loop_centroidal(queue_cs, queue_cs_com,
                     generate_centroidal, CentroidalInputs,  # CentroidalOutputs,
-                    cfg, fullBody):
+                    cfg):
     last_centroidal_phase = None
     while True:
         cs, last_iter = queue_cs.get()
         print("## Run centroidal")
         cs_com, last_centroidal_phase = compute_centroidal(generate_centroidal, CentroidalInputs,  # CentroidalOutputs,
-                                                           cfg, fullBody,
-                                                           cs, last_centroidal_phase, last_iter)
+                                                           cfg, cs, last_centroidal_phase, last_iter)
+        print("-- Add a cs_com to the queue")
         queue_cs_com.put([cs_com, last_iter])
 
 
-def loop_wholebody( queue_cs_com, queue_q_t,
+def loop_wholebody( queue_cs_com, queue_cs_wb,
                     generate_effector_trajectories, EffectorInputs, #EffectorOutputs,
                     generate_wholebody, WholebodyInputs, #WholebodyOutputs,
                     cfg, fullBody):
@@ -93,18 +98,21 @@ def loop_wholebody( queue_cs_com, queue_q_t,
                                              generate_wholebody, WholebodyInputs,  # WholebodyOutputs,
                                              cfg, fullBody,
                                             cs_com, last_q, last_iter)
-        queue_q_t.put([cs_wb, last_q])
+        print("-- Add a cs_wb to the queue")
+        queue_cs_wb.put([cs_wb, last_q])
 
 
-def loop_viewer(queue_q_t, viewer, dt_display):
+def loop_viewer(queue_cs_wb, cfg):
+    robot, gui = initScenePinocchio(cfg.Robot.urdfName + cfg.Robot.urdfSuffix , cfg.Robot.packageName, cfg.ENV_NAME)
+    proc_prev = None
     while True:
-        try:
-            cs_wb, last_displayed_q = queue_q_t.get(False, 0.01)
-            q_t = cs_wb.concatenateQtrajectories()
-            displayWBmotion(viewer, q_t, dt_display)
-        except queue_empty:
-            pass
-
+        cs_wb, last_displayed_q = queue_cs_wb.get()
+        q_t = cs_wb.concatenateQtrajectories()
+        proc = Process(target=disp_wb_pinocchio, args=(robot, q_t, cfg.DT_DISPLAY))
+        if proc_prev:
+            proc_prev.join()
+        proc.start()
+        proc_prev = proc
 
 
 class LocoPlannerHorizon(LocoPlanner):
@@ -146,7 +154,7 @@ class LocoPlannerHorizon(LocoPlanner):
         self.process_viewer = None
         self.queue_cs = None
         self.queue_cs_com = None
-        self.queue_q_t = None
+        self.queue_cs_wb = None
 
         self.last_displayed_q = None # last config displayed
 
@@ -158,36 +166,37 @@ class LocoPlannerHorizon(LocoPlanner):
             self.process_wholebody.terminate()
         self.queue_cs = Queue(10)
         self.queue_cs_com = Queue(10)
-        self.queue_q_t = Queue(5)
+        self.queue_cs_wb = Queue(5)
         self.last_displayed_q = None
 
         self.process_centroidal = Process(target=loop_centroidal, args=(self.queue_cs, self.queue_cs_com,
                                                                              self.generate_centroidal,
                                                                              self.CentroidalInputs,
-                                                                             self.cfg, self.fullBody
-                                                                             ))
+                                                                             self.cfg))
         self.process_centroidal.start()
-        self.process_wholebody = Process(target=loop_wholebody, args=(self.queue_cs_com, self.queue_q_t,
+        self.process_wholebody = Process(target=loop_wholebody, args=(self.queue_cs_com, self.queue_cs_wb,
                                                                            self.generate_effector_trajectories,
                                                                            self.EffectorInputs,
                                                                            self.generate_wholebody,
                                                                            self.WholebodyInputs,
-                                                                           self.cfg, self.fullBody
-                                                                           ))
+                                                                           self.cfg,
+                                                                      self.fullBody))
         self.process_wholebody.start()
+
         if not self.process_viewer:
-            self.process_viewer = Process(target=loop_viewer, args=(self.queue_q_t,
-                                                                         self.viewer,
-                                                                         self.cfg.DT_DISPLAY))
+            subprocess.run(["killall", "gepetto-gui"])
+            process_viewer = subprocess.Popen("gepetto-gui",
+                                              stdout=subprocess.PIPE,
+                                              stderr=subprocess.DEVNULL,
+                                              preexec_fn=os.setpgrp)
+            atexit.register(process_viewer.kill)
+            time.sleep(3)
+            self.process_viewer = Process(target=loop_viewer, args=(self.queue_cs_wb,
+                                                                         self.cfg))
             self.process_viewer.start()
 
-    def solve(self):
-        self.run_contact_generation()
-        self.cs = computePhasesTimings(self.cs, self.cfg)
-        self.cs = computePhasesCOMValues(self.cs, self.cfg.Robot.DEFAULT_COM_HEIGHT)
-        computeRootTrajFromContacts(self.fullBody, self.cs)
-        setAllUninitializedFrictionCoef(self.cs, self.cfg.MU)
 
+    def compute_from_cs(self):
         pid_centroidal = 0
         last_iter_centroidal = False
         print("## Cs size = ", self.cs.size())
@@ -213,8 +222,15 @@ class LocoPlannerHorizon(LocoPlanner):
 
 
     def run(self):
+        self.run_contact_generation()
+        self.cs = computePhasesTimings(self.cs, self.cfg)
+        self.cs = computePhasesCOMValues(self.cs, self.cfg.Robot.DEFAULT_COM_HEIGHT)
+        computeRootTrajFromContacts(self.fullBody, self.cs)
+        setAllUninitializedFrictionCoef(self.cs, self.cfg.MU)
+
         self.start_process()
-        self.solve()
+        time.sleep(2)
+        self.compute_from_cs()
 
 
 
@@ -228,6 +244,20 @@ if __name__ == "__main__":
 
     cfg = Config()
     cfg.load_scenario_config(demo_name)
+
+    # kill already existing instance of the server
+    subprocess.run(["killall", "hpp-rbprm-server"])
+    # run the server in background :
+    # stdout and stderr outputs of the child process are redirected to devnull (hidden).
+    # preexec_fn is used to ignore ctrl-c signal send to the main script (otherwise they are forwarded to the child process)
+    process_server = subprocess.Popen("hpp-rbprm-server",
+                                      stdout=subprocess.PIPE,
+                                      stderr=subprocess.DEVNULL,
+                                      preexec_fn=os.setpgrp)
+    # register cleanup methods to kill server when exiting python interpreter
+    atexit.register(process_server.kill)
+    time.sleep(3)
+
 
     loco_planner = LocoPlannerHorizon(cfg)
     loco_planner.run()

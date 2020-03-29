@@ -1,6 +1,8 @@
 import pinocchio as pin
 from pinocchio import SE3, Quaternion
 import time
+from rospkg import RosPack
+import gepetto.corbaserver
 from mlp.utils.util import numpy2DToList, hppConfigFromMatrice, discretizeCurve
 from mlp.utils.requirements import Requirements
 pin.switchToNumpyArray()
@@ -245,3 +247,40 @@ def initScene(Robot, envName="multicontact/ground", genLimbsDB=True):
     v = vf.createViewer(ghost = True, displayCoM=True)
     v(fullBody.getCurrentConfig())
     return fullBody, v
+
+
+def initScenePinocchio(urdf_name, package_name, env_name=None, env_package_name="hpp_environments", scene_name = "world"):
+    rp = RosPack()
+    package_path = rp.get_path(package_name)
+    urdf = package_path + '/urdf/' + urdf_name + '.urdf'
+    robot = pin.RobotWrapper.BuildFromURDF(urdf, package_path, pin.JointModelFreeFlyer(),)
+    robot.initDisplay(loadModel=True)
+    robot.displayCollisions(False)
+    robot.displayVisuals(True)
+    #robot.display(robot.model.neutralConfiguration)
+
+    cl = gepetto.corbaserver.Client()
+    gui = cl.gui
+    if env_name:
+        urdfEnvPath = rp.get_path(env_package_name)
+        urdfEnv = urdfEnvPath + '/urdf/' + env_name + '.urdf'
+        gui.addUrdfObjects(scene_name + "/environments", urdfEnv, True)
+    return robot, gui
+
+
+def disp_wb_pinocchio(robot, q_t, dt_display = 0.04):
+    t = q_t.min()
+    while t <= q_t.max():
+        t_start = time.time()
+        robot.display(q_t(t))
+        t += dt_display
+        elapsed = time.time() - t_start
+        if elapsed > dt_display:
+            print("Warning : display not real time ! choose a greater time step for the display.")
+        else:
+            time.sleep(dt_display - elapsed)
+    # display last config if the total duration is not a multiple of the dt
+    #robot.display(q_t(q_t.max()))
+
+
+
