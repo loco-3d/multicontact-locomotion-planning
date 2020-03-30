@@ -85,10 +85,10 @@ def loop_centroidal(queue_cs, queue_cs_com,
     last_iter = False
     while not last_iter:
         cs, last_iter = queue_cs.get()
-        #print("## Run centroidal")
+        print("## Run centroidal")
         cs_com, last_centroidal_phase = compute_centroidal(generate_centroidal, CentroidalInputs,  # CentroidalOutputs,
                                                            cfg, cs, last_centroidal_phase, last_iter)
-        #print("-- Add a cs_com to the queue")
+        print("-- Add a cs_com to the queue")
         queue_cs_com.put([cs_com, last_iter])
     queue_cs_com.close()
 
@@ -104,12 +104,12 @@ def loop_wholebody( queue_cs_com, queue_q_t,
     last_iter = False
     while not last_iter:
         cs_com, last_iter = queue_cs_com.get()
-        #print("## Run wholebody")
+        print("## Run wholebody")
         cs_wb, last_q, last_v, robot = compute_wholebody(generate_effector_trajectories, EffectorInputs,  # EffectorOutputs,
                                              generate_wholebody, WholebodyInputs,  # WholebodyOutputs,
                                              cfg, fullBody, robot,
                                             cs_com, last_q, last_v, last_iter)
-        #print("-- Add a cs_wb to the queue")
+        print("-- Add a cs_wb to the queue")
         queue_q_t.put([cs_wb.concatenateQtrajectories(), last_q])
     queue_q_t.close()
 
