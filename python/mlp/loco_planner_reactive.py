@@ -171,8 +171,10 @@ class LocoPlannerReactive(LocoPlanner):
     def start_process(self):
         if self.process_centroidal:
             self.process_centroidal.terminate()
+            self.process_centroidal.join()
         if self.process_wholebody:
             self.process_wholebody.terminate()
+            self.process_wholebody.join()
         self.queue_cs = Queue(10)
         self.queue_cs_com = Queue(10)
         self.queue_q_t = Queue(5)
@@ -183,6 +185,7 @@ class LocoPlannerReactive(LocoPlanner):
                                                                              self.CentroidalInputs,
                                                                              self.cfg))
         self.process_centroidal.start()
+        atexit.register(self.process_centroidal.terminate)
         self.process_wholebody = Process(target=loop_wholebody, args=(self.queue_cs_com, self.queue_q_t,
                                                                            self.generate_effector_trajectories,
                                                                            self.EffectorInputs,
@@ -191,6 +194,8 @@ class LocoPlannerReactive(LocoPlanner):
                                                                            self.cfg,
                                                                       self.fullBody))
         self.process_wholebody.start()
+        atexit.register(self.process_wholebody.terminate)
+
 
         if not self.process_viewer:
             subprocess.run(["killall", "gepetto-gui"])
