@@ -343,18 +343,18 @@ def rootOrientationFromFeetPlacement(Robot, phase_prev, phase, phase_next):
     patchL = None
     if phase.isEffectorInContact(Robot.rfoot):
         patchR = phase.contactPatch(Robot.rfoot)
-    elif phase_prev is not None and phase_prev.isEffectorInContact(Robot.rfoot):
+    elif phase_prev and phase_prev.isEffectorInContact(Robot.rfoot):
         patchR = phase_prev.contactPatch(Robot.rfoot)
-    if patchR is not None:
+    if patchR:
         qr = Quaternion(patchR.placement.rotation)
         qr.x = 0
         qr.y = 0
         qr.normalize()
     if phase.isEffectorInContact(Robot.lfoot):
         patchL = phase.contactPatch(Robot.lfoot)
-    elif phase_prev is not None and phase_prev.isEffectorInContact(Robot.lfoot):
+    elif phase_prev and phase_prev.isEffectorInContact(Robot.lfoot):
         patchL = phase_prev.contactPatch(Robot.lfoot)
-    if patchL is not None:
+    if patchL:
         ql = Quaternion(patchL.placement.rotation)
         ql.x = 0
         ql.y = 0

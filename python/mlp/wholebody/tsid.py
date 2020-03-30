@@ -261,7 +261,7 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
             phase.wrench_t.append(wrench, t)
 
     def appendEffectorsTraj(first_iter_for_phase = False):
-        if first_iter_for_phase and phase_prev is not None:
+        if first_iter_for_phase and phase_prev:
             for eeName in phase_prev.effectorsWithTrajectory():
                 if t > phase_prev.effectorTrajectory(eeName).max():
                     placement = getCurrentEffectorPosition(robot, invdyn.data(), eeName)
@@ -277,7 +277,7 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
 
 
     def appendContactForcesTrajs(first_iter_for_phase = False):
-        if first_iter_for_phase and phase_prev is not None:
+        if first_iter_for_phase and phase_prev:
             for eeName in phase_prev.effectorsInContact():
                 if t > phase_prev.contactForce(eeName).max():
                     if phase.isEffectorInContact(eeName):
@@ -534,7 +534,7 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
         # start removing the contact that will be broken in the next phase :
         # (This tell the solver that it should start minimizing the contact force on this contact, and ideally get to 0 at the given time)
         for eeName, contact in dic_contacts.items():
-            if phase_next is not None and phase.isEffectorInContact(eeName) and not phase_next.isEffectorInContact(eeName):
+            if phase_next and phase.isEffectorInContact(eeName) and not phase_next.isEffectorInContact(eeName):
                 transition_time = phase.duration + dt/2.
                 if cfg.WB_VERBOSE:
                     print("\nTime %.3f Start breaking contact %s. transition time : %.3f\n" %
@@ -543,7 +543,7 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
 
         # add newly created contacts :
         for eeName in usedEffectors:
-            if phase_prev is not None and phase_ref.isEffectorInContact(eeName) and not phase_prev.isEffectorInContact(eeName):
+            if phase_prev and phase_ref.isEffectorInContact(eeName) and not phase_prev.isEffectorInContact(eeName):
                 invdyn.removeTask(dic_effectors_tasks[eeName].name, 0.0)  # remove pin task for this contact
                 if cfg.WB_VERBOSE:
                     print("remove se3 effector task : " + dic_effectors_tasks[eeName].name)
@@ -560,7 +560,7 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
         q_begin = q.copy()
         v_begin = v.copy()
         phase.q_init = q_begin
-        if phase_prev is not None:
+        if phase_prev:
             phase_prev.q_final = q_begin
         phaseValid = False
         iter_for_phase = -1
@@ -583,12 +583,12 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
 
                 # set traj reference for current time :
                 # com
-                if comTask is not None:
+                if comTask:
                     sampleCom = curvesToTSID(com_traj,t)
                     comTask.setReference(sampleCom)
 
                 # am
-                if amTask is not None:
+                if amTask:
                     if cfg.IK_trackAM:
                         sampleAM =  curvesToTSID(am_traj,t)
                     else:
@@ -598,11 +598,11 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
 
                 # posture
                 #print "postural task ref : ",samplePosture.pos()
-                if postureTask is not None:
+                if postureTask:
                     postureTask.setReference(samplePosture)
 
                 # root orientation :
-                if orientationRootTask is not None:
+                if orientationRootTask:
                     sampleRoot = curveSE3toTSID(root_traj,t)
                     orientationRootTask.setReference(sampleRoot)
 

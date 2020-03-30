@@ -22,7 +22,7 @@ def displaySphere(viewer, pos, size=0.01, color=[0, 0, 0, 1]):
     rootName = "s"
     # add indices until the name is free
     list = viewer.client.gui.getNodeList()
-    if list is not None:
+    if list:
         i = 0
         name = rootName
         while list.count(name) > 0:
@@ -149,7 +149,7 @@ def displaySE3Traj(traj, gui, sceneName, name, color, time_interval, offset=SE3.
     rootName = name
     # add indices until the name is free
     list = gui.getNodeList()
-    if list is not None:
+    if list:
         i = 0
         while list.count(name) > 0:
             name = rootName + "_" + str(i)

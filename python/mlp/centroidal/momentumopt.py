@@ -316,7 +316,7 @@ def CSfromMomentumopt(planner_setting, cs, init_state, dyn_states, t_init = 0, c
 
 
 def generate_centroidal_momentumopt(cfg, cs, cs_initGuess=None, fullBody=None, viewer=None, first_iter = True):
-    if cs_initGuess is not None and first_iter:
+    if cs_initGuess and first_iter:
         print("WARNING : in current implementation of timeopt.generateCentroidalTrajectory"
               " the initial guess is ignored. (TODO)")
     if not first_iter:
