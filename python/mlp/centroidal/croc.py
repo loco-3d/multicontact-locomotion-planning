@@ -9,7 +9,7 @@ multicontact_api.switchToNumpyArray()
 import logging
 logging.basicConfig(format='[%(name)-12s] %(levelname)-8s: %(message)s')
 logger = logging.getLogger("croc")
-logger.setLevel(logging.DEBUG) #DEBUG, INFO or WARNING
+logger.setLevel(logging.WARNING) #DEBUG, INFO or WARNING
 
 class CentroidalInputsCroc(Requirements):
     timings = True

@@ -24,7 +24,7 @@ from mlp.utils.cs_tools import deleteAllTrajectories, deletePhaseWBtrajectories,
 import logging
 logging.basicConfig(format='[%(name)-12s] %(levelname)-8s: %(message)s')
 logger = logging.getLogger("tsid")
-logger.setLevel(logging.DEBUG) #DEBUG, INFO or WARNING
+logger.setLevel(logging.WARNING) #DEBUG, INFO or WARNING
 
 eigenpy.switchToNumpyArray()
 

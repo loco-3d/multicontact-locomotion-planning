@@ -110,7 +110,6 @@ class Config:
         ##  Settings for whole body :
         self.YAW_ROT_GAIN = 1.  # gain for the orientation task of the root orientation, along the yaw axis (wrt to the other axis of the orientation task)
         self.IK_trackAM = False #If True, the Wb algorithm take the Angular momentum computed by te centroidal block as reference. If False it try to minimize the angular momentum
-        self.WB_VERBOSE = 0  # 0,1 or 2 Verbosity level for the output of the wholebody script
         self.WB_STOP_AT_EACH_PHASE = False  # wait for user input between each phase
         self.IK_dt = 0.01  # controler time step (in second)
         self.IK_PRINT_N = 500  # print state of the problem every IK_PRINT_N time steps (if verbose >= 1)

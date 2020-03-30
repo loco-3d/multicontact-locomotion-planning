@@ -10,7 +10,7 @@ import numpy as np
 import logging
 logging.basicConfig(format='[%(name)-12s] %(levelname)-8s: %(message)s')
 logger = logging.getLogger("limb-rrt-opti")
-logger.setLevel(logging.DEBUG) #DEBUG, INFO or WARNING
+logger.setLevel(logging.WARNING) #DEBUG, INFO or WARNING
 
 # order to try weight values and number of variables :
 weights_vars = [[0.5, bezier_com.ConstraintFlag.ONE_FREE_VAR, 1], [0.75, bezier_com.ConstraintFlag.ONE_FREE_VAR, 1],

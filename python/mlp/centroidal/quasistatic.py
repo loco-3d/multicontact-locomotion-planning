@@ -7,7 +7,7 @@ from mlp.utils.requirements import Requirements
 import logging
 logging.basicConfig(format='[%(name)-12s] %(levelname)-8s: %(message)s')
 logger = logging.getLogger("quasistatic")
-logger.setLevel(logging.DEBUG) #DEBUG, INFO or WARNING
+logger.setLevel(logging.WARNING) #DEBUG, INFO or WARNING
 multicontact_api.switchToNumpyArray()
 
 class CentroidalInputsQuasistatic(Requirements):
