@@ -349,7 +349,7 @@ def generate_centroidal_momentumopt(cfg, cs, cs_initGuess=None, fullBody=None, v
     code = dyn_opt.optimize(ini_state, contact_plan, kin_sequence, not first_iter)
     logger.warning("Momentumopt internal solving time: " + str(dyn_opt.solveTime() / 1000.) + " s")
     if code != ExitCode.Optimal:
-        logger.error("!! momentumopt exit with a non Optimal status: ", code)
+        logger.error("!! momentumopt exit with a non Optimal status: %s", code)
 
     # now build a new multicontact_api contactSequence from the results of momentumopt:
     cs_result = CSfromMomentumopt(planner_setting, cs, ini_state, dyn_opt.dynamicsSequence().dynamics_states,
