@@ -151,6 +151,7 @@ class LocoPlannerReactive(LocoPlanner):
         self.previous_connect_goal = cfg.DURATION_CONNECT_GOAL
         cfg.DURATION_CONNECT_GOAL = 0.
         super().__init__(cfg)
+        self.cfg.TIMEOPT_CONFIG_FILE = "cfg_softConstraints_talos_lowgoal.yaml"
         self.generate_centroidal, self.CentroidalInputs, self.CentroidalOutputs = self.cfg.get_centroidal_method()
         self.generate_effector_trajectories, self.EffectorInputs, self.EffectorOutputs = \
             self.cfg.get_effector_initguess_method()
