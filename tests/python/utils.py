@@ -1,6 +1,6 @@
 from mlp.utils import check_path
 
-def check_motion(testCase, planner, contains_all_data = True):
+def check_motion(testCase, planner, contains_all_data=True):
 
     # check that the size of the sequences are correct:
     testCase.assertTrue(planner.cs.size() > 2)
