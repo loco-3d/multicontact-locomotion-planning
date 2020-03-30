@@ -345,11 +345,11 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None, robot=None)
         if cfg.WB_ABORT_WHEN_INVALID:
             # cut the sequence up to the last phase
             cs.resize(pid)
-            return cs
+            return cs, robot
         elif cfg.WB_RETURN_INVALID:
             # cut the sequence up to the current phase
             cs.resize(pid+1)
-            return cs
+            return cs, robot
 
     ### End of nested functions definitions ###
     if not viewer:
