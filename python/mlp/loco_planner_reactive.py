@@ -162,6 +162,9 @@ class LocoPlannerReactive(LocoPlanner):
         last_iter = False
         while not last_iter:
             cs, last_iter = self.pipe_cs_out.recv()
+            if last_iter:
+                self.cfg.DURATION_CONNECT_GOAL = self.previous_connect_goal
+                self.cfg.TIMEOPT_CONFIG_FILE = "cfg_softConstraints_talos.yaml"
             print("## Run centroidal")
             cs_com, last_centroidal_phase = self.compute_centroidal(cs, last_centroidal_phase, last_iter)
             print("-- Add a cs_com to the queue")
@@ -251,7 +254,6 @@ class LocoPlannerReactive(LocoPlanner):
                 # last iter, take all the remaining phases
                 num_phase = self.cs.size() - pid_centroidal
                 last_iter_centroidal = True
-                cfg.DURATION_CONNECT_GOAL = self.previous_connect_goal
             else:
                 num_phase = 5
             #print("## Num phase = ", num_phase)
