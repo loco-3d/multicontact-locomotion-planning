@@ -14,7 +14,7 @@ from curves import piecewise, SE3Curve, polynomial
 from multicontact_api import ContactSequence
 from mlp.utils.cs_tools import computePhasesTimings, setInitialFromFinalValues, setAllUninitializedFrictionCoef
 from mlp.utils.cs_tools import computePhasesCOMValues, computeRootTrajFromContacts
-from multiprocessing import Process, Queue
+from multiprocessing import Process, Queue, Pipe
 from queue import Empty as queue_empty
 
 eigenpy.switchToNumpyArray()
@@ -64,10 +64,12 @@ class LocoPlannerReactive(LocoPlanner):
         self.process_wholebody = None
         self.process_viewer = None
         self.process_gepetto_gui = None
-        self.queue_cs = None
-        self.queue_cs_com = None
-        self.queue_q_t = None
-
+        self.pipe_cs_in = None
+        self.pipe_cs_out = None
+        self.pipe_cs_com_in = None
+        self.pipe_cs_com_out = None
+        self.pipe_qt_in = None
+        self.pipe_qt_out = None
         self.last_displayed_q = None # last config displayed
 
     def compute_centroidal(self, cs, previous_phase,
@@ -125,12 +127,13 @@ class LocoPlannerReactive(LocoPlanner):
         last_centroidal_phase = None
         last_iter = False
         while not last_iter:
-            cs, last_iter = self.queue_cs.get()
+            cs, last_iter = self.pipe_cs_out.recv()
             print("## Run centroidal")
             cs_com, last_centroidal_phase = self.compute_centroidal(cs, last_centroidal_phase, last_iter)
             print("-- Add a cs_com to the queue")
-            self.queue_cs_com.put([cs_com, last_iter])
-        self.queue_cs_com.close()
+            self.pipe_cs_com_in.send([cs_com, last_iter])
+        print("Centroidal last iter received, close the pipe and terminate process.")
+        self.pipe_cs_com_in.close()
 
     def loop_wholebody(self):
         last_q = None
@@ -138,17 +141,18 @@ class LocoPlannerReactive(LocoPlanner):
         robot = None
         last_iter = False
         while not last_iter:
-            cs_com, last_iter = self.queue_cs_com.get()
+            cs_com, last_iter = self.pipe_cs_com_out.recv()
             print("## Run wholebody")
             cs_wb, last_q, last_v, robot = self.compute_wholebody(robot, cs_com, last_q, last_v, last_iter)
             print("-- Add a cs_wb to the queue")
-            self.queue_q_t.put([cs_wb.concatenateQtrajectories(), last_q])
-        self.queue_q_t.close()
+            self.pipe_qt_in.send([cs_wb.concatenateQtrajectories(), last_q])
+        print("Wholebody last iter received, close the pipe and terminate process.")
+        self.pipe_qt_in.close()
 
     def loop_viewer(self):
         robot, gui = initScenePinocchio(cfg.Robot.urdfName + cfg.Robot.urdfSuffix, cfg.Robot.packageName, cfg.ENV_NAME)
         while True:
-            q_t, last_displayed_q = self.queue_q_t.get()
+            q_t, last_displayed_q = self.pipe_qt_out.recv()
             disp_wb_pinocchio(robot, q_t, cfg.DT_DISPLAY)
 
     def start_process(self):
@@ -158,9 +162,22 @@ class LocoPlannerReactive(LocoPlanner):
         if self.process_wholebody:
             self.process_wholebody.terminate()
             self.process_wholebody.join()
-        self.queue_cs = Queue(10)
-        self.queue_cs_com = Queue(10)
-        self.queue_q_t = Queue(5)
+        if self.pipe_cs_in:
+            self.pipe_cs_in.close()
+        if self.pipe_cs_out:
+            self.pipe_cs_out.close()
+        if self.pipe_cs_com_in:
+            self.pipe_cs_com_in.close()
+        if self.pipe_cs_com_out:
+            self.pipe_cs_com_out.close()
+        if self.pipe_qt_in:
+            self.pipe_qt_in.close()
+        if self.pipe_qt_out:
+            self.pipe_qt_out.close()
+
+        self.pipe_cs_out, self.pipe_cs_in = Pipe(False)
+        self.pipe_cs_com_out, self.pipe_cs_com_in = Pipe(False)
+        self.pipe_qt_out, self.pipe_qt_in = Pipe(False)
         self.last_displayed_q = None
 
         self.process_centroidal = Process(target=self.loop_centroidal)
@@ -204,9 +221,9 @@ class LocoPlannerReactive(LocoPlanner):
             for i in range(pid_centroidal, pid_centroidal + num_phase):
                 #print("-- Add phase : ", i)
                 cs_iter.append(self.cs.contactPhases[i])
-            self.queue_cs.put([cs_iter, last_iter_centroidal])
+            self.pipe_cs_in.send([cs_iter, last_iter_centroidal])
             pid_centroidal += 2
-        self.queue_cs.close()
+        self.pipe_cs_in.close()
 
     def run(self):
         self.run_contact_generation()
