@@ -14,11 +14,13 @@ from curves import piecewise, SE3Curve, polynomial
 from multicontact_api import ContactSequence
 from mlp.utils.cs_tools import computePhasesTimings, setInitialFromFinalValues, setAllUninitializedFrictionCoef
 from mlp.utils.cs_tools import computePhasesCOMValues, computeRootTrajFromContacts
-from multiprocessing import Process, Queue, Pipe, Value
-from ctypes import c_wchar_p
+from multiprocessing import Process, Queue, Pipe, Value, Array
+from ctypes import c_ubyte
 from queue import Empty as queue_empty
 import pickle
 eigenpy.switchToNumpyArray()
+
+MAX_PICKLE_SIZE = 5000
 
 def update_root_traj_timings(cs):
     for cp in cs.contactPhases:
@@ -36,6 +38,21 @@ def clean_phase_trajectories(phase):
     phase.L_t = None
     phase.dL_t = None
     phase.root_t = None
+
+def copy_array(arr1, arr2):
+    """
+    Copy arr1 in arr2 element by elements (DEBUG tests)
+    :param arr1:
+    :param arr2:
+    :return:
+    """
+    for i, el in enumerate(arr1):
+        arr2[i] = el
+
+def load_from_array(arr):
+    pic = bytes(arr)
+    x = pickle.loads(pic)
+    return x
 
 class LocoPlannerReactive(LocoPlanner):
 
@@ -82,7 +99,7 @@ class LocoPlannerReactive(LocoPlanner):
         self.pipe_cs_com_out = None
         self.pipe_cs_wb_in = None
         self.pipe_cs_wb_out = None
-        self.last_phase = Value(c_wchar_p) # will contain the last contact phase send to the viewer
+        self.last_phase = Array(c_ubyte, MAX_PICKLE_SIZE) # will contain the last contact phase send to the viewer
 
     def compute_centroidal(self, cs, previous_phase,
                            last_iter=False):  # update the initial state with the data from the previous intermediate state:
@@ -171,8 +188,10 @@ class LocoPlannerReactive(LocoPlanner):
         while True:
             cs_wb, last_phase = self.pipe_cs_wb_out.recv()
             q_t = cs_wb.concatenateQtrajectories()
-            self.last_phase.value = pickle.dumps(last_phase).hex()
-            print("last phase value : ", self.last_phase.value)
+            copy_array(pickle.dumps(last_phase), self.last_phase)
+            #self.last_phase = pickle.dumps(last_phase)
+            #print("last phase value : ", self.last_phase)
+            #print("pickled size : ", len(pickle.dumps(last_phase)))
             disp_wb_pinocchio(robot, q_t, cfg.DT_DISPLAY)
 
     def start_process(self):
@@ -198,7 +217,7 @@ class LocoPlannerReactive(LocoPlanner):
         self.pipe_cs_out, self.pipe_cs_in = Pipe(False)
         self.pipe_cs_com_out, self.pipe_cs_com_in = Pipe(False)
         self.pipe_cs_wb_out, self.pipe_cs_wb_in = Pipe(False)
-        self.last_phase = Value(c_wchar_p)
+        self.last_phase = Array(c_ubyte, MAX_PICKLE_SIZE) # will contain the last contact phase send to the viewer
 
         self.process_centroidal = Process(target=self.loop_centroidal)
         self.process_centroidal.start()
