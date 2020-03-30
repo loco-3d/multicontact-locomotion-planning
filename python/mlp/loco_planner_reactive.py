@@ -122,7 +122,7 @@ def loop_viewer(queue_q_t, cfg):
 
 
 
-class LocoPlannerHorizon(LocoPlanner):
+class LocoPlannerReactive(LocoPlanner):
 
     def __init__(self, cfg):
         cfg.DISPLAY_CS = False
@@ -267,7 +267,7 @@ if __name__ == "__main__":
     time.sleep(3)
 
 
-    loco_planner = LocoPlannerHorizon(cfg)
+    loco_planner = LocoPlannerReactive(cfg)
     loco_planner.run()
 
 
