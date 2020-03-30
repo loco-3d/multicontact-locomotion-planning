@@ -35,7 +35,3 @@ def check_motion(testCase, planner, contains_all_data = True):
     validator = check_path.PathChecker(planner.fullBody, planner.cfg.CHECK_DT, True)
     motion_valid, _ = validator.check_motion(planner.cs_wb.concatenateQtrajectories())
     testCase.assertTrue(motion_valid)
-
-
-
-
