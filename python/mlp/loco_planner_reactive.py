@@ -20,7 +20,7 @@ from queue import Empty as queue_empty
 import pickle
 eigenpy.switchToNumpyArray()
 
-MAX_PICKLE_SIZE = 5000
+MAX_PICKLE_SIZE = 5000 # maximal size (in byte) of the pickled representation of a contactPhase
 
 def update_root_traj_timings(cs):
     for cp in cs.contactPhases:
@@ -46,6 +46,8 @@ def copy_array(arr1, arr2):
     :param arr2:
     :return:
     """
+    if len(arr1) > MAX_PICKLE_SIZE:
+        raise ValueError("In copy array: given array is too big, size = "+len(arr1))
     for i, el in enumerate(arr1):
         arr2[i] = el
 
@@ -192,9 +194,6 @@ class LocoPlannerReactive(LocoPlanner):
             cs_wb, last_phase = self.pipe_cs_wb_out.recv()
             q_t = cs_wb.concatenateQtrajectories()
             copy_array(pickle.dumps(last_phase), self.last_phase)
-            #self.last_phase = pickle.dumps(last_phase)
-            #print("last phase value : ", self.last_phase)
-            #print("pickled size : ", len(pickle.dumps(last_phase)))
             disp_wb_pinocchio(robot, q_t, cfg.DT_DISPLAY)
 
     def start_process(self):
