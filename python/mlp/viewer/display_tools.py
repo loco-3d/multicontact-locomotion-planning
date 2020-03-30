@@ -21,11 +21,11 @@ TRAJ_GROUP = "com_traj"
 def displaySphere(viewer, pos, size=0.01, color=[0, 0, 0, 1]):
     rootName = "s"
     # add indices until the name is free
-    list = viewer.client.gui.getNodeList()
-    if list:
+    node_list = viewer.client.gui.getNodeList()
+    if node_list:
         i = 0
         name = rootName
-        while list.count(name) > 0:
+        while node_list.count(name) > 0:
             name = rootName + "_" + str(i)
             i += 1
         viewer.client.gui.addSphere(name, size, color)
@@ -148,10 +148,10 @@ def displaySE3Traj(traj, gui, sceneName, name, color, time_interval, offset=SE3.
         name = "SE3_traj"
     rootName = name
     # add indices until the name is free
-    list = gui.getNodeList()
-    if list:
+    node_list = gui.getNodeList()
+    if node_list:
         i = 0
-        while list.count(name) > 0:
+        while node_list.count(name) > 0:
             name = rootName + "_" + str(i)
             i += 1
         path = []
