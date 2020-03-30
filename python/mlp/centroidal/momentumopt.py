@@ -125,8 +125,7 @@ def setFinalCOM(planner_setting, cs):
     :return:
     """
     com_motion = cs.contactPhases[-1].c_final - cs.contactPhases[0].c_init
-    if VERBOSE >= 2:
-        print("Desired com motion : ", com_motion)
+    logger.debug("Desired com motion : %s", com_motion)
     planner_setting.set(mopt.PlannerVectorParam_CenterOfMassMotion,com_motion)
 
 
@@ -176,12 +175,11 @@ def initStateFromPhase(phase, use_shift_com, com_shift_z, dict_ee_to_timeopt, ma
         ini_state.amom = phase.L_init
         ini_state.amomd = phase.dL_init
         #otherwise, set them to 0 (default)
-    if VERBOSE >= 2:
-        print("Initial CoM : ", ini_state.com)
-        print("Initial lmom : ", ini_state.lmom)
-        print("Initial lmomd : ", ini_state.lmomd)
-        print("Initial amom : ", ini_state.amom)
-        print("Initial amomd : ", ini_state.amomd)
+    logger.debug("Initial CoM : %s", ini_state.com)
+    logger.debug("Initial lmom : %s", ini_state.lmom)
+    logger.debug("Initial lmomd : %s", ini_state.lmomd)
+    logger.debug("Initial amom : %s", ini_state.amom)
+    logger.debug("Initial amomd : %s", ini_state.amomd)
 
     force_distribution = 1./phase.numContacts() # assume contact forces are distributed between all contacts
     for eeName, patch in phase.contactPatches().items():
