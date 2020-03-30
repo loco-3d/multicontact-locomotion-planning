@@ -4,6 +4,10 @@ from multicontact_api import ContactPhase, ContactSequence
 from mlp.utils.util import createFullbodyStatesFromCS, perturbateContactNormal
 from mlp.utils.cs_tools import connectPhaseTrajToFinalState, setInitialFromFinalValues, copyPhaseInitToFinal
 from mlp.utils.requirements import Requirements
+import logging
+logging.basicConfig(format='[%(name)-12s] %(levelname)-8s: %(message)s')
+logger = logging.getLogger("quasistatic")
+logger.setLevel(logging.DEBUG) #DEBUG, INFO or WARNING
 multicontact_api.switchToNumpyArray()
 
 class CentroidalInputsQuasistatic(Requirements):
@@ -27,14 +31,14 @@ def getTargetCOMPosition(fullBody, id_state, com_shift_z):
     success = False
     attempts = 10
     while not success and attempts > 0:
-        print("call 2-pac for ids : "+str(s_id_init)+ " ; "+str(s_id_final+1))
+        logger.info("call 2-pac for ids : %d; %d", s_id_init, s_id_final+1)
         tab = fullBody.isReachableFromState(s_id_init, s_id_final, True, False)
-        print("tab results : ",tab)
+        logger.info("tab results : %s", tab)
         success = tab[0]
         attempts -= 1
         if not success:
             # add a small perturbation in the contact normals
-            print("2-pac failed. Add perturbation and retry")
+            logger.info("2-pac failed. Add perturbation and retry")
             s_id_init = perturbateContactNormal(fullBody, id_state)
             assert s_id_init > 0, "Failed to change contact normals."
             s_id_final = perturbateContactNormal(fullBody, id_state+1)
@@ -44,36 +48,36 @@ def getTargetCOMPosition(fullBody, id_state, com_shift_z):
         cBreak = np.array(tab[1:4]).reshape(-1)
         cCreate = np.array(tab[4:7]).reshape(-1)
         c = (cBreak + cCreate) / 2.
-        print("shape c : ",c.shape)
+        logger.debug("shape c : %s", c.shape)
     else:
         c = np.array(tab[1:4]).reshape(-1)
-        print("shape c else : ",c.shape)
+        logger.debug("shape c else : %s", c.shape)
 
-    print("c before shift : ", c)
+    logger.debug("c before shift : %s", c)
     c[2] += com_shift_z
-    print("c after  shift : ", c)
+    logger.info("c : %s", c)
     return c
 
 
 
 def generate_centroidal_quasistatic(cfg, cs, cs_initGuess=None, fullBody=None, viewer=None, first_iter = True):
     if cs_initGuess:
-        print("WARNING : in centroidal.quasiStatic, initial guess is ignored.")
+        logger.warning("Initial guess is ignored.")
     if not fullBody:
         raise ValueError("quasiStatic called without fullBody object.")
     if not first_iter:
-        print("WARNING : in centroidal.quasiStatic, it is useless to iterate several times.")
+        logger.warning("It is useless to iterate several times.")
     beginId, endId = createFullbodyStatesFromCS(cs, fullBody)
-    print("beginid = ", beginId)
-    print("endId   = ", endId)
+    logger.info("beginid = %d", beginId)
+    logger.info("endId   = %d", endId)
     cs_result = ContactSequence(cs)
 
     # for each phase in the cs, create a corresponding FullBody State and call 2-PAC,
     # then fill the cs struct with a quintic spline connecting the two points found
     id_phase = 0
     for id_state in range(beginId, endId + 1):
-        print("id_state = ", str(id_state))
-        print("id_phase = ", str(id_phase))
+        logger.debug("id_state = %d", id_state)
+        logger.debug("id_phase = %d", id_phase)
         phase_fixed = cs_result.contactPhases[id_phase]  # phase where the CoM move and the contacts are fixed
         # set initial state to be the final one of the previous phase :
         if id_phase > 1:

@@ -8,7 +8,10 @@ import math
 from mlp.utils.requirements import Requirements
 from mlp.utils.cs_tools import generate_effector_trajectories_for_sequence
 pinocchio.switchToNumpyArray()
-
+import logging
+logging.basicConfig(format='[%(name)-12s] %(levelname)-8s: %(message)s')
+logger = logging.getLogger("bezier-predef")
+logger.setLevel(logging.DEBUG) #DEBUG, INFO or WARNING
 
 class EffectorInputsBezier(Requirements):
     consistentContacts = True
@@ -54,13 +57,13 @@ def computePredefConstants(cfg, t):
 def buildPredefinedInitTraj(cfg, placement, t_total,t_min,t_max):
     p_off, v_off, a_off = computePredefConstants(cfg, t_total)
     normal = placement.rotation @ np.array([0, 0, 1])
-    #print "normal used for takeoff : ",normal.T
-    #print "offset used : ",p_off
+    logger.debug("normal used for takeoff : %s",normal.T)
+    logger.debug("offset used : %s", p_off)
     c0 = placement.translation.copy()
     c1 = placement.translation.copy()
     c1 += p_off * normal
-    #print "takeoff part, c0 : ",c0.T
-    #print "takeoff part, c1 : ",c1.T
+    logger.debug("takeoff part, c0 : %s",c0.T)
+    logger.debug("takeoff part, c1 : %s",c1.T)
     dc0 = np.zeros(3)
     #dc1 = v_off * normal
     ddc0 = np.zeros(3)
@@ -86,13 +89,13 @@ def buildPredefinedInitTraj(cfg, placement, t_total,t_min,t_max):
 def buildPredefinedFinalTraj(cfg, placement, t_total,t_min,t_max):
     p_off, v_off, a_off = computePredefConstants(cfg, t_total)
     normal = placement.rotation @ np.array([0, 0, 1])
-    #print "normal used for landing : ",normal.T
-    #print "offset used : ",p_off
+    logger.debug("normal used for landing : %s", normal.T)
+    logger.debug("offset used : %s", p_off)
     c0 = placement.translation.copy()
     c1 = placement.translation.copy()
     c0 += p_off * normal
-    #print "landing part, c0 : ",c0.T
-    #print "landing part, c1 : ",c1.T
+    logger.debug("landing part, c0 : %s", c0.T)
+    logger.debug("landing part, c1 : %s", c1.T)
     dc1 = np.zeros(3)
     #dc0 = v_off * normal
     ddc1 = np.zeros(3)
@@ -151,10 +154,10 @@ def generatePredefMiddle(bezier_takeoff, bezier_landing, t_min,t_max):
 
 def generatePredefBeziers(cfg, time_interval, placement_init, placement_end):
     t_total = time_interval[1] - time_interval[0] - 2 * cfg.EFF_T_DELAY
-    #print "Generate Bezier Traj :"
-    #print "placement Init = ",placement_init
-    #print "placement End  = ",placement_end
-    #print "time interval  = ",time_interval
+    logger.info("Generate Bezier Traj :")
+    logger.info("placement Init = %s", placement_init)
+    logger.info("placement End  = %s", placement_end)
+    logger.info("time interval  = %s", time_interval)
     # generate two curves for the takeoff/landing :
     t_takeoff_min = time_interval[0] + cfg.EFF_T_DELAY
     t_takeoff_max = t_takeoff_min + cfg.EFF_T_PREDEF

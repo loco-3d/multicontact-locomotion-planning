@@ -10,9 +10,12 @@ from mlp.utils.requirements import Requirements
 from numpy import array
 import enum
 import importlib
+import logging
+logging.basicConfig(format='[%(name)-12s] %(levelname)-8s: %(message)s')
+logger = logging.getLogger("rbprm")
+logger.setLevel(logging.DEBUG) #DEBUG, INFO or WARNING
 multicontact_api.switchToNumpyArray()
 
-VERBOSE = False
 
 class ContactOutputsRbprm(Requirements):
     consistentContacts = True
@@ -47,13 +50,11 @@ def createPhaseFromRBPRMState(fb, stateId, t_init = -1):
 def getContactVariationBetweenStates(fb, s1, s2):
     # Determine the contact changes which are going to occur :
     variations = fb.getContactsVariations(s1, s2)
-    if VERBOSE:
-        print("Contact variations : ", variations)
+    logger.debug("Contact variations : %s", variations)
     assert len(variations) <= 1, "Several changes of contacts in adjacent states, not implemented yet !"
     variationValue = VariationType.NONE.value
     if len(variations) == 0:
-        if VERBOSE:
-            print("no variations !")
+        logger.debug("no variations !")
         movingLimb = None
     else:
         movingLimb = variations[0]
@@ -63,10 +64,8 @@ def getContactVariationBetweenStates(fb, s1, s2):
             variationValue += VariationType.CREATED.value
         # if both if are true, it's a repositionning (it is defined by the sum of the enum types)
     variationType = VariationType(variationValue)
-    if VERBOSE:
-        print("movingLimb = ", movingLimb)
-        print("variation type :", end ="")
-        print(variationType.name)
+    logger.info("movingLimb = %s", movingLimb)
+    logger.info("variation type : %s", variationType.name)
     return fb.dict_limb_joint[movingLimb],variationType
 
 def setPhaseInitialValues(fb, stateId, phase):
@@ -104,7 +103,7 @@ def runRBPRMScript(cfg):
         scriptName = cfg.SCRIPT_ABSOLUTE_PATH
     else:
         scriptName = cfg.RBPRM_SCRIPT_PATH + "." + cfg.SCRIPT_PATH + '.' + cfg.DEMO_NAME
-    print("Run RBPRM script : ", scriptName)
+    logger.warning("Run RBPRM script : %s", scriptName)
     module = importlib.import_module(scriptName)
     cg = module.ContactGenerator()
     cg.run()
@@ -120,7 +119,7 @@ def runRBPRMScript(cfg):
 
 
 def contactSequenceFromRBPRMConfigs(fb, beginId, endId):
-    print("generate contact sequence from planning : ")
+    logger.warning("generate contact sequence from planning : ")
     n_states = endId - beginId + 1
     # There could be either contact break, creation or repositionning between each adjacent states.
     # But there should be only contacts break or creation between each adjacent contactPhases
@@ -131,8 +130,7 @@ def contactSequenceFromRBPRMConfigs(fb, beginId, endId):
     # create initial ContactPhase
     cs.append(createPhaseFromRBPRMState(fb, beginId))
     for stateId in range(beginId + 1, endId + 1): #from the second state to the last one
-        if VERBOSE:
-            print("current state id = ", stateId)
+        logger.info("current state id = %d", stateId)
         previous_phase = cs.contactPhases[-1]
         eeName, variationType = getContactVariationBetweenStates(fb,stateId-1, stateId)
 

@@ -5,7 +5,10 @@ from mlp.utils.requirements import Requirements
 from mlp.utils.util import genCOMTrajFromPhaseStates, genAMTrajFromPhaseStates
 from mlp.utils.cs_tools import computePhasesCOMValues
 import math
-VERBOSE = False
+import logging
+logging.basicConfig(format='[%(name)-12s] %(levelname)-8s: %(message)s')
+logger = logging.getLogger("geometric")
+logger.setLevel(logging.DEBUG) #DEBUG, INFO or WARNING
 
 multicontact_api.switchToNumpyArray()
 
@@ -31,9 +34,9 @@ def generate_centroidal_geometric(cfg, cs, cs_initGuess=None, fullBody=None, vie
     :return:
     """
     if cs_initGuess:
-        print("WARNING : in centroidal.geometric, initial guess is ignored.")
+        logger.warning("Initial guess is ignored.")
     if not first_iter:
-        print("WARNING : in centroidal.geometric, it is useless to iterate several times.")
+        logger.warning("It is useless to iterate several times.")
 
     if cs.haveCOMvalues():
         # do not overwrite com values in input sequence
