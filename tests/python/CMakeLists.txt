@@ -10,5 +10,7 @@ SET(${PROJECT_NAME}_PYTHON_TESTS
 
 FOREACH(TEST ${${PROJECT_NAME}_PYTHON_TESTS})
   ADD_PYTHON_UNIT_TEST("py-${TEST}" "tests/python/${TEST}.py")
+  # RUN_SERIAL property forbid the tests to be run in parallel
+  # It is required here as each tests start/close a hpp-rbprm-server process in background and it cannot run in parallel
   SET_TESTS_PROPERTIES("py-${TEST}" PROPERTIES RUN_SERIAL "ON" TIMEOUT 600)
 ENDFOREACH(TEST ${${PROJECT_NAME}_PYTHON_TESTS})
