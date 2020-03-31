@@ -11,8 +11,8 @@ import eigenpy
 import curves
 from curves import piecewise, SE3Curve, polynomial
 from multicontact_api import ContactSequence
-from mlp.utils.cs_tools import computePhasesTimings, setInitialFromFinalValues, setAllUninitializedFrictionCoef
-from mlp.utils.cs_tools import computePhasesCOMValues, computeRootTrajFromContacts, deletePhaseTrajectories
+from mlp.utils.cs_tools import computePhasesTimings, setInitialFromFinalValues, setAllUninitializedFrictionCoef, \
+    computePhasesCOMValues, computeRootTrajFromContacts, deletePhaseCentroidalTrajectories, setFinalFromInitialValues
 from multiprocessing import Process, Queue, Pipe, Value, Array, Lock
 from ctypes import c_ubyte, c_bool
 from queue import Empty as queue_empty
@@ -142,8 +142,8 @@ class LocoPlannerReactive(LocoPlanner):
             for i in range(2):
                 cs_cut.append(cs_ref_full.contactPhases[i])
             cs_ref = cs_cut
-            last_phase = cs_com.contactPhases[1]
-
+            last_phase = cs_com.contactPhases[2]
+            setFinalFromInitialValues(last_phase, last_phase)
         if last_q is not None:
             cs_ref.contactPhases[0].q_init = last_q
         if last_v is not None:
@@ -160,8 +160,7 @@ class LocoPlannerReactive(LocoPlanner):
         # WholebodyOutputs.assertRequirements(cs_wb)
         last_q = cs_wb.contactPhases[-1].q_t(cs_wb.contactPhases[-1].timeFinal)
         last_v = cs_wb.contactPhases[-1].dq_t(cs_wb.contactPhases[-1].timeFinal)
-        deletePhaseTrajectories(last_phase)
-        last_phase.root_t = cs_ref.contactPhases[-1].root_t
+        deletePhaseCentroidalTrajectories(last_phase)
         last_phase.q_final = last_q
         last_phase.dq_t = piecewise(polynomial(last_v.reshape(-1, 1), last_phase.timeFinal, last_phase.timeFinal))
         return cs_wb, last_q, last_v, last_phase, robot
@@ -256,6 +255,7 @@ class LocoPlannerReactive(LocoPlanner):
     def stop_motion(self):
         self.stop_process()
         if not self.is_at_stop():
+            print("REQUIRE STOP MOTION: compute 0-step capturability")
             # Try 0 or one step capturability HERE
             pass
 

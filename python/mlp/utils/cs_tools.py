@@ -598,11 +598,11 @@ def deletePhaseCentroidalTrajectories(phase):
     phase.ddc_t = None
     phase.L_t = None
     phase.dL_t = None
-    phase.root_t = None
 
 def deletePhaseTrajectories(phase):
     deletePhaseCentroidalTrajectories(phase)
     deletePhaseWBtrajectories(phase)
+    phase.root_t = None
 
 def deleteAllTrajectories(cs):
     for phase in cs.contactPhases:
