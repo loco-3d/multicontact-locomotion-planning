@@ -598,6 +598,8 @@ def deletePhaseCentroidalTrajectories(phase):
     phase.ddc_t = None
     phase.L_t = None
     phase.dL_t = None
+    phase.zmp_t = None
+    phase.wrench_t = None
 
 def deletePhaseTrajectories(phase):
     deletePhaseCentroidalTrajectories(phase)
@@ -607,6 +609,10 @@ def deletePhaseTrajectories(phase):
 def deleteAllTrajectories(cs):
     for phase in cs.contactPhases:
         deletePhaseTrajectories(phase)
+
+def deleteEffectorsTrajectories(phase):
+    for eeName in phase.effectorsWithTrajectory():
+        phase.addEffectorTrajectory(eeName, None)
 
 
 def updateContactPlacement(cs, pid_begin, eeName, placement, update_rotation):

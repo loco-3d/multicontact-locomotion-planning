@@ -10,16 +10,16 @@ import numpy as np
 import eigenpy
 import curves
 from curves import SE3Curve, polynomial
-from multicontact_api import ContactSequence
-from mlp.utils.cs_tools import computePhasesTimings, setInitialFromFinalValues, setAllUninitializedFrictionCoef, \
-    computePhasesCOMValues, computeRootTrajFromContacts, deletePhaseCentroidalTrajectories, setFinalFromInitialValues
+from multicontact_api import ContactSequence, ContactPhase
+from mlp.utils.cs_tools import computePhasesTimings, computeCenterOfSupportPolygonFromPhase, setAllUninitializedFrictionCoef, connectPhaseTrajToFinalState, \
+    computePhasesCOMValues, computeRootTrajFromContacts, deletePhaseCentroidalTrajectories, setFinalFromInitialValues, setInitialFromFinalValues
 from multiprocessing import Process, Queue, Pipe, Value, Array, Lock
 from ctypes import c_ubyte, c_bool
 from queue import Empty as queue_empty
 import pickle
 eigenpy.switchToNumpyArray()
 
-MAX_PICKLE_SIZE = 5000 # maximal size (in byte) of the pickled representation of a contactPhase
+MAX_PICKLE_SIZE = 10000 # maximal size (in byte) of the pickled representation of a contactPhase
 
 def update_root_traj_timings(cs):
     for cp in cs.contactPhases:
@@ -34,7 +34,7 @@ def copy_array(arr1, arr2):
     :return:
     """
     if len(arr1) > MAX_PICKLE_SIZE:
-        raise ValueError("In copy array: given array is too big, size = "+len(arr1))
+        raise ValueError("In copy array: given array is too big, size = "+str(len(arr1)))
     for i, el in enumerate(arr1):
         arr2[i] = el
 
@@ -252,21 +252,24 @@ class LocoPlannerReactive(LocoPlanner):
             self.process_wholebody.join()
         """
 
-    def stop_motion(self):
-        self.stop_process()
-        if not self.is_at_stop():
-            print("REQUIRE STOP MOTION: compute 0-step capturability")
-            # Try 0 or one step capturability HERE
-            pass
+    def start_viewer_process(self):
+        self.queue_qt = Queue()
+        self.stop_motion_flag = Value(c_bool)
+        self.stop_motion_flag.value = False
+
+        self.process_viewer = Process(target=self.loop_viewer)
+        self.process_viewer.start()
+        atexit.register(self.process_viewer.terminate)
+
+
 
     def start_process(self):
         self.pipe_cs_out, self.pipe_cs_in = Pipe(False)
         self.pipe_cs_com_out, self.pipe_cs_com_in = Pipe(False)
-        self.queue_qt = Queue()
-        self.last_phase_pickled = Array(c_ubyte, MAX_PICKLE_SIZE) # will contain the last contact phase send to the viewer
+        self.last_phase_pickled = Array(c_ubyte, MAX_PICKLE_SIZE)
         self.last_phase = None
-        self.stop_motion_flag = Value(c_bool)
-        self.stop_motion_flag.value = False
+
+        self.start_viewer_process()
 
         if self.process_centroidal:
             self.process_centroidal.terminate()
@@ -279,9 +282,6 @@ class LocoPlannerReactive(LocoPlanner):
         self.process_wholebody.start()
         atexit.register(self.process_wholebody.terminate)
 
-        self.process_viewer = Process(target=self.loop_viewer)
-        self.process_viewer.start()
-        atexit.register(self.process_viewer.terminate)
 
 
     def compute_from_cs(self):
@@ -336,6 +336,38 @@ class LocoPlannerReactive(LocoPlanner):
         time.sleep(0.2)
         self.start_process()
         self.compute_from_cs()
+
+    def compute_zero_step_cs(self):
+        # Compute a Centroidal reference to bring the current phase at a stop with a change of contact:
+        phase_stop = ContactPhase(self.get_last_phase())
+        setInitialFromFinalValues(phase_stop, phase_stop)
+        phase_stop.timeInitial = phase_stop.timeFinal
+        phase_stop.duration = self.previous_connect_goal  # FIXME !!
+        # FIXME: replace the next lines by a real call to a zero-step solver
+        phase_stop.c_final = computeCenterOfSupportPolygonFromPhase(phase_stop, self.fullBody.DEFAULT_COM_HEIGHT)
+        phase_stop.dc_final = np.zeros(3)
+        phase_stop.ddc_final = np.zeros(3)
+        phase_stop.L_final = np.zeros(3)
+        phase_stop.dL_final = np.zeros(3)
+        connectPhaseTrajToFinalState(phase_stop)
+        cs_ref = ContactSequence(0)
+        cs_ref.append(phase_stop)
+        computeRootTrajFromContacts(self.fullBody,cs_ref)
+        return cs_ref
+
+    def run_zero_step_capturability(self):
+        cs_ref = self.compute_zero_step_cs()
+        self.generate_wholebody(self.cfg, cs_ref, self.fullBody, queue_qt=self.queue_qt)
+
+
+
+    def stop_motion(self):
+        self.stop_process()
+        if not self.is_at_stop():
+            print("REQUIRE STOP MOTION: compute 0-step capturability")
+            self.start_viewer_process()
+            # Try 0 or one step capturability HERE
+            self.run_zero_step_capturability()
 
 
 if __name__ == "__main__":

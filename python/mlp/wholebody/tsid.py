@@ -21,7 +21,7 @@ from mlp.utils.util import constantSE3curve, SE3toVec, MotiontoVec
 from mlp.utils.requirements import Requirements
 import eigenpy
 from mlp.utils.cs_tools import deleteAllTrajectories, deletePhaseWBtrajectories, deletePhaseTrajectories,\
-    updateContactPlacement, setPreviousFinalValues
+    updateContactPlacement, setPreviousFinalValues, deleteEffectorsTrajectories
 import logging
 logging.basicConfig(format='[%(name)-12s] %(levelname)-8s: %(message)s')
 logger = logging.getLogger("tsid")
@@ -402,6 +402,7 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None, robot=None,
         v = cs_ref.contactPhases[0].dq_t(t)
     else:
         v = np.zeros(robot.nv)
+    logger.critical("V_init used in tsid : %s", v)
 
     invdyn = tsid.InverseDynamicsFormulationAccForce("tsid", robot, False)
     invdyn.computeProblemData(t, q, v)
@@ -726,6 +727,7 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None, robot=None,
     if queue_qt:
         last_phase = ContactPhase(cs_ref.contactPhases[-1])
         deletePhaseTrajectories(last_phase)
+        deleteEffectorsTrajectories(last_phase)
         last_phase.root_t = cs_ref.contactPhases[-1].root_t
         last_phase.dq_t = polynomial(v.reshape(1,-1), last_phase.timeFinal, last_phase.timeFinal)
         queue_qt.put([phase.q_t.curve_at_index(phase.q_t.num_curves() - 1), last_phase, True])
