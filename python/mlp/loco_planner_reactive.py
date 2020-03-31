@@ -9,7 +9,7 @@ import os, sys, traceback
 import numpy as np
 import eigenpy
 import curves
-from curves import piecewise, SE3Curve, polynomial
+from curves import SE3Curve, polynomial
 from multicontact_api import ContactSequence
 from mlp.utils.cs_tools import computePhasesTimings, setInitialFromFinalValues, setAllUninitializedFrictionCoef, \
     computePhasesCOMValues, computeRootTrajFromContacts, deletePhaseCentroidalTrajectories, setFinalFromInitialValues
@@ -148,7 +148,7 @@ class LocoPlannerReactive(LocoPlanner):
             cs_ref.contactPhases[0].q_init = last_q
         if last_v is not None:
             t_init = cs_ref.contactPhases[0].timeInitial
-            cs_ref.contactPhases[0].dq_t = piecewise(polynomial(last_v.reshape(-1, 1), t_init, t_init))
+            cs_ref.contactPhases[0].dq_t = polynomial(last_v.reshape(-1, 1), t_init, t_init)
 
         ### Wholebody
         update_root_traj_timings(cs_ref)
@@ -162,7 +162,7 @@ class LocoPlannerReactive(LocoPlanner):
         last_v = cs_wb.contactPhases[-1].dq_t(cs_wb.contactPhases[-1].timeFinal)
         deletePhaseCentroidalTrajectories(last_phase)
         last_phase.q_final = last_q
-        last_phase.dq_t = piecewise(polynomial(last_v.reshape(-1, 1), last_phase.timeFinal, last_phase.timeFinal))
+        last_phase.dq_t = polynomial(last_v.reshape(-1, 1), last_phase.timeFinal, last_phase.timeFinal)
         return cs_wb, last_q, last_v, last_phase, robot
 
     def loop_centroidal(self):
