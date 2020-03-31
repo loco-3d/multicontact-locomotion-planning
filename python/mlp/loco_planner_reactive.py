@@ -99,8 +99,8 @@ class LocoPlannerReactive(LocoPlanner):
         self.pipe_cs_out = None
         self.pipe_cs_com_in = None
         self.pipe_cs_com_out = None
-        self.pipe_cs_wb_in = None
-        self.pipe_cs_wb_out = None
+        self.pipe_qt_in = None
+        self.pipe_qt_out = None
         self.last_phase = Array(c_ubyte, MAX_PICKLE_SIZE) # will contain the last contact phase send to the viewer
 
     def compute_centroidal(self, cs, previous_phase,
@@ -184,15 +184,14 @@ class LocoPlannerReactive(LocoPlanner):
             print("## Run wholebody")
             cs_wb, last_q, last_v, last_phase, robot = self.compute_wholebody(robot, cs_com, last_q, last_v, last_iter)
             print("-- Add a cs_wb to the queue")
-            self.pipe_cs_wb_in.send([cs_wb, last_phase])
+            self.pipe_qt_in.send([cs_wb.concatenateQtrajectories(), last_phase])
         print("Wholebody last iter received, close the pipe and terminate process.")
-        self.pipe_cs_wb_in.close()
+        self.pipe_qt_in.close()
 
     def loop_viewer(self):
         robot, gui = initScenePinocchio(cfg.Robot.urdfName + cfg.Robot.urdfSuffix, cfg.Robot.packageName, cfg.ENV_NAME)
         while True:
-            cs_wb, last_phase = self.pipe_cs_wb_out.recv()
-            q_t = cs_wb.concatenateQtrajectories()
+            q_t, last_phase = self.pipe_qt_out.recv()
             copy_array(pickle.dumps(last_phase), self.last_phase)
             disp_wb_pinocchio(robot, q_t, cfg.DT_DISPLAY)
 
@@ -211,14 +210,14 @@ class LocoPlannerReactive(LocoPlanner):
             self.pipe_cs_com_in.close()
         if self.pipe_cs_com_out:
             self.pipe_cs_com_out.close()
-        if self.pipe_cs_wb_in:
-            self.pipe_cs_wb_in.close()
-        if self.pipe_cs_wb_out:
-            self.pipe_cs_wb_out.close()
+        if self.pipe_qt_in:
+            self.pipe_qt_in.close()
+        if self.pipe_qt_out:
+            self.pipe_qt_out.close()
 
         self.pipe_cs_out, self.pipe_cs_in = Pipe(False)
         self.pipe_cs_com_out, self.pipe_cs_com_in = Pipe(False)
-        self.pipe_cs_wb_out, self.pipe_cs_wb_in = Pipe(False)
+        self.pipe_qt_out, self.pipe_qt_in = Pipe(False)
         self.last_phase = Array(c_ubyte, MAX_PICKLE_SIZE) # will contain the last contact phase send to the viewer
 
         self.process_centroidal = Process(target=self.loop_centroidal)
