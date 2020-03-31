@@ -14,8 +14,8 @@ from curves import piecewise, SE3Curve, polynomial
 from multicontact_api import ContactSequence
 from mlp.utils.cs_tools import computePhasesTimings, setInitialFromFinalValues, setAllUninitializedFrictionCoef
 from mlp.utils.cs_tools import computePhasesCOMValues, computeRootTrajFromContacts
-from multiprocessing import Process, Queue, Pipe, Value, Array
-from ctypes import c_ubyte
+from multiprocessing import Process, Queue, Pipe, Value, Array, Lock
+from ctypes import c_ubyte, c_bool
 from queue import Empty as queue_empty
 import pickle
 eigenpy.switchToNumpyArray()
@@ -99,9 +99,11 @@ class LocoPlannerReactive(LocoPlanner):
         self.pipe_cs_out = None
         self.pipe_cs_com_in = None
         self.pipe_cs_com_out = None
-        self.pipe_qt_in = None
-        self.pipe_qt_out = None
+        self.queue_qt = None
+        self.qt_lock = Lock()
+        self.qt_lock_in = Lock()
         self.last_phase = Array(c_ubyte, MAX_PICKLE_SIZE) # will contain the last contact phase send to the viewer
+        self.stop_motion_flag = Value(c_bool)
 
     def compute_centroidal(self, cs, previous_phase,
                            last_iter=False):  # update the initial state with the data from the previous intermediate state:
@@ -170,6 +172,9 @@ class LocoPlannerReactive(LocoPlanner):
                     self.cfg.TIMEOPT_CONFIG_FILE = "cfg_softConstraints_talos.yaml"
                 print("## Run centroidal")
                 cs_com, last_centroidal_phase = self.compute_centroidal(cs, last_centroidal_phase, last_iter)
+                if self.stop_motion_flag.value:
+                    print("STOP MOTION in centroidal")
+                    return
                 print("-- Add a cs_com to the queue")
                 self.pipe_cs_com_in.send([cs_com, last_iter])
             print("Centroidal last iter received, close the pipe and terminate process.")
@@ -189,35 +194,55 @@ class LocoPlannerReactive(LocoPlanner):
                 cs_com, last_iter = self.pipe_cs_com_out.recv()
                 print("## Run wholebody")
                 cs_wb, last_q, last_v, last_phase, robot = self.compute_wholebody(robot, cs_com, last_q, last_v, last_iter)
+                if self.stop_motion_flag.value:
+                    print("STOP MOTION in wholebody")
+                    return
                 print("-- Add a cs_wb to the queue")
-                self.pipe_qt_in.send([cs_wb.concatenateQtrajectories(), last_phase])
+                self.qt_lock_in.acquire()
+                self.queue_qt.put([cs_wb.concatenateQtrajectories(), last_phase])
+                self.qt_lock_in.release()
             print("Wholebody last iter received, close the pipe and terminate process.")
         except:
             print("FATAL ERROR in loop wholebody: ")
             traceback.print_exc()
             sys.exit(0)
-        self.pipe_qt_in.close()
 
     def loop_viewer(self):
         try:
             robot, gui = initScenePinocchio(cfg.Robot.urdfName + cfg.Robot.urdfSuffix, cfg.Robot.packageName, cfg.ENV_NAME)
             while True:
-
-                    q_t, last_phase = self.pipe_qt_out.recv()
+                    self.qt_lock.acquire()
+                    q_t, last_phase = self.queue_qt.get()
                     copy_array(pickle.dumps(last_phase), self.last_phase)
+                    self.qt_lock.release()
                     disp_wb_pinocchio(robot, q_t, cfg.DT_DISPLAY)
         except:
             print("FATAL ERROR in loop viewer: ")
             traceback.print_exc()
             sys.exit(0)
 
-    def start_process(self):
+    def clear_viewer_queue(self):
+        self.qt_lock_in.acquire()
+        time.sleep(1e-3)
+        if not self.queue_qt.empty():
+            self.qt_lock.acquire()
+            try:
+                while True:
+                    self.queue_qt.get_nowait()
+            except queue_empty:
+                pass
+            self.qt_lock.release()
+        self.qt_lock_in.release()
+
+    def stop_process(self):
+        """
         if self.process_centroidal:
             self.process_centroidal.terminate()
-            self.process_centroidal.join()
         if self.process_wholebody:
             self.process_wholebody.terminate()
-            self.process_wholebody.join()
+        """
+        self.stop_motion_flag.value = True
+        print("STOP MOTION flag sent")
         if self.pipe_cs_in:
             self.pipe_cs_in.close()
         if self.pipe_cs_out:
@@ -226,15 +251,24 @@ class LocoPlannerReactive(LocoPlanner):
             self.pipe_cs_com_in.close()
         if self.pipe_cs_com_out:
             self.pipe_cs_com_out.close()
-        if self.pipe_qt_in:
-            self.pipe_qt_in.close()
-        if self.pipe_qt_out:
-            self.pipe_qt_out.close()
+        """
+        if self.process_centroidal:
+            self.process_centroidal.join()
+        if self.process_wholebody:
+            self.process_wholebody.join()
+        """
 
+    def stop_motion(self):
+        self.stop_process()
+        self.clear_viewer_queue()
+        return load_from_array(self.last_phase)
+
+    def start_process(self):
         self.pipe_cs_out, self.pipe_cs_in = Pipe(False)
         self.pipe_cs_com_out, self.pipe_cs_com_in = Pipe(False)
-        self.pipe_qt_out, self.pipe_qt_in = Pipe(False)
+        self.queue_qt = Queue()
         self.last_phase = Array(c_ubyte, MAX_PICKLE_SIZE) # will contain the last contact phase send to the viewer
+        self.stop_motion_flag.value = False
 
         self.process_centroidal = Process(target=self.loop_centroidal)
         self.process_centroidal.start()
