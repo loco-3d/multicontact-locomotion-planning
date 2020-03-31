@@ -7,7 +7,6 @@ import subprocess
 import time
 import os, sys, traceback
 import numpy as np
-np.set_printoptions(precision=6)
 import eigenpy
 import curves
 from curves import piecewise, SE3Curve, polynomial
@@ -51,10 +50,6 @@ def copy_array(arr1, arr2):
     for i, el in enumerate(arr1):
         arr2[i] = el
 
-def load_from_array(arr):
-    pic = bytes(arr)
-    x = pickle.loads(pic)
-    return x
 
 class LocoPlannerReactive(LocoPlanner):
 
@@ -102,8 +97,29 @@ class LocoPlannerReactive(LocoPlanner):
         self.viewer_lock = Lock()
         self.robot = None
         self.gui = None
-        self.last_phase = Array(c_ubyte, MAX_PICKLE_SIZE) # will contain the last contact phase send to the viewer
+        self.last_phase_pickled = Array(c_ubyte, MAX_PICKLE_SIZE) # will contain the last contact phase send to the viewer
+        self.last_phase = None
         self.stop_motion_flag = Value(c_bool)
+
+    def get_last_phase(self):
+        if self.last_phase is None:
+            pic = bytes(self.last_phase_pickled)
+            self.last_phase = pickle.loads(pic)
+        return self.last_phase
+
+    def is_at_stop(self):
+        """
+        Return True if the last phase have a null CoM and joint velocities
+        :return:
+        """
+        p = self.get_last_phase()
+        if p.dc_final.any():
+            return False
+        dq = p.dq_t(p.timeFinal)
+        if np.isclose(np.zeros(dq.shape), dq).any():
+            return False
+        return True
+
 
     def compute_centroidal(self, cs, previous_phase,
                            last_iter=False):  # update the initial state with the data from the previous intermediate state:
@@ -159,6 +175,7 @@ class LocoPlannerReactive(LocoPlanner):
         clean_phase_trajectories(last_phase)
         last_phase.root_t = cs_ref.contactPhases[-1].root_t
         last_phase.q_final = last_q
+        last_phase.dq_t = piecewise(polynomial(last_v.reshape(-1, 1), last_phase.timeFinal, last_phase.timeFinal))
         return cs_wb, last_q, last_v, last_phase, robot
 
     def loop_centroidal(self):
@@ -213,7 +230,7 @@ class LocoPlannerReactive(LocoPlanner):
         try:
             while not last_iter:
                     q_t, last_phase, last_iter = self.queue_qt.get()
-                    copy_array(pickle.dumps(last_phase), self.last_phase)
+                    copy_array(pickle.dumps(last_phase), self.last_phase_pickled)
                     disp_wb_pinocchio(self.robot, q_t, cfg.DT_DISPLAY)
                     if self.stop_motion_flag.value:
                         print("STOP MOTION in viewer")
@@ -249,14 +266,16 @@ class LocoPlannerReactive(LocoPlanner):
 
     def stop_motion(self):
         self.stop_process()
-        #self.clear_viewer_queue()
-        return load_from_array(self.last_phase)
+        if not self.is_at_stop():
+            # Try 0 or one step capturability HERE
+            pass
 
     def start_process(self):
         self.pipe_cs_out, self.pipe_cs_in = Pipe(False)
         self.pipe_cs_com_out, self.pipe_cs_com_in = Pipe(False)
         self.queue_qt = Queue()
-        self.last_phase = Array(c_ubyte, MAX_PICKLE_SIZE) # will contain the last contact phase send to the viewer
+        self.last_phase_pickled = Array(c_ubyte, MAX_PICKLE_SIZE) # will contain the last contact phase send to the viewer
+        self.last_phase = None
         self.stop_motion_flag = Value(c_bool)
         self.stop_motion_flag.value = False
 
@@ -324,13 +343,14 @@ class LocoPlannerReactive(LocoPlanner):
 
     ## debug helper
     def stop_and_retry(self):
-        self.stop_motion()
+        self.stop_process()
         time.sleep(0.2)
         self.start_process()
         self.compute_from_cs()
 
 
 if __name__ == "__main__":
+    np.set_printoptions(precision=6)
     parser = argparse.ArgumentParser(description="Run a multicontact-locomotion-planning scenario")
     parser.add_argument('demo_name', type=str, help="The name of the demo configuration file to load. "
                                                     "Must be a valid python file, either inside the PYTHONPATH"
