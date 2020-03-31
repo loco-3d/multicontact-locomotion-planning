@@ -5,7 +5,7 @@ import argparse
 import atexit
 import subprocess
 import time
-import os
+import os, sys, traceback
 import numpy as np
 np.set_printoptions(precision=6)
 import eigenpy
@@ -162,16 +162,21 @@ class LocoPlannerReactive(LocoPlanner):
     def loop_centroidal(self):
         last_centroidal_phase = None
         last_iter = False
-        while not last_iter:
-            cs, last_iter = self.pipe_cs_out.recv()
-            if last_iter:
-                self.cfg.DURATION_CONNECT_GOAL = self.previous_connect_goal
-                self.cfg.TIMEOPT_CONFIG_FILE = "cfg_softConstraints_talos.yaml"
-            print("## Run centroidal")
-            cs_com, last_centroidal_phase = self.compute_centroidal(cs, last_centroidal_phase, last_iter)
-            print("-- Add a cs_com to the queue")
-            self.pipe_cs_com_in.send([cs_com, last_iter])
-        print("Centroidal last iter received, close the pipe and terminate process.")
+        try:
+            while not last_iter:
+                cs, last_iter = self.pipe_cs_out.recv()
+                if last_iter:
+                    self.cfg.DURATION_CONNECT_GOAL = self.previous_connect_goal
+                    self.cfg.TIMEOPT_CONFIG_FILE = "cfg_softConstraints_talos.yaml"
+                print("## Run centroidal")
+                cs_com, last_centroidal_phase = self.compute_centroidal(cs, last_centroidal_phase, last_iter)
+                print("-- Add a cs_com to the queue")
+                self.pipe_cs_com_in.send([cs_com, last_iter])
+            print("Centroidal last iter received, close the pipe and terminate process.")
+        except:
+            print("FATAL ERROR in loop centroidal: ")
+            traceback.print_exc()
+            sys.exit(0)
         self.pipe_cs_com_in.close()
 
     def loop_wholebody(self):
@@ -179,21 +184,32 @@ class LocoPlannerReactive(LocoPlanner):
         last_v = None
         robot = None
         last_iter = False
-        while not last_iter:
-            cs_com, last_iter = self.pipe_cs_com_out.recv()
-            print("## Run wholebody")
-            cs_wb, last_q, last_v, last_phase, robot = self.compute_wholebody(robot, cs_com, last_q, last_v, last_iter)
-            print("-- Add a cs_wb to the queue")
-            self.pipe_qt_in.send([cs_wb.concatenateQtrajectories(), last_phase])
-        print("Wholebody last iter received, close the pipe and terminate process.")
+        try:
+            while not last_iter:
+                cs_com, last_iter = self.pipe_cs_com_out.recv()
+                print("## Run wholebody")
+                cs_wb, last_q, last_v, last_phase, robot = self.compute_wholebody(robot, cs_com, last_q, last_v, last_iter)
+                print("-- Add a cs_wb to the queue")
+                self.pipe_qt_in.send([cs_wb.concatenateQtrajectories(), last_phase])
+            print("Wholebody last iter received, close the pipe and terminate process.")
+        except:
+            print("FATAL ERROR in loop wholebody: ")
+            traceback.print_exc()
+            sys.exit(0)
         self.pipe_qt_in.close()
 
     def loop_viewer(self):
-        robot, gui = initScenePinocchio(cfg.Robot.urdfName + cfg.Robot.urdfSuffix, cfg.Robot.packageName, cfg.ENV_NAME)
-        while True:
-            q_t, last_phase = self.pipe_qt_out.recv()
-            copy_array(pickle.dumps(last_phase), self.last_phase)
-            disp_wb_pinocchio(robot, q_t, cfg.DT_DISPLAY)
+        try:
+            robot, gui = initScenePinocchio(cfg.Robot.urdfName + cfg.Robot.urdfSuffix, cfg.Robot.packageName, cfg.ENV_NAME)
+            while True:
+
+                    q_t, last_phase = self.pipe_qt_out.recv()
+                    copy_array(pickle.dumps(last_phase), self.last_phase)
+                    disp_wb_pinocchio(robot, q_t, cfg.DT_DISPLAY)
+        except:
+            print("FATAL ERROR in loop viewer: ")
+            traceback.print_exc()
+            sys.exit(0)
 
     def start_process(self):
         if self.process_centroidal:
