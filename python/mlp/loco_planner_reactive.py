@@ -90,7 +90,6 @@ class LocoPlannerReactive(LocoPlanner):
         self.generate_effector_trajectories, self.EffectorInputs, self.EffectorOutputs = \
             self.cfg.get_effector_initguess_method()
         self.generate_wholebody, self.WholebodyInputs, self.WholebodyOutputs = self.cfg.get_wholebody_method()
-
         self.process_centroidal = None
         self.process_wholebody = None
         self.process_viewer = None
@@ -100,8 +99,9 @@ class LocoPlannerReactive(LocoPlanner):
         self.pipe_cs_com_in = None
         self.pipe_cs_com_out = None
         self.queue_qt = None
-        self.qt_lock = Lock()
-        self.qt_lock_in = Lock()
+        self.viewer_lock = Lock()
+        self.robot = None
+        self.gui = None
         self.last_phase = Array(c_ubyte, MAX_PICKLE_SIZE) # will contain the last contact phase send to the viewer
         self.stop_motion_flag = Value(c_bool)
 
@@ -174,6 +174,7 @@ class LocoPlannerReactive(LocoPlanner):
                 cs_com, last_centroidal_phase = self.compute_centroidal(cs, last_centroidal_phase, last_iter)
                 if self.stop_motion_flag.value:
                     print("STOP MOTION in centroidal")
+                    self.pipe_cs_com_in.close()
                     return
                 print("-- Add a cs_com to the queue")
                 self.pipe_cs_com_in.send([cs_com, last_iter])
@@ -196,11 +197,10 @@ class LocoPlannerReactive(LocoPlanner):
                 cs_wb, last_q, last_v, last_phase, robot = self.compute_wholebody(robot, cs_com, last_q, last_v, last_iter)
                 if self.stop_motion_flag.value:
                     print("STOP MOTION in wholebody")
+                    self.queue_qt.close()
                     return
                 print("-- Add a cs_wb to the queue")
-                self.qt_lock_in.acquire()
-                self.queue_qt.put([cs_wb.concatenateQtrajectories(), last_phase])
-                self.qt_lock_in.release()
+                self.queue_qt.put([cs_wb.concatenateQtrajectories(), last_phase, last_iter])
             print("Wholebody last iter received, close the pipe and terminate process.")
         except:
             print("FATAL ERROR in loop wholebody: ")
@@ -208,39 +208,26 @@ class LocoPlannerReactive(LocoPlanner):
             sys.exit(0)
 
     def loop_viewer(self):
+        self.viewer_lock.acquire()
+        last_iter = False
         try:
-            robot, gui = initScenePinocchio(cfg.Robot.urdfName + cfg.Robot.urdfSuffix, cfg.Robot.packageName, cfg.ENV_NAME)
-            while True:
-                    self.qt_lock.acquire()
-                    q_t, last_phase = self.queue_qt.get()
+            while not last_iter:
+                    q_t, last_phase, last_iter = self.queue_qt.get()
                     copy_array(pickle.dumps(last_phase), self.last_phase)
-                    self.qt_lock.release()
-                    disp_wb_pinocchio(robot, q_t, cfg.DT_DISPLAY)
+                    disp_wb_pinocchio(self.robot, q_t, cfg.DT_DISPLAY)
+                    if self.stop_motion_flag.value:
+                        print("STOP MOTION in viewer")
+                        self.viewer_lock.release()
+                        return
         except:
             print("FATAL ERROR in loop viewer: ")
             traceback.print_exc()
             sys.exit(0)
+        self.viewer_lock.release()
 
-    def clear_viewer_queue(self):
-        self.qt_lock_in.acquire()
-        time.sleep(1e-3)
-        if not self.queue_qt.empty():
-            self.qt_lock.acquire()
-            try:
-                while True:
-                    self.queue_qt.get_nowait()
-            except queue_empty:
-                pass
-            self.qt_lock.release()
-        self.qt_lock_in.release()
+
 
     def stop_process(self):
-        """
-        if self.process_centroidal:
-            self.process_centroidal.terminate()
-        if self.process_wholebody:
-            self.process_wholebody.terminate()
-        """
         self.stop_motion_flag.value = True
         print("STOP MOTION flag sent")
         if self.pipe_cs_in:
@@ -251,6 +238,8 @@ class LocoPlannerReactive(LocoPlanner):
             self.pipe_cs_com_in.close()
         if self.pipe_cs_com_out:
             self.pipe_cs_com_out.close()
+        if self.queue_qt:
+            self.queue_qt.close()
         """
         if self.process_centroidal:
             self.process_centroidal.join()
@@ -260,7 +249,7 @@ class LocoPlannerReactive(LocoPlanner):
 
     def stop_motion(self):
         self.stop_process()
-        self.clear_viewer_queue()
+        #self.clear_viewer_queue()
         return load_from_array(self.last_phase)
 
     def start_process(self):
@@ -268,6 +257,7 @@ class LocoPlannerReactive(LocoPlanner):
         self.pipe_cs_com_out, self.pipe_cs_com_in = Pipe(False)
         self.queue_qt = Queue()
         self.last_phase = Array(c_ubyte, MAX_PICKLE_SIZE) # will contain the last contact phase send to the viewer
+        self.stop_motion_flag = Value(c_bool)
         self.stop_motion_flag.value = False
 
         self.process_centroidal = Process(target=self.loop_centroidal)
@@ -277,18 +267,9 @@ class LocoPlannerReactive(LocoPlanner):
         self.process_wholebody.start()
         atexit.register(self.process_wholebody.terminate)
 
-
-        if not self.process_viewer:
-            subprocess.run(["killall", "gepetto-gui"])
-            self.process_gepetto_gui = subprocess.Popen("gepetto-gui",
-                                              stdout=subprocess.PIPE,
-                                              stderr=subprocess.DEVNULL,
-                                              preexec_fn=os.setpgrp)
-            atexit.register(self.process_gepetto_gui.kill)
-            time.sleep(3)
-            self.process_viewer = Process(target=self.loop_viewer)
-            self.process_viewer.start()
-            atexit.register(self.process_viewer.terminate)
+        self.process_viewer = Process(target=self.loop_viewer)
+        self.process_viewer.start()
+        atexit.register(self.process_viewer.terminate)
 
 
     def compute_from_cs(self):
@@ -314,8 +295,20 @@ class LocoPlannerReactive(LocoPlanner):
             pid_centroidal += 2
         self.pipe_cs_in.close()
 
+    def init_viewer(self):
+        subprocess.run(["killall", "gepetto-gui"])
+        self.process_gepetto_gui = subprocess.Popen("gepetto-gui",
+                                                    stdout=subprocess.PIPE,
+                                                    stderr=subprocess.DEVNULL,
+                                                    preexec_fn=os.setpgrp)
+        atexit.register(self.process_gepetto_gui.kill)
+        time.sleep(3)
+        self.robot, self.gui = initScenePinocchio(cfg.Robot.urdfName + cfg.Robot.urdfSuffix,
+                                                  cfg.Robot.packageName, cfg.ENV_NAME)
+
     def run(self):
         self.run_contact_generation()
+        self.init_viewer()
         self.cs = computePhasesTimings(self.cs, self.cfg)
         self.cs = computePhasesCOMValues(self.cs, self.cfg.Robot.DEFAULT_COM_HEIGHT)
         computeRootTrajFromContacts(self.fullBody, self.cs)
@@ -325,6 +318,12 @@ class LocoPlannerReactive(LocoPlanner):
         time.sleep(2)
         self.compute_from_cs()
 
+    ## debug helper
+    def stop_and_retry(self):
+        self.stop_motion()
+        time.sleep(0.2)
+        self.start_process()
+        self.compute_from_cs()
 
 
 if __name__ == "__main__":
