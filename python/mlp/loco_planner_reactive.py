@@ -12,7 +12,7 @@ import curves
 from curves import piecewise, SE3Curve, polynomial
 from multicontact_api import ContactSequence
 from mlp.utils.cs_tools import computePhasesTimings, setInitialFromFinalValues, setAllUninitializedFrictionCoef
-from mlp.utils.cs_tools import computePhasesCOMValues, computeRootTrajFromContacts
+from mlp.utils.cs_tools import computePhasesCOMValues, computeRootTrajFromContacts, deletePhaseTrajectories
 from multiprocessing import Process, Queue, Pipe, Value, Array, Lock
 from ctypes import c_ubyte, c_bool
 from queue import Empty as queue_empty
@@ -25,18 +25,6 @@ def update_root_traj_timings(cs):
     for cp in cs.contactPhases:
         cp.root_t = SE3Curve(cp.root_t(cp.root_t.min()), cp.root_t(cp.root_t.max()), cp.timeInitial, cp.timeFinal)
 
-def clean_phase_trajectories(phase):
-    """
-    Delete all the centroidal trajectories of the given phase
-    :param phase:
-    :return:
-    """
-    phase.c_t = None
-    phase.dc_t = None
-    phase.ddc_t = None
-    phase.L_t = None
-    phase.dL_t = None
-    phase.root_t = None
 
 def copy_array(arr1, arr2):
     """
@@ -172,7 +160,7 @@ class LocoPlannerReactive(LocoPlanner):
         # WholebodyOutputs.assertRequirements(cs_wb)
         last_q = cs_wb.contactPhases[-1].q_t(cs_wb.contactPhases[-1].timeFinal)
         last_v = cs_wb.contactPhases[-1].dq_t(cs_wb.contactPhases[-1].timeFinal)
-        clean_phase_trajectories(last_phase)
+        deletePhaseTrajectories(last_phase)
         last_phase.root_t = cs_ref.contactPhases[-1].root_t
         last_phase.q_final = last_q
         last_phase.dq_t = piecewise(polynomial(last_v.reshape(-1, 1), last_phase.timeFinal, last_phase.timeFinal))
@@ -230,7 +218,8 @@ class LocoPlannerReactive(LocoPlanner):
         try:
             while not last_iter:
                     q_t, last_phase, last_iter = self.queue_qt.get()
-                    copy_array(pickle.dumps(last_phase), self.last_phase_pickled)
+                    if last_phase:
+                        copy_array(pickle.dumps(last_phase), self.last_phase_pickled)
                     disp_wb_pinocchio(self.robot, q_t, cfg.DT_DISPLAY)
                     if self.stop_motion_flag.value:
                         print("STOP MOTION in viewer")

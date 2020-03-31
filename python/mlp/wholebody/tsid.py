@@ -20,7 +20,8 @@ import math
 from mlp.utils.util import constantSE3curve, SE3toVec, MotiontoVec
 from mlp.utils.requirements import Requirements
 import eigenpy
-from mlp.utils.cs_tools import deleteAllTrajectories, deletePhaseWBtrajectories, updateContactPlacement, setPreviousFinalValues
+from mlp.utils.cs_tools import deleteAllTrajectories, deletePhaseWBtrajectories, deletePhaseTrajectories,\
+    updateContactPlacement, setPreviousFinalValues
 import logging
 logging.basicConfig(format='[%(name)-12s] %(levelname)-8s: %(message)s')
 logger = logging.getLogger("tsid")
@@ -186,16 +187,18 @@ def adjustEndEffectorTrajectoryIfNeeded(cfg, phase, robot, data, eeName, effecto
         phase.addEffectorTrajectory(eeName, ref_traj)
 
 
-def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None, robot=None):
+def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None, robot=None, queue_qt = None):
     """
     Generate the whole body motion corresponding to the given contactSequence
     :param cs: Contact sequence containing the references,
      it will only be modified if the end effector trajectories are not valid.
      New references will be generated and added to the cs
-    :param fullBody:
-    :param viewer:
+    :param fullBody: Required to compute collision free end effector trajectories
+    :param viewer: If provided, and the settings are enabled, display the end effector trajectories and the last step computed
+    :param robot: a tsid.RobotWrapper instance. If None, a new one is created from the urdf files defined in cfg
+    :param queue_qt: If not None, the joint trajectories are send to this multiprocessing.Queue during computation
     :return: a new ContactSequence object, containing the wholebody trajectories,
-    and the other trajectories computed from the wholebody motion request with cfg.IK_STORE_*
+    and the other trajectories computed from the wholebody motion request with cfg.IK_STORE_* and a robotWrapper instance
     """
 
     ### define nested functions used in control loop ###
@@ -207,6 +210,8 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None, robot=None)
         else:
             phase.q_t.append(q, t)
             #phase.root_t.append(SE3FromConfig(q), t)
+        if queue_qt:
+            queue_qt.put([phase.q_t.curve_at_index(phase.q_t.num_curves()-1), None, False])
 
     def appendJointsDerivatives(first_iter_for_phase=False):
         if first_iter_for_phase:
@@ -718,4 +723,10 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None, robot=None)
     logger.warning("Whole body motion generated in : %f s.", time_end)
     logger.info("\nFinal COM Position  %s", robot.com(invdyn.data()))
     logger.info("Desired COM Position %s", cs.contactPhases[-1].c_final)
+    if queue_qt:
+        last_phase = ContactPhase(cs_ref.contactPhases[-1])
+        deletePhaseTrajectories(last_phase)
+        last_phase.root_t = cs_ref.contactPhases[-1].root_t
+        last_phase.dq_t = polynomial(v.reshape(1,-1), last_phase.timeFinal, last_phase.timeFinal)
+        queue_qt.put([phase.q_t.curve_at_index(phase.q_t.num_curves() - 1), last_phase, True])
     return cs, robot

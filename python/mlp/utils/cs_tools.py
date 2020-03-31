@@ -579,21 +579,35 @@ def resetCOMtrajectories(cs):
         phase.dc_t = None
         phase.ddc_t = None
 
-def deleteAllTrajectories(cs):
-    for phase in cs.contactPhases:
-        deletePhaseWBtrajectories(phase)
-        phase.c_t = None
-        phase.dc_t = None
-        phase.ddc_t = None
-        phase.L_t = None
-        phase.dL_t = None
-        phase.root_t = None
 
 def deletePhaseWBtrajectories(phase):
     phase.q_t = None
     phase.dq_t = None
     phase.ddq_t = None
     phase.tau_t = None
+
+
+def deletePhaseCentroidalTrajectories(phase):
+    """
+    Delete all the centroidal trajectories of the given phase
+    :param phase:
+    :return:
+    """
+    phase.c_t = None
+    phase.dc_t = None
+    phase.ddc_t = None
+    phase.L_t = None
+    phase.dL_t = None
+    phase.root_t = None
+
+def deletePhaseTrajectories(phase):
+    deletePhaseCentroidalTrajectories(phase)
+    deletePhaseWBtrajectories(phase)
+
+def deleteAllTrajectories(cs):
+    for phase in cs.contactPhases:
+        deletePhaseTrajectories(phase)
+
 
 def updateContactPlacement(cs, pid_begin, eeName, placement, update_rotation):
     """
