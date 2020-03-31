@@ -260,9 +260,13 @@ class LocoPlannerReactive(LocoPlanner):
         self.stop_motion_flag = Value(c_bool)
         self.stop_motion_flag.value = False
 
+        if self.process_centroidal:
+            self.process_centroidal.terminate()
         self.process_centroidal = Process(target=self.loop_centroidal)
         self.process_centroidal.start()
         atexit.register(self.process_centroidal.terminate)
+        if self.process_wholebody:
+            self.process_wholebody.terminate()
         self.process_wholebody = Process(target=self.loop_wholebody)
         self.process_wholebody.start()
         atexit.register(self.process_wholebody.terminate)
