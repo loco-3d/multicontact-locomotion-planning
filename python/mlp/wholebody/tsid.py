@@ -504,7 +504,7 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None, robot=None,
 
         # take CoM and AM trajectory from the phase, with their derivatives
         com_traj = [phase_ref.c_t, phase_ref.dc_t, phase_ref.ddc_t]
-        am_traj = [phase_ref.L_t, phase_ref.dL_t]
+        am_traj = [phase_ref.L_t, phase_ref.L_t, phase_ref.dL_t]
 
         # add root's orientation ref from reference config :
         root_traj = phase_ref.root_t
