@@ -360,9 +360,8 @@ class LocoPlannerReactive(LocoPlanner):
 
     def run_zero_step_capturability(self):
         cs_ref = self.compute_zero_step_cs()
-        self.generate_wholebody(self.cfg, cs_ref, self.fullBody, queue_qt=self.queue_qt)
-
-
+        p = Process(target=self.generate_wholebody, args=(self.cfg, cs_ref, self.fullBody, None, None, self.queue_qt))
+        p.start()
 
     def stop_motion(self):
         self.stop_process()
