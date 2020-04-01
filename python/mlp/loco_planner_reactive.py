@@ -360,6 +360,7 @@ class LocoPlannerReactive(LocoPlanner):
 
     def run_zero_step_capturability(self):
         cs_ref = self.compute_zero_step_cs()
+        self.cfg.IK_dt = 0.02
         p = Process(target=self.generate_wholebody, args=(self.cfg, cs_ref, self.fullBody, None, None, self.queue_qt))
         p.start()
 
