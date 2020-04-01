@@ -17,6 +17,7 @@ from multiprocessing import Process, Queue, Pipe, Value, Array, Lock
 from ctypes import c_ubyte, c_bool
 from queue import Empty as queue_empty
 import pickle
+from mlp.centroidal.n_step_capturability import zeroStepCapturability
 eigenpy.switchToNumpyArray()
 
 MAX_PICKLE_SIZE = 10000 # maximal size (in byte) of the pickled representation of a contactPhase
@@ -338,28 +339,28 @@ class LocoPlannerReactive(LocoPlanner):
         self.start_process()
         self.compute_from_cs()
 
-    def compute_zero_step_cs(self):
+    def compute_stopping_cs(self):
         # Compute a Centroidal reference to bring the current phase at a stop with a change of contact:
         phase_stop = ContactPhase(self.get_last_phase())
         setInitialFromFinalValues(phase_stop, phase_stop)
         phase_stop.timeInitial = phase_stop.timeFinal
         phase_stop.duration = self.previous_connect_goal  # FIXME !!
-        # FIXME: replace the next lines by a real call to a zero-step solver
-        phase_stop.c_final = computeCenterOfSupportPolygonFromPhase(phase_stop, self.fullBody.DEFAULT_COM_HEIGHT)
-        phase_stop.dc_final = np.zeros(3)
-        phase_stop.ddc_final = np.zeros(3)
-        phase_stop.L_final = np.zeros(3)
-        phase_stop.dL_final = np.zeros(3)
-        self.last_phase = phase_stop.copy()
-        self.last_phase_flag.value = False
-        connectPhaseTrajToFinalState(phase_stop)
-        cs_ref = ContactSequence(0)
-        cs_ref.append(phase_stop)
+        # try 0-step:
+        success, phase = zeroStepCapturability(phase_stop, self.cfg)
+        if success:
+            cs_ref = ContactSequence(0)
+            cs_ref.append(phase_stop)
+            # TEST : add another phase to go back in the center of the support polygon
+        else:
+            # TODO try 1 step :
+            raise RuntimeError("One step capturability not implemented yet !")
         computeRootTrajFromContacts(self.fullBody,cs_ref)
+        self.last_phase = cs_ref.contactPhases[-1].copy()
+        self.last_phase_flag.value = False
         return cs_ref
 
     def run_zero_step_capturability(self):
-        cs_ref = self.compute_zero_step_cs()
+        cs_ref = self.compute_stopping_cs()
         self.cfg.IK_dt = 0.02
         p = Process(target=self.generate_wholebody, args=(self.cfg, cs_ref, self.fullBody, None, None, self.queue_qt))
         p.start()
@@ -374,7 +375,6 @@ class LocoPlannerReactive(LocoPlanner):
 
 
 if __name__ == "__main__":
-    np.set_printoptions(precision=6)
     parser = argparse.ArgumentParser(description="Run a multicontact-locomotion-planning scenario")
     parser.add_argument('demo_name', type=str, help="The name of the demo configuration file to load. "
                                                     "Must be a valid python file, either inside the PYTHONPATH"
