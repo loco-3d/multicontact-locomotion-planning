@@ -730,5 +730,6 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None, robot=None,
         deleteEffectorsTrajectories(last_phase)
         last_phase.root_t = cs_ref.contactPhases[-1].root_t
         last_phase.dq_t = polynomial(v.reshape(1,-1), last_phase.timeFinal, last_phase.timeFinal)
+        last_phase.q_final = q
         queue_qt.put([phase.q_t.curve_at_index(phase.q_t.num_curves() - 1), last_phase, True])
     return cs, robot

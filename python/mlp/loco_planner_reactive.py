@@ -26,18 +26,6 @@ def update_root_traj_timings(cs):
         cp.root_t = SE3Curve(cp.root_t(cp.root_t.min()), cp.root_t(cp.root_t.max()), cp.timeInitial, cp.timeFinal)
 
 
-def copy_array(arr1, arr2):
-    """
-    Copy arr1 in arr2 element by elements (DEBUG tests)
-    :param arr1:
-    :param arr2:
-    :return:
-    """
-    if len(arr1) > MAX_PICKLE_SIZE:
-        raise ValueError("In copy array: given array is too big, size = "+str(len(arr1)))
-    for i, el in enumerate(arr1):
-        arr2[i] = el
-
 
 class LocoPlannerReactive(LocoPlanner):
 
@@ -88,12 +76,26 @@ class LocoPlannerReactive(LocoPlanner):
         self.last_phase_pickled = Array(c_ubyte, MAX_PICKLE_SIZE) # will contain the last contact phase send to the viewer
         self.last_phase = None
         self.stop_motion_flag = Value(c_bool)
+        self.last_phase_flag = Value(c_bool) # true if the last phase have changed
 
     def get_last_phase(self):
-        if self.last_phase is None:
+        if self.last_phase_flag.value:
             pic = bytes(self.last_phase_pickled)
             self.last_phase = pickle.loads(pic)
+        self.last_phase_flag.value = False
         return self.last_phase
+
+    def set_last_phase(self, last_phase):
+        """
+        set pickled last_phase data to last_phase_pickled shared memory
+        :param last_phase:
+        """
+        self.last_phase_flag.value = True
+        arr = pickle.dumps(last_phase)
+        if len(arr) > MAX_PICKLE_SIZE:
+            raise ValueError("In copy array: given array is too big, size = " + str(len(arr1)))
+        for i, el in enumerate(arr):
+            self.last_phase_pickled[i] = el
 
     def is_at_stop(self):
         """
@@ -218,7 +220,7 @@ class LocoPlannerReactive(LocoPlanner):
             while not last_iter:
                     q_t, last_phase, last_iter = self.queue_qt.get()
                     if last_phase:
-                        copy_array(pickle.dumps(last_phase), self.last_phase_pickled)
+                        self.set_last_phase(last_phase)
                     disp_wb_pinocchio(self.robot, q_t, cfg.DT_DISPLAY)
                     if self.stop_motion_flag.value:
                         print("STOP MOTION in viewer")
@@ -256,7 +258,6 @@ class LocoPlannerReactive(LocoPlanner):
         self.queue_qt = Queue()
         self.stop_motion_flag = Value(c_bool)
         self.stop_motion_flag.value = False
-
         self.process_viewer = Process(target=self.loop_viewer)
         self.process_viewer.start()
         atexit.register(self.process_viewer.terminate)
@@ -349,6 +350,8 @@ class LocoPlannerReactive(LocoPlanner):
         phase_stop.ddc_final = np.zeros(3)
         phase_stop.L_final = np.zeros(3)
         phase_stop.dL_final = np.zeros(3)
+        self.last_phase = phase_stop.copy()
+        self.last_phase_flag.value = False
         connectPhaseTrajToFinalState(phase_stop)
         cs_ref = ContactSequence(0)
         cs_ref.append(phase_stop)
