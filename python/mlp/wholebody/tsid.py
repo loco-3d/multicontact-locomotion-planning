@@ -17,7 +17,7 @@ from curves import piecewise, piecewise_SE3, polynomial
 from mlp.utils.computation_tools import shiftZMPtoFloorAltitude
 import mlp.viewer.display_tools as display_tools
 import math
-from mlp.utils.util import constantSE3curve, SE3toVec, MotiontoVec
+from mlp.utils.util import constantSE3curve, SE3toVec, MotiontoVec, buildRectangularContactPoints
 from mlp.utils.requirements import Requirements
 import eigenpy
 from mlp.utils.cs_tools import deleteAllTrajectories, deletePhaseWBtrajectories, deletePhaseTrajectories,\
