@@ -402,7 +402,7 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None, robot=None,
         v = cs_ref.contactPhases[0].dq_t(t)
     else:
         v = np.zeros(robot.nv)
-    logger.critical("V_init used in tsid : %s", v)
+    logger.debug("V_init used in tsid : %s", v)
 
     invdyn = tsid.InverseDynamicsFormulationAccForce("tsid", robot, False)
     invdyn.computeProblemData(t, q, v)
