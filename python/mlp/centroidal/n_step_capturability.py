@@ -37,6 +37,7 @@ def zeroStepCapturability(phase, cfg):
     else:
         L0 = np.zeros(3)
     print("Initial com : ", phase.c_init)
+    print("Initial AM : ", phase.L_init)
     print("phase duration used :", phase.duration )
     res = com_traj.zeroStepCapturability(eq, phase.c_init, phase.dc_init, L0, USE_AM, phase.duration, -1)
     if not res.success:

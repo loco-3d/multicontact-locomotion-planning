@@ -161,11 +161,15 @@ class LocoPlannerReactive(LocoPlanner):
         cs_wb, robot = self.generate_wholebody(self.cfg, cs_ref, self.fullBody, robot=robot)
         # print("-- compute whole body END")
         # WholebodyOutputs.assertRequirements(cs_wb)
-        last_q = cs_wb.contactPhases[-1].q_t(cs_wb.contactPhases[-1].timeFinal)
-        last_v = cs_wb.contactPhases[-1].dq_t(cs_wb.contactPhases[-1].timeFinal)
+        last_phase_wb = cs_wb.contactPhases[-1]
+        last_q = last_phase_wb.q_t(cs_wb.contactPhases[-1].timeFinal)
+        last_v = last_phase_wb.dq_t(cs_wb.contactPhases[-1].timeFinal)
         deletePhaseCentroidalTrajectories(last_phase)
         last_phase.q_final = last_q
         last_phase.dq_t = polynomial(last_v.reshape(-1, 1), last_phase.timeFinal, last_phase.timeFinal)
+        #last_phase.c_final = last_phase_wb.c_final
+        #last_phase.dc_final = last_phase_wb.dc_final
+        #last_phase.L_final = last_phase_wb.L_final
         return cs_wb, last_q, last_v, last_phase, robot
 
     def loop_centroidal(self):
