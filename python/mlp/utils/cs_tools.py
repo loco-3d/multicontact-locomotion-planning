@@ -701,6 +701,15 @@ def copyEffectorTrajectories(cs_eff, cs):
     return cs_res
 
 
+def copyContactPlacement(p0, p1):
+    """
+    Copy all the contacts patch of p0 to p1
+    :param p0:
+    :param p1:
+    """
+    for eeName in p0.effectorsInContact():
+        p1.addContact(eeName, p0.contactPatch(eeName))
+
 
 def generate_effector_trajectories_for_sequence(cfg, cs, generate_end_effector_traj, fullBody = None):
     """
