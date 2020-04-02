@@ -12,7 +12,7 @@ import curves
 from curves import SE3Curve, polynomial
 from multicontact_api import ContactSequence, ContactPhase
 from mlp.utils.cs_tools import computePhasesTimings, computeCenterOfSupportPolygonFromPhase, setAllUninitializedFrictionCoef, connectPhaseTrajToFinalState, \
-    computePhasesCOMValues, computeRootTrajFromContacts, deletePhaseCentroidalTrajectories, setFinalFromInitialValues, setInitialFromFinalValues
+    computePhasesCOMValues, computeRootTrajFromContacts, deletePhaseCentroidalTrajectories, setFinalFromInitialValues, setInitialFromFinalValues, copyContactPlacement
 from multiprocessing import Process, Queue, Pipe, Value, Array, Lock
 from ctypes import c_ubyte, c_bool
 from queue import Empty as queue_empty
@@ -349,8 +349,17 @@ class LocoPlannerReactive(LocoPlanner):
         success, phase = zeroStepCapturability(phase_stop, self.cfg)
         if success:
             cs_ref = ContactSequence(0)
-            cs_ref.append(phase_stop)
+            cs_ref.append(phase)
             # TEST : add another phase to go back in the center of the support polygon
+            phase_projected = ContactPhase()
+            phase_projected.timeInitial = phase.timeFinal
+            phase_projected.duration = self.previous_connect_goal
+            copyContactPlacement(phase, phase_projected)
+            setInitialFromFinalValues(phase, phase_projected)
+            phase_projected.c_final = computeCenterOfSupportPolygonFromPhase(phase_stop, self.fullBody.DEFAULT_COM_HEIGHT)
+            #FIXME 'default height'
+            connectPhaseTrajToFinalState(phase_projected)
+            cs_ref.append(phase_projected)
         else:
             # TODO try 1 step :
             raise RuntimeError("One step capturability not implemented yet !")
