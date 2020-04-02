@@ -38,11 +38,11 @@ def zeroStepCapturability(phase, cfg):
         L0 = np.zeros(3)
     print("Initial com : ", phase.c_init)
     print("Initial AM : ", phase.L_init)
-    print("phase duration used :", phase.duration )
+    #print("phase duration used :", phase.duration )
     res = com_traj.zeroStepCapturability(eq, phase.c_init, phase.dc_init, L0, USE_AM, phase.duration, -1)
     if not res.success:
         return False, phase
-    print("zero step, res.x : ", res.x)
+    #print("zero step, res.x : ", res.x)
     print("zero step, com final : ", res.c_of_t(res.c_of_t.max()))
     # save the results inside the phase
     # update the definition interval of the bezier curve :

@@ -11,8 +11,7 @@ import eigenpy
 import curves
 from curves import SE3Curve, polynomial
 from multicontact_api import ContactSequence, ContactPhase
-from mlp.utils.cs_tools import computePhasesTimings, computeCenterOfSupportPolygonFromPhase, setAllUninitializedFrictionCoef, connectPhaseTrajToFinalState, \
-    computePhasesCOMValues, computeRootTrajFromContacts, deletePhaseCentroidalTrajectories, setFinalFromInitialValues, setInitialFromFinalValues, copyContactPlacement
+import mlp.utils.cs_tools as tools
 from multiprocessing import Process, Queue, Pipe, Value, Array, Lock
 from ctypes import c_ubyte, c_bool
 from queue import Empty as queue_empty
@@ -115,7 +114,7 @@ class LocoPlannerReactive(LocoPlanner):
     def compute_centroidal(self, cs, previous_phase,
                            last_iter=False):  # update the initial state with the data from the previous intermediate state:
         if previous_phase:
-            setInitialFromFinalValues(previous_phase, cs.contactPhases[0])
+            tools.setInitialFromFinalValues(previous_phase, cs.contactPhases[0])
 
         if not self.CentroidalInputs.checkAndFillRequirements(cs, self.cfg, None):
             raise RuntimeError(
@@ -146,7 +145,7 @@ class LocoPlannerReactive(LocoPlanner):
                 cs_cut.append(cs_ref_full.contactPhases[i])
             cs_ref = cs_cut
             last_phase = cs_com.contactPhases[2]
-            setFinalFromInitialValues(last_phase, last_phase)
+            tools.setFinalFromInitialValues(last_phase, last_phase)
         if last_q is not None:
             cs_ref.contactPhases[0].q_init = last_q
         if last_v is not None:
@@ -164,7 +163,7 @@ class LocoPlannerReactive(LocoPlanner):
         last_phase_wb = cs_wb.contactPhases[-1]
         last_q = last_phase_wb.q_t(cs_wb.contactPhases[-1].timeFinal)
         last_v = last_phase_wb.dq_t(cs_wb.contactPhases[-1].timeFinal)
-        deletePhaseCentroidalTrajectories(last_phase)
+        tools.deletePhaseCentroidalTrajectories(last_phase)
         last_phase.q_final = last_q
         last_phase.dq_t = polynomial(last_v.reshape(-1, 1), last_phase.timeFinal, last_phase.timeFinal)
         #last_phase.c_final = last_phase_wb.c_final
@@ -327,10 +326,10 @@ class LocoPlannerReactive(LocoPlanner):
     def run(self):
         self.run_contact_generation()
         self.init_viewer()
-        self.cs = computePhasesTimings(self.cs, self.cfg)
-        self.cs = computePhasesCOMValues(self.cs, self.cfg.Robot.DEFAULT_COM_HEIGHT)
-        computeRootTrajFromContacts(self.fullBody, self.cs)
-        setAllUninitializedFrictionCoef(self.cs, self.cfg.MU)
+        self.cs = tools.computePhasesTimings(self.cs, self.cfg)
+        self.cs = tools.computePhasesCOMValues(self.cs, self.cfg.Robot.DEFAULT_COM_HEIGHT)
+        tools.computeRootTrajFromContacts(self.fullBody, self.cs)
+        tools.setAllUninitializedFrictionCoef(self.cs, self.cfg.MU)
 
         self.start_process()
         time.sleep(2)
@@ -346,7 +345,7 @@ class LocoPlannerReactive(LocoPlanner):
     def compute_stopping_cs(self):
         # Compute a Centroidal reference to bring the current phase at a stop with a change of contact:
         phase_stop = ContactPhase(self.get_last_phase())
-        setInitialFromFinalValues(phase_stop, phase_stop)
+        tools.setInitialFromFinalValues(phase_stop, phase_stop)
         phase_stop.timeInitial = phase_stop.timeFinal
         phase_stop.duration = self.previous_connect_goal  # FIXME !!
         # try 0-step:
@@ -358,16 +357,16 @@ class LocoPlannerReactive(LocoPlanner):
             phase_projected = ContactPhase()
             phase_projected.timeInitial = phase.timeFinal
             phase_projected.duration = self.previous_connect_goal
-            copyContactPlacement(phase, phase_projected)
-            setInitialFromFinalValues(phase, phase_projected)
-            phase_projected.c_final = computeCenterOfSupportPolygonFromPhase(phase_stop, self.fullBody.DEFAULT_COM_HEIGHT)
+            tools.copyContactPlacement(phase, phase_projected)
+            tools.setInitialFromFinalValues(phase, phase_projected)
+            phase_projected.c_final = tools.computeCenterOfSupportPolygonFromPhase(phase_stop, self.fullBody.DEFAULT_COM_HEIGHT)
             #FIXME 'default height'
-            connectPhaseTrajToFinalState(phase_projected)
+            tools.connectPhaseTrajToFinalState(phase_projected)
             cs_ref.append(phase_projected)
         else:
             # TODO try 1 step :
             raise RuntimeError("One step capturability not implemented yet !")
-        computeRootTrajFromContacts(self.fullBody,cs_ref)
+        tools.computeRootTrajFromContacts(self.fullBody,cs_ref)
         self.last_phase = cs_ref.contactPhases[-1].copy()
         self.last_phase_flag.value = False
         return cs_ref
