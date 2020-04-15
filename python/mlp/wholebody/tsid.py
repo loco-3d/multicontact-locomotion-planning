@@ -614,7 +614,7 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
                 # solve HQP for the current time
                 HQPData = invdyn.computeProblemData(t, q, v)
                 if t < phase.timeInitial + dt:
-                    logger.info("final data for phase ", pid)
+                    logger.info("final data for phase %d", pid)
                     if logger.isEnabledFor(logging.INFO):
                         HQPData.print_all()
                 sol = solver.solve(HQPData)
