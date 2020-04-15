@@ -69,7 +69,7 @@ class Config:
         self.DISPLAY_WP_COST = True
         self.DISPLAY_COM_TRAJ = True
         self.DISPLAY_FEET_TRAJ = True  # display the feet trajectories used in the final motion
-        self.DISPLAY_ALL_FEET_TRAJ = True  # display all the trajectory used as reference, even the invalid ones
+        self.DISPLAY_ALL_FEET_TRAJ = False  # display all the trajectory used as reference, even the invalid ones
         self.DISPLAY_WB_MOTION = False  # display whole body motion automatically once it's computed
         # dt used to display the wb motion (one configuration every dt is displayed) It have to be greater than IK_dt
         self.DT_DISPLAY = 0.05
@@ -82,6 +82,9 @@ class Config:
         ###  Settings for generate_contact_sequence
         self.FORCE_STRAIGHT_LINE = False  # DEBUG ONLY should be false
         self.SL1M_USE_ORIENTATION = True  # sl1m method use the root orientation computed by the guide planning
+        self.GUIDE_STEP_SIZE = 1. # initial discretization step of the guide path used to find the surfaces for SL1M
+        self.GUIDE_MAX_YAW = 0.2 # maximal yaw rotation difference between two discretization step
+        self.MAX_SURFACE_AREA = 1. # if a contact surface is greater than this value, the intersection is used instead of the whole surface
         # Only matter if SL1M_USE_ORIENTATION=True, if false sl1m method use exactly the orientation from planning,
         # if False, it interpolate the orientation and adapt it depending if the feet is in the inside or outside of the turn
         self.SL1M_USE_INTERPOLATED_ORIENTATION = True
@@ -107,7 +110,6 @@ class Config:
         ##  Settings for whole body :
         self.YAW_ROT_GAIN = 1.  # gain for the orientation task of the root orientation, along the yaw axis (wrt to the other axis of the orientation task)
         self.IK_trackAM = False #If True, the Wb algorithm take the Angular momentum computed by te centroidal block as reference. If False it try to minimize the angular momentum
-        self.WB_VERBOSE = 0  # 0,1 or 2 Verbosity level for the output of the wholebody script
         self.WB_STOP_AT_EACH_PHASE = False  # wait for user input between each phase
         self.IK_dt = 0.01  # controler time step (in second)
         self.IK_PRINT_N = 500  # print state of the problem every IK_PRINT_N time steps (if verbose >= 1)
@@ -220,15 +222,26 @@ class Config:
                 self.REF_FILENAME = self.WB_FILENAME
             self.CS_FILENAME = self.REF_FILENAME
             self.COM_FILENAME = self.REF_FILENAME
+        if self.wholebody_method == "none":
+            self.IK_store_centroidal = False
+            self.IK_store_zmp = False
+            self.IK_store_effector = False
+            self.IK_store_contact_forces = False
+            self.IK_store_joints_derivatives = False
+            self.IK_store_joints_torque = False
+            self.SAVE_CS_WB = False
+
 
 
     def get_contact_generation_method(self):
+        self.check_methods()
         module = import_module('mlp.contact_sequence.'+self.contact_generation_method)
         method = getattr(module, 'generate_contact_sequence_'+self.contact_generation_method)
         Outputs = getattr(module, 'ContactOutputs'+self.contact_generation_method.capitalize())
         return method, Outputs
 
     def get_centroidal_initguess_method(self):
+        self.check_methods()
         module = import_module('mlp.centroidal.'+self.centroidal_initGuess_method)
         method = getattr(module, 'generate_centroidal_'+self.centroidal_initGuess_method)
         Inputs = getattr(module, 'CentroidalInputs'+self.centroidal_initGuess_method.capitalize())
@@ -236,6 +249,7 @@ class Config:
         return method, Inputs, Outputs
 
     def get_centroidal_method(self):
+        self.check_methods()
         module = import_module('mlp.centroidal.'+self.centroidal_method)
         method = getattr(module, 'generate_centroidal_'+self.centroidal_method)
         Inputs = getattr(module, 'CentroidalInputs'+self.centroidal_method.capitalize())
@@ -243,6 +257,7 @@ class Config:
         return method, Inputs, Outputs
 
     def get_effector_initguess_method(self):
+        self.check_methods()
         module = import_module('mlp.end_effector.' + self.end_effector_initGuess_method)
         method = getattr(module, 'generate_effector_trajectories_for_sequence_' + self.end_effector_initGuess_method.split("_")[0])
         Inputs = getattr(module, 'EffectorInputs' + self.end_effector_initGuess_method.capitalize().split("_")[0])
@@ -250,12 +265,14 @@ class Config:
         return method, Inputs, Outputs
 
     def get_effector_method(self):
+        self.check_methods()
         module = import_module('mlp.end_effector.' + self.end_effector_method)
         method = getattr(module, 'generate_effector_trajectory_' + self.end_effector_method)
         can_retry = getattr(module, 'effectorCanRetry')
         return method, can_retry
 
     def get_wholebody_method(self):
+        self.check_methods()
         module = import_module('mlp.wholebody.' + self.wholebody_method)
         method = getattr(module, 'generate_wholebody_' + self.wholebody_method)
         Inputs = getattr(module, 'WholebodyInputs'+self.wholebody_method.capitalize())
@@ -263,5 +280,6 @@ class Config:
         return method, Inputs, Outputs
 
     def get_simulator_class(self):
+        self.check_methods()
         return getattr(import_module('mlp.simulator.' + self.simulator_method), self.simulator_method.title().replace("_",""))
 

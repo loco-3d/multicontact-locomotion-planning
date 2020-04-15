@@ -82,7 +82,7 @@ class LocoPlanner:
             raise RuntimeError(
                 "The current contact sequence cannot be given as input to the centroidal method selected.")
         if iter_dynamic_filter > 0:
-            if self.cs_wb is not None:
+            if self.cs_wb:
                 self.cs_initGuess = self.cs_wb
         self.cs_com = generate_centroidal(self.cfg, self.cs, self.cs_initGuess,
                                                              self.fullBody, self.viewer,
@@ -105,7 +105,7 @@ class LocoPlanner:
     def run_effector_init_guess(self):
         print("------------------------------")
         print("### MLP : End effector initial Guess  ###")
-        if self.cs_ref is not None and self.cs_ref.haveEffectorsTrajectories(1e-2):
+        if self.cs_ref and self.cs_ref.haveEffectorsTrajectories(1e-2):
             print("Try to copy from previous iteration.")
             self.cs_ref = copyEffectorTrajectories(self.cs_ref, self.cs_com)
         if self.cs_ref is None:
@@ -154,7 +154,7 @@ class LocoPlanner:
             else:
                 displayEffectorTrajectories(self.cs_ref, self.viewer, self.fullBody)
 
-        if self.cfg.CHECK_FINAL_MOTION and self.cs_wb is not None and self.cs_wb.size() > 0:
+        if self.cfg.CHECK_FINAL_MOTION and self.cs_wb and self.cs_wb.size() > 0:
             print("## Begin validation of the final motion (collision and joint-limits)")
             validator = check_path.PathChecker(self.fullBody, self.cfg.CHECK_DT, True)
             motion_valid, t_invalid = validator.check_motion(self.cs_wb.concatenateQtrajectories())
@@ -164,7 +164,7 @@ class LocoPlanner:
             if self.cfg.WRITE_STATUS:
                 with open(self.cfg.STATUS_FILENAME, "a") as f:
                     f.write("motion_valid: " + str(motion_valid) + "\n")
-        elif self.cs_wb is not None and self.cs_wb.size() > 0:
+        elif self.cs_wb and self.cs_wb.size() > 0:
             self.motion_valid = True
         else:
             self.motion_valid = False

@@ -6,6 +6,8 @@ from pinocchio import SE3, Quaternion, Motion
 from pinocchio.utils import rpyToMatrix, rotate
 from curves import polynomial, SE3Curve, SO3Linear
 import math
+from hpp.corbaserver.rbprm.rbprmstate import State, StateHelper
+from random import uniform
 import types
 pinocchio.switchToNumpyArray()
 
@@ -293,6 +295,23 @@ def createFullbodyStatesFromCS(cs, fb):
             phase_prev = phase
     return beginId, lastId
 
+def perturbateContactNormal(fb, state_id, epsilon = 1e-2):
+    """
+    Add a small variation (+- epsilon) to the contact normals of the given state
+    :param fb:
+    :param state_id:
+    :param epsilon:
+    :return: the new state ID, -1 if fail
+    """
+    state = State(fb, state_id)
+    for name in state.getLimbsInContact():
+        p, n = state.getCenterOfContactForLimb(name)
+        n[2] += uniform(-epsilon, epsilon)
+        n = np.array(n)
+        state, success = StateHelper.addNewContact(state,name, p, n.tolist())
+        if not success:
+            return -1
+    return state.sId
 
 
 def computeContactNormal(placement):
@@ -324,18 +343,18 @@ def rootOrientationFromFeetPlacement(Robot, phase_prev, phase, phase_next):
     patchL = None
     if phase.isEffectorInContact(Robot.rfoot):
         patchR = phase.contactPatch(Robot.rfoot)
-    elif phase_prev is not None and phase_prev.isEffectorInContact(Robot.rfoot):
+    elif phase_prev and phase_prev.isEffectorInContact(Robot.rfoot):
         patchR = phase_prev.contactPatch(Robot.rfoot)
-    if patchR is not None:
+    if patchR:
         qr = Quaternion(patchR.placement.rotation)
         qr.x = 0
         qr.y = 0
         qr.normalize()
     if phase.isEffectorInContact(Robot.lfoot):
         patchL = phase.contactPatch(Robot.lfoot)
-    elif phase_prev is not None and phase_prev.isEffectorInContact(Robot.lfoot):
+    elif phase_prev and phase_prev.isEffectorInContact(Robot.lfoot):
         patchL = phase_prev.contactPatch(Robot.lfoot)
-    if patchL is not None:
+    if patchL:
         ql = Quaternion(patchL.placement.rotation)
         ql.x = 0
         ql.y = 0
@@ -387,7 +406,7 @@ def discretizeCurve(curve,dt):
     :param dt: the discretization step
     :return: an array of shape (curve.dim(), numPoints) and an array corresponding to the timeline
     """
-    numPoints = math.ceil((curve.max() - curve.min()) / dt )
+    numPoints = round((curve.max() - curve.min()) / dt ) + 1
     res = np.zeros([curve.dim(), numPoints])
     timeline = np.zeros(numPoints)
     t = curve.min()
@@ -410,7 +429,7 @@ def discretizeDerivateCurve(curve,dt, order):
     :param dt: the discretization step
     :return: an array of shape (curve.dim(), numPoints) and an array corresponding to the timeline
     """
-    numPoints = math.ceil((curve.max() - curve.min()) / dt )
+    numPoints = round((curve.max() - curve.min()) / dt ) + 1
     res = np.zeros([curve.dim(), numPoints])
     timeline = np.zeros(numPoints)
     t = curve.min()
@@ -433,7 +452,7 @@ def discretizeSE3CurveTranslation(curve,dt):
     :param dt: the discretization step
     :return: an array of shape (3, numPoints) and an array corresponding to the timeline
     """
-    numPoints = math.ceil((curve.max() - curve.min()) / dt )
+    numPoints = round((curve.max() - curve.min()) / dt ) + 1
     res = np.zeros([3, numPoints])
     timeline = np.zeros(numPoints)
     t = curve.min()
@@ -456,7 +475,7 @@ def discretizeSE3CurveQuaternion(curve,dt):
     :param dt: the discretization step
     :return: an array of shape (3, numPoints) and an array corresponding to the timeline
     """
-    numPoints = math.ceil((curve.max() - curve.min()) / dt )
+    numPoints = round((curve.max() - curve.min()) / dt ) + 1
     res = np.zeros([4, numPoints])
     timeline = np.zeros(numPoints)
     t = curve.min()
@@ -478,7 +497,7 @@ def discretizeSE3CurveToVec(curve,dt):
     :param dt: the discretization step
     :return: an array of shape (12, numPoints) and an array corresponding to the timeline
     """
-    numPoints = math.ceil((curve.max() - curve.min()) / dt )
+    numPoints = round((curve.max() - curve.min()) / dt ) +1
     res = np.zeros([12, numPoints])
     timeline = np.zeros(numPoints)
     t = curve.min()

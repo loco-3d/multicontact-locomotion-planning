@@ -20,7 +20,12 @@ import math
 from mlp.utils.util import constantSE3curve, SE3toVec, MotiontoVec
 from mlp.utils.requirements import Requirements
 import eigenpy
-from mlp.utils.cs_tools import deleteAllTrajectories, deletePhaseWBtrajectories, updateContactPlacement
+from mlp.utils.cs_tools import deleteAllTrajectories, deletePhaseWBtrajectories, updateContactPlacement, setPreviousFinalValues
+import logging
+logging.basicConfig(format='[%(name)-12s] %(levelname)-8s: %(message)s')
+logger = logging.getLogger("tsid")
+logger.setLevel(logging.WARNING) #DEBUG, INFO or WARNING
+
 eigenpy.switchToNumpyArray()
 
 
@@ -91,28 +96,25 @@ def createContactForEffector(cfg, invdyn, robot, eeName, patch):
     """
     contactNormal = np.array(cfg.Robot.dict_normal[eeName])
     contactNormal = cfg.Robot.dict_offset[eeName].rotation @ contactNormal  # apply offset transform
+    logger.info("create contact for effector %s", eeName)
+    logger.info("contact placement : %s", patch.placement)
+    logger.info("contact_normal : %s", contactNormal)
     if cfg.Robot.cType == "_3_DOF":
         contact = tsid.ContactPoint("contact_" + eeName, robot, eeName, contactNormal, patch.friction, cfg.fMin, cfg.fMax)
         mask = np.ones(3)
         contact.useLocalFrame(False)
+        logger.info("create contact point")
     else:
         contact_Points = buildRectangularContactPoints(cfg.IK_eff_size[eeName],cfg.Robot.dict_offset[eeName] )
         contact = tsid.Contact6d("contact_" + eeName, robot, eeName, contact_Points, contactNormal, patch.friction, cfg.fMin,
                                  cfg.fMax)
         mask = np.ones(6)
+        logger.info("create rectangular contact")
+        logger.info("contact points : \n %s", contact_Points)
     contact.setKp(cfg.kp_contact * mask)
     contact.setKd(2.0 * np.sqrt(cfg.kp_contact) * mask)
     contact.setReference(patch.placement)
     invdyn.addRigidContact(contact, cfg.w_forceRef)
-    if cfg.WB_VERBOSE:
-        print("create contact for effector ", eeName)
-        if cfg.Robot.cType == "_3_DOF":
-            print("create contact point")
-        else:
-            print("create rectangular contact")
-            print("contact points : \n", contact_Points)
-        print("contact placement : ", patch.placement)
-        print("contact_normal : ", contactNormal)
     return contact
 
 
@@ -181,7 +183,7 @@ def adjustEndEffectorTrajectoryIfNeeded(cfg, phase, robot, data, eeName, effecto
     current_placement = getCurrentEffectorPosition(robot, data, eeName)
     ref_placement = phase.effectorTrajectory(eeName).evaluateAsSE3(phase.timeInitial)
     if not current_placement.isApprox(ref_placement, 1e-3):
-        print("- End effector trajectory need to be adjusted.")
+        logger.warning("- End effector trajectory need to be adjusted.")
         placement_end = phase.effectorTrajectory(eeName).evaluateAsSE3(phase.timeFinal)
         ref_traj = effectorMethod(cfg, [phase.timeInitial, phase.timeFinal], current_placement, placement_end, 0)
         phase.addEffectorTrajectory(eeName, ref_traj)
@@ -205,11 +207,6 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
             phase.q_init = q
             phase.q_t = piecewise(polynomial(q.reshape(-1,1), t, t))
             #phase.root_t = piecewise_SE3(constantSE3curve(SE3FromConfig(q) ,t))
-            if phase_prev is not None:
-                phase_prev.q_final = q
-                if t > phase_prev.q_t.max():
-                    phase_prev.q_t.append(q, t)
-                    #phase_prev.root_t.append(SE3FromConfig(q), t)
         else:
             phase.q_t.append(q, t)
             #phase.root_t.append(SE3FromConfig(q), t)
@@ -218,10 +215,6 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
         if first_iter_for_phase:
             phase.dq_t = piecewise(polynomial(v.reshape(-1, 1), t, t))
             phase.ddq_t = piecewise(polynomial(dv.reshape(-1, 1), t, t))
-            if phase_prev is not None:
-                if t > phase_prev.dq_t.max():
-                    phase_prev.dq_t.append(v, t)
-                    phase_prev.ddq_t.append(dv, t)
         else:
             phase.dq_t.append(v, t)
             phase.ddq_t.append(dv, t)
@@ -230,9 +223,6 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
         tau = invdyn.getActuatorForces(sol)
         if first_iter_for_phase:
             phase.tau_t = piecewise(polynomial(tau.reshape(-1,1), t, t))
-            if phase_prev is not None:
-                if t > phase_prev.tau_t.max():
-                    phase_prev.tau_t.append(tau, t)
         else:
             phase.tau_t.append(tau, t)
 
@@ -251,18 +241,6 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
             phase.ddc_t = piecewise(polynomial(acom.reshape(-1,1), t, t))
             phase.L_t = piecewise(polynomial(L.reshape(-1,1), t, t))
             phase.dL_t = piecewise(polynomial(dL.reshape(-1,1), t, t))
-            if phase_prev is not None:
-                phase_prev.c_final = pcom
-                phase_prev.dc_final = vcom
-                phase_prev.ddc_final = acom
-                phase_prev.L_final = L
-                phase_prev.dL_final = dL
-                if t > phase_prev.c_t.max():
-                    phase_prev.c_t.append(pcom,t)
-                    phase_prev.dc_t.append(vcom,t)
-                    phase_prev.ddc_t.append(acom,t)
-                    phase_prev.L_t.append(L,t)
-                    phase_prev.dL_t.append(dL,t)
         else:
             phase.c_t.append(pcom, t)
             phase.dc_t.append(vcom, t)
@@ -280,15 +258,12 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
         if first_iter_for_phase:
             phase.zmp_t = piecewise(polynomial(zmp.reshape(-1,1), t, t))
             phase.wrench_t = piecewise(polynomial(wrench.reshape(-1,1), t, t))
-            if phase_prev is not None and t > phase_prev.zmp_t.max():
-                phase_prev.zmp_t.append(zmp, t)
-                phase_prev.wrench_t.append(wrench, t)
         else:
             phase.zmp_t.append(zmp, t)
             phase.wrench_t.append(wrench, t)
 
     def appendEffectorsTraj(first_iter_for_phase = False):
-        if first_iter_for_phase and phase_prev is not None:
+        if first_iter_for_phase and phase_prev:
             for eeName in phase_prev.effectorsWithTrajectory():
                 if t > phase_prev.effectorTrajectory(eeName).max():
                     placement = getCurrentEffectorPosition(robot, invdyn.data(), eeName)
@@ -304,7 +279,7 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
 
 
     def appendContactForcesTrajs(first_iter_for_phase = False):
-        if first_iter_for_phase and phase_prev is not None:
+        if first_iter_for_phase and phase_prev:
             for eeName in phase_prev.effectorsInContact():
                 if t > phase_prev.contactForce(eeName).max():
                     if phase.isEffectorInContact(eeName):
@@ -356,34 +331,36 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
 
 
     def printIntermediate():
-        print("Time %.3f" % (t))
-        for eeName, contact in dic_contacts.items():
-            if invdyn.checkContact(contact.name, sol):
-                f = invdyn.getContactForce(contact.name, sol)
-                print("\tnormal force %s: %.1f" % (contact.name.ljust(20, '.'), contact.getNormalForce(f)))
+        if logger.isEnabledFor(logging.INFO):
+            print("Time %.3f" % (t))
+            for eeName, contact in dic_contacts.items():
+                if invdyn.checkContact(contact.name, sol):
+                    f = invdyn.getContactForce(contact.name, sol)
+                    print("\tnormal force %s: %.1f" % (contact.name.ljust(20, '.'), contact.getNormalForce(f)))
 
-        print("\ttracking err %s: %.3f" % (comTask.name.ljust(20, '.'), norm(comTask.position_error, 2)))
-        for eeName in phase.effectorsWithTrajectory():
-            task = dic_effectors_tasks[eeName]
-            error = task.position_error
-            if cfg.Robot.cType == "_3_DOF":
-                error = error[0:3]
-            print("\ttracking err %s: %.3f" % (task.name.ljust(20, '.'), norm(error, 2)))
-        print("\t||v||: %.3f\t ||dv||: %.3f" % (norm(v, 2), norm(dv)))
+            print("\ttracking err %s: %.3f" % (comTask.name.ljust(20, '.'), norm(comTask.position_error, 2)))
+            for eeName in phase.effectorsWithTrajectory():
+                task = dic_effectors_tasks[eeName]
+                error = task.position_error
+                if cfg.Robot.cType == "_3_DOF":
+                    error = error[0:3]
+                print("\ttracking err %s: %.3f" % (task.name.ljust(20, '.'), norm(error, 2)))
+            print("\t||v||: %.3f\t ||dv||: %.3f" % (norm(v, 2), norm(dv)))
 
     def checkDiverge():
         if norm(dv) > 1e6 or norm(v) > 1e6:
-            print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-            print("/!\ ABORT : controler unstable at t = " + str(t) + "  /!\ ")
-            print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+            logger.error("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+            logger.error("/!\ ABORT : controler unstable at t = %f  /!\ ", t)
+            logger.error("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
             raise ValueError("ABORT : controler unstable at t = " + str(t))
         if math.isnan(norm(dv)) or math.isnan(norm(v)):
-            print("!!!!!!    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-            print("/!\ ABORT : nan   at t = " + str(t) + "  /!\ ")
-            print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+            logger.error("!!!!!!    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+            logger.error("/!\ ABORT : nan   at t = %f   /!\ ", t)
+            logger.error("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
             raise ValueError("ABORT : controler unstable at t = " + str(t))
 
     def stopHere():
+        setPreviousFinalValues(phase_prev, phase, cfg)
         if cfg.WB_ABORT_WHEN_INVALID:
             # cut the sequence up to the last phase
             cs.resize(pid)
@@ -396,8 +373,8 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
     ### End of nested functions definitions ###
 
     if not viewer:
-        print("No viewer linked, cannot display end_effector trajectories.")
-    print("Start TSID ... ")
+        logger.warning("No viewer linked, cannot display end_effector trajectories.")
+    logger.warning("Start TSID ... ")
 
     # copy the given contact sequence to keep it as reference :
     cs = ContactSequence(cs_ref)
@@ -408,18 +385,14 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
     rp = RosPack()
     package_path = rp.get_path(cfg.Robot.packageName)
     urdf = package_path + '/urdf/' + cfg.Robot.urdfName + cfg.Robot.urdfSuffix + '.urdf'
-    if cfg.WB_VERBOSE:
-        print("load robot : ", urdf)
+    logger.info("load robot : %s", urdf)
     robot = tsid.RobotWrapper(urdf, pin.StdVec_StdString(), pin.JointModelFreeFlyer(), False)
-    if cfg.WB_VERBOSE:
-        print("robot loaded in tsid.")
+    logger.info("robot loaded in tsid.")
     if cfg.IK_store_centroidal or cfg.IK_store_zmp:
-        if cfg.WB_VERBOSE:
-            print("load pinocchio robot ...")
+        logger.info("load pinocchio robot ...")
         # FIXME : tsid robotWrapper don't have all the required methods, only pinocchio have them
-        pinRobot = pin.RobotWrapper.BuildFromURDF(urdf, package_path, pin.JointModelFreeFlyer(), cfg.WB_VERBOSE == 2)
-        if cfg.WB_VERBOSE:
-            print("pinocchio robot loaded.")
+        pinRobot = pin.RobotWrapper.BuildFromURDF(urdf, package_path, pin.JointModelFreeFlyer())
+        logger.info("pinocchio robot loaded.")
 
     # get the selected end effector trajectory generation method
     effectorMethod, effectorCanRetry = cfg.get_effector_method()
@@ -452,11 +425,10 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
 
     if cfg.EFF_CHECK_COLLISION:  # initialise object needed to check the motion
         from mlp.utils import check_path
-        validator = check_path.PathChecker(fullBody, cfg.CHECK_DT, cfg.WB_VERBOSE)
+        validator = check_path.PathChecker(fullBody, cfg.CHECK_DT, logger.isEnabledFor(logging.INFO))
 
     ### Initialize all task used  ###
-    if cfg.WB_VERBOSE:
-        print("initialize tasks : ")
+    logger.info("initialize tasks : ")
     if cfg.w_com > 0. :
         comTask = tsid.TaskComEquality("task-com", robot)
         comTask.setKp(cfg.kp_com * np.ones(3))
@@ -507,18 +479,15 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
 
     # time check
     dt = cfg.IK_dt
-    if cfg.WB_VERBOSE:
-        print("dt : ", dt)
-    if cfg.WB_VERBOSE:
-        print("tsid initialized, start control loop")
-        #raw_input("Enter to start the motion (motion displayed as it's computed, may be slower than real-time)")
+    logger.info("dt : %f", dt)
+    logger.info("tsid initialized, start control loop")
+    #raw_input("Enter to start the motion (motion displayed as it's computed, may be slower than real-time)")
     time_start = time.time()
 
     # For each phases, create the necessary task and references trajectories :
     for pid in range(cs.size()):
-        if cfg.WB_VERBOSE:
-            print("## for phase : ", pid)
-            print("t = ", t)
+        logger.info("## for phase : %d", pid)
+        logger.info("t = %f", t)
         # phase_ref contains the reference trajectories and should not be modified exept for new effector trajectories
         # when the first ones was not collision free
         phase_ref = cs_ref.contactPhases[pid]
@@ -535,8 +504,7 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
 
         time_interval = [phase_ref.timeInitial, phase_ref.timeFinal]
 
-        if cfg.WB_VERBOSE:
-            print("time_interval ", time_interval)
+        logger.info("time_interval %s", time_interval)
 
         # take CoM and AM trajectory from the phase, with their derivatives
         com_traj = [phase_ref.c_t, phase_ref.dc_t, phase_ref.ddc_t]
@@ -548,36 +516,31 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
 
         # add se3 tasks for end effector when required
         for eeName in phase.effectorsWithTrajectory():
-                if cfg.WB_VERBOSE:
-                    print("add se3 task for " + eeName)
+                logger.info("add se3 task for %s", eeName)
                 task = dic_effectors_tasks[eeName]
                 invdyn.addMotionTask(task, cfg.w_eff, cfg.level_eff, 0.)
                 adjustEndEffectorTrajectoryIfNeeded(cfg, phase_ref, robot, invdyn.data(), eeName, effectorMethod)
-                if cfg.WB_VERBOSE:
-                    print("t interval : ", time_interval)
+                logger.info("t interval : %s", time_interval)
 
 
         # start removing the contact that will be broken in the next phase :
         # (This tell the solver that it should start minimizing the contact force on this contact, and ideally get to 0 at the given time)
         for eeName, contact in dic_contacts.items():
-            if phase_next is not None and phase.isEffectorInContact(eeName) and not phase_next.isEffectorInContact(eeName):
+            if phase_next and phase.isEffectorInContact(eeName) and not phase_next.isEffectorInContact(eeName):
                 transition_time = phase.duration + dt/2.
-                if cfg.WB_VERBOSE:
-                    print("\nTime %.3f Start breaking contact %s. transition time : %.3f\n" %
-                          (t, contact.name, transition_time))
+                logger.info("\nTime %.3f Start breaking contact %s. transition time : %.3f\n",
+                            t, contact.name, transition_time)
                 invdyn.removeRigidContact(contact.name, transition_time)
 
         # add newly created contacts :
         for eeName in usedEffectors:
-            if phase_prev is not None and phase_ref.isEffectorInContact(eeName) and not phase_prev.isEffectorInContact(eeName):
+            if phase_prev and phase_ref.isEffectorInContact(eeName) and not phase_prev.isEffectorInContact(eeName):
                 invdyn.removeTask(dic_effectors_tasks[eeName].name, 0.0)  # remove pin task for this contact
-                if cfg.WB_VERBOSE:
-                    print("remove se3 effector task : " + dic_effectors_tasks[eeName].name)
+                logger.info("remove se3 effector task : %s", dic_effectors_tasks[eeName].name)
                 updateContactPlacement(cs, pid, eeName, getCurrentEffectorPosition(robot, invdyn.data(), eeName))
                 contact = createContactForEffector(cfg, invdyn, robot, eeName, phase.contactPatch(eeName))
                 dic_contacts.update({eeName: contact})
-                if cfg.WB_VERBOSE:
-                    print("Create contact for : " + eeName)
+                logger.info("Create contact for : %s", eeName)
 
         if cfg.WB_STOP_AT_EACH_PHASE:
             input('start simulation')
@@ -586,7 +549,7 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
         q_begin = q.copy()
         v_begin = v.copy()
         phase.q_init = q_begin
-        if phase_prev is not None:
+        if phase_prev:
             phase_prev.q_final = q_begin
         phaseValid = False
         iter_for_phase = -1
@@ -599,20 +562,21 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
                 # reset values to their value at the beginning of the current phase
                 q = q_begin.copy()
                 v = v_begin.copy()
+                simulator.q = q
+                simulator.v = v
             iter_for_phase += 1
-            if cfg.WB_VERBOSE:
-                print("Start computation for phase " + str(pid) + ", try number :  " + str(iter_for_phase))
+            logger.info("Start computation for phase %d , try number :  %d", pid, iter_for_phase)
             # loop to generate states (q,v,a) for the current contact phase :
             while t < phase.timeFinal - (dt / 2.):
 
                 # set traj reference for current time :
                 # com
-                if comTask is not None:
+                if comTask:
                     sampleCom = curvesToTSID(com_traj,t)
                     comTask.setReference(sampleCom)
 
                 # am
-                if amTask is not None:
+                if amTask:
                     if cfg.IK_trackAM:
                         sampleAM =  curvesToTSID(am_traj,t)
                     else:
@@ -622,37 +586,36 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
 
                 # posture
                 #print "postural task ref : ",samplePosture.pos()
-                if postureTask is not None:
+                if postureTask:
                     postureTask.setReference(samplePosture)
 
                 # root orientation :
-                if orientationRootTask is not None:
+                if orientationRootTask:
                     sampleRoot = curveSE3toTSID(root_traj,t)
                     orientationRootTask.setReference(sampleRoot)
 
-                if cfg.WB_VERBOSE == 2:
-                    print("### references given : ###")
-                    print("com  pos : ", sampleCom.pos())
-                    print("com  vel : ", sampleCom.vel())
-                    print("com  acc : ", sampleCom.acc())
-                    print("AM   pos : ", sampleAM.pos())
-                    print("AM   vel : ", sampleAM.vel())
-                    print("root pos : ", sampleRoot.pos())
-                    print("root vel : ", sampleRoot.vel())
+                logger.debug("### references given : ###")
+                logger.debug("com  pos : %s", sampleCom.pos())
+                logger.debug("com  vel : %s", sampleCom.vel())
+                logger.debug("com  acc : %s", sampleCom.acc())
+                logger.debug("AM   pos : %s", sampleAM.pos())
+                logger.debug("AM   vel : %s", sampleAM.vel())
+                logger.debug("root pos : %s", sampleRoot.pos())
+                logger.debug("root vel : %s", sampleRoot.vel())
 
                 # end effector (if they exists)
                 for eeName, traj in phase_ref.effectorTrajectories().items():
                     sampleEff = curveSE3toTSID(traj,t,True)
                     dic_effectors_tasks[eeName].setReference(sampleEff)
-                    if cfg.WB_VERBOSE == 2:
-                        print("effector " + str(eeName) + " pos : " + str(sampleEff.pos()))
-                        print("effector " + str(eeName) + " vel : " + str(sampleEff.vel()))
+                    logger.debug("effector %s, pos = %s", eeName, sampleEff.pos())
+                    logger.debug("effector %s, vel = %s", eeName, sampleEff.vel())
 
                 # solve HQP for the current time
                 HQPData = invdyn.computeProblemData(t, q, v)
-                if cfg.WB_VERBOSE and t < phase.timeInitial + dt:
-                    print("final data for phase ", pid)
-                    HQPData.print_all()
+                if t < phase.timeInitial + dt:
+                    logger.info("final data for phase ", pid)
+                    if logger.isEnabledFor(logging.INFO):
+                        HQPData.print_all()
                 sol = solver.solve(HQPData)
                 dv = invdyn.getAccelerations(sol)
 
@@ -663,11 +626,10 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
                 if t >= phase.timeFinal - (dt / 2.):
                     t = phase.timeFinal # avoid numerical imprecisions
 
-                if cfg.WB_VERBOSE == 2:
-                    print("v = ", v)
-                    print("dv = ", dv)
+                logger.debug("v = %s", v)
+                logger.debug("dv = %s", dv)
 
-                if cfg.WB_VERBOSE and int(t / dt) % cfg.IK_PRINT_N == 0:
+                if int(t / dt) % cfg.IK_PRINT_N == 0:
                     printIntermediate()
                 try:
                     checkDiverge()
@@ -685,13 +647,13 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
                     if iter_for_phase == 0:
                         # save the first q_t trajectory computed, for limb-rrt
                         first_q_t = phase.q_t
-                    print("Phase " + str(pid) + " not valid at t = " + str(t_invalid))
+                    logger.warning("Phase %d not valid at t = %f", pid, t_invalid)
                     if t_invalid <= (phase.timeInitial + cfg.EFF_T_PREDEF) \
                             or t_invalid >= (phase.timeFinal - cfg.EFF_T_PREDEF):
-                        print("Motion is invalid during predefined phases, cannot change this.")
+                        logger.error("Motion is invalid during predefined phases, cannot change this.")
                         return stopHere()
                     if effectorCanRetry():
-                        print("Try new end effector trajectory.")
+                        logger.warning("Try new end effector trajectory.")
                         try:
                             for eeName, ref_traj in phase_ref.effectorTrajectories().items():
                                 placement_init = ref_traj.evaluateAsSE3(phase.timeInitial)
@@ -701,18 +663,27 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
                                                                    phase_ref, phase_next, fullBody, eeName, viewer)
                                 # save the new trajectory in the phase with the references
                                 phase_ref.addEffectorTrajectory(eeName,traj)
+                                if cfg.DISPLAY_ALL_FEET_TRAJ and logger.isEnabledFor(logging.INFO):
+                                    color = fullBody.dict_limb_color_traj[eeName]
+                                    color[-1] = 0.6 # set small transparency
+                                    display_tools.displaySE3Traj(phase_ref.effectorTrajectory(eeName),
+                                                       viewer.client.gui,
+                                                       viewer.sceneName,
+                                                       eeName + "_traj_" + str(pid) + "_" + str(iter_for_phase),
+                                                       color,
+                                                       [phase.timeInitial, phase.timeFinal],
+                                                       fullBody.dict_offset[eeName])
                         except ValueError as e:
-                            print("ERROR in generateEndEffectorTraj :")
-                            print(e)
+                            logging.error("ERROR in generateEndEffectorTraj :", exc_info=e)
                             return stopHere()
                     else:
-                        print("End effector method choosen do not allow retries, abort here.")
+                        logging.error("End effector method choosen do not allow retries, abort here.")
                         return stopHere()
             else:  # no effector motions, phase always valid (or bypass the check)
                 phaseValid = True
-                if cfg.WB_VERBOSE:
-                    print("Phase " + str(pid) + " valid.")
+                logging.info("Phase %d valid.", pid)
             if phaseValid:
+                setPreviousFinalValues(phase_prev, phase, cfg)
                 # display the progress by moving the robot at the last configuration computed
                 if viewer:
                     display_tools.displayWBconfig(viewer,q)
@@ -722,10 +693,9 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
     phase_prev = phase
     phase = ContactPhase()
     storeData(True)
+    setPreviousFinalValues(phase_prev, phase, cfg)
     time_end = time.time() - time_start
-    print("Whole body motion generated in : " + str(time_end) + " s.")
-    if cfg.WB_VERBOSE:
-        print("\nFinal COM Position  ", robot.com(invdyn.data()))
-        print("Desired COM Position", cs.contactPhases[-1].c_final)
-
+    logger.warning("Whole body motion generated in : %f s.", time_end)
+    logger.info("\nFinal COM Position  %s", robot.com(invdyn.data()))
+    logger.info("Desired COM Position %s", cs.contactPhases[-1].c_final)
     return cs

@@ -21,18 +21,19 @@ TRAJ_GROUP = "com_traj"
 def displaySphere(viewer, pos, size=0.01, color=[0, 0, 0, 1]):
     rootName = "s"
     # add indices until the name is free
-    list = viewer.client.gui.getNodeList()
-    i = 0
-    name = rootName
-    while list.count(name) > 0:
-        name = rootName + "_" + str(i)
-        i += 1
-    viewer.client.gui.addSphere(name, size, color)
-    viewer.client.gui.addToGroup(name, viewer.sceneName)
-    #viewer.client.gui.setVisibility(name,'ALWAYS_ON_TOP')
-    q = pos + [0, 0, 0, 1]
-    viewer.client.gui.applyConfiguration(name, q)
-    viewer.client.gui.refresh()
+    node_list = viewer.client.gui.getNodeList()
+    if node_list:
+        i = 0
+        name = rootName
+        while node_list.count(name) > 0:
+            name = rootName + "_" + str(i)
+            i += 1
+        viewer.client.gui.addSphere(name, size, color)
+        viewer.client.gui.addToGroup(name, viewer.sceneName)
+        #viewer.client.gui.setVisibility(name,'ALWAYS_ON_TOP')
+        q = pos + [0, 0, 0, 1]
+        viewer.client.gui.applyConfiguration(name, q)
+        viewer.client.gui.refresh()
 
 
 def SE3ToViewerConfig(placement):
@@ -147,22 +148,23 @@ def displaySE3Traj(traj, gui, sceneName, name, color, time_interval, offset=SE3.
         name = "SE3_traj"
     rootName = name
     # add indices until the name is free
-    list = gui.getNodeList()
-    i = 0
-    while list.count(name) > 0:
-        name = rootName + "_" + str(i)
-        i += 1
-    path = []
-    dt = 0.01
-    t = time_interval[0]
-    while t <= time_interval[1]:
-        m = traj.evaluateAsSE3(t)
-        m = m.act(offset)
-        path += [m.translation.tolist()]
-        t += dt
-    gui.addCurve(name, path, color)
-    gui.addToGroup(name, sceneName)
-    gui.refresh()
+    node_list = gui.getNodeList()
+    if node_list:
+        i = 0
+        while node_list.count(name) > 0:
+            name = rootName + "_" + str(i)
+            i += 1
+        path = []
+        dt = 0.01
+        t = time_interval[0]
+        while t <= time_interval[1]:
+            m = traj.evaluateAsSE3(t)
+            m = m.act(offset)
+            path += [m.translation.tolist()]
+            t += dt
+        gui.addCurve(name, path, color)
+        gui.addToGroup(name, sceneName)
+        gui.refresh()
 
 def displayEffectorTrajectories(cs, viewer, Robot, suffixe = "", colorAlpha = 1):
     effectors = cs.getAllEffectorsInContact()
@@ -240,10 +242,6 @@ def initScene(Robot, envName="multicontact/ground", genLimbsDB=True):
     ps = ProblemSolver(fullBody)
     vf = ViewerFactory(ps)
     vf.loadObstacleModel("package://hpp_environments/urdf/" + envName + ".urdf", "planning")
-    try:
-        v = vf.createViewer(displayCoM=True)
-        v(fullBody.getCurrentConfig())
-    except Exception:
-        print("In initScene : no Viewer started.")
-        v = None
+    v = vf.createViewer(ghost = True, displayCoM=True)
+    v(fullBody.getCurrentConfig())
     return fullBody, v

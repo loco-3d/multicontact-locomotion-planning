@@ -513,6 +513,38 @@ def setFinalFromInitialValues(previous_phase, next_phase):
     previous_phase.dL_final = next_phase.dL_init
     previous_phase.q_final = next_phase.q_init
 
+
+
+def setPreviousFinalValues(phase_prev, phase, cfg):
+    """
+    Set the final values and last points of the trajectory of phase_prev to the initial values of phase
+    :param phase_prev:
+    :param phase:
+    :param cfg:
+    :return:
+    """
+    if phase_prev is None:
+        return
+    setFinalFromInitialValues(phase_prev,phase)
+    t = phase_prev.timeFinal
+    phase_prev.q_t.append(phase_prev.q_final, t)
+    if cfg.IK_store_joints_derivatives:
+        phase_prev.dq_t.append(phase.dq_t(t), t)
+        phase_prev.ddq_t.append(phase.ddq_t(t), t)
+    if cfg.IK_store_joints_torque:
+        phase_prev.tau_t.append(phase.tau_t(t), t)
+    if cfg.IK_store_centroidal:
+        phase_prev.c_t.append(phase_prev.c_final, t)
+        phase_prev.dc_t.append(phase_prev.dc_final, t)
+        phase_prev.ddc_t.append(phase_prev.ddc_final, t)
+        phase_prev.L_t.append(phase_prev.L_final, t)
+        phase_prev.dL_t.append(phase_prev.dL_final, t)
+    if cfg.IK_store_zmp:
+        phase_prev.zmp_t.append(phase.zmp_t(t), t)
+        phase_prev.wrench_t.append(phase.wrench_t(t), t)
+
+
+
 def setInitialFromFinalValues(previous_phase, next_phase):
     """
     Set c_final, dc_init, ddc_init, L_init, dL_init of next_phase

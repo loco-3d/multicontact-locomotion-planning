@@ -6,6 +6,10 @@ from mlp.utils.util import createFullbodyStatesFromCS
 from mlp.utils.cs_tools import resetCOMtrajectories
 from mlp.utils.requirements import Requirements
 multicontact_api.switchToNumpyArray()
+import logging
+logging.basicConfig(format='[%(name)-12s] %(levelname)-8s: %(message)s')
+logger = logging.getLogger("croc")
+logger.setLevel(logging.WARNING) #DEBUG, INFO or WARNING
 
 class CentroidalInputsCroc(Requirements):
     timings = True
@@ -55,14 +59,14 @@ def setCOMfromCurve(phase, curve_normalized):
 # Not generic .... assume that there is always 2 contact phases for each state in fullBody
 def generate_centroidal_croc(cfg, cs, cs_initGuess=None, fb=None, viewer=None, first_iter = True):
     if cs_initGuess:
-        print("WARNING : in centroidal.croc, initial guess is ignored.")
+        logger.warning("Initial guess is ignored.")
     if not fb:
         raise ValueError("CROC called without fullBody object.")
     if not first_iter:
-        print("WARNING: in centroidal.croc, it is useless to iterate several times.")
+        logger.warning("It is useless to iterate several times.")
     beginId, endId = createFullbodyStatesFromCS(cs, fb)
-    print("beginid = ", beginId)
-    print("endId   = ", endId)
+    logger.info("beginid = %d", beginId)
+    logger.info("endId   = %d", endId)
     cs_result = ContactSequence(cs)
     resetCOMtrajectories(cs_result) # erase all pre existing CoM trajectories
 
@@ -73,12 +77,12 @@ def generate_centroidal_croc(cfg, cs, cs_initGuess=None, fb=None, viewer=None, f
     id_phase = 0
     current_t = cs.contactPhases[0].timeInitial
     for id_state in range(beginId, endId):
-        print("id_state = ", str(id_state))
-        print("id_phase = ", str(id_phase))
+        logger.info("id_state = %d", id_state)
+        logger.info("id_phase = %d", id_phase)
         # First, compute the bezier curves between the states :
         pid = fb.isDynamicallyReachableFromState(id_state, id_state + 1, True, numPointsPerPhases=0)
         if len(pid) != 4:
-            print("# ERROR : Cannot compute CROC between states " + str(id_state) + " , " + str(id_state + 1))
+            logger.error("# Cannot compute CROC between states %d, %d", id_state, id_state + 1)
             return cs
         c1 = fb.getPathAsBezier(int(pid[1])) # curve before contact break
         c2 = fb.getPathAsBezier(int(pid[2])) # curve for swing phase

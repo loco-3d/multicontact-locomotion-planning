@@ -31,7 +31,7 @@ class Requirements():
     def requireTimings(cls, cs, cfg):
         if not cs.haveTimings():
             print("- Contact sequence do not have consistent timings.")
-            if cfg is not None:
+            if cfg:
                 print("Compute timings from predefined values in configuration file ...")
                 cs = cs_tools.computePhasesTimings(cs, cfg)
                 if not cs.haveTimings():
@@ -106,7 +106,7 @@ class Requirements():
     def requireConfigurationValues(cls, cs, fullBody = None, cfg = None):
         if not cs.haveConfigurationsValues():
             print("- Contact sequence do not have consistent configurations values.")
-            if fullBody is not None:
+            if fullBody:
                 print("Try to compute configuration from inverse kinematics from the contacts ... ")
                 cls.requireRootTrajectories(cs, cfg)
                 cs = cs_tools.computePhasesConfigurations(cs, fullBody)

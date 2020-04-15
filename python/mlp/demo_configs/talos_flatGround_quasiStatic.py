@@ -3,6 +3,7 @@ from .common_talos import *
 SCRIPT_PATH = "demos"
 ENV_NAME = "multicontact/ground"
 centroidal_method = "quasistatic"
+DEMO_NAME = "talos_flatGround"
 
 DURATION_INIT = 3.  # Time to init the motion
 DURATION_FINAL = 3.  # Time to stop the robot
@@ -19,3 +20,5 @@ FEET_MAX_ANG_VEL = 1.5
 p_max = 0.1
 
 COM_SHIFT_Z = -0.03
+
+GUIDE_STEP_SIZE = 0.6

@@ -2,6 +2,10 @@ import numpy as np
 from mlp.utils.util import createStateFromPhase, discretizeCurve
 from mlp.utils.trajectories import HPPEffectorTrajectory
 from mlp.utils.requirements import Requirements
+import logging
+logging.basicConfig(format='[%(name)-12s] %(levelname)-8s: %(message)s')
+logger = logging.getLogger("limb-rrt")
+logger.setLevel(logging.WARNING) #DEBUG, INFO or WARNING
 
 class EffectorInputsLimbrrt(Requirements):
     timings = True
@@ -10,7 +14,6 @@ class EffectorInputsLimbrrt(Requirements):
 class EffectorOutputsLimbrrt(EffectorInputsLimbrrt):
     effectorTrajectories = True
 
-VERBOSE = 1
 DISPLAY_RRT_PATH = True
 DISPLAY_JOINT_LEVEL = True
 HPP_DT = 0.01 # dt used to discretize trajectory given to hpp
@@ -29,36 +32,39 @@ def generateLimbRRTPath(q_init, q_end, phase_previous, phase, phase_next, fullBo
     s0 = createStateFromPhase(fullBody, phase_previous, q_init)
     s1 = createStateFromPhase(fullBody, phase_next, q_end)
     if not fullBody.isConfigValid(q_init)[0]:
-        print("q_init invalid in limb-rrt : ", q_init)
+        logger.error("q_init invalid in limb-rrt : %s", q_init)
         raise ValueError("init config is invalid in limb-rrt.")
     if not fullBody.isConfigValid(q_end)[0]:
-        print("q_end invalid in limb-rrt : ", q_end)
+        logger.error("q_end invalid in limb-rrt : %s", q_end)
         raise ValueError("goal config is invalid in limb-rrt.")
-    if VERBOSE > 1:
-        print("New state added, q_init = ", q_init)
-        print("New state added, q_end = ", q_end)
+
+    logger.debug("New state added, q_init = %s", q_init)
+    logger.debug("New state added, q_end = %s", q_end)
+    if logger.getEffectiveLevel() >= logging.DEBUG:
         contacts = fullBody.getAllLimbsInContact(s0)
         fullBody.setCurrentConfig(fullBody.getConfigAtState(s0))
-        print("contact at init state : ", contacts)
+        logger.debug("contact at init state : %s", contacts)
         for contact in contacts:
             effName = fullBody.dict_limb_joint[contact]
-            print("contact position for joint " + str(effName) + " = " + str(fullBody.getJointPosition(effName)[0:3]))
+            logger.debug("contact position for joint %s = %s",effName, fullBody.getJointPosition(effName)[0:3])
         contacts = fullBody.getAllLimbsInContact(s1)
         fullBody.setCurrentConfig(fullBody.getConfigAtState(s1))
-        print("contact at end  state : ", contacts)
+        logger.debug("contact at end  state : %s", contacts)
         for contact in contacts:
             effName = fullBody.dict_limb_joint[contact]
-            print("contact position for joint " + str(effName) + " = " + str(fullBody.getJointPosition(effName)[0:3]))
+            logger.debug("contact position for joint %s = %s",effName, fullBody.getJointPosition(effName)[0:3])
 
     # create a path in hpp corresponding to the discretized trajectory in phase :
     dt = HPP_DT
     c_t = discretizeCurve(phase.c_t, dt)[0]
     v_t = discretizeCurve(phase.dc_t, dt)[0][:,:-1]
     a_t = discretizeCurve(phase.ddc_t, dt)[0][:,:-1]
-    if VERBOSE > 1:
-        print ("c shape : ", c_t.shape)
-        print ("v shape : ", v_t.shape)
-        print ("a shape : ", a_t.shape)
+    logger.debug("c shape : %s", c_t.shape)
+    logger.debug("v shape : %s", v_t.shape)
+    logger.debug("a shape : %s", a_t.shape)
+    logger.debug("c_t = %s", c_t.T.tolist())
+    logger.debug("dc_t = %s", v_t.T.tolist())
+    logger.debug("ddc_t = %s", a_t.T.tolist())
 
     fullBody.setCurrentConfig(fullBody.getConfigAtState(s0))
     com0_fb = fullBody.getCenterOfMass()
@@ -70,15 +76,13 @@ def generateLimbRRTPath(q_init, q_end, phase_previous, phase, phase_next, fullBo
     c_t[:, -1] = np.array(com1_fb)
     com0 = c_t[:,0].tolist()
     com1 = c_t[:,-1].tolist()
-    if VERBOSE > 1:
-        print("init com : ", com0_fb)
-        print("init ref : ", com0)
-        print("end  com : ", com1_fb)
-        print("end  ref : ", com1)
+    logger.debug("init com : %s", com0_fb)
+    logger.debug("init ref : %s", com0)
+    logger.debug("end  com : %s", com1_fb)
+    logger.debug("end  ref : %s", com1)
 
     path_com_id = fullBody.generateComTraj(c_t.T.tolist(), v_t.T.tolist(), a_t.T.tolist(), dt)
-    if VERBOSE:
-        print("add com reference as hpp path with id : ", path_com_id)
+    logger.info("add com reference as hpp path with id : %d", path_com_id)
 
     # project this states to the new COM position in phase :
     """
@@ -96,11 +100,10 @@ def generateLimbRRTPath(q_init, q_end, phase_previous, phase, phase_next, fullBo
     """
 
     # run limb-rrt in hpp :
-    if VERBOSE:
-        print("start limb-rrt ... ")
+
+    logger.info("start limb-rrt ... ")
     paths_rrt_ids = fullBody.comRRTOnePhase(s0, s1, path_com_id, 10)
-    if VERBOSE:
-        print("Limb-rrt returned path(s) : ", paths_rrt_ids)
+    logger.info("Limb-rrt returned path(s) : %s", paths_rrt_ids)
     path_rrt_id = int(paths_rrt_ids[0])
 
     return path_rrt_id
