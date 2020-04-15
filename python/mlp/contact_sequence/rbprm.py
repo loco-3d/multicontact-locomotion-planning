@@ -45,7 +45,20 @@ def contactPlacementFromRBPRMState(fb, stateId, eeName):
 def createPhaseFromRBPRMState(fb, stateId, t_init = -1):
     q = fb.getConfigAtState(stateId)
     limbs_contact = fb.getAllLimbsInContact(stateId)
-    return createPhaseFromConfig(fb, q, limbs_contact, t_init)
+    cp = createPhaseFromConfig(fb, q, limbs_contact, t_init)
+    if fb.cType == "_3_DOF":
+        # update the contact normal from the data in fullbody
+        for limbId in limbs_contact:
+            eeName = fb.dict_limb_joint[limbId]
+            [p, n] = fb.clientRbprm.rbprm.computeCenterOfContactAtStateForLimb(stateId, False, limbId)
+            normal = np.array(n)
+            print("New normal : ", normal)
+            quat = Quaternion.FromTwoVectors(np.array(fb.dict_normal[eeName]), normal)
+            placement = cp.contactPatch(eeName).placement
+            placement.rotation = quat.matrix()
+            cp.contactPatch(eeName).placement = placement
+            print("New placement : ", normal)
+    return cp
 
 def getContactVariationBetweenStates(fb, s1, s2):
     # Determine the contact changes which are going to occur :

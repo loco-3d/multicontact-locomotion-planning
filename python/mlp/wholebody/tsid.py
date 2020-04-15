@@ -598,8 +598,9 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
                 logger.debug("com  pos : %s", sampleCom.pos())
                 logger.debug("com  vel : %s", sampleCom.vel())
                 logger.debug("com  acc : %s", sampleCom.acc())
-                logger.debug("AM   pos : %s", sampleAM.pos())
-                logger.debug("AM   vel : %s", sampleAM.vel())
+                if amTask:
+                    logger.debug("AM   pos : %s", sampleAM.pos())
+                    logger.debug("AM   vel : %s", sampleAM.vel())
                 logger.debug("root pos : %s", sampleRoot.pos())
                 logger.debug("root vel : %s", sampleRoot.vel())
 
