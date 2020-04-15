@@ -28,7 +28,7 @@ This package rely on a lot of optionnal packages, see the section 'Available met
 
 ## Install depencies from binary repositories :
 
-1. Add robotpkg to your apt configuration: http://robotpkg.openrobots.org/debian.html
+1. Add robotpkg to your apt configuration: http://robotpkg.openrobots.org/debian.html and robotpkg/wip: http://robotpkg.openrobots.org/robotpkg-wip.html
 2. `sudo apt update && sudo apt install robotpkg-py3\*-pinocchio robotpkg-py3\*-multicontact-api`
 
 ## Install depencies from sources : 
