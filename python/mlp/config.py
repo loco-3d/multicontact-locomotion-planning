@@ -148,10 +148,11 @@ class Config:
         except ImportError as e:
             print("Cannot load config file '" + demo_name + "', error : ")
             print(e)
-            print("Try to prepend path 'mlp.demo_configs.'")
+            print("Trying to prepend path 'mlp.demo_configs...'")
             demo_name = "mlp.demo_configs." + demo_name
             try:
                 demo_cfg = import_module(demo_name)
+                print ("... Sucess !")
             except ImportError as e:
                 print("Cannot load config file '" + demo_name + "', error : ")
                 print(e)
