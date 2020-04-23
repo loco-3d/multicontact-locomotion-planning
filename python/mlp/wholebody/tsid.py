@@ -539,6 +539,10 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
             if phase_prev and phase_ref.isEffectorInContact(eeName) and not phase_prev.isEffectorInContact(eeName):
                 invdyn.removeTask(dic_effectors_tasks[eeName].name, 0.0)  # remove pin task for this contact
                 logger.info("remove se3 effector task : %s", dic_effectors_tasks[eeName].name)
+                if logger.isEnabledFor(logging.DEBUG):
+                    current_placement = getCurrentEffectorPosition(robot, invdyn.data(), eeName)
+                    logger.debug("Current   effector placement : %s", current_placement)
+                    logger.debug("Reference effector placement : %s", cs.contactPhases[pid].contactPatch(eeName).placement)
                 updateContactPlacement(cs, pid, eeName,
                                        getCurrentEffectorPosition(robot, invdyn.data(), eeName),
                                        cfg.Robot.cType == "_6_DOF")
@@ -569,7 +573,7 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
                 simulator.q = q
                 simulator.v = v
             iter_for_phase += 1
-            logger.info("Start computation for phase %d , try number :  %d", pid, iter_for_phase)
+            logger.info("Start computation for phase %d , t = %f, try number :  %d", pid, t, iter_for_phase)
             # loop to generate states (q,v,a) for the current contact phase :
             while t < phase.timeFinal - (dt / 2.):
 
@@ -615,6 +619,8 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
                     logger.debug("effector %s, pos = %s", eeName, sampleEff.pos())
                     logger.debug("effector %s, vel = %s", eeName, sampleEff.vel())
 
+                logger.debug("previous q = %s", q)
+                logger.debug("previous v = %s", v)
                 # solve HQP for the current time
                 HQPData = invdyn.computeProblemData(t, q, v)
                 if t < phase.timeInitial + dt:
