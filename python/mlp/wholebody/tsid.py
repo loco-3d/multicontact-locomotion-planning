@@ -532,7 +532,8 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
                 transition_time = phase.duration + dt/2.
                 logger.info("\nTime %.3f Start breaking contact %s. transition time : %.3f\n",
                             t, contact.name, transition_time)
-                invdyn.removeRigidContact(contact.name, transition_time)
+                exist = invdyn.removeRigidContact(contact.name, transition_time)
+                assert exist, "Try to remove a non existing contact !"
 
         # add newly created contacts :
         for eeName in usedEffectors:
