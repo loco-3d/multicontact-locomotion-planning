@@ -582,21 +582,26 @@ def deletePhaseWBtrajectories(phase):
     phase.ddq_t = None
     phase.tau_t = None
 
-def updateContactPlacement(cs, pid_begin, eeName, placement):
+def updateContactPlacement(cs, pid_begin, eeName, placement, update_rotation):
     """
     Starting from cs.contactPhases[pid_begin] and going until eeName is in contact,
     the placement of eeName is modified with the given placement.
     Note that the wholebody configurations are not updated !
-    :param cs:
-    :param pid_begin:
-    :param eeName:
-    :param placement:
-    :return:
+    :param cs: The ContactSequence to modify
+    :param pid_begin: the Id of the first phase to modify
+    :param eeName: the effector name
+    :param placement: the new placement for eeName
+    :param update_rotation: if True, update the placement, if False update only the translation
     """
     for pid in range(pid_begin, cs.size()):
         phase = cs.contactPhases[pid]
         if phase.isEffectorInContact(eeName):
-            phase.contactPatch(eeName).placement = placement
+            if update_rotation:
+                phase.contactPatch(eeName).placement = placement
+            else:
+                new_placement = phase.contactPatch(eeName).placement
+                new_placement.translation = placement.translation
+                phase.contactPatch(eeName).placement = new_placement
         else:
             return
 

@@ -418,7 +418,9 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
     dic_contacts = {}
     for eeName in cs.contactPhases[0].effectorsInContact():
         # replace the initial contact patch placements if needed to match exactly the current position in the problem:
-        updateContactPlacement(cs, 0, eeName, getCurrentEffectorPosition(robot, invdyn.data(), eeName))
+        updateContactPlacement(cs, 0, eeName,
+                               getCurrentEffectorPosition(robot, invdyn.data(), eeName),
+                               cfg.Robot.cType == "_6_DOF")
         # create the contacts :
         contact = createContactForEffector(cfg, invdyn, robot, eeName, phase0.contactPatch(eeName))
         dic_contacts.update({eeName: contact})
@@ -522,6 +524,21 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
                 adjustEndEffectorTrajectoryIfNeeded(cfg, phase_ref, robot, invdyn.data(), eeName, effectorMethod)
                 logger.info("t interval : %s", time_interval)
 
+        # add newly created contacts :
+        for eeName in usedEffectors:
+            if phase_prev and phase_ref.isEffectorInContact(eeName) and not phase_prev.isEffectorInContact(eeName):
+                invdyn.removeTask(dic_effectors_tasks[eeName].name, 0.0)  # remove pin task for this contact
+                logger.info("remove se3 effector task : %s", dic_effectors_tasks[eeName].name)
+                if logger.isEnabledFor(logging.DEBUG):
+                    current_placement = getCurrentEffectorPosition(robot, invdyn.data(), eeName)
+                    logger.debug("Current   effector placement : %s", current_placement)
+                    logger.debug("Reference effector placement : %s", cs.contactPhases[pid].contactPatch(eeName).placement)
+                updateContactPlacement(cs, pid, eeName,
+                                       getCurrentEffectorPosition(robot, invdyn.data(), eeName),
+                                       cfg.Robot.cType == "_6_DOF")
+                contact = createContactForEffector(cfg, invdyn, robot, eeName, phase.contactPatch(eeName))
+                dic_contacts.update({eeName: contact})
+                logger.info("Create contact for : %s", eeName)
 
         # start removing the contact that will be broken in the next phase :
         # (This tell the solver that it should start minimizing the contact force on this contact, and ideally get to 0 at the given time)
@@ -530,17 +547,8 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
                 transition_time = phase.duration + dt/2.
                 logger.info("\nTime %.3f Start breaking contact %s. transition time : %.3f\n",
                             t, contact.name, transition_time)
-                invdyn.removeRigidContact(contact.name, transition_time)
-
-        # add newly created contacts :
-        for eeName in usedEffectors:
-            if phase_prev and phase_ref.isEffectorInContact(eeName) and not phase_prev.isEffectorInContact(eeName):
-                invdyn.removeTask(dic_effectors_tasks[eeName].name, 0.0)  # remove pin task for this contact
-                logger.info("remove se3 effector task : %s", dic_effectors_tasks[eeName].name)
-                updateContactPlacement(cs, pid, eeName, getCurrentEffectorPosition(robot, invdyn.data(), eeName))
-                contact = createContactForEffector(cfg, invdyn, robot, eeName, phase.contactPatch(eeName))
-                dic_contacts.update({eeName: contact})
-                logger.info("Create contact for : %s", eeName)
+                exist = invdyn.removeRigidContact(contact.name, transition_time)
+                assert exist, "Try to remove a non existing contact !"
 
         if cfg.WB_STOP_AT_EACH_PHASE:
             input('start simulation')
@@ -565,7 +573,7 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
                 simulator.q = q
                 simulator.v = v
             iter_for_phase += 1
-            logger.info("Start computation for phase %d , try number :  %d", pid, iter_for_phase)
+            logger.info("Start computation for phase %d , t = %f, try number :  %d", pid, t, iter_for_phase)
             # loop to generate states (q,v,a) for the current contact phase :
             while t < phase.timeFinal - (dt / 2.):
 
@@ -611,10 +619,12 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
                     logger.debug("effector %s, pos = %s", eeName, sampleEff.pos())
                     logger.debug("effector %s, vel = %s", eeName, sampleEff.vel())
 
+                logger.debug("previous q = %s", q)
+                logger.debug("previous v = %s", v)
                 # solve HQP for the current time
                 HQPData = invdyn.computeProblemData(t, q, v)
                 if t < phase.timeInitial + dt:
-                    logger.info("final data for phase ", pid)
+                    logger.info("final data for phase %d", pid)
                     if logger.isEnabledFor(logging.INFO):
                         HQPData.print_all()
                 sol = solver.solve(HQPData)
