@@ -524,17 +524,6 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
                 adjustEndEffectorTrajectoryIfNeeded(cfg, phase_ref, robot, invdyn.data(), eeName, effectorMethod)
                 logger.info("t interval : %s", time_interval)
 
-
-        # start removing the contact that will be broken in the next phase :
-        # (This tell the solver that it should start minimizing the contact force on this contact, and ideally get to 0 at the given time)
-        for eeName, contact in dic_contacts.items():
-            if phase_next and phase.isEffectorInContact(eeName) and not phase_next.isEffectorInContact(eeName):
-                transition_time = phase.duration + dt/2.
-                logger.info("\nTime %.3f Start breaking contact %s. transition time : %.3f\n",
-                            t, contact.name, transition_time)
-                exist = invdyn.removeRigidContact(contact.name, transition_time)
-                assert exist, "Try to remove a non existing contact !"
-
         # add newly created contacts :
         for eeName in usedEffectors:
             if phase_prev and phase_ref.isEffectorInContact(eeName) and not phase_prev.isEffectorInContact(eeName):
@@ -550,6 +539,16 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
                 contact = createContactForEffector(cfg, invdyn, robot, eeName, phase.contactPatch(eeName))
                 dic_contacts.update({eeName: contact})
                 logger.info("Create contact for : %s", eeName)
+
+        # start removing the contact that will be broken in the next phase :
+        # (This tell the solver that it should start minimizing the contact force on this contact, and ideally get to 0 at the given time)
+        for eeName, contact in dic_contacts.items():
+            if phase_next and phase.isEffectorInContact(eeName) and not phase_next.isEffectorInContact(eeName):
+                transition_time = phase.duration + dt/2.
+                logger.info("\nTime %.3f Start breaking contact %s. transition time : %.3f\n",
+                            t, contact.name, transition_time)
+                exist = invdyn.removeRigidContact(contact.name, transition_time)
+                assert exist, "Try to remove a non existing contact !"
 
         if cfg.WB_STOP_AT_EACH_PHASE:
             input('start simulation')
