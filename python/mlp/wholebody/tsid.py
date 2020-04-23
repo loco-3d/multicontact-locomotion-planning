@@ -418,7 +418,9 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
     dic_contacts = {}
     for eeName in cs.contactPhases[0].effectorsInContact():
         # replace the initial contact patch placements if needed to match exactly the current position in the problem:
-        updateContactPlacement(cs, 0, eeName, getCurrentEffectorPosition(robot, invdyn.data(), eeName))
+        updateContactPlacement(cs, 0, eeName,
+                               getCurrentEffectorPosition(robot, invdyn.data(), eeName),
+                               cfg.Robot.cType == "_6_DOF")
         # create the contacts :
         contact = createContactForEffector(cfg, invdyn, robot, eeName, phase0.contactPatch(eeName))
         dic_contacts.update({eeName: contact})
@@ -537,7 +539,9 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
             if phase_prev and phase_ref.isEffectorInContact(eeName) and not phase_prev.isEffectorInContact(eeName):
                 invdyn.removeTask(dic_effectors_tasks[eeName].name, 0.0)  # remove pin task for this contact
                 logger.info("remove se3 effector task : %s", dic_effectors_tasks[eeName].name)
-                updateContactPlacement(cs, pid, eeName, getCurrentEffectorPosition(robot, invdyn.data(), eeName))
+                updateContactPlacement(cs, pid, eeName,
+                                       getCurrentEffectorPosition(robot, invdyn.data(), eeName),
+                                       cfg.Robot.cType == "_6_DOF")
                 contact = createContactForEffector(cfg, invdyn, robot, eeName, phase.contactPatch(eeName))
                 dic_contacts.update({eeName: contact})
                 logger.info("Create contact for : %s", eeName)
