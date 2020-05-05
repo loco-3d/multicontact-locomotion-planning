@@ -26,6 +26,7 @@ level_am = 1
 YAW_ROT_GAIN = 1.
 
 IK_eff_size = Robot.dict_size.copy()
+PLOT_CIRCLE_RADIUS = 0.01 # radius of the circle used to display the contacts
 
 # phases duration
 DURATION_INIT = 1.  # Time to init the motion
