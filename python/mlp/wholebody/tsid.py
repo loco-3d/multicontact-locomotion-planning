@@ -702,7 +702,7 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
     # end for all phases
     # store the data of the last point
     phase_prev = phase
-    phase = ContactPhase()
+    phase = ContactPhase(phase_prev)
     storeData(True)
     setPreviousFinalValues(phase_prev, phase, cfg)
     time_end = time.time() - time_start
