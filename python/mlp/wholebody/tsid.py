@@ -12,7 +12,7 @@ from numpy.linalg import norm as norm
 import os
 from rospkg import RosPack
 import time
-from multicontact_api import ContactPhase, ContactSequence
+from multicontact_api import ContactPhase, ContactSequence, ContactType
 from curves import piecewise, piecewise_SE3, polynomial
 from mlp.utils.computation_tools import shiftZMPtoFloorAltitude
 import mlp.viewer.display_tools as display_tools
@@ -33,6 +33,7 @@ eigenpy.switchToNumpyArray()
 class WholebodyInputsTsid(Requirements):
     consistentContacts = True
     friction = True
+    contactModel = True
     timings = True
     centroidalTrajectories = True
     effectorTrajectories = True
@@ -42,20 +43,6 @@ class WholebodyOutputsTsid(Requirements):
     consistentContacts = True
     timings = True
     jointsTrajectories = True
-
-
-def buildRectangularContactPoints(size, transform):
-    # build matrices with corners of the feet
-    lxp = size[0] / 2. + transform.translation[0]  # foot length in positive x direction
-    lxn = size[0] / 2. - transform.translation[0]  # foot length in negative x direction
-    lyp = size[1] / 2. + transform.translation[1]  # foot length in positive y direction
-    lyn = size[1] / 2. - transform.translation[1]  # foot length in negative y direction
-    lz = transform.translation[2]  # foot sole height with respect to ankle joint
-    contact_Point = np.ones((3, 4))
-    contact_Point[0, :] = [-lxn, -lxn, lxp, lxp]
-    contact_Point[1, :] = [-lyn, lyp, -lyn, lyp]
-    contact_Point[2, :] = [lz] * 4
-    return contact_Point
 
 
 def getCurrentEffectorPosition(robot, data, eeName):
@@ -99,18 +86,20 @@ def createContactForEffector(cfg, invdyn, robot, eeName, patch):
     logger.info("create contact for effector %s", eeName)
     logger.info("contact placement : %s", patch.placement)
     logger.info("contact_normal : %s", contactNormal)
-    if cfg.Robot.cType == "_3_DOF":
+    if patch.contact_model.contact_type == ContactType.CONTACT_POINT:
         contact = tsid.ContactPoint("contact_" + eeName, robot, eeName, contactNormal, patch.friction, cfg.fMin, cfg.fMax)
         mask = np.ones(3)
         contact.useLocalFrame(False)
         logger.info("create contact point")
-    else:
-        contact_Points = buildRectangularContactPoints(cfg.IK_eff_size[eeName],cfg.Robot.dict_offset[eeName] )
-        contact = tsid.Contact6d("contact_" + eeName, robot, eeName, contact_Points, contactNormal, patch.friction, cfg.fMin,
+    elif patch.contact_model.contact_type == ContactType.CONTACT_PLANAR:
+        contact_points = patch.contact_model.contact_points_positions
+        contact = tsid.Contact6d("contact_" + eeName, robot, eeName, contact_points, contactNormal, patch.friction, cfg.fMin,
                                  cfg.fMax)
         mask = np.ones(6)
         logger.info("create rectangular contact")
-        logger.info("contact points : \n %s", contact_Points)
+        logger.info("contact points : \n %s", contact_points)
+    else:
+        raise RuntimeError("Unknown contact type : ", patch.contact_model.contact_type)
     contact.setKp(cfg.kp_contact * mask)
     contact.setKd(2.0 * np.sqrt(cfg.kp_contact) * mask)
     contact.setReference(patch.placement)
