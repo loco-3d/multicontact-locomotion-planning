@@ -522,3 +522,22 @@ def constantSE3curve(placement, t_min, t_max = None):
     rot = SO3Linear(placement.rotation, placement.rotation, t_min, t_max)
     trans = polynomial(placement.translation.reshape(-1,1), t_min, t_max)
     return SE3Curve(trans, rot)
+
+
+def buildRectangularContactPoints(size, transform):
+    """
+    Build Array at the corners of the feet
+    :param size: list of len 2 : size of the rectangle along x and y
+    :param transform: an SE3 object: transform applied to all vectors
+    :return: a 3x4 Array, with the 3D position of one contact point per columns
+    """
+    lxp = size[0] / 2. + transform.translation[0]  # foot length in positive x direction
+    lxn = size[0] / 2. - transform.translation[0]  # foot length in negative x direction
+    lyp = size[1] / 2. + transform.translation[1]  # foot length in positive y direction
+    lyn = size[1] / 2. - transform.translation[1]  # foot length in negative y direction
+    lz = transform.translation[2]  # foot sole height with respect to ankle joint
+    contact_Point = np.ones((3, 4))
+    contact_Point[0, :] = [-lxn, -lxn, lxp, lxp]
+    contact_Point[1, :] = [-lyn, lyp, -lyn, lyp]
+    contact_Point[2, :] = [lz] * 4
+    return contact_Point
