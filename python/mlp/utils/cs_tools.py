@@ -1,10 +1,10 @@
 import multicontact_api
-from multicontact_api import ContactSequence, ContactPhase, ContactPatch
+from multicontact_api import ContactSequence, ContactPhase, ContactPatch, ContactModel, ContactType
 from curves import piecewise, polynomial, SE3Curve
 from pinocchio import SE3, Quaternion
 from mlp.utils.util import SE3FromConfig,  computeContactNormal, rootOrientationFromFeetPlacement
 from mlp.utils.util import computeEffectorTranslationBetweenStates, computeEffectorRotationBetweenStates
-from mlp.utils.util import effectorPlacementFromPhaseConfig
+from mlp.utils.util import effectorPlacementFromPhaseConfig, buildRectangularContactPoints
 import numpy as np
 import types
 from hpp.corbaserver.rbprm.rbprmstate import State, StateHelper
@@ -616,6 +616,25 @@ def setAllUninitializedFrictionCoef(cs, mu):
         for eeName in phase.effectorsInContact():
             if phase.contactPatch(eeName).friction <= 0 :
                 phase.contactPatch(eeName).friction = mu
+
+def setAllUninitializedContactModel(cs, Robot):
+    """
+    For all the contact patch of all the phases, if the contact type is UNDEFINED, set it from the Robot config
+    :param cs: The contact sequence to modify
+    :param Robot: The Robot class, require the fields cType, dict_size and dict_offset
+    :return:
+    """
+    for phase in cs.contactPhases:
+        for eeName in phase.effectorsInContact():
+            if phase.contactPatch(eeName).contact_model.contact_type == ContactType.CONTACT_UNDEFINED:
+                if Robot.cType == "_3_DOF":
+                    phase.contactPatch(eeName).contact_model.contact_type = ContactType.CONTACT_POINT
+                elif Robot.cType == "_6_DOF":
+                    phase.contactPatch(eeName).contact_model.contact_type = ContactType.CONTACT_PLANAR
+                    phase.contactPatch(eeName).contact_model.contact_points_positions =\
+                        buildRectangularContactPoints(Robot.dict_size[eeName], Robot.dict_offset[eeName])
+                else:
+                    raise RuntimeError("Unknown contact type : ", Robot.cType)
 
 def generateZeroAMreference(cs):
     """

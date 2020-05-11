@@ -63,7 +63,7 @@ cs.contactPhases[-2].c_final = c_r
 cs.contactPhases[-1].c_init = c_r
 setFinalState(cs,com, q_ref)
 
-cs.saveAsBinary("talos_flatGround.cs")
+cs.saveAsBinary("step_in_place_quasistatic.cs")
 
 t = 0
 for pid, phase in enumerate(cs.contactPhases):
@@ -99,4 +99,4 @@ assert cs.haveConsistentContacts()
 assert cs.haveCentroidalValues()
 assert cs.haveCentroidalTrajectories()
 
-cs.saveAsBinary("talos_flatGround_COM.cs")
+cs.saveAsBinary("step_in_place_quasistatic_COM.cs")

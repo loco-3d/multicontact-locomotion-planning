@@ -231,7 +231,8 @@ class Config:
             self.IK_store_joints_derivatives = False
             self.IK_store_joints_torque = False
             self.SAVE_CS_WB = False
-
+        if self.ITER_DYNAMIC_FILTER > 0:
+            self.IK_store_centroidal = True
 
 
     def get_contact_generation_method(self):

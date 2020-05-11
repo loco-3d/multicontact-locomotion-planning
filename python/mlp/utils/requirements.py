@@ -12,6 +12,7 @@ class Requirements():
     timings = False
     consistentContacts = False
     friction = False
+    contactModel = False
     rootTrajectories = False
     COMvalues = False
     AMvalues = False
@@ -60,6 +61,18 @@ class Requirements():
                 print("An error occurred in setAllUninitializedFrictionCoef.")
                 return False
         return True
+
+    @classmethod
+    def requireContactModel(cls, cs, Robot):
+        if not cs.haveContactModelDefined():
+            print("- Contact sequence do not have ContactModel defined.")
+            print("Set all the uninitialized model from the Robot class")
+            cs_tools.setAllUninitializedContactModel(cs, Robot)
+            if not cs.haveContactModelDefined():
+                print("An error occurred in setAllUninitializedContactModel.")
+                return False
+        return True
+
 
     @classmethod
     def requireRootTrajectories(cls, cs, cfg):
@@ -196,6 +209,8 @@ class Requirements():
             print("- Consistent contacts")
         if cls.friction:
             print("- friction coefficient for all contacts")
+        if cls.contactModel:
+            print("- ContactModel defined for all ContactPhases")
         if cls.COMvalues:
             print("- c_init / final for each phases")
         if cls.AMvalues:
@@ -232,6 +247,8 @@ class Requirements():
             assert cs.haveConsistentContacts(), "Contact sequence do not have consistent contacts."
         if cls.friction:
             assert cs.haveFriction(), "Contact sequence do not have friction coefficient defined for all contacts."
+        if cls.contactModel:
+            assert cs.haveContactModelDefined(), "Contact Sequence do not have ContactModel defined for all phases."
         if cls.rootTrajectories:
             assert cs.haveRootTrajectories(), "Contact sequence do not have consistent Root trajectories."
         if cls.COMvalues:
@@ -303,6 +320,9 @@ class Requirements():
                 return False
         if cls.friction:
             if not cls.requireFriction(cs, cfg.MU):
+                return False
+        if cls.contactModel:
+            if not cls.requireContactModel(cs, cfg.Robot):
                 return False
         if cls.rootTrajectories:
             if not cls.requireRootTrajectories(cs, cfg):
