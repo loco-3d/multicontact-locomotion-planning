@@ -45,4 +45,4 @@ setFinalState(cs,com, q_ref)
 
 assert cs.haveConsistentContacts()
 
-cs.saveAsBinary("talos_flatGround.cs")
+cs.saveAsBinary("step_in_place.cs")
