@@ -25,7 +25,6 @@ w_am = 2e-2 # weight used for the minimization of the Angular momentum
 w_am_track = 2e-2 # weight used for the tracking of the Angular momentum
 w_posture = 0.1  # weight of joint posture task
 w_rootOrientation = 1.  # weight of the root's orientation task
-w_forceRef = 1e-3  # weight of force regularization task
 w_eff = 1.0  # weight of the effector motion task
 kp_contact = 30.0  # proportional gain of contact constraint
 kp_com = 20.  # proportional gain of center of mass task
@@ -39,6 +38,11 @@ level_com = 0
 level_posture = 1
 level_rootOrientation = 1
 level_am = 1
+# The weight of the force regularization task of each contact will start at w_forceRef_init when creating a new contact,
+# and then linearly reduce to w_forceRef_end over a time period of phase_duration * w_forceRef_time_ratio
+w_forceRef_init = 0.5
+w_forceRef_end = 1e-5
+w_forceRef_time_ratio = 0.5
 
 #IK_dt = 0.001
 IK_eff_size = Robot.dict_size.copy()
