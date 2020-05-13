@@ -409,7 +409,7 @@ def discretizeCurve(curve,dt):
     numPoints = round((curve.max() - curve.min()) / dt ) + 1
     res = np.zeros([curve.dim(), numPoints])
     timeline = np.zeros(numPoints)
-    t = curve.min()
+    t = curve.min() + 0.0001 # add an epsilon to be sure to be AFTER the discontinuities at each phase changes
     for i in range(numPoints):
         res[:,i] = curve(t)
         timeline[i] = t
