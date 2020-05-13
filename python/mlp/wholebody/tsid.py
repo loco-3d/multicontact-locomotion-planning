@@ -98,7 +98,7 @@ def createContactForEffector(cfg, invdyn, robot, eeName, patch, use_force_reg = 
         contact = tsid.Contact6d("contact_" + eeName, robot, eeName, contact_points, contactNormal, patch.friction, cfg.fMin,
                                  cfg.fMax)
         mask = np.ones(6)
-        force_ref = np.zeros(12)
+        force_ref = np.zeros(6)
         logger.info("create rectangular contact")
         logger.info("contact points : \n %s", contact_points)
     else:
@@ -298,6 +298,7 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
                 contact_forces = invdyn.getContactForce(contact.name, sol)
                 contact_normal_force = np.array(contact.getNormalForce(contact_forces))
             else:
+                logger.warning("invdyn check contact returned false while the reference contact is active !")
                 contact_normal_force = np.zeros(1)
                 if cfg.Robot.cType == "_3_DOF":
                     contact_forces = np.zeros(3)
@@ -607,10 +608,9 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
                     u_w_force = (t - phase.timeInitial) / (phase.duration * cfg.w_forceRef_time_ratio)
                     if u_w_force <= 1.:
                         current_w_force = cfg.w_forceRef_init * (1. - u_w_force) + cfg.w_forceRef_end * u_w_force
-                        print("current_w_force ", current_w_force)
-                        for task_names in new_contacts_names:
-                            success = invdyn.updateTaskWeight(task_names, current_w_force)
-                            assert success
+                        for contact_name in new_contacts_names:
+                            success = invdyn.updateRigidContactWeights(contact_name, current_w_force)
+                            assert success, "Unable to change the weight of the force regularization task for contact "+contact_name
 
                 logger.debug("### references given : ###")
                 logger.debug("com  pos : %s", sampleCom.pos())
