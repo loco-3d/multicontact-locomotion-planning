@@ -533,6 +533,15 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
                 exist = invdyn.removeRigidContact(contact.name, transition_time)
                 assert exist, "Try to remove a non existing contact !"
 
+        # Remove all effectors not in contact at this phase,
+        # This is required as the block above may not remove the contact exactly at the desired time
+        # FIXME: why is it required ? Numerical approximation in the transition_time ?
+        for eeName, contact in dic_contacts.items():
+            if not phase.isEffectorInContact(eeName):
+                exist = invdyn.removeRigidContact(contact.name, 0.)
+                if exist:
+                    logger.warning("Contact "+eeName+" was not remove after the given transition time.")
+
         if cfg.WB_STOP_AT_EACH_PHASE:
             input('start simulation')
 
