@@ -265,33 +265,16 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
                 if t > phase_prev.effectorTrajectory(eeName).max():
                     placement = getCurrentEffectorPosition(robot, invdyn.data(), eeName)
                     phase_prev.effectorTrajectory(eeName).append(placement, t)
-        if first_iter_for_phase:
-            for eeName in phase.effectorsWithTrajectory():
-                placement = getCurrentEffectorPosition(robot, invdyn.data(), eeName)
+
+        for eeName in phase.effectorsWithTrajectory():
+            placement = getCurrentEffectorPosition(robot, invdyn.data(), eeName)
+            if first_iter_for_phase:
                 phase.addEffectorTrajectory(eeName, piecewise_SE3(constantSE3curve(placement, t)))
-        else:
-            for eeName in phase.effectorsWithTrajectory():
-                placement = getCurrentEffectorPosition(robot, invdyn.data(), eeName)
+            else:
                 phase.effectorTrajectory(eeName).append(placement, t)
 
 
     def appendContactForcesTrajs(first_iter_for_phase = False):
-        if first_iter_for_phase and phase_prev:
-            for eeName in phase_prev.effectorsInContact():
-                if t > phase_prev.contactForce(eeName).max():
-                    if phase.isEffectorInContact(eeName):
-                        contact = dic_contacts[eeName]
-                        contact_forces = invdyn.getContactForce(contact.name, sol)
-                        contact_normal_force = np.array(contact.getNormalForce(contact_forces))
-                    else:
-                        contact_normal_force = np.zeros(1)
-                        if cfg.Robot.cType == "_3_DOF":
-                            contact_forces = np.zeros(3)
-                        else:
-                            contact_forces = np.zeros(12)
-                    phase_prev.contactForce(eeName).append(contact_forces, t)
-                    phase_prev.contactNormalForce(eeName).append(contact_normal_force.reshape(1), t)
-
         for eeName in phase.effectorsInContact():
             contact = dic_contacts[eeName]
             if invdyn.checkContact(contact.name, sol):
