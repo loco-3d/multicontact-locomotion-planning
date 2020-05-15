@@ -77,6 +77,7 @@ class LocoPlannerReactive(LocoPlanner):
         self.last_phase = None
         self.stop_motion_flag = Value(c_bool)
         self.last_phase_flag = Value(c_bool) # true if the last phase have changed
+        self.cfg.Robot.minDist = 0.7
 
     def get_last_phase(self):
         if self.last_phase_flag.value:
@@ -328,6 +329,7 @@ class LocoPlannerReactive(LocoPlanner):
         self.init_viewer()
         self.cs = tools.computePhasesTimings(self.cs, self.cfg)
         self.cs = tools.computePhasesCOMValues(self.cs, self.cfg.Robot.DEFAULT_COM_HEIGHT)
+        tools.setAllUninitializedContactModel(self.cs, cfg.Robot)
         tools.computeRootTrajFromContacts(self.fullBody, self.cs)
         tools.setAllUninitializedFrictionCoef(self.cs, self.cfg.MU)
 
