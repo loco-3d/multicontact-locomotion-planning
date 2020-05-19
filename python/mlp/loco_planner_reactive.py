@@ -325,14 +325,17 @@ class LocoPlannerReactive(LocoPlanner):
         self.robot, self.gui = initScenePinocchio(cfg.Robot.urdfName + cfg.Robot.urdfSuffix,
                                                   cfg.Robot.packageName, cfg.ENV_NAME)
 
-    def run(self):
-        self.run_contact_generation()
-        self.init_viewer()
-        self.cs = tools.computePhasesTimings(self.cs, self.cfg)
-        self.cs = tools.computePhasesCOMValues(self.cs, self.cfg.Robot.DEFAULT_COM_HEIGHT)
+    def compute_cs_requirements(self):
+        tools.computePhasesTimings(self.cs, self.cfg)
+        tools.computePhasesCOMValues(self.cs, self.cfg.Robot.DEFAULT_COM_HEIGHT)
         tools.setAllUninitializedContactModel(self.cs, cfg.Robot)
         tools.computeRootTrajFromContacts(self.fullBody, self.cs)
         tools.setAllUninitializedFrictionCoef(self.cs, self.cfg.MU)
+
+    def run(self):
+        self.run_contact_generation()
+        self.init_viewer()
+        self.compute_cs_requirements()
 
         self.start_process()
         time.sleep(2)
