@@ -17,6 +17,7 @@ from ctypes import c_ubyte, c_bool
 from queue import Empty as queue_empty
 import pickle
 from mlp.centroidal.n_step_capturability import zeroStepCapturability
+from hpp.corbaserver.rbprm.utils import ServerManager
 eigenpy.switchToNumpyArray()
 
 MAX_PICKLE_SIZE = 10000 # maximal size (in byte) of the pickled representation of a contactPhase
@@ -399,22 +400,10 @@ if __name__ == "__main__":
     cfg = Config()
     cfg.load_scenario_config(demo_name)
 
-    # kill already existing instance of the server
-    subprocess.run(["killall", "hpp-rbprm-server"])
-    # run the server in background :
-    # stdout and stderr outputs of the child process are redirected to devnull (hidden).
-    # preexec_fn is used to ignore ctrl-c signal send to the main script (otherwise they are forwarded to the child process)
-    process_server = subprocess.Popen("hpp-rbprm-server",
-                                      stdout=subprocess.PIPE,
-                                      stderr=subprocess.DEVNULL,
-                                      preexec_fn=os.setpgrp)
-    # register cleanup methods to kill server when exiting python interpreter
-    atexit.register(process_server.kill)
-    time.sleep(3)
-
-
-    loco_planner = LocoPlannerReactive(cfg)
-    loco_planner.run()
+    with ServerManager('gepetto-gui'):
+        with ServerManager('hpp-rbprm-server'):
+            loco_planner = LocoPlannerReactive(cfg)
+            loco_planner.run()
 
 
 
