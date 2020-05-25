@@ -3,7 +3,7 @@ from pinocchio import SE3, Quaternion
 import time
 from rospkg import RosPack
 import gepetto.corbaserver
-from mlp.utils.util import numpy2DToList, hppConfigFromMatrice, discretizeCurve
+from mlp.utils.util import numpy2DToList, hppConfigFromMatrice, discretizeCurve, build_fullbody
 from mlp.utils.requirements import Requirements
 pin.switchToNumpyArray()
 
@@ -224,24 +224,9 @@ def displayContactSequence(v, cs, step=0.2):
     displayWBconfig(v, cs.contactPhases[-1].q_final)
 
 
-def initScene(Robot, envName="multicontact/ground", genLimbsDB=True):
-    from hpp.gepetto import Viewer, ViewerFactory
-    from hpp.corbaserver.rbprm.rbprmfullbody import FullBody
-    from hpp.corbaserver import ProblemSolver
-    fullBody = Robot()
-    fullBody.client.robot.setDimensionExtraConfigSpace(6)
-    fullBody.setJointBounds("root_joint", [-100, 100, -100, 100, -100, 100])
-    fullBody.client.robot.setExtraConfigSpaceBounds([-100, 100, -100, 100, -100, 100, -100, 100, -100, 100, -100, 100])
-    fullBody.setReferenceConfig(fullBody.referenceConfig[::] + [0] * 6)
-    fullBody.setPostureWeights(fullBody.postureWeights[::] + [0] * 6)
-    try:
-        if genLimbsDB:
-            fullBody.loadAllLimbs("static", nbSamples=100)
-        else:
-            fullBody.loadAllLimbs("static", nbSamples=1)
-    except AttributeError:
-        print("WARNING initScene : fullBody do not have loadAllLimbs, some scripts may fails.")
-    ps = ProblemSolver(fullBody)
+def initScene(Robot, envName="multicontact/ground", genLimbsDB=True, context = None):
+    from hpp.gepetto import ViewerFactory
+    fullBody, ps = build_fullbody(Robot, genLimbsDB, context)
     vf = ViewerFactory(ps)
     vf.loadObstacleModel("package://hpp_environments/urdf/" + envName + ".urdf", "planning")
     v = vf.createViewer(ghost = True, displayCoM=True)

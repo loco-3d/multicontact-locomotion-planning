@@ -541,3 +541,41 @@ def buildRectangularContactPoints(size, transform):
     contact_Point[1, :] = [-lyn, lyp, -lyn, lyp]
     contact_Point[2, :] = [lz] * 4
     return contact_Point
+
+
+def build_fullbody(Robot, genLimbsDB=True, context = None):
+    """
+    Build an rbprm FullBody instance
+    :param Robot: The class of the robot
+    :param genLimbsDB: if true, generate the limbs database
+    :param context: An optional string that give a name to a corba context instance
+    :return: a fullbody instance and a problemsolver containing this fullbody
+    """
+    # Local import, as they are optional dependencies
+    from hpp.corbaserver import createContext, loadServerPlugin, Client, ProblemSolver
+    from hpp.corbaserver.rbprm import Client as RbprmClient
+    if context:
+        createContext(context)
+        loadServerPlugin(context, 'rbprm-corba.so')
+        loadServerPlugin(context, 'affordance-corba.so')
+        hpp_client = Client(context=context)
+        hpp_client.problem.selectProblem(context)
+        rbprm_client = RbprmClient(context=context)
+    else:
+        hpp_client = None
+        rbprm_client = None
+    fullBody = Robot(client = hpp_client, clientRbprm = rbprm_client)
+    fullBody.client.robot.setDimensionExtraConfigSpace(6)
+    fullBody.setJointBounds("root_joint", [-100, 100, -100, 100, -100, 100])
+    fullBody.client.robot.setExtraConfigSpaceBounds([-100, 100, -100, 100, -100, 100, -100, 100, -100, 100, -100, 100])
+    fullBody.setReferenceConfig(fullBody.referenceConfig[::] + [0] * 6)
+    fullBody.setPostureWeights(fullBody.postureWeights[::] + [0] * 6)
+    try:
+        if genLimbsDB:
+            fullBody.loadAllLimbs("static", nbSamples=100)
+        else:
+            fullBody.loadAllLimbs("static", nbSamples=1)
+    except AttributeError:
+        print("WARNING initScene : fullBody do not have loadAllLimbs, some scripts may fails.")
+    ps = ProblemSolver(fullBody)
+    return fullBody, ps
