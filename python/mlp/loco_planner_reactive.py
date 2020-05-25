@@ -1,6 +1,6 @@
 from mlp import LocoPlanner
 from mlp.config import Config
-from mlp.viewer.display_tools import disp_wb_pinocchio, initScenePinocchio
+from mlp.viewer.display_tools import disp_wb_pinocchio, initScenePinocchio, initScene
 import argparse
 import atexit
 import subprocess
@@ -18,6 +18,10 @@ from queue import Empty as queue_empty
 import pickle
 from mlp.centroidal.n_step_capturability import zeroStepCapturability
 from hpp.corbaserver.rbprm.utils import ServerManager
+import importlib
+import logging
+logging.basicConfig(format='[%(name)-12s] %(levelname)-8s: %(message)s')
+logger = logging.getLogger("reactive-planning")
 eigenpy.switchToNumpyArray()
 
 MAX_PICKLE_SIZE = 10000 # maximal size (in byte) of the pickled representation of a contactPhase
@@ -62,6 +66,7 @@ class LocoPlannerReactive(LocoPlanner):
         self.generate_effector_trajectories, self.EffectorInputs, self.EffectorOutputs = \
             self.cfg.get_effector_initguess_method()
         self.generate_wholebody, self.WholebodyInputs, self.WholebodyOutputs = self.cfg.get_wholebody_method()
+        # define members that will stores processes and queues
         self.process_centroidal = None
         self.process_wholebody = None
         self.process_viewer = None
@@ -72,13 +77,83 @@ class LocoPlannerReactive(LocoPlanner):
         self.pipe_cs_com_out = None
         self.queue_qt = None
         self.viewer_lock = Lock()
-        self.robot = None
-        self.gui = None
         self.last_phase_pickled = Array(c_ubyte, MAX_PICKLE_SIZE) # will contain the last contact phase send to the viewer
         self.last_phase = None
         self.stop_motion_flag = Value(c_bool)
         self.last_phase_flag = Value(c_bool) # true if the last phase have changed
         self.cfg.Robot.minDist = 0.7
+        # initialize the guide planner class:
+        self.client_hpp = None
+        self.guide_planner = self.init_guide_planner()
+        # initialize a fullBody rbprm object and a sl1m contact planning class
+        self.fullBody, _ = initScene(cfg.Robot, cfg.ENV_NAME, context="fullbody")
+        self.contact_planner = self.init_contact_planner()
+        # Set up gepetto gui and a pinocchio robotWrapper with display
+        self.robot = None
+        self.gui = None
+        self.init_viewer()
+
+
+    def init_guide_planner(self):
+        """
+        Initialize an rbprm.AbstractPathPlanner class
+        :return: an instance of the class
+        """
+        # the following script must produce a
+        if hasattr(self.cfg, 'SCRIPT_ABSOLUTE_PATH'):
+            scriptName = self.cfg.SCRIPT_ABSOLUTE_PATH
+        else:
+            scriptName = self.cfg.RBPRM_SCRIPT_PATH + "." + self.cfg.SCRIPT_PATH + '.' + self.cfg.DEMO_NAME
+        scriptName += "_path"
+        logger.warning("Run Guide script : %s", scriptName)
+        module = importlib.import_module(scriptName)
+        planner = module.PathPlanner("guide_planning")
+        planner.init_problem()
+        # greatly increase the number of loops of the random shortcut
+        planner.ps.setParameter("PathOptimization/RandomShortcut/NumberOfLoops", 50)
+        # force the base orientation to follow the direction of motion along the Z axis
+        planner.ps.setParameter("Kinodynamic/forceYawOrientation", True)
+        planner.q_init[:2] = [0, 0] # FIXME : defined somewhere ??
+        planner.init_viewer(cfg.ENV_NAME)
+        planner.init_planner()
+        return planner
+
+    def init_contact_planner(self):
+        """
+        Initialize aa class used to generate sl1m contact sequences
+        :return: a sl1m instance
+        """
+        return None # class sl1m
+
+    def init_viewer(self):
+        """
+        Build a pinocchio wrapper and a gepetto-gui instance and assign them as class members
+        """
+        subprocess.run(["killall", "gepetto-gui"])
+        self.process_gepetto_gui = subprocess.Popen("gepetto-gui",
+                                                    stdout=subprocess.PIPE,
+                                                    stderr=subprocess.DEVNULL,
+                                                    preexec_fn=os.setpgrp)
+        atexit.register(self.process_gepetto_gui.kill)
+        time.sleep(3)
+        self.robot, self.gui = initScenePinocchio(cfg.Robot.urdfName + cfg.Robot.urdfSuffix,
+                                                  cfg.Robot.packageName, cfg.ENV_NAME)
+        self.robot.display(self.cfg.IK_REFERENCE_CONFIG)
+
+    def plan_guide(self, root_goal):
+        """
+        Plan a guide from the current last_phase position to the given root position
+        :param root_goal: a list of length 7 (translation + quaternion)
+        :return: the Id of the new path
+        """
+        self.guide_planner.q_goal = self.guide_planner.q_init[::]
+        self.guide_planner.q_goal[:7] = root_goal
+        #TODO: define q_init from last_phase
+        #TODO: add velocity
+        self.guide_planner.ps.resetGoalConfigs()
+        self.guide_planner.solve()
+        return self.guide_planner.ps.numberPaths() - 1
+
 
     def get_last_phase(self):
         if self.last_phase_flag.value:
@@ -314,16 +389,6 @@ class LocoPlannerReactive(LocoPlanner):
             pid_centroidal += 2
         self.pipe_cs_in.close()
 
-    def init_viewer(self):
-        subprocess.run(["killall", "gepetto-gui"])
-        self.process_gepetto_gui = subprocess.Popen("gepetto-gui",
-                                                    stdout=subprocess.PIPE,
-                                                    stderr=subprocess.DEVNULL,
-                                                    preexec_fn=os.setpgrp)
-        atexit.register(self.process_gepetto_gui.kill)
-        time.sleep(3)
-        self.robot, self.gui = initScenePinocchio(cfg.Robot.urdfName + cfg.Robot.urdfSuffix,
-                                                  cfg.Robot.packageName, cfg.ENV_NAME)
 
     def compute_cs_requirements(self):
         tools.computePhasesTimings(self.cs, self.cfg)
@@ -334,7 +399,6 @@ class LocoPlannerReactive(LocoPlanner):
 
     def run(self):
         self.run_contact_generation()
-        self.init_viewer()
         self.compute_cs_requirements()
 
         self.start_process()
