@@ -467,10 +467,15 @@ if __name__ == "__main__":
     cfg = Config()
     cfg.load_scenario_config(demo_name)
 
-    with ServerManager('gepetto-gui'):
-        with ServerManager('hpp-rbprm-server'):
-            loco_planner = LocoPlannerReactive(cfg)
-            loco_planner.run()
+    subprocess.run(["killall", "hpp-rbprm-server"])
+    process_rbprm = subprocess.Popen("hpp-rbprm-server",
+                                                stdout=subprocess.PIPE,
+                                                stderr=subprocess.DEVNULL,
+                                                preexec_fn=os.setpgrp)
+    atexit.register(process_rbprm.terminate)
+    time.sleep(3)
+    loco_planner = LocoPlannerReactive(cfg)
+    #loco_planner.run()
 
 
 
