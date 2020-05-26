@@ -1,4 +1,10 @@
-from hpp.corbaserver.rbprm.anymal import Robot
+try:
+    from anymal_rbprm.anymal import Robot
+except ImportError:
+    message = "ERROR: Cannot import anymal-rbprm package.\n"
+    message += "Did you correctly installed it?\n"
+    message +="https://github.com/humanoid-path-planner/anymal-rbprm"
+    raise ImportError(message)
 MASS = 30.47  # cannot retrieve it from urdf because the file is not parsed here ...
 
 ## weight and gains used by TSID

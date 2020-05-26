@@ -1,4 +1,11 @@
-from talos_rbprm.talos import Robot
+try:
+    from talos_rbprm.talos import Robot
+except ImportError:
+    message = "ERROR: Cannot import anymal-talos_rbprm package.\n"
+    message += "Did you correctly installed it?\n"
+    message +="https://github.com/humanoid-path-planner/talos-rbprm"
+    raise ImportError(message)
+
 MASS = 90.27
 
 GUIDE_STEP_SIZE = 1.
