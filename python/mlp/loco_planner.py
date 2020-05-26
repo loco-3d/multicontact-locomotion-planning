@@ -114,7 +114,7 @@ class LocoPlanner:
                 raise RuntimeError(
                     "The current contact sequence cannot be given as input to the end effector method selected.")
             self.cs_ref = generate_effector_trajectories(self.cfg, self.cs_com, self.fullBody)
-            EffectorOutputs.assertRequirements(self.cs_ref, cfg.Robot.cType == "_6_DOF")
+            EffectorOutputs.assertRequirements(self.cs_ref, self.cfg.Robot.cType == "_6_DOF")
         self.cs_ref_iters += [self.cs_ref]
 
         if self.cfg.DISPLAY_ALL_FEET_TRAJ:
