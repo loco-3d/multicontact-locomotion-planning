@@ -1,6 +1,6 @@
 from mlp import LocoPlanner
 from mlp.config import Config
-from mlp.viewer.display_tools import disp_wb_pinocchio, initScenePinocchio, initScene
+from mlp.viewer.display_tools import disp_wb_pinocchio, initScenePinocchio, initScene, displaySteppingStones, hideSteppingStone
 import argparse
 import atexit
 import subprocess
@@ -17,6 +17,7 @@ from ctypes import c_ubyte, c_bool
 from queue import Empty as queue_empty
 import pickle
 from mlp.centroidal.n_step_capturability import zeroStepCapturability
+import mlp.contact_sequence.sl1m as sl1m
 from hpp.corbaserver.rbprm.utils import ServerManager
 import importlib
 import logging
@@ -149,12 +150,45 @@ class LocoPlannerReactive(LocoPlanner):
         """
         self.guide_planner.q_goal = self.guide_planner.q_init[::]
         self.guide_planner.q_goal[:7] = root_goal
-        #TODO: define q_init from last_phase
+        last_phase = self.get_last_phase()
+        if last_phase:
+            self.guide_planner.q_init[:7] = last_phase.q_final[:7]
+            self.guide_planner.q_init[2] = self.guide_planner.rbprmBuilder.ref_height # FIXME
         #TODO: add velocity
+        print("Guide init = ", self.guide_planner.q_init)
+        print("Guide goal = ", self.guide_planner.q_goal)
         self.guide_planner.ps.resetGoalConfigs()
+        self.guide_planner.ps.clearRoadmap()
         self.guide_planner.solve()
         return self.guide_planner.ps.numberPaths() - 1
 
+    def compute_cs_from_guide(self, guide_id):
+        """
+        Call SL1M to produce a contact sequence following the given root path
+        Store the result in self.cs
+        :param guide_id: Id of the path stored in self.guide_planner.ps
+        :return:
+        """
+        hideSteppingStone(self.gui)
+        last_phase = self.get_last_phase()
+        if last_phase:
+            q_init = last_phase.q_final[::].tolist() + [0]*6
+        else:
+            q_init = self.fullBody.getCurrentConfig()
+        print("q_init used : ", q_init)
+        self.guide_planner.pathId = guide_id
+        pathId, pb, coms, footpos, allfeetpos, res = sl1m.solve(self.guide_planner,
+                                                           cfg.GUIDE_STEP_SIZE,
+                                                           cfg.GUIDE_MAX_YAW,
+                                                           cfg.MAX_SURFACE_AREA,
+                                                           False,
+                                                           self.fullBody,
+                                                           q_init)
+        root_end = self.guide_planner.ps.configAtParam(pathId, self.guide_planner.ps.pathLength(pathId) - 0.001)[0:7]
+        print("SL1M, root_end = ", root_end)
+        self.cs = sl1m.build_cs_from_sl1m(self.fullBody, self.cfg.IK_REFERENCE_CONFIG, q_init, root_end, pb, sl1m.RF,
+                                     allfeetpos, cfg.SL1M_USE_ORIENTATION, cfg.SL1M_USE_INTERPOLATED_ORIENTATION)
+        displaySteppingStones(self.cs, self.gui, "world", self.cfg.Robot) #FIXME: change world if changed in pinocchio ...
 
     def get_last_phase(self):
         if self.last_phase_flag.value:
@@ -399,6 +433,7 @@ class LocoPlannerReactive(LocoPlanner):
         tools.computeRootTrajFromContacts(self.fullBody, self.cs)
         tools.setAllUninitializedFrictionCoef(self.cs, self.cfg.MU)
 
+    #DEPRECATED
     def run(self):
         self.run_contact_generation()
         self.compute_cs_requirements()
@@ -456,6 +491,23 @@ class LocoPlannerReactive(LocoPlanner):
             self.start_viewer_process()
             # Try 0 or one step capturability HERE
             self.run_zero_step_capturability()
+
+    def move_to_goal(self, root_goal):
+        """
+        Plan and execute a motion connecting the current configuration to one with the given root position
+        If the robot is in motion, start by computing a safe stop motion.
+        :param root_goal: list of size 7: translation and quaternion for the desired root position
+        :return:
+        """
+        self.stop_motion()
+        guide_id = self.plan_guide(root_goal)
+        print("Guide planning solved, path id = ", guide_id)
+        self.compute_cs_from_guide(guide_id)
+        self.compute_cs_requirements()
+
+        self.start_process()
+        time.sleep(2)
+        self.compute_from_cs()
 
 
 if __name__ == "__main__":
