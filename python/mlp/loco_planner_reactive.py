@@ -181,11 +181,12 @@ class LocoPlannerReactive(LocoPlanner):
         :return:
         """
         p = self.get_last_phase()
-        if p.dc_final.any():
-            return False
-        dq = p.dq_t(p.timeFinal)
-        if np.isclose(np.zeros(dq.shape), dq).any():
-            return False
+        if p:
+            if not np.isclose(p.dc_final, np.zeros(3), atol = 1e-2).all():
+                return False
+            dq = p.dq_t(p.timeFinal)
+            if not np.isclose(dq, np.zeros(dq.shape), atol = 1e-1).all():
+                return False
         return True
 
 
