@@ -25,6 +25,7 @@ logger = logging.getLogger("reactive-planning")
 eigenpy.switchToNumpyArray()
 
 MAX_PICKLE_SIZE = 10000 # maximal size (in byte) of the pickled representation of a contactPhase
+DURATION_0_STEP = 3. # duration (in seconds) of the motion to stop when calling the 0 step capturability
 
 def update_root_traj_timings(cs):
     for cp in cs.contactPhases:
@@ -417,7 +418,7 @@ class LocoPlannerReactive(LocoPlanner):
         phase_stop = ContactPhase(self.get_last_phase())
         tools.setInitialFromFinalValues(phase_stop, phase_stop)
         phase_stop.timeInitial = phase_stop.timeFinal
-        phase_stop.duration = self.previous_connect_goal  # FIXME !!
+        phase_stop.duration = DURATION_0_STEP  # FIXME !!
         # try 0-step:
         success, phase = zeroStepCapturability(phase_stop, self.cfg)
         if success:
