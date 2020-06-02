@@ -578,4 +578,5 @@ def build_fullbody(Robot, genLimbsDB=True, context = None):
     except AttributeError:
         print("WARNING initScene : fullBody do not have loadAllLimbs, some scripts may fails.")
     ps = ProblemSolver(fullBody)
+    fullBody.setCurrentConfig(fullBody.referenceConfig[::] + [0] * 6)
     return fullBody, ps
