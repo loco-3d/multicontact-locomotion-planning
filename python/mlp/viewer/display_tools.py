@@ -80,7 +80,16 @@ def addSteppingStone(gui, placement, name, group, size, color):
     gui.addBox(name, size[0], size[1], STONE_HEIGHT, color)
     gui.addToGroup(name, group)
     gui.applyConfiguration(name, SE3ToViewerConfig(placement))
+    gui.setVisibility(name, "ON")
 
+def hideSteppingStone(gui):
+    node_list = gui.getNodeList()
+    for node in node_list:
+        if node.startswith(STONE_LF + "/") \
+                or node.startswith(STONE_RF + "/") \
+                or node.startswith(STONE_LH + "/") \
+                or node.startswith(STONE_RH + "/"):
+            gui.setVisibility(node, "OFF")
 
 def displaySteppingStones(cs, gui, sceneName, Robot):
     gui.createGroup(STONE_GROUP)
