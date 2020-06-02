@@ -406,6 +406,9 @@ class LocoPlannerReactive(LocoPlanner):
         pid_centroidal = 0
         last_iter_centroidal = False
         print("## Compute from cs,  size = ", self.cs.size())
+        last_phase = self.get_last_phase()
+        if last_phase:
+            tools.setFinalFromInitialValues(last_phase, self.cs.contactPhases[0])
         while pid_centroidal + 5 < self.cs.size():
             #print("## Current pid = ", pid_centroidal)
             if pid_centroidal + 7 >= self.cs.size():
