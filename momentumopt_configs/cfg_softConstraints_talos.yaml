@@ -33,8 +33,8 @@ planner_variables:
   eff_offset_rh: [ 0.00, -0.15,  0.45]
   eff_offset_lh: [ 0.00,  0.15,  0.45]
   # size of the contact surfaces used to constraint the CoP position
-  cop_range_rf: [-0.03,  0.03, -0.03,  0.03]
-  cop_range_lf: [-0.03,  0.03, -0.03,  0.03]
+  cop_range_rf: [-0.03,  0.03, -0.02,  0.02]
+  cop_range_lf: [-0.03,  0.03, -0.02,  0.02]
   cop_range_rh: [-0.01,  0.01, -0.01,  0.01]
   cop_range_lh: [-0.01,  0.01, -0.01,  0.01]
 
