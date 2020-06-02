@@ -121,13 +121,26 @@ def quatToConfig(quat):
 
 
 # FIXME : HARDCODED stuff for talos in this method !
-def gen_pb(root_init, R, surfaces, ref_root_height):
+def initial_foot_pose_from_guide(root_init, ref_root_height):
+    lf_0 = array(root_init[0:3]) + array([0, 0.085, -ref_root_height])  # values for talos !
+    rf_0 = array(root_init[0:3]) + array([0, -0.085, -ref_root_height])  # values for talos !
+    return lf_0, rf_0
+
+
+def initial_foot_pose_from_fullbody(fullbody, q_init):
+    fullbody.setCurrentConfig(q_init)
+    lf_0 = fullbody.getJointPosition(fullbody.lfoot)[:3]
+    rf_0 = fullbody.getJointPosition(fullbody.rfoot)[:3]
+    return lf_0, rf_0
+
+
+def gen_pb(lf_0, rf_0, R, surfaces):
     logger.debug("surfaces = %s",surfaces)
     logger.info("number of surfaces : %d", len(surfaces))
     logger.info("number of rotation matrix for root : %d", len(R))
     nphases = len(surfaces)
-    lf_0 = array(root_init[0:3]) + array([0, 0.085, -ref_root_height])  # values for talos !
-    rf_0 = array(root_init[0:3]) + array([0, -0.085, -ref_root_height])  # values for talos !
+    logger.info("lf_0 = ", lf_0)
+    logger.info("rf_0 = ", rf_0)
     #init_floor_height = surfaces[0][0][2][0]
     # z value of the first surface in intersection with the rom in the initial configuration
     #lf_0[2] = init_floor_height
@@ -161,9 +174,13 @@ def gen_pb(root_init, R, surfaces, ref_root_height):
     return res
 
 
-def solve(planner, guide_step_size, guide_max_yaw, max_surface_area, ref_root_height, display_surfaces = False):
+def solve(planner, guide_step_size, guide_max_yaw, max_surface_area, display_surfaces = False, fullbody = None, q_init = None):
     from sl1m.fix_sparsity import solveL1
     #surfaces_dict = getAllSurfacesDict(planner.afftool)
+    if fullbody and q_init:
+        lf_0, rf_0 = initial_foot_pose_from_fullbody(fullbody, q_init)
+    else:
+        lf_0, rf_0 = initial_foot_pose_from_guide(planner.q_init, planner.rbprmBuilder.ref_height)
     success = False
     maxIt = 50
     it = 0
@@ -193,7 +210,7 @@ def solve(planner, guide_step_size, guide_max_yaw, max_surface_area, ref_root_he
                                                      useIntersection=True,
                                                      max_yaw=guide_max_yaw,
                                                      max_surface_area=max_surface_area)
-        pb = gen_pb(planner.q_init, R, surfaces, ref_root_height)
+        pb = gen_pb(lf_0, rf_0, R, surfaces)
         try:
             pb, coms, footpos, allfeetpos, res = solveL1(pb, surfaces, None)
             success = True
@@ -218,7 +235,7 @@ def runLPFromGuideScript(cfg):
     planner.run()
     # compute sequence of surfaces from guide path
     pathId, pb, coms, footpos, allfeetpos, res = solve(planner, cfg.GUIDE_STEP_SIZE, cfg.GUIDE_MAX_YAW,
-                                                       cfg.MAX_SURFACE_AREA,  planner.rbprmBuilder.ref_height,
+                                                       cfg.MAX_SURFACE_AREA,
                                                        cfg.DISPLAY_SL1M_SURFACES)
     root_init = planner.ps.configAtParam(pathId, 0.001)[0:7]
     root_end = planner.ps.configAtParam(pathId, planner.ps.pathLength(pathId) - 0.001)[0:7]
