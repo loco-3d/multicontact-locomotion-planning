@@ -191,9 +191,30 @@ class LocoPlannerReactive(LocoPlanner):
                                                            initial_contacts)
         root_end = self.guide_planner.ps.configAtParam(pathId, self.guide_planner.ps.pathLength(pathId) - 0.001)[0:7]
         print("SL1M, root_end = ", root_end)
-        self.cs = sl1m.build_cs_from_sl1m(self.fullBody, self.cfg.IK_REFERENCE_CONFIG, q_init, root_end, pb, sl1m.RF,
-                                     allfeetpos, cfg.SL1M_USE_ORIENTATION, cfg.SL1M_USE_INTERPOLATED_ORIENTATION)
-        displaySteppingStones(self.cs, self.gui, "world", self.cfg.Robot) #FIXME: change world if changed in pinocchio ...
+
+        self.cs = sl1m.build_cs_from_sl1m(self.fullBody, self.cfg.IK_REFERENCE_CONFIG, root_end, pb, sl1m.RF,
+                                     allfeetpos, cfg.SL1M_USE_ORIENTATION, cfg.SL1M_USE_INTERPOLATED_ORIENTATION,
+                                          q_init, first_phase)
+        print("## Compute cs from guide done.")
+        process_stones = Process(target=self.display_stones_lock)
+        process_stones.start()
+        atexit.register(process_stones.terminate)
+
+    def display_stones_lock(self):
+        self.viewer_lock.acquire()
+        print("Display stepping stones ...")
+        displaySteppingStones(self.cs, self.gui, "world",
+                              self.cfg.Robot)  # FIXME: change world if changed in pinocchio ...
+        print("Display done.")
+        self.viewer_lock.release()
+        return
+
+    def hide_stones_lock(self):
+        self.viewer_lock.acquire()
+        print("Hide stepping stones ...")
+        hideSteppingStone(self.gui)
+        print("Hiding done.")
+        self.viewer_lock.release()
 
     def get_last_phase(self):
         if self.last_phase_flag.value:
@@ -494,6 +515,9 @@ class LocoPlannerReactive(LocoPlanner):
 
     def stop_motion(self):
         self.stop_process()
+        process_stones = Process(target=self.hide_stones_lock)
+        process_stones.start()
+        atexit.register(process_stones.terminate)
         if not self.is_at_stop():
             print("REQUIRE STOP MOTION: compute 0-step capturability")
             self.start_viewer_process()
