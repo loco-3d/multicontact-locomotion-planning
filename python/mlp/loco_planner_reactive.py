@@ -347,10 +347,20 @@ class LocoPlannerReactive(LocoPlanner):
         self.pipe_cs_com_in.close()
 
     def loop_wholebody(self):
-        last_q = None
         last_v = None
         robot = None
         last_iter = False
+        # Set the current config:
+        last_q = self.cs.contactPhases[0].q_init
+        if last_q is None or last_q.shape[0] < self.robot.nq:
+            print("initial config not defined in CS, set it from last phase.")
+            # get current last_phase config:
+            last_phase = self.get_last_phase()
+            print("last_phase.q_final shape: ", last_phase.q_final.shape[0])
+            while last_phase is None or last_phase.q_final.shape[0] < self.robot.nq:
+                last_phase = self.get_last_phase()
+            last_q = last_phase.q_final
+            print("Got last_q from last_phase, start wholebody loop ...")
         try:
             while not last_iter:
                 cs_com, last_iter = self.pipe_cs_com_out.recv()
@@ -422,7 +432,7 @@ class LocoPlannerReactive(LocoPlanner):
     def start_process(self):
         self.pipe_cs_out, self.pipe_cs_in = Pipe(False)
         self.pipe_cs_com_out, self.pipe_cs_com_in = Pipe(False)
-        self.last_phase_pickled = Array(c_ubyte, MAX_PICKLE_SIZE)
+        #self.last_phase_pickled = Array(c_ubyte, MAX_PICKLE_SIZE)
         self.last_phase = None
 
         self.start_viewer_process()
