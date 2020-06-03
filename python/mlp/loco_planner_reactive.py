@@ -169,21 +169,26 @@ class LocoPlannerReactive(LocoPlanner):
         :param guide_id: Id of the path stored in self.guide_planner.ps
         :return:
         """
-        hideSteppingStone(self.gui)
+        initial_contacts = None
         last_phase = self.get_last_phase()
         if last_phase:
-            q_init = last_phase.q_final[::].tolist() + [0]*6
+            q_init = None
+            initial_contacts = [last_phase.contactPatch(loco_planner.fullBody.lfoot).placement.translation,
+                                last_phase.contactPatch(loco_planner.fullBody.rfoot).placement.translation]
+            first_phase = ContactPhase()
+            tools.copyContactPlacement(last_phase, first_phase)
         else:
+            first_phase = None
             q_init = self.fullBody.getCurrentConfig()
-        print("q_init used : ", q_init)
+            initial_contacts = sl1m.initial_foot_pose_from_fullbody(self.fullBody, q_init)
+
         self.guide_planner.pathId = guide_id
         pathId, pb, coms, footpos, allfeetpos, res = sl1m.solve(self.guide_planner,
                                                            cfg.GUIDE_STEP_SIZE,
                                                            cfg.GUIDE_MAX_YAW,
                                                            cfg.MAX_SURFACE_AREA,
                                                            False,
-                                                           self.fullBody,
-                                                           q_init)
+                                                           initial_contacts)
         root_end = self.guide_planner.ps.configAtParam(pathId, self.guide_planner.ps.pathLength(pathId) - 0.001)[0:7]
         print("SL1M, root_end = ", root_end)
         self.cs = sl1m.build_cs_from_sl1m(self.fullBody, self.cfg.IK_REFERENCE_CONFIG, q_init, root_end, pb, sl1m.RF,

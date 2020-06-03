@@ -174,13 +174,15 @@ def gen_pb(lf_0, rf_0, R, surfaces):
     return res
 
 
-def solve(planner, guide_step_size, guide_max_yaw, max_surface_area, display_surfaces = False, fullbody = None, q_init = None):
+def solve(planner, guide_step_size, guide_max_yaw, max_surface_area, display_surfaces = False, initial_contacts = None):
     from sl1m.fix_sparsity import solveL1
     #surfaces_dict = getAllSurfacesDict(planner.afftool)
-    if fullbody and q_init:
-        lf_0, rf_0 = initial_foot_pose_from_fullbody(fullbody, q_init)
-    else:
+    if initial_contacts is None:
         lf_0, rf_0 = initial_foot_pose_from_guide(planner.q_init, planner.rbprmBuilder.ref_height)
+    else:
+        #FIXME : assume order and size of arguments, do something more generic
+        lf_0 = initial_contacts[0]
+        rf_0 = initial_contacts[1]
     success = False
     maxIt = 50
     it = 0
@@ -272,19 +274,25 @@ def generate_contact_sequence_sl1m(cfg):
     if v:
         v(q_init)
 
-    cs = build_cs_from_sl1m(fb, cfg.IK_REFERENCE_CONFIG, q_init, root_end, pb, RF, allfeetpos,
-                            cfg.SL1M_USE_ORIENTATION, cfg.SL1M_USE_INTERPOLATED_ORIENTATION)
+    cs = build_cs_from_sl1m(fb, cfg.IK_REFERENCE_CONFIG, root_end, pb, RF, allfeetpos,
+                            cfg.SL1M_USE_ORIENTATION, cfg.SL1M_USE_INTERPOLATED_ORIENTATION, q_init = q_init)
 
     if cfg.DISPLAY_CS_STONES:
         displaySteppingStones(cs, v.client.gui, v.sceneName, fb)
 
     return cs, fb, v
 
-def build_cs_from_sl1m(fb, q_ref, q_init, root_end, pb, RF, allfeetpos, use_orientation, use_interpolated_orientation):
+def build_cs_from_sl1m(fb, q_ref, root_end, pb, RF, allfeetpos, use_orientation, use_interpolated_orientation,
+                       q_init = None, first_phase = None):
     # init contact sequence with first phase : q_ref move at the right root pose and with both feet in contact
     # FIXME : allow to customize that first phase
     cs = ContactSequence(0)
-    addPhaseFromConfig(fb, cs, q_init, [fb.rLegId, fb.lLegId])
+    if q_init:
+        addPhaseFromConfig(fb, cs, q_init, [fb.rLegId, fb.lLegId])
+    elif first_phase:
+        cs.append(first_phase)
+    else:
+        raise ValueError("build_cs_from_sl1m should have either q_init or first_phase argument defined")
 
     # loop over all phases of pb and add them to the cs :
     for pId in range(2, len(pb["phaseData"])):  # start at 2 because the first two ones are already done in the q_init
