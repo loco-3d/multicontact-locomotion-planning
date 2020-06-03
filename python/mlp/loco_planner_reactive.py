@@ -79,6 +79,7 @@ class LocoPlannerReactive(LocoPlanner):
         self.pipe_cs_com_out = None
         self.queue_qt = None
         self.viewer_lock = Lock()
+        self.last_phase_lock = Lock()
         self.last_phase_pickled = Array(c_ubyte, MAX_PICKLE_SIZE) # will contain the last contact phase send to the viewer
         self.last_phase = None
         self.stop_motion_flag = Value(c_bool)
@@ -217,10 +218,15 @@ class LocoPlannerReactive(LocoPlanner):
         self.viewer_lock.release()
 
     def get_last_phase(self):
-        if self.last_phase_flag.value:
-            pic = bytes(self.last_phase_pickled)
-            self.last_phase = pickle.loads(pic)
-        self.last_phase_flag.value = False
+        if self.last_phase is None or self.last_phase_flag.value:
+            self.last_phase_lock.acquire()
+            try:
+                pic = bytes(self.last_phase_pickled)
+                self.last_phase = pickle.loads(pic)
+                self.last_phase_flag.value = False
+            except:
+                pass
+            self.last_phase_lock.release()
         return self.last_phase
 
     def set_last_phase(self, last_phase):
@@ -228,12 +234,14 @@ class LocoPlannerReactive(LocoPlanner):
         set pickled last_phase data to last_phase_pickled shared memory
         :param last_phase:
         """
-        self.last_phase_flag.value = True
         arr = pickle.dumps(last_phase)
-        if len(arr) > MAX_PICKLE_SIZE:
-            raise ValueError("In copy array: given array is too big, size = " + str(len(arr1)))
+        self.last_phase_lock.acquire()
+        if len(arr) >= MAX_PICKLE_SIZE:
+            raise ValueError("In copy array: given array is too big, size = " + str(len(arr)))
         for i, el in enumerate(arr):
             self.last_phase_pickled[i] = el
+        self.last_phase_flag.value = True
+        self.last_phase_lock.release()
 
     def is_at_stop(self):
         """
