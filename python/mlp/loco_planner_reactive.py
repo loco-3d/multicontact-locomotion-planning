@@ -18,6 +18,7 @@ from queue import Empty as queue_empty
 import pickle
 from mlp.centroidal.n_step_capturability import zeroStepCapturability
 import mlp.contact_sequence.sl1m as sl1m
+from pinocchio import Quaternion
 from hpp.corbaserver.rbprm.utils import ServerManager
 import importlib
 import logging
@@ -154,6 +155,8 @@ class LocoPlannerReactive(LocoPlanner):
         self.guide_planner.q_goal[:7] = root_goal
         last_phase = self.get_last_phase()
         if last_phase:
+            print("Last phase not None")
+            print("Last phase q_final : ", last_phase.q_final[:7])
             self.guide_planner.q_init[:7] = last_phase.q_final[:7]
             self.guide_planner.q_init[2] = self.guide_planner.rbprmBuilder.ref_height # FIXME
         #TODO: add velocity
@@ -501,7 +504,7 @@ class LocoPlannerReactive(LocoPlanner):
             # TEST : add another phase to go back in the center of the support polygon
             phase_projected = ContactPhase()
             phase_projected.timeInitial = phase.timeFinal
-            phase_projected.duration = self.previous_connect_goal
+            phase_projected.duration = DURATION_0_STEP
             tools.copyContactPlacement(phase, phase_projected)
             tools.setInitialFromFinalValues(phase, phase_projected)
             phase_projected.c_final = tools.computeCenterOfSupportPolygonFromPhase(phase_stop, self.fullBody.DEFAULT_COM_HEIGHT)
@@ -537,9 +540,9 @@ class LocoPlannerReactive(LocoPlanner):
         atexit.register(process_stones.terminate)
         if not self.is_at_stop():
             print("REQUIRE STOP MOTION: compute 0-step capturability")
-            self.start_viewer_process()
             # Try 0 or one step capturability HERE
             self.run_zero_step_capturability()
+
 
     def move_to_goal(self, root_goal):
         """
@@ -553,6 +556,7 @@ class LocoPlannerReactive(LocoPlanner):
         print("Guide planning solved, path id = ", guide_id)
         self.compute_cs_from_guide(guide_id)
         self.compute_cs_requirements()
+        print("Start process")
 
         self.start_process()
         time.sleep(2)
