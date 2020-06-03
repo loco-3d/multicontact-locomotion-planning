@@ -56,6 +56,7 @@ class LocoPlannerReactive(LocoPlanner):
         cfg.IK_store_contact_forces = False
         cfg.IK_store_joints_derivatives = True
         cfg.IK_store_joints_torque = False
+        cfg.EFF_CHECK_COLLISION = False
         cfg.contact_generation_method = "sl1m"
         cfg.Robot.DEFAULT_COM_HEIGHT += cfg.COM_SHIFT_Z
         cfg.COM_SHIFT_Z = 0.
@@ -304,7 +305,7 @@ class LocoPlannerReactive(LocoPlanner):
         if not self.WholebodyInputs.checkAndFillRequirements(cs_ref, self.cfg, self.fullBody):
             raise RuntimeError(
                 "The current contact sequence cannot be given as input to the wholeBody method selected.")
-        cs_wb, robot = self.generate_wholebody(self.cfg, cs_ref, self.fullBody, robot=robot)
+        cs_wb, robot = self.generate_wholebody(self.cfg, cs_ref, robot=robot)
         # print("-- compute whole body END")
         # WholebodyOutputs.assertRequirements(cs_wb)
         last_phase_wb = cs_wb.contactPhases[-1]
@@ -524,8 +525,9 @@ class LocoPlannerReactive(LocoPlanner):
 
     def run_zero_step_capturability(self):
         cs_ref = self.compute_stopping_cs()
+        self.start_viewer_process()
         self.cfg.IK_dt = 0.02
-        p = Process(target=self.generate_wholebody, args=(self.cfg, cs_ref, self.fullBody, None, None, self.queue_qt))
+        p = Process(target=self.generate_wholebody, args=(self.cfg, cs_ref, None, None, None, self.queue_qt))
         p.start()
 
     def stop_motion(self):
