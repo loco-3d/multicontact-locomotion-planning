@@ -512,6 +512,13 @@ class LocoPlannerReactive(LocoPlanner):
             raise RuntimeError("One step capturability not implemented yet !")
         tools.computeRootTrajFromContacts(self.fullBody,cs_ref)
         self.last_phase = cs_ref.contactPhases[-1].copy()
+        # define the final root position, translation from the CoM position and rotation from the feet rotation
+        q_final = np.zeros(7)
+        q_final[:3] = self.last_phase.c_final[::]
+        placement_rot_root, _ = tools.rootOrientationFromFeetPlacement(self.cfg.Robot, None, self.last_phase, None)
+        quat_root = Quaternion(placement_rot_root.rotation)
+        q_final[3:7] = [quat_root.x, quat_root.y, quat_root.z, quat_root.w]
+        self.last_phase.q_final = q_final
         self.last_phase_flag.value = False
         return cs_ref
 
