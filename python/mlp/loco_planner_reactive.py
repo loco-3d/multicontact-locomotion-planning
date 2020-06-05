@@ -29,8 +29,9 @@ eigenpy.switchToNumpyArray()
 
 MAX_PICKLE_SIZE = 10000 # maximal size (in byte) of the pickled representation of a contactPhase
 DURATION_0_STEP = 3. # duration (in seconds) of the motion to stop when calling the 0 step capturability
-V_INIT = 0.15  # small velocity added to the init/goal guide config to force smooth orientation change
-V_GOAL = 0.15
+V_INIT = 0.05  # small velocity added to the init/goal guide config to force smooth orientation change
+V_GOAL = 0.1
+SCALE_OBSTACLE_COLLISION = 0.1 # value added to the size of the collision obstacles manually added
 
 def update_root_traj_timings(cs):
     for cp in cs.contactPhases:
@@ -92,16 +93,16 @@ class LocoPlannerReactive(LocoPlanner):
         self.cfg.Robot.minDist = 0.7
         # initialize the guide planner class:
         self.client_hpp = None
+        self.robot = None
+        self.gui = None
         self.guide_planner = self.init_guide_planner()
         # initialize a fullBody rbprm object and a sl1m contact planning class
         self.fullBody, _ = initScene(cfg.Robot, cfg.ENV_NAME, context="fullbody")
         self.contact_planner = self.init_contact_planner()
-        # Set up gepetto gui and a pinocchio robotWrapper with display
-        self.robot = None
-        self.gui = None
-        self.init_viewer()
         self.current_root_goal = []
         self.current_guide_id = 0
+        # Set up gepetto gui and a pinocchio robotWrapper with display
+        self.init_viewer()
 
     def init_guide_planner(self):
         """
@@ -184,7 +185,7 @@ class LocoPlannerReactive(LocoPlanner):
         self.guide_planner.ps.resetGoalConfigs()
         self.guide_planner.ps.clearRoadmap()
         self.current_root_goal = root_goal
-        self.guide_planner.solve()
+        self.guide_planner.solve(True)
         self.current_guide_id = self.guide_planner.ps.numberPaths() - 1
 
     def compute_cs_from_guide(self):
@@ -569,7 +570,7 @@ class LocoPlannerReactive(LocoPlanner):
         process_stones.start()
         atexit.register(process_stones.terminate)
         if not self.is_at_stop():
-            print("REQUIRE STOP MOTION: compute 0-step capturability")
+            print("!!!!!! REQUIRE STOP MOTION: compute 0-step capturability")
             # Try 0 or one step capturability HERE
             self.run_zero_step_capturability()
 
@@ -591,7 +592,10 @@ class LocoPlannerReactive(LocoPlanner):
 
         self.start_process()
         time.sleep(2)
+        print("@@@ Start compute_from_cs @@@")
         self.compute_from_cs()
+        print("@@@ END compute_from_cs @@@")
+
 
     def is_path_valid(self, path_id):
         """
@@ -614,6 +618,72 @@ class LocoPlannerReactive(LocoPlanner):
             return False
         else:
             return True
+
+    def add_obstacle_to_viewer(self, name, size, position, color = [0,0,1,1]):
+        node_name = "world/environments/" + name #FIXME: change the prefix if there is changes in pinocchio ...
+        self.viewer_lock.acquire()
+        # add the obstacle to the viewer:
+        self.gui.addBox(node_name, size[0], size[1], size[2], color)
+        # move the obstacle to the given placement:
+        self.gui.applyConfiguration(node_name, position)
+        self.gui.refresh()
+        self.viewer_lock.release()
+
+    def add_obstacle_to_problem_solvers(self, name, size, position, obstacle_client):
+        # add the obstacle to the problem solver:
+        obstacle_client.createBox(name, size[0] + SCALE_OBSTACLE_COLLISION, size[1] + SCALE_OBSTACLE_COLLISION,
+                                     size[2] + SCALE_OBSTACLE_COLLISION)
+        obstacle_client.addObstacle(name, True, False)
+        # move the obstacle to the given placement:
+        obstacle_client.obstacle.moveObstacle(name, position)
+
+
+
+
+    def add_obstacle(self, size, position, color = [0,0,1,1]):
+        """
+        Add a cube to the environment, and recompute a motion if the current computed motion become invalid
+        :param size: The size of the cube [x, y, z]
+        :param position: The placement of the cube: either a list of length 3 for the translation or
+        a list of size 7 for translation + quaternion
+        :param color: color of the obstacle in the viewer, blue by default
+        :return:
+        """
+        print("!!!! ADD OBSTACLE REQUESTED")
+        name = "obstacle_0" #FIXME: change the prefix if there is changes in pinocchio ...
+        # Add an id until it is an unused name:
+        i = 1
+        obs_names = self.guide_planner.ps.client.obstacle.getObstacleNames(True, False)
+        while name in obs_names:
+            name = "obstacle_" + str(i)
+            i += 1
+
+        if len(position) == 3:
+            position += [0, 0, 0, 1]
+        print("!!!! Addobstacle name : ", name)
+        self.add_obstacle_to_problem_solvers(name, size, position, self.guide_planner.ps.client.obstacle)
+        self.add_obstacle_to_problem_solvers(name, size, position, self.fullbody.client.obstacle)
+
+
+        print("!!!! obstacle added to the problem")
+        # add obstacle to the viewer:
+        process_obstacle = Process(target=self.add_obstacle_to_viewer, args=(name, size, position, color))
+        process_obstacle.start()
+        atexit.register(process_obstacle.terminate)
+        print("!!!! start thread to display obstacle")
+
+        if not self.is_at_stop():
+            print("!!!!!! Add obstacle during motion, check path ...")
+            valid = self.is_path_valid(self.current_guide_id)
+            if valid:
+                print("!!!!!! Current path is still valid, continue ...")
+            else:
+                print("!!!!!! Current path is now invalid ! Compute a new one ...")
+                self.move_to_goal(self.current_root_goal)
+        else:
+            print("!!!!!! Add obstacle: The robot is not in motion")
+
+
 
 
 if __name__ == "__main__":
