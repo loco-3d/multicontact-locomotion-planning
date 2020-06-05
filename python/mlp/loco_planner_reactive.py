@@ -19,6 +19,7 @@ import pickle
 from mlp.centroidal.n_step_capturability import zeroStepCapturability
 import mlp.contact_sequence.sl1m as sl1m
 from pinocchio import Quaternion
+from pinocchio.utils import matrixToRpy
 from hpp.corbaserver.rbprm.utils import ServerManager
 import importlib
 import logging
@@ -28,6 +29,8 @@ eigenpy.switchToNumpyArray()
 
 MAX_PICKLE_SIZE = 10000 # maximal size (in byte) of the pickled representation of a contactPhase
 DURATION_0_STEP = 3. # duration (in seconds) of the motion to stop when calling the 0 step capturability
+V_INIT = 0.15  # small velocity added to the init/goal guide config to force smooth orientation change
+V_GOAL = 0.15
 
 def update_root_traj_timings(cs):
     for cp in cs.contactPhases:
@@ -148,18 +151,33 @@ class LocoPlannerReactive(LocoPlanner):
     def plan_guide(self, root_goal):
         """
         Plan a guide from the current last_phase position to the given root position
-        :param root_goal: a list of length 7 (translation + quaternion)
+        :param root_goal: list of size 3 or 7: translation and quaternion for the desired root position
+        If the quaternion part is not specified, the final orientation is not constrained
         :return: the Id of the new path
         """
         self.guide_planner.q_goal = self.guide_planner.q_init[::]
-        self.guide_planner.q_goal[:7] = root_goal
+        self.guide_planner.q_goal[:3] = root_goal[:3]
+        self.guide_planner.q_goal[3:7] = [0, 0, 0, 1]
+        self.guide_planner.q_goal[-6:] = [0]*6
         last_phase = self.get_last_phase()
         if last_phase:
             print("Last phase not None")
             print("Last phase q_final : ", last_phase.q_final[:7])
             self.guide_planner.q_init[:7] = last_phase.q_final[:7]
             self.guide_planner.q_init[2] = self.guide_planner.rbprmBuilder.ref_height # FIXME
-        #TODO: add velocity
+        #add small velocity in order to have smooth change of orientation at the beginning/end
+        quat_init = Quaternion(self.guide_planner.q_init[6], self.guide_planner.q_init[3],
+                               self.guide_planner.q_init[4], self.guide_planner.q_init[5])
+        dir_init = quat_init * np.array([1, 0, 0])
+        self.guide_planner.q_init[-6] = dir_init[0] * V_INIT
+        self.guide_planner.q_init[-5] = dir_init[1] * V_INIT
+        if len(root_goal) >= 7:
+            self.guide_planner.q_goal[3:7] = root_goal[3:7]
+            quat_goal =  Quaternion(self.guide_planner.q_goal[6], self.guide_planner.q_goal[3],
+                               self.guide_planner.q_goal[4], self.guide_planner.q_goal[5])
+            dir_goal = quat_goal * np.array([1, 0, 0])
+            self.guide_planner.q_goal[-6] = dir_goal[0] * V_GOAL
+            self.guide_planner.q_goal[-5] = dir_goal[1] * V_GOAL
         print("Guide init = ", self.guide_planner.q_init)
         print("Guide goal = ", self.guide_planner.q_goal)
         self.guide_planner.ps.resetGoalConfigs()
@@ -558,7 +576,8 @@ class LocoPlannerReactive(LocoPlanner):
         """
         Plan and execute a motion connecting the current configuration to one with the given root position
         If the robot is in motion, start by computing a safe stop motion.
-        :param root_goal: list of size 7: translation and quaternion for the desired root position
+        :param root_goal: list of size 3 or 7: translation and quaternion for the desired root position
+        If the quaternion part is not specified, the final orientation is not constrained
         :return:
         """
         self.stop_motion()
