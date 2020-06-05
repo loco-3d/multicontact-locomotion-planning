@@ -101,6 +101,7 @@ class LocoPlannerReactive(LocoPlanner):
         self.gui = None
         self.init_viewer()
         self.current_root_goal = []
+        self.current_guide_id = 0
 
     def init_guide_planner(self):
         """
@@ -182,11 +183,11 @@ class LocoPlannerReactive(LocoPlanner):
         print("Guide goal = ", self.guide_planner.q_goal)
         self.guide_planner.ps.resetGoalConfigs()
         self.guide_planner.ps.clearRoadmap()
-        self.current_root_goal = root_goal[::]
+        self.current_root_goal = root_goal
         self.guide_planner.solve()
-        return self.guide_planner.ps.numberPaths() - 1
+        self.current_guide_id = self.guide_planner.ps.numberPaths() - 1
 
-    def compute_cs_from_guide(self, guide_id):
+    def compute_cs_from_guide(self):
         """
         Call SL1M to produce a contact sequence following the given root path
         Store the result in self.cs
@@ -206,7 +207,7 @@ class LocoPlannerReactive(LocoPlanner):
             q_init = self.fullBody.getCurrentConfig()
             initial_contacts = sl1m.initial_foot_pose_from_fullbody(self.fullBody, q_init)
 
-        self.guide_planner.pathId = guide_id
+        self.guide_planner.pathId = self.current_guide_id
         pathId, pb, coms, footpos, allfeetpos, res = sl1m.solve(self.guide_planner,
                                                            cfg.GUIDE_STEP_SIZE,
                                                            cfg.GUIDE_MAX_YAW,
@@ -582,15 +583,37 @@ class LocoPlannerReactive(LocoPlanner):
         :return:
         """
         self.stop_motion()
-        guide_id = self.plan_guide(root_goal)
-        print("Guide planning solved, path id = ", guide_id)
-        self.compute_cs_from_guide(guide_id)
+        self.plan_guide(root_goal)
+        print("Guide planning solved, path id = ", self.current_guide_id)
+        self.compute_cs_from_guide()
         self.compute_cs_requirements()
         print("Start process")
 
         self.start_process()
         time.sleep(2)
         self.compute_from_cs()
+
+    def is_path_valid(self, path_id):
+        """
+        Check if the given path id stored in self.guide_planner.ps is valid or not
+        :param path_id: the id of the path
+        :return: True if the path is completely valid, False otherwise
+        """
+        DT = 0.01 # FIXME: timestep of the discretization for the collision checking of the path
+        ps = self.guide_planner.ps
+        robot_rom = self.guide_planner.rbprmBuilder
+        t = 0.
+        t_max = ps.pathLength(path_id)
+        while t <= t_max:
+            report = robot_rom.isConfigValid(ps.configAtParam(path_id, t))
+            if not report[0]:
+                return False
+            t += DT
+        report = robot_rom.isConfigValid(ps.configAtParam(path_id, t_max))
+        if not report[0]:
+            return False
+        else:
+            return True
 
 
 if __name__ == "__main__":
