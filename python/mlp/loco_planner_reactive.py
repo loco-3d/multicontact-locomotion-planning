@@ -100,7 +100,7 @@ class LocoPlannerReactive(LocoPlanner):
         self.robot = None
         self.gui = None
         self.init_viewer()
-
+        self.current_root_goal = []
 
     def init_guide_planner(self):
         """
@@ -182,6 +182,7 @@ class LocoPlannerReactive(LocoPlanner):
         print("Guide goal = ", self.guide_planner.q_goal)
         self.guide_planner.ps.resetGoalConfigs()
         self.guide_planner.ps.clearRoadmap()
+        self.current_root_goal = root_goal[::]
         self.guide_planner.solve()
         return self.guide_planner.ps.numberPaths() - 1
 
