@@ -85,8 +85,9 @@ class LocoPlannerReactive(LocoPlanner):
         self.pipe_cs_com_in = None
         self.pipe_cs_com_out = None
         self.queue_qt = None
-        self.viewer_lock = Lock()
-        self.last_phase_lock = Lock()
+        self.viewer_lock = Lock() # lock to access gepetto-gui API
+        self.loop_viewer_lock = Lock() # lock to guarante that only one loop_viewer is executed at any given time
+        self.last_phase_lock = Lock() # lock to read/write last_phase data
         self.last_phase_pickled = Array(c_ubyte, MAX_PICKLE_SIZE) # will contain the last contact phase send to the viewer
         self.last_phase = None
         self.stop_motion_flag = Value(c_bool)
@@ -413,17 +414,19 @@ class LocoPlannerReactive(LocoPlanner):
             sys.exit(0)
 
     def loop_viewer(self):
-        self.viewer_lock.acquire()
+        self.loop_viewer_lock.acquire()
         last_iter = False
         try:
             while not last_iter:
                     q_t, last_phase, last_iter = self.queue_qt.get(timeout = TIMEOUT_CONNECTIONS)
                     if last_phase:
                         self.set_last_phase(last_phase)
+                    self.viewer_lock.acquire()
                     disp_wb_pinocchio(self.robot, q_t, cfg.DT_DISPLAY)
+                    self.viewer_lock.release()
                     if self.stop_motion_flag.value:
                         print("STOP MOTION in viewer")
-                        self.viewer_lock.release()
+                        self.loop_viewer_lock.release()
                         return
         except Queue.Empty:
             print("Loop viewer closed because queue is empty since 10 seconds")
@@ -432,7 +435,7 @@ class LocoPlannerReactive(LocoPlanner):
             print("FATAL ERROR in loop viewer: ")
             traceback.print_exc()
             sys.exit(0)
-        self.viewer_lock.release()
+        self.loop_viewer_lock.release()
 
 
 
