@@ -508,6 +508,7 @@ class LocoPlannerReactive(LocoPlanner):
         tools.computeRootTrajFromContacts(self.fullBody, self.cs)
         tools.setAllUninitializedFrictionCoef(self.cs, self.cfg.MU)
 
+    """
     #DEPRECATED
     def run(self):
         self.run_contact_generation()
@@ -518,11 +519,13 @@ class LocoPlannerReactive(LocoPlanner):
         self.compute_from_cs()
 
     ## debug helper
+    ## DEPRECATED
     def stop_and_retry(self):
         self.stop_process()
         time.sleep(0.2)
         self.start_process()
         self.compute_from_cs()
+    """
 
     def compute_stopping_cs(self):
         # Compute a Centroidal reference to bring the current phase at a stop with a change of contact:
