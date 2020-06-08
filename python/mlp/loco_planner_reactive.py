@@ -9,6 +9,7 @@ import os, sys, traceback
 import numpy as np
 import eigenpy
 import curves
+import math
 from curves import SE3Curve, polynomial
 from multicontact_api import ContactSequence, ContactPhase
 import mlp.utils.cs_tools as tools
@@ -622,6 +623,32 @@ class LocoPlannerReactive(LocoPlanner):
         atexit.register(self.process_compute_cs.terminate)
         print("@@@ END compute_from_cs @@@")
 
+    def find_closest_guide_time(self, path_id):
+        """
+        Look for the index in the guide path that give the closest distance between the root position at this index
+        and the wholebody root position in the last_phase configuration
+        :param path_id: 
+        :return: 
+        """
+        last_phase = self.get_last_phase()
+        if last_phase is None:
+            return 0.
+        root_wb = np.array(last_phase.q_final[0:2])
+        DT = 0.01
+        current_t = 0.
+        min_t = 0.
+        min_dist = math.inf
+        ps = self.guide_planner.ps
+        t_max = ps.pathLength(path_id)
+        while current_t <= t_max:
+            root_guide = np.array(ps.configAtParam(path_id, current_t)[0:2])
+            dist = np.linalg.norm(root_wb - root_guide)
+            if dist < min_dist:
+                min_dist = dist
+                min_t = current_t
+            current_t += DT
+        return min_t
+
 
     def is_path_valid(self, path_id):
         """
@@ -632,7 +659,9 @@ class LocoPlannerReactive(LocoPlanner):
         DT = 0.01 # FIXME: timestep of the discretization for the collision checking of the path
         ps = self.guide_planner.ps
         robot_rom = self.guide_planner.rbprmBuilder
-        t = 0.
+        t = self.find_closest_guide_time(path_id) - 0.1
+        if t < 0:
+            t = 0.
         t_max = ps.pathLength(path_id)
         while t <= t_max:
             report = robot_rom.isConfigValid(ps.configAtParam(path_id, t))
