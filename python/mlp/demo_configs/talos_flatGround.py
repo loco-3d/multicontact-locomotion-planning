@@ -17,7 +17,7 @@ DURATION_CONNECT_GOAL = 0.
 
 USE_PLANNING_ROOT_ORIENTATION = True
 GUIDE_STEP_SIZE = 0.5
-GUIDE_MAX_YAW = 100.  # maximal yaw rotation difference between two discretization step
+GUIDE_MAX_YAW = 0.5 # maximal yaw rotation difference between two discretization step
 """
 IK_REFERENCE_CONFIG = np.array(
 [       0.0,
