@@ -635,7 +635,7 @@ class LocoPlannerReactive(LocoPlanner):
                                      size[2] + SCALE_OBSTACLE_COLLISION)
         obstacle_client.addObstacle(name, True, False)
         # move the obstacle to the given placement:
-        obstacle_client.obstacle.moveObstacle(name, position)
+        obstacle_client.moveObstacle(name, position)
 
 
 
@@ -662,7 +662,7 @@ class LocoPlannerReactive(LocoPlanner):
             position += [0, 0, 0, 1]
         print("!!!! Addobstacle name : ", name)
         self.add_obstacle_to_problem_solvers(name, size, position, self.guide_planner.ps.client.obstacle)
-        self.add_obstacle_to_problem_solvers(name, size, position, self.fullbody.client.obstacle)
+        self.add_obstacle_to_problem_solvers(name, size, position, self.fullBody.client.obstacle)
 
 
         print("!!!! obstacle added to the problem")
