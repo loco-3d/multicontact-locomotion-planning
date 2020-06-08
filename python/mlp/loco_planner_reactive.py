@@ -32,7 +32,7 @@ DURATION_0_STEP = 3. # duration (in seconds) of the motion to stop when calling 
 V_INIT = 0.05  # small velocity added to the init/goal guide config to force smooth orientation change
 V_GOAL = 0.1
 SCALE_OBSTACLE_COLLISION = 0.1 # value added to the size of the collision obstacles manually added
-
+TIMEOUT_CONNECTIONS = 10. # the time (in second) after which a process close if it did not receive new data
 def update_root_traj_timings(cs):
     for cp in cs.contactPhases:
         cp.root_t = SE3Curve(cp.root_t(cp.root_t.min()), cp.root_t(cp.root_t.max()), cp.timeInitial, cp.timeFinal)
@@ -347,21 +347,27 @@ class LocoPlannerReactive(LocoPlanner):
     def loop_centroidal(self):
         last_centroidal_phase = None
         last_iter = False
+        timeout = False
         try:
-            while not last_iter:
-                cs, last_iter = self.pipe_cs_out.recv()
-                if last_iter:
-                    self.cfg.DURATION_CONNECT_GOAL = self.previous_connect_goal
-                    self.cfg.TIMEOPT_CONFIG_FILE = "cfg_softConstraints_talos.yaml"
-                print("## Run centroidal")
-                cs_com, last_centroidal_phase = self.compute_centroidal(cs, last_centroidal_phase, last_iter)
-                if self.stop_motion_flag.value:
-                    print("STOP MOTION in centroidal")
-                    self.pipe_cs_com_in.close()
-                    return
-                print("-- Add a cs_com to the queue")
-                self.pipe_cs_com_in.send([cs_com, last_iter])
-            print("Centroidal last iter received, close the pipe and terminate process.")
+            while not last_iter and not timeout:
+                if self.pipe_cs_out.poll(TIMEOUT_CONNECTIONS):
+                    cs, last_iter = self.pipe_cs_out.recv()
+                    if last_iter:
+                        self.cfg.DURATION_CONNECT_GOAL = self.previous_connect_goal
+                        self.cfg.TIMEOPT_CONFIG_FILE = "cfg_softConstraints_talos.yaml"
+                    print("## Run centroidal")
+                    cs_com, last_centroidal_phase = self.compute_centroidal(cs, last_centroidal_phase, last_iter)
+                    if self.stop_motion_flag.value:
+                        print("STOP MOTION in centroidal")
+                        self.pipe_cs_com_in.close()
+                        return
+                    print("-- Add a cs_com to the queue")
+                    self.pipe_cs_com_in.send([cs_com, last_iter])
+                else:
+                    timeout = True
+                    print("Loop centroidal closed because pipe is empty since 10 seconds")
+            if last_iter:
+                print("Centroidal last iter received, close the pipe and terminate process.")
         except:
             print("FATAL ERROR in loop centroidal: ")
             traceback.print_exc()
@@ -372,6 +378,7 @@ class LocoPlannerReactive(LocoPlanner):
         last_v = None
         robot = None
         last_iter = False
+        timeout = False
         # Set the current config:
         last_q = self.cs.contactPhases[0].q_init
         if last_q is None or last_q.shape[0] < self.robot.nq:
@@ -384,17 +391,22 @@ class LocoPlannerReactive(LocoPlanner):
             last_q = last_phase.q_final
             print("Got last_q from last_phase, start wholebody loop ...")
         try:
-            while not last_iter:
-                cs_com, last_iter = self.pipe_cs_com_out.recv()
-                print("## Run wholebody")
-                cs_wb, last_q, last_v, last_phase, robot = self.compute_wholebody(robot, cs_com, last_q, last_v, last_iter)
-                if self.stop_motion_flag.value:
-                    print("STOP MOTION in wholebody")
-                    self.queue_qt.close()
-                    return
-                print("-- Add a cs_wb to the queue")
-                self.queue_qt.put([cs_wb.concatenateQtrajectories(), last_phase, last_iter])
-            print("Wholebody last iter received, close the pipe and terminate process.")
+            while not last_iter and not timeout:
+                if self.pipe_cs_com_out.poll(TIMEOUT_CONNECTIONS):
+                    cs_com, last_iter = self.pipe_cs_com_out.recv()
+                    print("## Run wholebody")
+                    cs_wb, last_q, last_v, last_phase, robot = self.compute_wholebody(robot, cs_com, last_q, last_v, last_iter)
+                    if self.stop_motion_flag.value:
+                        print("STOP MOTION in wholebody")
+                        self.queue_qt.close()
+                        return
+                    print("-- Add a cs_wb to the queue")
+                    self.queue_qt.put([cs_wb.concatenateQtrajectories(), last_phase, last_iter])
+                else:
+                    timeout = True
+                    print("Loop wholebody closed because pipe is empty since 10 seconds")
+            if last_iter:
+                print("Wholebody last iter received, close the pipe and terminate process.")
         except:
             print("FATAL ERROR in loop wholebody: ")
             traceback.print_exc()
@@ -405,7 +417,7 @@ class LocoPlannerReactive(LocoPlanner):
         last_iter = False
         try:
             while not last_iter:
-                    q_t, last_phase, last_iter = self.queue_qt.get()
+                    q_t, last_phase, last_iter = self.queue_qt.get(timeout = TIMEOUT_CONNECTIONS)
                     if last_phase:
                         self.set_last_phase(last_phase)
                     disp_wb_pinocchio(self.robot, q_t, cfg.DT_DISPLAY)
@@ -413,6 +425,9 @@ class LocoPlannerReactive(LocoPlanner):
                         print("STOP MOTION in viewer")
                         self.viewer_lock.release()
                         return
+        except Queue.Empty:
+            print("Loop viewer closed because queue is empty since 10 seconds")
+            pass
         except:
             print("FATAL ERROR in loop viewer: ")
             traceback.print_exc()
