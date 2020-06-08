@@ -75,6 +75,7 @@ class LocoPlannerReactive(LocoPlanner):
             self.cfg.get_effector_initguess_method()
         self.generate_wholebody, self.WholebodyInputs, self.WholebodyOutputs = self.cfg.get_wholebody_method()
         # define members that will stores processes and queues
+        self.process_compute_cs = None
         self.process_centroidal = None
         self.process_wholebody = None
         self.process_viewer = None
@@ -423,6 +424,8 @@ class LocoPlannerReactive(LocoPlanner):
     def stop_process(self):
         self.stop_motion_flag.value = True
         print("STOP MOTION flag sent")
+        if self.process_compute_cs:
+            self.process_compute_cs.terminate()
         if self.pipe_cs_in:
             self.pipe_cs_in.close()
         if self.pipe_cs_out:
@@ -593,7 +596,9 @@ class LocoPlannerReactive(LocoPlanner):
         self.start_process()
         time.sleep(2)
         print("@@@ Start compute_from_cs @@@")
-        self.compute_from_cs()
+        self.process_compute_cs = Process(target=self.compute_from_cs)
+        self.process_compute_cs.start()
+        atexit.register(self.process_compute_cs.terminate)
         print("@@@ END compute_from_cs @@@")
 
 
