@@ -6,13 +6,13 @@ planner_variables:
   floor_height: 0.0 # offset between the contact position and the 'floor' surface used to constraint the height
   min_rel_height: 0.75 # minimum allowed distance from the robot CoM to the floor
 
-  heuristic: TrustRegion  # Types: TrustRegion, SoftConstraint, TimeOptimization #
+  heuristic: TimeOptimization  # Types: TrustRegion, SoftConstraint, TimeOptimization #
   n_act_eefs: 2 # number of effector used for contact, will be overwrited with value from the Contact sequence
   time_step: 0.05 # time step used by the solver, will be overwrited by the value defined inside the planner
   time_horizon: 0. # duration of the motion, will be overwrited by the value inside the contact sequence
   time_range: [0.01, 0.2] # Bounds on the value of dt during time optimization
   is_time_horizon_fixed: false # Allow to change the total duration of the motion
-  external_force: [0.00, 0.00, 0.00]
+  external_force: [0., 0., 0.]
   com_displacement: [0., 0., 0.] # will be overwrited with values from the contact sequence
   num_com_viapoints: 0
   com_viapoints:
