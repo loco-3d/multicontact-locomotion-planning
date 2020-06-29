@@ -231,7 +231,7 @@ def isNewPhase(ds1, ds2):
     return False
 
 
-def CSfromMomentumopt(planner_setting, cs, init_state, dyn_states, t_init = 0, connect_goal = True):
+def CSfromMomentumopt(planner_setting, cs, init_state, dyn_states, t_init = 0., connect_goal = True):
     """
     Create a ContactSequence and fill it with the results from momentumopt
     :param planner_setting:
@@ -276,7 +276,7 @@ def CSfromMomentumopt(planner_setting, cs, init_state, dyn_states, t_init = 0, c
         L_t = append(L_t, L.reshape(3,1), axis = 1)
         dL_t = append(dL_t, dL.reshape(3,1), axis = 1)
         current_t += ds.dt
-        times = append(times, current_t)
+        times = append(times, round(current_t, 6))
 
         if k > 0 and isNewPhase(dyn_states[k-1], ds) and p_id < cs_com.size() - 1:
             #last k of current phase, first k of next one (same trajectories and time)

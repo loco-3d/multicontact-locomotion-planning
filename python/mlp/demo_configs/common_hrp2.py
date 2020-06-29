@@ -1,5 +1,10 @@
-from hpp.corbaserver.rbprm.hrp2 import Robot
-## following info are already accessible once the urdf is loaded, but here we do not load the urdf ...
+try:
+    from hrp2_rbprm.hrp2 import Robot
+except ImportError:
+    message = "ERROR: Cannot import hrp2-rbprm package.\n"
+    message += "Did you correctly installed it?\n"
+    message +="https://gepgitlab.laas.fr/hrp2-dev/hrp2-rbprm"
+    raise ImportError(message)## following info are already accessible once the urdf is loaded, but here we do not load the urdf ...
 MASS = 55.88363633
 ## weight and gains used by TSID
 

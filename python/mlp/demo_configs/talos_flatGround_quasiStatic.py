@@ -9,7 +9,7 @@ DURATION_INIT = 3.  # Time to init the motion
 DURATION_FINAL = 3.  # Time to stop the robot
 DURATION_FINAL_SS = 1.
 DURATION_SS = 2.
-DURATION_DS = 2.
+DURATION_DS = 4.
 DURATION_TS = 0.4
 DURATION_CONNECT_GOAL = 1.
 

@@ -542,6 +542,19 @@ def setPreviousFinalValues(phase_prev, phase, cfg):
     if cfg.IK_store_zmp:
         phase_prev.zmp_t.append(phase.zmp_t(t), t)
         phase_prev.wrench_t.append(phase.wrench_t(t), t)
+    if cfg.IK_store_contact_forces:
+        for eeName in phase_prev.effectorsInContact():
+            if phase.isEffectorInContact(eeName):
+                contact_forces = phase.contactForce(eeName)(t)
+                contact_normal_force = phase.contactNormalForce(eeName)(t)
+            else:
+                contact_normal_force = np.zeros(1)
+                if cfg.Robot.cType == "_3_DOF":
+                    contact_forces = np.zeros(3)
+                else:
+                    contact_forces = np.zeros(12)
+            phase_prev.contactForce(eeName).append(contact_forces, t)
+            phase_prev.contactNormalForce(eeName).append(contact_normal_force.reshape(1), t)
 
 
 

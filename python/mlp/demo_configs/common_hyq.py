@@ -1,4 +1,11 @@
-from hpp.corbaserver.rbprm.hyq_contact6D import Robot
+try:
+    from hyq_rbprm.hyq import Robot
+except ImportError:
+    message = "ERROR: Cannot import hyq-rbprm package.\n"
+    message += "Did you correctly installed it?\n"
+    message +="https://github.com/humanoid-path-planner/hyq-rbprm"
+    raise ImportError(message)
+
 MASS = 76.07
 
 ## weight and gains used by TSID

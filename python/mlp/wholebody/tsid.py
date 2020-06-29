@@ -72,13 +72,14 @@ def getCurrentEffectorAcceleration(robot, data, eeName):
         return robot.frameAcceleration(data, id)
 
 
-def createContactForEffector(cfg, invdyn, robot, eeName, patch):
+def createContactForEffector(cfg, invdyn, robot, eeName, patch, use_force_reg = True):
     """
     Add a contact task in invdyn for the given effector, at it's current placement
     :param invdyn:
     :param robot:
     :param eeName: name of the effector
     :param patch: the ContactPatch object to use. Take friction coefficient and placement for the contact from this object
+    :param use_force_reg: if True, use the cfg.w_forceRef_init otherwise use cfg.w_forceRef_end
     :return: the contact task
     """
     contactNormal = np.array(cfg.Robot.dict_normal[eeName])
@@ -89,6 +90,7 @@ def createContactForEffector(cfg, invdyn, robot, eeName, patch):
     if patch.contact_model.contact_type == ContactType.CONTACT_POINT:
         contact = tsid.ContactPoint("contact_" + eeName, robot, eeName, contactNormal, patch.friction, cfg.fMin, cfg.fMax)
         mask = np.ones(3)
+        force_ref = np.zeros(3)
         contact.useLocalFrame(False)
         logger.info("create contact point")
     elif patch.contact_model.contact_type == ContactType.CONTACT_PLANAR:
@@ -96,6 +98,7 @@ def createContactForEffector(cfg, invdyn, robot, eeName, patch):
         contact = tsid.Contact6d("contact_" + eeName, robot, eeName, contact_points, contactNormal, patch.friction, cfg.fMin,
                                  cfg.fMax)
         mask = np.ones(6)
+        force_ref = np.zeros(6)
         logger.info("create rectangular contact")
         logger.info("contact points : \n %s", contact_points)
     else:
@@ -103,7 +106,12 @@ def createContactForEffector(cfg, invdyn, robot, eeName, patch):
     contact.setKp(cfg.kp_contact * mask)
     contact.setKd(2.0 * np.sqrt(cfg.kp_contact) * mask)
     contact.setReference(patch.placement)
-    invdyn.addRigidContact(contact, cfg.w_forceRef)
+    contact.setForceReference(force_ref)
+    if use_force_reg:
+        w_forceRef = cfg.w_forceRef_init
+    else:
+        w_forceRef = cfg.w_forceRef_end
+    invdyn.addRigidContact(contact, w_forceRef)
     return contact
 
 
@@ -257,39 +265,23 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
                 if t > phase_prev.effectorTrajectory(eeName).max():
                     placement = getCurrentEffectorPosition(robot, invdyn.data(), eeName)
                     phase_prev.effectorTrajectory(eeName).append(placement, t)
-        if first_iter_for_phase:
-            for eeName in phase.effectorsWithTrajectory():
-                placement = getCurrentEffectorPosition(robot, invdyn.data(), eeName)
+
+        for eeName in phase.effectorsWithTrajectory():
+            placement = getCurrentEffectorPosition(robot, invdyn.data(), eeName)
+            if first_iter_for_phase:
                 phase.addEffectorTrajectory(eeName, piecewise_SE3(constantSE3curve(placement, t)))
-        else:
-            for eeName in phase.effectorsWithTrajectory():
-                placement = getCurrentEffectorPosition(robot, invdyn.data(), eeName)
+            else:
                 phase.effectorTrajectory(eeName).append(placement, t)
 
 
     def appendContactForcesTrajs(first_iter_for_phase = False):
-        if first_iter_for_phase and phase_prev:
-            for eeName in phase_prev.effectorsInContact():
-                if t > phase_prev.contactForce(eeName).max():
-                    if phase.isEffectorInContact(eeName):
-                        contact = dic_contacts[eeName]
-                        contact_forces = invdyn.getContactForce(contact.name, sol)
-                        contact_normal_force = np.array(contact.getNormalForce(contact_forces))
-                    else:
-                        contact_normal_force = np.zeros(1)
-                        if cfg.Robot.cType == "_3_DOF":
-                            contact_forces = np.zeros(3)
-                        else:
-                            contact_forces = np.zeros(12)
-                    phase_prev.contactForce(eeName).append(contact_forces, t)
-                    phase_prev.contactNormalForce(eeName).append(contact_normal_force.reshape(1), t)
-
         for eeName in phase.effectorsInContact():
             contact = dic_contacts[eeName]
             if invdyn.checkContact(contact.name, sol):
                 contact_forces = invdyn.getContactForce(contact.name, sol)
                 contact_normal_force = np.array(contact.getNormalForce(contact_forces))
             else:
+                logger.warning("invdyn check contact returned false while the reference contact is active !")
                 contact_normal_force = np.zeros(1)
                 if cfg.Robot.cType == "_3_DOF":
                     contact_forces = np.zeros(3)
@@ -411,7 +403,7 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
                                getCurrentEffectorPosition(robot, invdyn.data(), eeName),
                                cfg.Robot.cType == "_6_DOF")
         # create the contacts :
-        contact = createContactForEffector(cfg, invdyn, robot, eeName, phase0.contactPatch(eeName))
+        contact = createContactForEffector(cfg, invdyn, robot, eeName, phase0.contactPatch(eeName), False)
         dic_contacts.update({eeName: contact})
 
     if cfg.EFF_CHECK_COLLISION:  # initialise object needed to check the motion
@@ -514,6 +506,7 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
                 logger.info("t interval : %s", time_interval)
 
         # add newly created contacts :
+        new_contacts_names = [] # will store the names of the contact tasks created at this phase
         for eeName in usedEffectors:
             if phase_prev and phase_ref.isEffectorInContact(eeName) and not phase_prev.isEffectorInContact(eeName):
                 invdyn.removeTask(dic_effectors_tasks[eeName].name, 0.0)  # remove pin task for this contact
@@ -526,6 +519,7 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
                                        getCurrentEffectorPosition(robot, invdyn.data(), eeName),
                                        cfg.Robot.cType == "_6_DOF")
                 contact = createContactForEffector(cfg, invdyn, robot, eeName, phase.contactPatch(eeName))
+                new_contacts_names += [contact.name]
                 dic_contacts.update({eeName: contact})
                 logger.info("Create contact for : %s", eeName)
 
@@ -538,6 +532,15 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
                             t, contact.name, transition_time)
                 exist = invdyn.removeRigidContact(contact.name, transition_time)
                 assert exist, "Try to remove a non existing contact !"
+
+        # Remove all effectors not in contact at this phase,
+        # This is required as the block above may not remove the contact exactly at the desired time
+        # FIXME: why is it required ? Numerical approximation in the transition_time ?
+        for eeName, contact in dic_contacts.items():
+            if not phase.isEffectorInContact(eeName):
+                exist = invdyn.removeRigidContact(contact.name, 0.)
+                if exist:
+                    logger.warning("Contact "+eeName+" was not remove after the given transition time.")
 
         if cfg.WB_STOP_AT_EACH_PHASE:
             input('start simulation')
@@ -590,6 +593,16 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
                 if orientationRootTask:
                     sampleRoot = curveSE3toTSID(root_traj,t)
                     orientationRootTask.setReference(sampleRoot)
+
+                # update weight of regularization tasks for the new contacts:
+                if len(new_contacts_names) > 0 :
+                    # linearly decrease the weight of the tasks for the newly created contacts
+                    u_w_force = (t - phase.timeInitial) / (phase.duration * cfg.w_forceRef_time_ratio)
+                    if u_w_force <= 1.:
+                        current_w_force = cfg.w_forceRef_init * (1. - u_w_force) + cfg.w_forceRef_end * u_w_force
+                        for contact_name in new_contacts_names:
+                            success = invdyn.updateRigidContactWeights(contact_name, current_w_force)
+                            assert success, "Unable to change the weight of the force regularization task for contact "+contact_name
 
                 logger.debug("### references given : ###")
                 logger.debug("com  pos : %s", sampleCom.pos())
