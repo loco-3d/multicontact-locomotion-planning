@@ -410,7 +410,7 @@ class LocoPlannerReactive(LocoPlanner):
                     cs_wb, last_q, last_v, last_phase, robot = self.compute_wholebody(robot, cs_com, last_q, last_v, last_iter)
                     if self.stop_motion_flag.value:
                         logger.info("STOP MOTION in wholebody")
-                        self.queue_qt.close()
+                        #self.queue_qt.close()
                         return
                     logger.info("-- Add a cs_wb to the queue")
                     self.queue_qt.put([cs_wb.concatenateQtrajectories(), last_phase, last_iter])
@@ -426,10 +426,13 @@ class LocoPlannerReactive(LocoPlanner):
 
     def loop_viewer(self):
         self.loop_viewer_lock.acquire()
+        logger.warning("## Start a loop_viewer")
         last_iter = False
+        timeout = TIMEOUT_CONNECTIONS
         try:
             while not last_iter:
-                    q_t, last_phase, last_iter = self.queue_qt.get(timeout = TIMEOUT_CONNECTIONS)
+                    q_t, last_phase, last_iter = self.queue_qt.get(timeout = timeout)
+                    timeout = 0.1
                     if last_phase:
                         self.set_last_phase(last_phase)
                     self.viewer_lock.acquire()
@@ -446,6 +449,7 @@ class LocoPlannerReactive(LocoPlanner):
             logger.error("FATAL ERROR in loop viewer: ")
             traceback.print_exc()
             sys.exit(0)
+        self.queue_qt.close()
         self.loop_viewer_lock.release()
 
 
@@ -463,8 +467,8 @@ class LocoPlannerReactive(LocoPlanner):
             self.pipe_cs_com_in.close()
         if self.pipe_cs_com_out:
             self.pipe_cs_com_out.close()
-        if self.queue_qt:
-            self.queue_qt.close()
+        #if self.queue_qt:
+        #    self.queue_qt.close()
         """
         if self.process_centroidal:
             self.process_centroidal.join()
