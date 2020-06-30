@@ -560,8 +560,13 @@ class LocoPlannerReactive(LocoPlanner):
         self.compute_from_cs()
     """
 
-    def compute_stopping_cs(self):
-        # Compute a Centroidal reference to bring the current phase at a stop with a change of contact:
+    def compute_stopping_cs(self, move_to_support_polygon = True):
+        """
+        Compute a Contact Sequence with centroidal trajectories to bring the current last_phase
+        to a stop without contact changes
+        :param move_to_support_polygon: if True, add a trajectory to put the CoM above the center of the support polygon
+        :return:
+        """
         phase_stop = ContactPhase(self.get_last_phase())
         tools.setInitialFromFinalValues(phase_stop, phase_stop)
         phase_stop.timeInitial = phase_stop.timeFinal
@@ -572,15 +577,16 @@ class LocoPlannerReactive(LocoPlanner):
             cs_ref = ContactSequence(0)
             cs_ref.append(phase)
             # TEST : add another phase to go back in the center of the support polygon
-            phase_projected = ContactPhase()
-            phase_projected.timeInitial = phase.timeFinal
-            phase_projected.duration = DURATION_0_STEP
-            tools.copyContactPlacement(phase, phase_projected)
-            tools.setInitialFromFinalValues(phase, phase_projected)
-            phase_projected.c_final = tools.computeCenterOfSupportPolygonFromPhase(phase_stop, self.fullBody.DEFAULT_COM_HEIGHT)
-            #FIXME 'default height'
-            tools.connectPhaseTrajToFinalState(phase_projected)
-            cs_ref.append(phase_projected)
+            if move_to_support_polygon:
+                phase_projected = ContactPhase()
+                phase_projected.timeInitial = phase.timeFinal
+                phase_projected.duration = DURATION_0_STEP
+                tools.copyContactPlacement(phase, phase_projected)
+                tools.setInitialFromFinalValues(phase, phase_projected)
+                phase_projected.c_final = tools.computeCenterOfSupportPolygonFromPhase(phase_stop, self.fullBody.DEFAULT_COM_HEIGHT)
+                #FIXME 'default height'
+                tools.connectPhaseTrajToFinalState(phase_projected)
+                cs_ref.append(phase_projected)
         else:
             # TODO try 1 step :
             raise RuntimeError("One step capturability not implemented yet !")
@@ -596,23 +602,22 @@ class LocoPlannerReactive(LocoPlanner):
         self.last_phase_flag.value = False
         return cs_ref
 
-    def run_zero_step_capturability(self):
-        cs_ref = self.compute_stopping_cs()
+    def run_zero_step_capturability(self, move_to_support_polygon = True):
+        cs_ref = self.compute_stopping_cs(move_to_support_polygon)
         self.start_viewer_process()
         self.cfg.IK_dt = 0.02
         p = Process(target=self.generate_wholebody, args=(self.cfg, cs_ref, None, None, None, self.queue_qt))
         logger.warning("@@ Start generate_wholebody for 0 step capturability @@")
         p.start()
 
-    def stop_motion(self):
+    def stop_motion(self, move_to_support_polygon = True):
         self.stop_process()
         process_stones = Process(target=self.hide_stones_lock)
         process_stones.start()
         atexit.register(process_stones.terminate)
         if not self.is_at_stop():
             logger.warning("!!!!!! REQUIRE STOP MOTION: compute 0-step capturability")
-            # Try 0 or one step capturability HERE
-            self.run_zero_step_capturability()
+            self.run_zero_step_capturability(move_to_support_polygon)
 
 
     def move_to_goal(self, root_goal):
@@ -623,7 +628,7 @@ class LocoPlannerReactive(LocoPlanner):
         If the quaternion part is not specified, the final orientation is not constrained
         :return:
         """
-        self.stop_motion()
+        self.stop_motion(False)
         self.plan_guide(root_goal)
         logger.info("Guide planning solved, path id = %d", self.current_guide_id)
         self.compute_cs_from_guide()
