@@ -254,7 +254,8 @@ class LocoPlannerReactive(LocoPlanner):
                 self.last_phase = pickle.loads(pic)
                 self.last_phase_flag.value = False
             except:
-                pass
+                logger.error("Cannot de serialize the last_phase")
+                self.last_phase = None
             self.last_phase_lock.release()
         return self.last_phase
 
