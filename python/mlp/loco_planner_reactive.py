@@ -168,7 +168,7 @@ class LocoPlannerReactive(LocoPlanner):
         last_phase = self.get_last_phase()
         if last_phase:
             logger.warning("Last phase not None")
-            logger.warning("Last phase q_final : ", last_phase.q_final[:7])
+            logger.warning("Last phase q_final : %s", last_phase.q_final[:7])
             self.guide_planner.q_init[:7] = last_phase.q_final[:7]
             self.guide_planner.q_init[2] = self.guide_planner.rbprmBuilder.ref_height # FIXME
         #add small velocity in order to have smooth change of orientation at the beginning/end
@@ -184,8 +184,8 @@ class LocoPlannerReactive(LocoPlanner):
             dir_goal = quat_goal * np.array([1, 0, 0])
             self.guide_planner.q_goal[-6] = dir_goal[0] * V_GOAL
             self.guide_planner.q_goal[-5] = dir_goal[1] * V_GOAL
-        logger.warning("Guide init = ", self.guide_planner.q_init)
-        logger.warning("Guide goal = ", self.guide_planner.q_goal)
+        logger.warning("Guide init = %s", self.guide_planner.q_init)
+        logger.warning("Guide goal = %s", self.guide_planner.q_goal)
         self.guide_planner.ps.resetGoalConfigs()
         self.guide_planner.ps.clearRoadmap()
         self.current_root_goal = root_goal
@@ -220,7 +220,7 @@ class LocoPlannerReactive(LocoPlanner):
                                                            False,
                                                            initial_contacts)
         root_end = self.guide_planner.ps.configAtParam(pathId, self.guide_planner.ps.pathLength(pathId) - 0.001)[0:7]
-        logger.info("SL1M, root_end = ", root_end)
+        logger.info("SL1M, root_end = %s", root_end)
 
         self.cs = sl1m.build_cs_from_sl1m(self.fullBody, self.cfg.IK_REFERENCE_CONFIG, root_end, pb, sl1m.RF,
                                      allfeetpos, cfg.SL1M_USE_ORIENTATION, cfg.SL1M_USE_INTERPOLATED_ORIENTATION,
@@ -388,7 +388,8 @@ class LocoPlannerReactive(LocoPlanner):
             logger.info("initial config not defined in CS, set it from last phase.")
             # get current last_phase config:
             last_phase = self.get_last_phase()
-            logger.info("last_phase.q_final shape: ", last_phase.q_final.shape[0])
+            if logger.isEnabledFor(logging.INFO) and last_phase:
+                logger.info("last_phase.q_final shape: %d", last_phase.q_final.shape[0])
             while last_phase is None or last_phase.q_final.shape[0] < self.robot.nq:
                 last_phase = self.get_last_phase()
             last_q = last_phase.q_final
@@ -497,12 +498,12 @@ class LocoPlannerReactive(LocoPlanner):
     def compute_from_cs(self):
         pid_centroidal = 0
         last_iter_centroidal = False
-        logger.info("## Compute from cs,  size = ", self.cs.size())
+        logger.info("## Compute from cs,  size = %d", self.cs.size())
         last_phase = self.get_last_phase()
         if last_phase:
             tools.setFinalFromInitialValues(last_phase, self.cs.contactPhases[0])
         while pid_centroidal + 5 < self.cs.size():
-            logger.debug("## Current pid = ", pid_centroidal)
+            logger.debug("## Current pid = %d", pid_centroidal)
             if pid_centroidal + 7 >= self.cs.size():
                 logger.debug("## Last centroidal iter")
                 # last iter, take all the remaining phases
@@ -510,11 +511,11 @@ class LocoPlannerReactive(LocoPlanner):
                 last_iter_centroidal = True
             else:
                 num_phase = 5
-            logger.debug("## Num phase = ", num_phase)
+            logger.debug("## Num phase = %d", num_phase)
             # Extract the phases [pid_centroidal; pid_centroidal +num_phases] from cs_full
             cs_iter = ContactSequence(0)
             for i in range(pid_centroidal, pid_centroidal + num_phase):
-                logger.debug("-- Add phase : ", i)
+                logger.debug("-- Add phase : %d", i)
                 cs_iter.append(self.cs.contactPhases[i])
             self.pipe_cs_in.send([cs_iter, last_iter_centroidal])
             pid_centroidal += 2
@@ -588,6 +589,7 @@ class LocoPlannerReactive(LocoPlanner):
         self.start_viewer_process()
         self.cfg.IK_dt = 0.02
         p = Process(target=self.generate_wholebody, args=(self.cfg, cs_ref, None, None, None, self.queue_qt))
+        logger.warning("@@ Start generate_wholebody for 0 step capturability @@")
         p.start()
 
     def stop_motion(self):
@@ -611,7 +613,7 @@ class LocoPlannerReactive(LocoPlanner):
         """
         self.stop_motion()
         self.plan_guide(root_goal)
-        logger.info("Guide planning solved, path id = ", self.current_guide_id)
+        logger.info("Guide planning solved, path id = %d", self.current_guide_id)
         self.compute_cs_from_guide()
         self.compute_cs_requirements()
         logger.info("Start process")
@@ -716,7 +718,7 @@ class LocoPlannerReactive(LocoPlanner):
 
         if len(position) == 3:
             position += [0, 0, 0, 1]
-        logger.info("!!!! Addobstacle name : ", name)
+        logger.info("!!!! Addobstacle name : %s", name)
         self.add_obstacle_to_problem_solvers(name, size, position, self.guide_planner.ps.client.obstacle)
         self.add_obstacle_to_problem_solvers(name, size, position, self.fullBody.client.obstacle)
 
