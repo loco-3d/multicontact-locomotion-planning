@@ -66,8 +66,8 @@ class LocoPlannerReactive(LocoPlanner):
         cfg.EFF_CHECK_COLLISION = False
         cfg.contact_generation_method = "sl1m"
         cfg.Robot.DEFAULT_COM_HEIGHT += cfg.COM_SHIFT_Z
-        cfg.COM_SHIFT_Z = 0.
-        cfg.TIME_SHIFT_COM = 0.
+        self.previous_com_shift_z = cfg.COM_SHIFT_Z
+        self.previous_time_shift_com = cfg.TIME_SHIFT_COM
         self.previous_connect_goal = cfg.DURATION_CONNECT_GOAL
         cfg.DURATION_CONNECT_GOAL = 0.
         super().__init__(cfg)
@@ -291,7 +291,17 @@ class LocoPlannerReactive(LocoPlanner):
                            last_iter=False):  # update the initial state with the data from the previous intermediate state:
         if previous_phase:
             tools.setInitialFromFinalValues(previous_phase, cs.contactPhases[0])
-
+            self.cfg.COM_SHIFT_Z = 0.
+            self.cfg.TIME_SHIFT_COM = 0.
+        #else:
+        #    self.cfg.COM_SHIFT_Z = self.previous_com_shift_z
+        #    self.cfg.TIME_SHIFT_COM = self.previous_time_shift_com
+        if last_iter:
+            self.cfg.DURATION_CONNECT_GOAL = self.previous_connect_goal
+            self.cfg.TIMEOPT_CONFIG_FILE = "cfg_softConstraints_talos.yaml"
+        else:
+            self.cfg.DURATION_CONNECT_GOAL = 0.
+            self.cfg.TIMEOPT_CONFIG_FILE = "cfg_softConstraints_talos_lowgoal.yaml"
         if not self.CentroidalInputs.checkAndFillRequirements(cs, self.cfg, None):
             raise RuntimeError(
                 "The current contact sequence cannot be given as input to the centroidal method selected.")
@@ -337,8 +347,8 @@ class LocoPlannerReactive(LocoPlanner):
         logger.info("-- compute whole body END")
         # WholebodyOutputs.assertRequirements(cs_wb)
         last_phase_wb = cs_wb.contactPhases[-1]
-        last_q = last_phase_wb.q_t(cs_wb.contactPhases[-1].timeFinal)
-        last_v = last_phase_wb.dq_t(cs_wb.contactPhases[-1].timeFinal)
+        last_q = last_phase_wb.q_t(last_phase_wb.timeFinal)
+        last_v = last_phase_wb.dq_t(last_phase_wb.timeFinal)
         tools.deletePhaseCentroidalTrajectories(last_phase)
         last_phase.q_final = last_q
         last_phase.dq_t = polynomial(last_v.reshape(-1, 1), last_phase.timeFinal, last_phase.timeFinal)
@@ -355,9 +365,6 @@ class LocoPlannerReactive(LocoPlanner):
             while not last_iter and not timeout:
                 if self.pipe_cs_out.poll(TIMEOUT_CONNECTIONS):
                     cs, last_iter = self.pipe_cs_out.recv()
-                    if last_iter:
-                        self.cfg.DURATION_CONNECT_GOAL = self.previous_connect_goal
-                        self.cfg.TIMEOPT_CONFIG_FILE = "cfg_softConstraints_talos.yaml"
                     logger.info("## Run centroidal")
                     cs_com, last_centroidal_phase = self.compute_centroidal(cs, last_centroidal_phase, last_iter)
                     if self.stop_motion_flag.value:
