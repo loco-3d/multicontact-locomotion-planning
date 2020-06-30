@@ -271,6 +271,7 @@ class LocoPlannerReactive(LocoPlanner):
         for i, el in enumerate(arr):
             self.last_phase_pickled[i] = el
         self.last_phase_flag.value = True
+        logger.info("Add a last_phase, q_final = %s", last_phase.q_final)
         self.last_phase_lock.release()
 
     def is_at_stop(self):
@@ -402,6 +403,7 @@ class LocoPlannerReactive(LocoPlanner):
                 last_phase = self.get_last_phase()
             last_q = last_phase.q_final
             logger.info("Got last_q from last_phase, start wholebody loop ...")
+            logger.info("last_q in loop_wholebody = %s", last_q)
         try:
             while not last_iter and not timeout:
                 if self.pipe_cs_com_out.poll(TIMEOUT_CONNECTIONS):
