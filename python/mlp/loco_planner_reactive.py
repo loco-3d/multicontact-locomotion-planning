@@ -26,6 +26,7 @@ import importlib
 import logging
 logging.basicConfig(format='[%(name)-12s] %(levelname)-8s: %(message)s')
 logger = logging.getLogger("reactive-planning")
+logger.setLevel(logging.WARNING) #DEBUG, INFO or WARNING
 eigenpy.switchToNumpyArray()
 
 MAX_PICKLE_SIZE = 10000 # maximal size (in byte) of the pickled representation of a contactPhase
@@ -166,8 +167,8 @@ class LocoPlannerReactive(LocoPlanner):
         self.guide_planner.q_goal[-6:] = [0]*6
         last_phase = self.get_last_phase()
         if last_phase:
-            print("Last phase not None")
-            print("Last phase q_final : ", last_phase.q_final[:7])
+            logger.warning("Last phase not None")
+            logger.warning("Last phase q_final : ", last_phase.q_final[:7])
             self.guide_planner.q_init[:7] = last_phase.q_final[:7]
             self.guide_planner.q_init[2] = self.guide_planner.rbprmBuilder.ref_height # FIXME
         #add small velocity in order to have smooth change of orientation at the beginning/end
@@ -183,8 +184,8 @@ class LocoPlannerReactive(LocoPlanner):
             dir_goal = quat_goal * np.array([1, 0, 0])
             self.guide_planner.q_goal[-6] = dir_goal[0] * V_GOAL
             self.guide_planner.q_goal[-5] = dir_goal[1] * V_GOAL
-        print("Guide init = ", self.guide_planner.q_init)
-        print("Guide goal = ", self.guide_planner.q_goal)
+        logger.warning("Guide init = ", self.guide_planner.q_init)
+        logger.warning("Guide goal = ", self.guide_planner.q_goal)
         self.guide_planner.ps.resetGoalConfigs()
         self.guide_planner.ps.clearRoadmap()
         self.current_root_goal = root_goal
@@ -219,30 +220,30 @@ class LocoPlannerReactive(LocoPlanner):
                                                            False,
                                                            initial_contacts)
         root_end = self.guide_planner.ps.configAtParam(pathId, self.guide_planner.ps.pathLength(pathId) - 0.001)[0:7]
-        print("SL1M, root_end = ", root_end)
+        logger.info("SL1M, root_end = ", root_end)
 
         self.cs = sl1m.build_cs_from_sl1m(self.fullBody, self.cfg.IK_REFERENCE_CONFIG, root_end, pb, sl1m.RF,
                                      allfeetpos, cfg.SL1M_USE_ORIENTATION, cfg.SL1M_USE_INTERPOLATED_ORIENTATION,
                                           q_init, first_phase)
-        print("## Compute cs from guide done.")
+        logger.warning("## Compute cs from guide done.")
         process_stones = Process(target=self.display_stones_lock)
         process_stones.start()
         atexit.register(process_stones.terminate)
 
     def display_stones_lock(self):
         self.viewer_lock.acquire()
-        print("Display stepping stones ...")
+        logger.info("Display stepping stones ...")
         displaySteppingStones(self.cs, self.gui, "world",
                               self.cfg.Robot)  # FIXME: change world if changed in pinocchio ...
-        print("Display done.")
+        logger.info("Display done.")
         self.viewer_lock.release()
         return
 
     def hide_stones_lock(self):
         self.viewer_lock.acquire()
-        print("Hide stepping stones ...")
+        logger.info("Hide stepping stones ...")
         hideSteppingStone(self.gui)
-        print("Hiding done.")
+        logger.info("Hiding done.")
         self.viewer_lock.release()
 
     def get_last_phase(self):
@@ -333,7 +334,7 @@ class LocoPlannerReactive(LocoPlanner):
             raise RuntimeError(
                 "The current contact sequence cannot be given as input to the wholeBody method selected.")
         cs_wb, robot = self.generate_wholebody(self.cfg, cs_ref, robot=robot)
-        # print("-- compute whole body END")
+        logger.info("-- compute whole body END")
         # WholebodyOutputs.assertRequirements(cs_wb)
         last_phase_wb = cs_wb.contactPhases[-1]
         last_q = last_phase_wb.q_t(cs_wb.contactPhases[-1].timeFinal)
@@ -357,21 +358,21 @@ class LocoPlannerReactive(LocoPlanner):
                     if last_iter:
                         self.cfg.DURATION_CONNECT_GOAL = self.previous_connect_goal
                         self.cfg.TIMEOPT_CONFIG_FILE = "cfg_softConstraints_talos.yaml"
-                    print("## Run centroidal")
+                    logger.info("## Run centroidal")
                     cs_com, last_centroidal_phase = self.compute_centroidal(cs, last_centroidal_phase, last_iter)
                     if self.stop_motion_flag.value:
-                        print("STOP MOTION in centroidal")
+                        logger.info("STOP MOTION in centroidal")
                         self.pipe_cs_com_in.close()
                         return
-                    print("-- Add a cs_com to the queue")
+                    logger.info("-- Add a cs_com to the queue")
                     self.pipe_cs_com_in.send([cs_com, last_iter])
                 else:
                     timeout = True
-                    print("Loop centroidal closed because pipe is empty since 10 seconds")
+                    logger.warning("Loop centroidal closed because pipe is empty since 10 seconds")
             if last_iter:
-                print("Centroidal last iter received, close the pipe and terminate process.")
+                logger.info("Centroidal last iter received, close the pipe and terminate process.")
         except:
-            print("FATAL ERROR in loop centroidal: ")
+            logger.error("FATAL ERROR in loop centroidal: ")
             traceback.print_exc()
             sys.exit(0)
         self.pipe_cs_com_in.close()
@@ -384,33 +385,33 @@ class LocoPlannerReactive(LocoPlanner):
         # Set the current config:
         last_q = self.cs.contactPhases[0].q_init
         if last_q is None or last_q.shape[0] < self.robot.nq:
-            print("initial config not defined in CS, set it from last phase.")
+            logger.info("initial config not defined in CS, set it from last phase.")
             # get current last_phase config:
             last_phase = self.get_last_phase()
-            print("last_phase.q_final shape: ", last_phase.q_final.shape[0])
+            logger.info("last_phase.q_final shape: ", last_phase.q_final.shape[0])
             while last_phase is None or last_phase.q_final.shape[0] < self.robot.nq:
                 last_phase = self.get_last_phase()
             last_q = last_phase.q_final
-            print("Got last_q from last_phase, start wholebody loop ...")
+            logger.info("Got last_q from last_phase, start wholebody loop ...")
         try:
             while not last_iter and not timeout:
                 if self.pipe_cs_com_out.poll(TIMEOUT_CONNECTIONS):
                     cs_com, last_iter = self.pipe_cs_com_out.recv()
-                    print("## Run wholebody")
+                    logger.info("## Run wholebody")
                     cs_wb, last_q, last_v, last_phase, robot = self.compute_wholebody(robot, cs_com, last_q, last_v, last_iter)
                     if self.stop_motion_flag.value:
-                        print("STOP MOTION in wholebody")
+                        logger.info("STOP MOTION in wholebody")
                         self.queue_qt.close()
                         return
-                    print("-- Add a cs_wb to the queue")
+                    logger.info("-- Add a cs_wb to the queue")
                     self.queue_qt.put([cs_wb.concatenateQtrajectories(), last_phase, last_iter])
                 else:
                     timeout = True
-                    print("Loop wholebody closed because pipe is empty since 10 seconds")
+                    logger.warning("Loop wholebody closed because pipe is empty since 10 seconds")
             if last_iter:
-                print("Wholebody last iter received, close the pipe and terminate process.")
+                logger.info("Wholebody last iter received, close the pipe and terminate process.")
         except:
-            print("FATAL ERROR in loop wholebody: ")
+            logger.error("FATAL ERROR in loop wholebody: ")
             traceback.print_exc()
             sys.exit(0)
 
@@ -426,14 +427,14 @@ class LocoPlannerReactive(LocoPlanner):
                     disp_wb_pinocchio(self.robot, q_t, cfg.DT_DISPLAY)
                     self.viewer_lock.release()
                     if self.stop_motion_flag.value:
-                        print("STOP MOTION in viewer")
+                        logger.info("STOP MOTION in viewer")
                         self.loop_viewer_lock.release()
                         return
         except Queue.Empty:
-            print("Loop viewer closed because queue is empty since 10 seconds")
+            logger.warning("Loop viewer closed because queue is empty since 10 seconds")
             pass
         except:
-            print("FATAL ERROR in loop viewer: ")
+            logger.error("FATAL ERROR in loop viewer: ")
             traceback.print_exc()
             sys.exit(0)
         self.loop_viewer_lock.release()
@@ -442,7 +443,7 @@ class LocoPlannerReactive(LocoPlanner):
 
     def stop_process(self):
         self.stop_motion_flag.value = True
-        print("STOP MOTION flag sent")
+        logger.warning("STOP MOTION flag sent")
         if self.process_compute_cs:
             self.process_compute_cs.terminate()
         if self.pipe_cs_in:
@@ -496,24 +497,24 @@ class LocoPlannerReactive(LocoPlanner):
     def compute_from_cs(self):
         pid_centroidal = 0
         last_iter_centroidal = False
-        print("## Compute from cs,  size = ", self.cs.size())
+        logger.info("## Compute from cs,  size = ", self.cs.size())
         last_phase = self.get_last_phase()
         if last_phase:
             tools.setFinalFromInitialValues(last_phase, self.cs.contactPhases[0])
         while pid_centroidal + 5 < self.cs.size():
-            #print("## Current pid = ", pid_centroidal)
+            logger.debug("## Current pid = ", pid_centroidal)
             if pid_centroidal + 7 >= self.cs.size():
-                #print("## Last centroidal iter")
+                logger.debug("## Last centroidal iter")
                 # last iter, take all the remaining phases
                 num_phase = self.cs.size() - pid_centroidal
                 last_iter_centroidal = True
             else:
                 num_phase = 5
-            #print("## Num phase = ", num_phase)
+            logger.debug("## Num phase = ", num_phase)
             # Extract the phases [pid_centroidal; pid_centroidal +num_phases] from cs_full
             cs_iter = ContactSequence(0)
             for i in range(pid_centroidal, pid_centroidal + num_phase):
-                #print("-- Add phase : ", i)
+                logger.debug("-- Add phase : ", i)
                 cs_iter.append(self.cs.contactPhases[i])
             self.pipe_cs_in.send([cs_iter, last_iter_centroidal])
             pid_centroidal += 2
@@ -595,7 +596,7 @@ class LocoPlannerReactive(LocoPlanner):
         process_stones.start()
         atexit.register(process_stones.terminate)
         if not self.is_at_stop():
-            print("!!!!!! REQUIRE STOP MOTION: compute 0-step capturability")
+            logger.warning("!!!!!! REQUIRE STOP MOTION: compute 0-step capturability")
             # Try 0 or one step capturability HERE
             self.run_zero_step_capturability()
 
@@ -610,18 +611,18 @@ class LocoPlannerReactive(LocoPlanner):
         """
         self.stop_motion()
         self.plan_guide(root_goal)
-        print("Guide planning solved, path id = ", self.current_guide_id)
+        logger.info("Guide planning solved, path id = ", self.current_guide_id)
         self.compute_cs_from_guide()
         self.compute_cs_requirements()
-        print("Start process")
+        logger.info("Start process")
 
         self.start_process()
         time.sleep(2)
-        print("@@@ Start compute_from_cs @@@")
+        logger.info("@@@ Start compute_from_cs @@@")
         self.process_compute_cs = Process(target=self.compute_from_cs)
         self.process_compute_cs.start()
         atexit.register(self.process_compute_cs.terminate)
-        print("@@@ END compute_from_cs @@@")
+        logger.info("@@@ END compute_from_cs @@@")
 
     def find_closest_guide_time(self, path_id):
         """
@@ -704,7 +705,7 @@ class LocoPlannerReactive(LocoPlanner):
         :param color: color of the obstacle in the viewer, blue by default
         :return:
         """
-        print("!!!! ADD OBSTACLE REQUESTED")
+        logger.warning("!!!! ADD OBSTACLE REQUESTED")
         name = "obstacle_0" #FIXME: change the prefix if there is changes in pinocchio ...
         # Add an id until it is an unused name:
         i = 1
@@ -715,28 +716,28 @@ class LocoPlannerReactive(LocoPlanner):
 
         if len(position) == 3:
             position += [0, 0, 0, 1]
-        print("!!!! Addobstacle name : ", name)
+        logger.info("!!!! Addobstacle name : ", name)
         self.add_obstacle_to_problem_solvers(name, size, position, self.guide_planner.ps.client.obstacle)
         self.add_obstacle_to_problem_solvers(name, size, position, self.fullBody.client.obstacle)
 
 
-        print("!!!! obstacle added to the problem")
+        logger.info("!!!! obstacle added to the problem")
         # add obstacle to the viewer:
         process_obstacle = Process(target=self.add_obstacle_to_viewer, args=(name, size, position, color))
         process_obstacle.start()
         atexit.register(process_obstacle.terminate)
-        print("!!!! start thread to display obstacle")
+        logger.info("!!!! start thread to display obstacle")
 
         if not self.is_at_stop():
-            print("!!!!!! Add obstacle during motion, check path ...")
+            logger.info("!!!!!! Add obstacle during motion, check path ...")
             valid = self.is_path_valid(self.current_guide_id)
             if valid:
-                print("!!!!!! Current path is still valid, continue ...")
+                logger.warning("!!!!!! Current path is still valid, continue ...")
             else:
-                print("!!!!!! Current path is now invalid ! Compute a new one ...")
+                logger.warning("!!!!!! Current path is now invalid ! Compute a new one ...")
                 self.move_to_goal(self.current_root_goal)
         else:
-            print("!!!!!! Add obstacle: The robot is not in motion")
+            logger.warning("!!!!!! Add obstacle: The robot is not in motion")
 
 
 
