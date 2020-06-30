@@ -602,6 +602,7 @@ class LocoPlannerReactive(LocoPlanner):
         q_final[3:7] = [quat_root.x, quat_root.y, quat_root.z, quat_root.w]
         self.last_phase.q_final = q_final
         self.last_phase_flag.value = False
+        self.last_phase_pickled = Array(c_ubyte, MAX_PICKLE_SIZE) # reset currently stored whole body last phase
         return cs_ref
 
     def run_zero_step_capturability(self, move_to_support_polygon = True):
