@@ -102,11 +102,13 @@ class LocoPlannerReactive(LocoPlanner):
         self.guide_planner = self.init_guide_planner()
         # initialize a fullBody rbprm object and a sl1m contact planning class
         self.fullBody, _ = initScene(cfg.Robot, cfg.ENV_NAME, context="fullbody")
+        self.fullBody.setCurrentConfig(cfg.IK_REFERENCE_CONFIG.tolist() + [0]*6)
         self.contact_planner = self.init_contact_planner()
         self.current_root_goal = []
         self.current_guide_id = 0
         # Set up gepetto gui and a pinocchio robotWrapper with display
         self.init_viewer()
+
 
     def init_guide_planner(self):
         """
