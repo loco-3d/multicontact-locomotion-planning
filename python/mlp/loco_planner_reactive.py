@@ -232,6 +232,7 @@ class LocoPlannerReactive(LocoPlanner):
         atexit.register(process_stones.terminate)
 
     def display_stones_lock(self):
+        logger.info("Waiting lock to display stepping stones ...")
         self.viewer_lock.acquire()
         logger.info("Display stepping stones ...")
         displaySteppingStones(self.cs, self.gui, "world",
@@ -241,6 +242,7 @@ class LocoPlannerReactive(LocoPlanner):
         return
 
     def hide_stones_lock(self):
+        logger.info("Waiting lock to hide stepping stones ...")
         self.viewer_lock.acquire()
         logger.info("Hide stepping stones ...")
         hideSteppingStone(self.gui)
@@ -255,7 +257,7 @@ class LocoPlannerReactive(LocoPlanner):
                 self.last_phase = pickle.loads(pic)
                 self.last_phase_flag.value = False
             except:
-                logger.error("Cannot de serialize the last_phase")
+                #logger.error("Cannot de serialize the last_phase")
                 self.last_phase = None
             self.last_phase_lock.release()
         return self.last_phase
@@ -434,26 +436,30 @@ class LocoPlannerReactive(LocoPlanner):
         timeout = TIMEOUT_CONNECTIONS
         try:
             while not last_iter:
+                    print("ùùùùùù waiting for new data in the queue, timeout = ", timeout)
                     q_t, last_phase, last_iter = self.queue_qt.get(timeout = timeout)
+                    print("ùùùùùù Get a new data")
                     timeout = 0.1
                     if last_phase:
                         self.set_last_phase(last_phase)
+                    print("ùùùùùù Waiting to display ...")
                     self.viewer_lock.acquire()
+                    print("ùùùùùù Start to display ...")
                     disp_wb_pinocchio(self.robot, q_t, cfg.DT_DISPLAY)
                     self.viewer_lock.release()
+                    print("ùùùùùù Displayed.")
                     if self.stop_motion_flag.value:
                         logger.info("STOP MOTION in viewer")
-                        self.loop_viewer_lock.release()
-                        return
+                        last_iter = True
         except Queue.Empty:
             logger.warning("Loop viewer closed because queue is empty since 10 seconds")
-            pass
         except:
             logger.error("FATAL ERROR in loop viewer: ")
             traceback.print_exc()
             sys.exit(0)
         self.queue_qt.close()
         self.loop_viewer_lock.release()
+        logger.warning("## End of loop_viewer")
 
 
 
@@ -700,6 +706,7 @@ class LocoPlannerReactive(LocoPlanner):
 
     def add_obstacle_to_viewer(self, name, size, position, color = [0,0,1,1]):
         node_name = "world/environments/" + name #FIXME: change the prefix if there is changes in pinocchio ...
+        logger.info("Waiting lock to add obstacles ...")
         self.viewer_lock.acquire()
         # add the obstacle to the viewer:
         self.gui.addBox(node_name, size[0], size[1], size[2], color)
@@ -707,6 +714,8 @@ class LocoPlannerReactive(LocoPlanner):
         self.gui.applyConfiguration(node_name, position)
         self.gui.refresh()
         self.viewer_lock.release()
+        logger.info("Obstacles added in the viewer")
+
 
     def add_obstacle_to_problem_solvers(self, name, size, position, obstacle_client):
         # add the obstacle to the problem solver:
