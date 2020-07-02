@@ -103,7 +103,6 @@ class LocoPlannerReactive(LocoPlanner):
         # initialize a fullBody rbprm object and a sl1m contact planning class
         self.fullBody, _ = initScene(cfg.Robot, cfg.ENV_NAME, context="fullbody")
         self.fullBody.setCurrentConfig(cfg.IK_REFERENCE_CONFIG.tolist() + [0]*6)
-        self.contact_planner = self.init_contact_planner()
         self.current_root_goal = []
         self.current_guide_id = 0
         # Set up gepetto gui and a pinocchio robotWrapper with display
@@ -133,13 +132,6 @@ class LocoPlannerReactive(LocoPlanner):
         planner.init_viewer(cfg.ENV_NAME)
         planner.init_planner()
         return planner
-
-    def init_contact_planner(self):
-        """
-        Initialize aa class used to generate sl1m contact sequences
-        :return: a sl1m instance
-        """
-        return None # class sl1m
 
     def init_viewer(self):
         """
