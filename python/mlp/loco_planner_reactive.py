@@ -68,6 +68,8 @@ class LocoPlannerReactive(LocoPlanner):
         cfg.Robot.DEFAULT_COM_HEIGHT += cfg.COM_SHIFT_Z
         self.previous_com_shift_z = cfg.COM_SHIFT_Z
         self.previous_time_shift_com = cfg.TIME_SHIFT_COM
+        cfg.COM_SHIFT_Z = 0.
+        cfg.TIME_SHIFT_COM = 0.
         self.previous_connect_goal = cfg.DURATION_CONNECT_GOAL
         cfg.DURATION_CONNECT_GOAL = 0.
         super().__init__(cfg)
