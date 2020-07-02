@@ -372,10 +372,6 @@ class LocoPlannerReactive(LocoPlanner):
                     cs, last_iter = self.pipe_cs_out.recv()
                     logger.info("## Run centroidal")
                     cs_com, last_centroidal_phase = self.compute_centroidal(cs, last_centroidal_phase, last_iter)
-                    if self.stop_motion_flag.value:
-                        logger.info("STOP MOTION in centroidal")
-                        self.pipe_cs_com_in.close()
-                        return
                     logger.info("-- Add a cs_com to the queue")
                     self.pipe_cs_com_in.send([cs_com, last_iter])
                 else:
@@ -413,10 +409,6 @@ class LocoPlannerReactive(LocoPlanner):
                     cs_com, last_iter = self.pipe_cs_com_out.recv()
                     logger.info("## Run wholebody")
                     cs_wb, last_q, last_v, last_phase, robot = self.compute_wholebody(robot, cs_com, last_q, last_v, last_iter)
-                    if self.stop_motion_flag.value:
-                        logger.info("STOP MOTION in wholebody")
-                        #self.queue_qt.close()
-                        return
                     logger.info("-- Add a cs_wb to the queue")
                     self.queue_qt.put([cs_wb.concatenateQtrajectories(), last_phase, last_iter])
                 else:
@@ -432,6 +424,7 @@ class LocoPlannerReactive(LocoPlanner):
     def loop_viewer(self):
         self.loop_viewer_lock.acquire()
         logger.warning("## Start a loop_viewer")
+        self.stop_motion_flag.value = False
         last_iter = False
         timeout = TIMEOUT_CONNECTIONS
         try:
@@ -478,17 +471,14 @@ class LocoPlannerReactive(LocoPlanner):
             self.pipe_cs_com_out.close()
         #if self.queue_qt:
         #    self.queue_qt.close()
-        """
+
         if self.process_centroidal:
-            self.process_centroidal.join()
+            self.process_centroidal.terminate()
         if self.process_wholebody:
-            self.process_wholebody.join()
-        """
+            self.process_wholebody.terminate()
 
     def start_viewer_process(self):
         self.queue_qt = Queue()
-        self.stop_motion_flag = Value(c_bool)
-        self.stop_motion_flag.value = False
         self.process_viewer = Process(target=self.loop_viewer)
         self.process_viewer.start()
         atexit.register(self.process_viewer.terminate)
