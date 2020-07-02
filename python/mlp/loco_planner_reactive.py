@@ -632,7 +632,7 @@ class LocoPlannerReactive(LocoPlanner):
         logger.info("Start process")
 
         self.start_process()
-        time.sleep(2)
+        time.sleep(0.1)
         logger.info("@@@ Start compute_from_cs @@@")
         self.process_compute_cs = Process(target=self.compute_from_cs)
         self.process_compute_cs.start()
