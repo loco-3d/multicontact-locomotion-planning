@@ -207,6 +207,7 @@ class LocoPlannerReactive(LocoPlanner):
                                 last_phase.contactPatch(loco_planner.fullBody.rfoot).placement.translation]
             first_phase = ContactPhase()
             tools.copyContactPlacement(last_phase, first_phase)
+            tools.setInitialFromFinalValues(last_phase, first_phase)
         else:
             first_phase = None
             q_init = self.fullBody.getCurrentConfig()
