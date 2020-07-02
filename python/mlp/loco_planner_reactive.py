@@ -444,7 +444,7 @@ class LocoPlannerReactive(LocoPlanner):
                     if self.stop_motion_flag.value:
                         logger.info("STOP MOTION in viewer")
                         last_iter = True
-        except Queue.Empty:
+        except queue_empty:
             logger.warning("Loop viewer closed because queue is empty since 10 seconds")
         except:
             logger.error("FATAL ERROR in loop viewer: ")
