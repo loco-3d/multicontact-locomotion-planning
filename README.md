@@ -137,6 +137,54 @@ Currently supported method for each subproblem, you need to install the packages
 * OpenHRP (only for HRP-2 robot)
 * npz numpy archive (containing all the datas of the wholebody motion) (see https://github.com/MeMory-of-MOtion/docker-loco3d#details-on-the-npz-archive  for details)
 
+# Reactive planning (Work In Progess):
+
+The script loco_planner_reactive.py is a WIP script to allow reactive replanning using MLP. It run the centroidal and wholebody blocks with a time-horizon instead of running them sequentially for the whole motion. It also run them in separate processes in parrallel and display the motion as soon as the first step is computed. 
+
+This script currently allow to:
+* Request a stop during the motion (Solve a 0-step capturability problem to bring the robot at a stop). WIP: extend it to a 1-step capturability if the 0-step problem fail
+* Request a change in the goal position/orientation of the motion during it's execution
+* Add an obstacle in the environment, and re plan the motion if required
+
+To use this script, run:
+
+``` 
+python3 -i loco_planner_reactive.py DEMO_NAME
+``` 
+
+Here, the `DEMO_NAME` initial and goal position defined by the DEMO file are not used. 
+*WIP*: This script currently work only for Talos and only with some of the methods for each blocks.
+
+Once the initialization is done, the following python code can be executed:
+
+```python
+ref_height = loco_planner.fullBody.referenceConfig[2]
+
+# Add a goal 2m in front of the robot
+loco_planner.move_to_goal([2., 0., ref_height])
+
+
+# Add an ostacle in the path
+loco_planner.add_obstacle([0.01, 0.2, 0.4], [1.2, 0.15, 0.2])
+
+
+# Change the goal to 1.5m on the left
+loco_planner.move_to_goal([1., 1.5, ref_height])
+
+
+# Add an obstacle out of the way
+loco_planner.add_obstacle([0.5, 0.5, 0.5], [0.3, 0.2, 0.25])
+
+
+# Add an obstacle behind the robot
+loco_planner.add_obstacle([0.2, 0.1, 0.4], [1.5, 0.4, 0.2])
+
+
+# STOP the motion
+loco_planner.stop_motion()
+
+```
+
 # Contributing
 
 ## Package organization: 
