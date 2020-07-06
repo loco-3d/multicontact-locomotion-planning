@@ -26,7 +26,7 @@ import importlib
 import logging
 logging.basicConfig(format='[%(name)-12s] %(levelname)-8s: %(message)s')
 logger = logging.getLogger("reactive-planning")
-logger.setLevel(logging.WARNING) #DEBUG, INFO or WARNING
+logger.setLevel(logging.ERROR) #DEBUG, INFO or WARNING
 eigenpy.switchToNumpyArray()
 
 MAX_PICKLE_SIZE = 10000 # maximal size (in byte) of the pickled representation of a contactPhase
@@ -358,6 +358,23 @@ class LocoPlannerReactive(LocoPlanner):
         #last_phase.L_final = last_phase_wb.L_final
         return cs_wb, last_q, last_v, last_phase, robot
 
+    def compute_wholebody_queue(self, cs_ref):
+        """
+        Call the wholebody motion generation with the given cs_ref and the queue_qt
+        and store the last compute phase with self.set_last_phase
+        :param cs_ref:
+        :return:
+        """
+        logger.warning("@@ Start compute_wholebody_queue")
+        cs_wb, _ = self.generate_wholebody(self.cfg, cs_ref, None, None, None, self.queue_qt)
+        last_phase = ContactPhase(cs_wb.contactPhases[-1])
+        tools.deletePhaseTrajectories(last_phase)
+        tools.deleteEffectorsTrajectories(last_phase)
+        last_phase.root_t = cs_ref.contactPhases[-1].root_t
+        self.set_last_phase(last_phase)
+        logger.warning("@@ End compute_wholebody_queue")
+
+
     def loop_centroidal(self):
         last_centroidal_phase = None
         last_iter = False
@@ -602,8 +619,7 @@ class LocoPlannerReactive(LocoPlanner):
         cs_ref = self.compute_stopping_cs(move_to_support_polygon)
         self.start_viewer_process()
         self.cfg.IK_dt = 0.02
-        p = Process(target=self.generate_wholebody, args=(self.cfg, cs_ref, None, None, None, self.queue_qt))
-        logger.warning("@@ Start generate_wholebody for 0 step capturability @@")
+        p = Process(target=self.compute_wholebody_queue, args=(cs_ref, ))
         p.start()
 
     def stop_motion(self, move_to_support_polygon = True):
