@@ -263,10 +263,13 @@ class LocoPlannerReactive(LocoPlanner):
         set pickled last_phase data to last_phase_pickled shared memory
         :param last_phase:
         """
+        logger.info("set_last_phase: pickle serialization ...")
         arr = pickle.dumps(last_phase)
+        logger.info("set_last_phase: waiting for lock ...")
         self.last_phase_lock.acquire()
         if len(arr) >= MAX_PICKLE_SIZE:
             raise ValueError("In copy array: given array is too big, size = " + str(len(arr)))
+        logger.info("set_last_phase: writing data ... ")
         for i, el in enumerate(arr):
             self.last_phase_pickled[i] = el
         self.last_phase_flag.value = True
@@ -442,18 +445,18 @@ class LocoPlannerReactive(LocoPlanner):
         timeout = TIMEOUT_CONNECTIONS
         try:
             while not last_iter:
-                    print("ùùùùùù waiting for new data in the queue, timeout = ", timeout)
+                    #print("ùùùùùù waiting for new data in the queue, timeout = ", timeout)
                     q_t, last_phase, last_iter = self.queue_qt.get(timeout = timeout)
-                    print("ùùùùùù Get a new data")
+                    #print("ùùùùùù Get a new data")
                     timeout = 0.1
                     if last_phase:
                         self.set_last_phase(last_phase)
-                    print("ùùùùùù Waiting to display ...")
+                    #print("ùùùùùù Waiting to display ...")
                     self.viewer_lock.acquire()
-                    print("ùùùùùù Start to display ...")
+                    #print("ùùùùùù Start to display ...")
                     disp_wb_pinocchio(self.robot, q_t, cfg.DT_DISPLAY)
                     self.viewer_lock.release()
-                    print("ùùùùùù Displayed.")
+                    #print("ùùùùùù Displayed.")
                     if self.stop_motion_flag.value:
                         logger.info("STOP MOTION in viewer")
                         last_iter = True
