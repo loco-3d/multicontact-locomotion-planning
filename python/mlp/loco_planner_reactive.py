@@ -24,15 +24,16 @@ import importlib
 import logging
 logging.basicConfig(format='[%(name)-12s] %(levelname)-8s: %(message)s')
 logger = logging.getLogger("reactive-planning")
-logger.setLevel(logging.ERROR) #DEBUG, INFO or WARNING
+logger.setLevel(logging.ERROR)  #DEBUG, INFO or WARNING
 eigenpy.switchToNumpyArray()
 
-MAX_PICKLE_SIZE = 10000 # maximal size (in byte) of the pickled representation of a contactPhase
-DURATION_0_STEP = 3. # duration (in seconds) of the motion to stop when calling the 0 step capturability
+MAX_PICKLE_SIZE = 10000  # maximal size (in byte) of the pickled representation of a contactPhase
+DURATION_0_STEP = 3.  # duration (in seconds) of the motion to stop when calling the 0 step capturability
 V_INIT = 0.05  # small velocity added to the init/goal guide config to force smooth orientation change
 V_GOAL = 0.1
-SCALE_OBSTACLE_COLLISION = 0.1 # value added to the size of the collision obstacles manually added
-TIMEOUT_CONNECTIONS = 10. # the time (in second) after which a process close if it did not receive new data
+SCALE_OBSTACLE_COLLISION = 0.1  # value added to the size of the collision obstacles manually added
+TIMEOUT_CONNECTIONS = 10.  # the time (in second) after which a process close if it did not receive new data
+
 
 def update_root_traj_timings(cs):
     """
@@ -45,9 +46,7 @@ def update_root_traj_timings(cs):
         cp.root_t = SE3Curve(cp.root_t(cp.root_t.min()), cp.root_t(cp.root_t.max()), cp.timeInitial, cp.timeFinal)
 
 
-
 class LocoPlannerReactive(LocoPlanner):
-
     def __init__(self, cfg):
         # Disable most of the automatic display that could not be updated automatically when motion is replanned
         cfg.DISPLAY_CS = False
@@ -60,8 +59,8 @@ class LocoPlannerReactive(LocoPlanner):
         cfg.DISPLAY_ALL_FEET_TRAJ = False
         cfg.DISPLAY_WB_MOTION = False
         cfg.IK_SHOW_PROGRESS = False
-        cfg.centroidal_initGuess_method = "none" # not supported by this class yet
-        cfg.ITER_DYNAMIC_FILTER = 0 # not supported by this class yet
+        cfg.centroidal_initGuess_method = "none"  # not supported by this class yet
+        cfg.ITER_DYNAMIC_FILTER = 0  # not supported by this class yet
         cfg.CHECK_FINAL_MOTION = False
         # Disable computation of additionnal data to speed up the wholebody computation time
         cfg.IK_store_centroidal = False  # c,dc,ddc,L,dL (of the computed wholebody motion)
@@ -70,8 +69,8 @@ class LocoPlannerReactive(LocoPlanner):
         cfg.IK_store_contact_forces = False
         cfg.IK_store_joints_derivatives = True
         cfg.IK_store_joints_torque = False
-        cfg.EFF_CHECK_COLLISION = False # WIP: disable limb-rrt
-        cfg.contact_generation_method = "sl1m" # Reactive planning class is specific to SL1M for now
+        cfg.EFF_CHECK_COLLISION = False  # WIP: disable limb-rrt
+        cfg.contact_generation_method = "sl1m"  # Reactive planning class is specific to SL1M for now
         # Store the specific settings for connecting the initial/goal points as they may be changed
         cfg.Robot.DEFAULT_COM_HEIGHT += cfg.COM_SHIFT_Z
         self.previous_com_shift_z = cfg.COM_SHIFT_Z
@@ -97,14 +96,15 @@ class LocoPlannerReactive(LocoPlanner):
         self.pipe_cs_com_in = None
         self.pipe_cs_com_out = None
         self.queue_qt = None
-        self.viewer_lock = Lock() # lock to access gepetto-gui API
-        self.loop_viewer_lock = Lock() # lock to guarantee that only one loop_viewer is executed at any given time
-        self.last_phase_lock = Lock() # lock to read/write last_phase data
-        self.last_phase_pickled = Array(c_ubyte, MAX_PICKLE_SIZE) # will contain the last contact phase send to the viewer
+        self.viewer_lock = Lock()  # lock to access gepetto-gui API
+        self.loop_viewer_lock = Lock()  # lock to guarantee that only one loop_viewer is executed at any given time
+        self.last_phase_lock = Lock()  # lock to read/write last_phase data
+        self.last_phase_pickled = Array(c_ubyte,
+                                        MAX_PICKLE_SIZE)  # will contain the last contact phase send to the viewer
         self.last_phase = None
-        self.stop_motion_flag = Value(c_bool) # true if a stop is requested
-        self.last_phase_flag = Value(c_bool) # true if the last phase have changed
-        self.cfg.Robot.minDist = 0.7 # See bezier-com-traj doc,
+        self.stop_motion_flag = Value(c_bool)  # true if a stop is requested
+        self.last_phase_flag = Value(c_bool)  # true if the last phase have changed
+        self.cfg.Robot.minDist = 0.7  # See bezier-com-traj doc,
         # minimal distance between the CoM and the contact points along the Z axis
         # initialize the guide planner class:
         self.client_hpp = None
@@ -113,12 +113,11 @@ class LocoPlannerReactive(LocoPlanner):
         self.guide_planner = self.init_guide_planner()
         # initialize a fullBody rbprm object
         self.fullBody, _ = initScene(cfg.Robot, cfg.ENV_NAME, context="fullbody")
-        self.fullBody.setCurrentConfig(cfg.IK_REFERENCE_CONFIG.tolist() + [0]*6)
+        self.fullBody.setCurrentConfig(cfg.IK_REFERENCE_CONFIG.tolist() + [0] * 6)
         self.current_root_goal = []
         self.current_guide_id = 0
         # Set up gepetto gui and a pinocchio robotWrapper with display
         self.init_viewer()
-
 
     def init_guide_planner(self):
         """
@@ -139,7 +138,7 @@ class LocoPlannerReactive(LocoPlanner):
         planner.ps.setParameter("PathOptimization/RandomShortcut/NumberOfLoops", 50)
         # force the base orientation to follow the direction of motion along the Z axis
         planner.ps.setParameter("Kinodynamic/forceYawOrientation", True)
-        planner.q_init[:2] = [0, 0] # FIXME : defined somewhere ??
+        planner.q_init[:2] = [0, 0]  # FIXME : defined somewhere ??
         planner.init_viewer(cfg.ENV_NAME)
         planner.init_planner()
         return planner
@@ -157,8 +156,8 @@ class LocoPlannerReactive(LocoPlanner):
                                                     preexec_fn=os.setpgrp)
         atexit.register(self.process_gepetto_gui.kill)
         time.sleep(3)
-        self.robot, self.gui = initScenePinocchio(cfg.Robot.urdfName + cfg.Robot.urdfSuffix,
-                                                  cfg.Robot.packageName, cfg.ENV_NAME)
+        self.robot, self.gui = initScenePinocchio(cfg.Robot.urdfName + cfg.Robot.urdfSuffix, cfg.Robot.packageName,
+                                                  cfg.ENV_NAME)
         self.robot.display(self.cfg.IK_REFERENCE_CONFIG)
 
     def plan_guide(self, root_goal):
@@ -171,13 +170,13 @@ class LocoPlannerReactive(LocoPlanner):
         self.guide_planner.q_goal = self.guide_planner.q_init[::]
         self.guide_planner.q_goal[:3] = root_goal[:3]
         self.guide_planner.q_goal[3:7] = [0, 0, 0, 1]
-        self.guide_planner.q_goal[-6:] = [0]*6
+        self.guide_planner.q_goal[-6:] = [0] * 6
         last_phase = self.get_last_phase()
         if last_phase:
             logger.warning("Last phase not None")
             logger.warning("Last phase q_final : %s", last_phase.q_final[:7])
             self.guide_planner.q_init[:7] = last_phase.q_final[:7]
-            self.guide_planner.q_init[2] = self.guide_planner.rbprmBuilder.ref_height # FIXME
+            self.guide_planner.q_init[2] = self.guide_planner.rbprmBuilder.ref_height  # FIXME
         #add small velocity in order to have smooth change of orientation at the beginning/end
         quat_init = Quaternion(self.guide_planner.q_init[6], self.guide_planner.q_init[3],
                                self.guide_planner.q_init[4], self.guide_planner.q_init[5])
@@ -186,8 +185,8 @@ class LocoPlannerReactive(LocoPlanner):
         self.guide_planner.q_init[-5] = dir_init[1] * V_INIT
         if len(root_goal) >= 7:
             self.guide_planner.q_goal[3:7] = root_goal[3:7]
-            quat_goal =  Quaternion(self.guide_planner.q_goal[6], self.guide_planner.q_goal[3],
-                               self.guide_planner.q_goal[4], self.guide_planner.q_goal[5])
+            quat_goal = Quaternion(self.guide_planner.q_goal[6], self.guide_planner.q_goal[3],
+                                   self.guide_planner.q_goal[4], self.guide_planner.q_goal[5])
             dir_goal = quat_goal * np.array([1, 0, 0])
             self.guide_planner.q_goal[-6] = dir_goal[0] * V_GOAL
             self.guide_planner.q_goal[-5] = dir_goal[1] * V_GOAL
@@ -210,8 +209,10 @@ class LocoPlannerReactive(LocoPlanner):
         last_phase = self.get_last_phase()
         if last_phase:
             q_init = None
-            initial_contacts = [last_phase.contactPatch(loco_planner.fullBody.lfoot).placement.translation,
-                                last_phase.contactPatch(loco_planner.fullBody.rfoot).placement.translation]
+            initial_contacts = [
+                last_phase.contactPatch(loco_planner.fullBody.lfoot).placement.translation,
+                last_phase.contactPatch(loco_planner.fullBody.rfoot).placement.translation
+            ]
             first_phase = ContactPhase()
             tools.copyContactPlacement(last_phase, first_phase)
             tools.setInitialFromFinalValues(last_phase, first_phase)
@@ -221,17 +222,14 @@ class LocoPlannerReactive(LocoPlanner):
             initial_contacts = sl1m.initial_foot_pose_from_fullbody(self.fullBody, q_init)
 
         self.guide_planner.pathId = self.current_guide_id
-        pathId, pb, coms, footpos, allfeetpos, res = sl1m.solve(self.guide_planner,
-                                                           cfg.GUIDE_STEP_SIZE,
-                                                           cfg.GUIDE_MAX_YAW,
-                                                           cfg.MAX_SURFACE_AREA,
-                                                           False,
-                                                           initial_contacts)
+        pathId, pb, coms, footpos, allfeetpos, res = sl1m.solve(self.guide_planner, cfg.GUIDE_STEP_SIZE,
+                                                                cfg.GUIDE_MAX_YAW, cfg.MAX_SURFACE_AREA, False,
+                                                                initial_contacts)
         root_end = self.guide_planner.ps.configAtParam(pathId, self.guide_planner.ps.pathLength(pathId) - 0.001)[0:7]
         logger.info("SL1M, root_end = %s", root_end)
 
         self.cs = sl1m.build_cs_from_sl1m(self.fullBody, self.cfg.IK_REFERENCE_CONFIG, root_end, pb, sl1m.RF,
-                                     allfeetpos, cfg.SL1M_USE_ORIENTATION, cfg.SL1M_USE_INTERPOLATED_ORIENTATION,
+                                          allfeetpos, cfg.SL1M_USE_ORIENTATION, cfg.SL1M_USE_INTERPOLATED_ORIENTATION,
                                           q_init, first_phase)
         logger.warning("## Compute cs from guide done.")
         process_stones = Process(target=self.display_stones_lock)
@@ -305,16 +303,14 @@ class LocoPlannerReactive(LocoPlanner):
         """
         p = self.get_last_phase()
         if p:
-            if not np.isclose(p.dc_final, np.zeros(3), atol = 1e-2).all():
+            if not np.isclose(p.dc_final, np.zeros(3), atol=1e-2).all():
                 return False
             dq = p.dq_t(p.timeFinal)
-            if not np.isclose(dq, np.zeros(dq.shape), atol = 1e-1).all():
+            if not np.isclose(dq, np.zeros(dq.shape), atol=1e-1).all():
                 return False
         return True
 
-
-    def compute_centroidal(self, cs, previous_phase,
-                           last_iter=False):
+    def compute_centroidal(self, cs, previous_phase, last_iter=False):
         """
         Solve the centroidal problem for the given ContactSequence
         :param cs: the ContactSequence used
@@ -353,8 +349,7 @@ class LocoPlannerReactive(LocoPlanner):
                 cs_cut.append(cs_full.contactPhases[i])
             return cs_cut, cs_cut.contactPhases[1]
 
-    def compute_wholebody(self, robot, cs_com,
-                          last_q=None, last_v=None, last_iter=False):
+    def compute_wholebody(self, robot, cs_com, last_q=None, last_v=None, last_iter=False):
         """
         Compute the wholebody motion for the given ContactSequence
         :param robot: a TSID RobotWrapper instance
@@ -401,7 +396,7 @@ class LocoPlannerReactive(LocoPlanner):
         last_phase_wb = cs_wb.contactPhases[-1]
         last_q = last_phase_wb.q_t(last_phase_wb.timeFinal)
         last_v = last_phase_wb.dq_t(last_phase_wb.timeFinal)
-        tools.deletePhaseCentroidalTrajectories(last_phase) # Remove unnecessary data to reduce serialized size
+        tools.deletePhaseCentroidalTrajectories(last_phase)  # Remove unnecessary data to reduce serialized size
         last_phase.q_final = last_q
         last_phase.dq_t = polynomial(last_v.reshape(-1, 1), last_phase.timeFinal, last_phase.timeFinal)
         #last_phase.c_final = last_phase_wb.c_final
@@ -424,7 +419,6 @@ class LocoPlannerReactive(LocoPlanner):
         last_phase.root_t = cs_ref.contactPhases[-1].root_t
         self.set_last_phase(last_phase)
         logger.warning("@@ End compute_wholebody_queue")
-
 
     def loop_centroidal(self):
         """
@@ -481,7 +475,8 @@ class LocoPlannerReactive(LocoPlanner):
                 if self.pipe_cs_com_out.poll(TIMEOUT_CONNECTIONS):
                     cs_com, last_iter = self.pipe_cs_com_out.recv()
                     logger.info("## Run wholebody")
-                    cs_wb, last_q, last_v, last_phase, robot = self.compute_wholebody(robot, cs_com, last_q, last_v, last_iter)
+                    cs_wb, last_q, last_v, last_phase, robot = self.compute_wholebody(
+                        robot, cs_com, last_q, last_v, last_iter)
                     logger.info("-- Add a cs_wb to the queue")
                     self.queue_qt.put([cs_wb.concatenateQtrajectories(), last_phase, last_iter])
                 else:
@@ -508,16 +503,16 @@ class LocoPlannerReactive(LocoPlanner):
         timeout = TIMEOUT_CONNECTIONS
         try:
             while not last_iter:
-                    q_t, last_phase, last_iter = self.queue_qt.get(timeout = timeout)
-                    timeout = 0.1
-                    if last_phase:
-                        self.set_last_phase(last_phase)
-                    self.viewer_lock.acquire()
-                    disp_wb_pinocchio(self.robot, q_t, cfg.DT_DISPLAY)
-                    self.viewer_lock.release()
-                    if self.stop_motion_flag.value:
-                        logger.info("STOP MOTION in viewer")
-                        last_iter = True
+                q_t, last_phase, last_iter = self.queue_qt.get(timeout=timeout)
+                timeout = 0.1
+                if last_phase:
+                    self.set_last_phase(last_phase)
+                self.viewer_lock.acquire()
+                disp_wb_pinocchio(self.robot, q_t, cfg.DT_DISPLAY)
+                self.viewer_lock.release()
+                if self.stop_motion_flag.value:
+                    logger.info("STOP MOTION in viewer")
+                    last_iter = True
         except queue_empty:
             logger.warning("Loop viewer closed because queue is empty since 10 seconds")
         except:
@@ -527,8 +522,6 @@ class LocoPlannerReactive(LocoPlanner):
         self.queue_qt.close()
         self.loop_viewer_lock.release()
         logger.warning("## End of loop_viewer")
-
-
 
     def stop_process(self):
         """
@@ -564,8 +557,6 @@ class LocoPlannerReactive(LocoPlanner):
         self.process_viewer.start()
         atexit.register(self.process_viewer.terminate)
 
-
-
     def start_process(self):
         """
         Create new pipes and queue objects and start the centroidal, wholebody and viewer loops in new processes
@@ -588,8 +579,6 @@ class LocoPlannerReactive(LocoPlanner):
         self.process_wholebody = Process(target=self.loop_wholebody)
         self.process_wholebody.start()
         atexit.register(self.process_wholebody.terminate)
-
-
 
     def compute_from_cs(self):
         """
@@ -616,10 +605,9 @@ class LocoPlannerReactive(LocoPlanner):
             for i in range(pid_centroidal, pid_centroidal + num_phase):
                 logger.debug("-- Add phase : %d", i)
                 cs_iter.append(self.cs.contactPhases[i])
-            self.pipe_cs_in.send([cs_iter, last_iter_centroidal]) # This call may be blocking if the pipe is full
+            self.pipe_cs_in.send([cs_iter, last_iter_centroidal])  # This call may be blocking if the pipe is full
             pid_centroidal += 2
         self.pipe_cs_in.close()
-
 
     def compute_cs_requirements(self):
         """
@@ -632,8 +620,7 @@ class LocoPlannerReactive(LocoPlanner):
         tools.computeRootTrajFromContacts(self.fullBody, self.cs)
         tools.setAllUninitializedFrictionCoef(self.cs, self.cfg.MU)
 
-
-    def compute_stopping_cs(self, move_to_support_polygon = True):
+    def compute_stopping_cs(self, move_to_support_polygon=True):
         """
         Compute a Contact Sequence with centroidal trajectories to bring the current last_phase
         to a stop without contact changes
@@ -656,14 +643,15 @@ class LocoPlannerReactive(LocoPlanner):
                 phase_projected.duration = DURATION_0_STEP
                 tools.copyContactPlacement(phase, phase_projected)
                 tools.setInitialFromFinalValues(phase, phase_projected)
-                phase_projected.c_final = tools.computeCenterOfSupportPolygonFromPhase(phase_stop, self.fullBody.DEFAULT_COM_HEIGHT)
+                phase_projected.c_final = tools.computeCenterOfSupportPolygonFromPhase(
+                    phase_stop, self.fullBody.DEFAULT_COM_HEIGHT)
                 #FIXME 'default height'
                 tools.connectPhaseTrajToFinalState(phase_projected)
                 cs_ref.append(phase_projected)
         else:
             # TODO try 1 step :
             raise RuntimeError("One step capturability not implemented yet !")
-        tools.computeRootTrajFromContacts(self.fullBody,cs_ref)
+        tools.computeRootTrajFromContacts(self.fullBody, cs_ref)
         self.last_phase = cs_ref.contactPhases[-1].copy()
         # define the final root position, translation from the CoM position and rotation from the feet rotation
         q_final = np.zeros(7)
@@ -673,10 +661,10 @@ class LocoPlannerReactive(LocoPlanner):
         q_final[3:7] = [quat_root.x, quat_root.y, quat_root.z, quat_root.w]
         self.last_phase.q_final = q_final
         self.last_phase_flag.value = False
-        self.last_phase_pickled = Array(c_ubyte, MAX_PICKLE_SIZE) # reset currently stored whole body last phase
+        self.last_phase_pickled = Array(c_ubyte, MAX_PICKLE_SIZE)  # reset currently stored whole body last phase
         return cs_ref
 
-    def run_zero_step_capturability(self, move_to_support_polygon = True):
+    def run_zero_step_capturability(self, move_to_support_polygon=True):
         """
         Compute the centroidal trajectory to bring the current last_phaseto a stop without contact changes.
         Then start a viewer and a wholebody processes to generate and display the motion corresponding to this
@@ -689,7 +677,7 @@ class LocoPlannerReactive(LocoPlanner):
         p = Process(target=self.compute_wholebody_queue, args=(cs_ref, ))
         p.start()
 
-    def stop_motion(self, move_to_support_polygon = True):
+    def stop_motion(self, move_to_support_polygon=True):
         """
         Terminate all the running contact, centroidal and wholebody processes
         and remove the stepping stones from the display.
@@ -703,7 +691,6 @@ class LocoPlannerReactive(LocoPlanner):
         if not self.is_at_stop():
             logger.warning("!!!!!! REQUIRE STOP MOTION: compute 0-step capturability")
             self.run_zero_step_capturability(move_to_support_polygon)
-
 
     def move_to_goal(self, root_goal):
         """
@@ -754,14 +741,13 @@ class LocoPlannerReactive(LocoPlanner):
             current_t += DT
         return min_t
 
-
     def is_path_valid(self, path_id):
         """
         Check if the given path id stored in self.guide_planner.ps is valid or not
         :param path_id: the id of the path
         :return: True if the path is completely valid, False otherwise
         """
-        DT = 0.01 # FIXME: timestep of the discretization for the collision checking of the path
+        DT = 0.01  # FIXME: timestep of the discretization for the collision checking of the path
         ps = self.guide_planner.ps
         robot_rom = self.guide_planner.rbprmBuilder
         t = self.find_closest_guide_time(path_id) - 0.1
@@ -779,7 +765,7 @@ class LocoPlannerReactive(LocoPlanner):
         else:
             return True
 
-    def add_obstacle_to_viewer(self, name, size, position, color = [0,0,1,1]):
+    def add_obstacle_to_viewer(self, name, size, position, color=[0, 0, 1, 1]):
         """
         Add an obstacle (a box) to the viewer. This call is blocking as it wait for a lock to access to the gepetto-gui API
         :param name: the node name of the new obstacle
@@ -787,7 +773,7 @@ class LocoPlannerReactive(LocoPlanner):
         :param position: the placement (translation + quaternion) of the obstacle in the world frame
         :param color: the color (rgba) of the obstacle
         """
-        node_name = "world/environments/" + name #FIXME: change the prefix if there is changes in pinocchio ...
+        node_name = "world/environments/" + name  #FIXME: change the prefix if there is changes in pinocchio ...
         logger.info("Waiting lock to add obstacles ...")
         self.viewer_lock.acquire()
         # add the obstacle to the viewer:
@@ -797,7 +783,6 @@ class LocoPlannerReactive(LocoPlanner):
         self.gui.refresh()
         self.viewer_lock.release()
         logger.info("Obstacles added in the viewer")
-
 
     def add_obstacle_to_problem_solvers(self, name, size, position, obstacle_client):
         """
@@ -809,15 +794,12 @@ class LocoPlannerReactive(LocoPlanner):
         """
         # add the obstacle to the problem solver:
         obstacle_client.createBox(name, size[0] + SCALE_OBSTACLE_COLLISION, size[1] + SCALE_OBSTACLE_COLLISION,
-                                     size[2] + SCALE_OBSTACLE_COLLISION)
+                                  size[2] + SCALE_OBSTACLE_COLLISION)
         obstacle_client.addObstacle(name, True, False)
         # move the obstacle to the given placement:
         obstacle_client.moveObstacle(name, position)
 
-
-
-
-    def add_obstacle(self, size, position, color = [0,0,1,1]):
+    def add_obstacle(self, size, position, color=[0, 0, 1, 1]):
         """
         Add a cube to the environment, and recompute a motion if the current computed motion become invalid
         :param size: The size of the cube [x, y, z]
@@ -827,7 +809,7 @@ class LocoPlannerReactive(LocoPlanner):
         :return:
         """
         logger.warning("!!!! ADD OBSTACLE REQUESTED")
-        name = "obstacle_0" #FIXME: change the prefix if there is changes in pinocchio ...
+        name = "obstacle_0"  #FIXME: change the prefix if there is changes in pinocchio ...
         # Add an id until it is an unused name:
         i = 1
         obs_names = self.guide_planner.ps.client.obstacle.getObstacleNames(True, False)
@@ -840,7 +822,6 @@ class LocoPlannerReactive(LocoPlanner):
         logger.info("!!!! Addobstacle name : %s", name)
         self.add_obstacle_to_problem_solvers(name, size, position, self.guide_planner.ps.client.obstacle)
         self.add_obstacle_to_problem_solvers(name, size, position, self.fullBody.client.obstacle)
-
 
         logger.info("!!!! obstacle added to the problem")
         # add obstacle to the viewer, do it in a process as this call is blocking:
@@ -863,13 +844,13 @@ class LocoPlannerReactive(LocoPlanner):
             logger.warning("!!!!!! Add obstacle: The robot is not in motion")
 
 
-
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run a multicontact-locomotion-planning scenario")
-    parser.add_argument('demo_name', type=str, help="The name of the demo configuration file to load. "
-                                                    "Must be a valid python file, either inside the PYTHONPATH"
-                                                    "or inside the mlp.demo_configs folder. ")
+    parser.add_argument('demo_name',
+                        type=str,
+                        help="The name of the demo configuration file to load. "
+                        "Must be a valid python file, either inside the PYTHONPATH"
+                        "or inside the mlp.demo_configs folder. ")
     args = parser.parse_args()
     demo_name = args.demo_name
 
@@ -878,13 +859,10 @@ if __name__ == "__main__":
 
     subprocess.run(["killall", "hpp-rbprm-server"])
     process_rbprm = subprocess.Popen("hpp-rbprm-server",
-                                                stdout=subprocess.PIPE,
-                                                stderr=subprocess.DEVNULL,
-                                                preexec_fn=os.setpgrp)
+                                     stdout=subprocess.PIPE,
+                                     stderr=subprocess.DEVNULL,
+                                     preexec_fn=os.setpgrp)
     atexit.register(process_rbprm.terminate)
     time.sleep(3)
     loco_planner = LocoPlannerReactive(cfg)
     #loco_planner.run()
-
-
-
