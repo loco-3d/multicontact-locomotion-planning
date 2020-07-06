@@ -197,6 +197,8 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None, robot=None,
     :param viewer: If provided, and the settings are enabled, display the end effector trajectories and the last step computed
     :param robot: a tsid.RobotWrapper instance. If None, a new one is created from the urdf files defined in cfg
     :param queue_qt: If not None, the joint trajectories are send to this multiprocessing.Queue during computation
+        The queue take a tuple: [q_t (a Curve object), ContactPhase (may be None), Bool (True mean that this is the
+         last trajectory of the motion)]
     :return: a new ContactSequence object, containing the wholebody trajectories,
     and the other trajectories computed from the wholebody motion request with cfg.IK_STORE_* and a robotWrapper instance
     """
@@ -725,13 +727,5 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None, robot=None,
     logger.info("\nFinal COM Position  %s", robot.com(invdyn.data()))
     logger.info("Desired COM Position %s", cs.contactPhases[-1].c_final)
     if queue_qt:
-        last_phase = ContactPhase(cs_ref.contactPhases[-1])
-        deletePhaseTrajectories(last_phase)
-        deleteEffectorsTrajectories(last_phase)
-        last_phase.root_t = cs_ref.contactPhases[-1].root_t
-        last_phase.dq_t = polynomial(v.reshape(1,-1), last_phase.timeFinal, last_phase.timeFinal)
-        last_phase.q_final = q
-        last_phase.q_init = q
-        queue_qt.put([phase.q_t.curve_at_index(phase.q_t.num_curves() - 1), last_phase, True])
-        print("@@ End of generate_wholebody tsid @@")
+        queue_qt.put([phase.q_t.curve_at_index(phase.q_t.num_curves() - 1), None, True])
     return cs, robot
