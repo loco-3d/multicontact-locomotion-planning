@@ -47,7 +47,7 @@ level_rootOrientation = 1
 level_am = 1
 # The weight of the force regularization task of each contact will start at w_forceRef_init when creating a new contact,
 # and then linearly reduce to w_forceRef_end over a time period of phase_duration * w_forceRef_time_ratio
-w_forceRef_init = 0.5
+w_forceRef_init = 0.1
 w_forceRef_end = 1e-5
 w_forceRef_time_ratio = 0.5
 
