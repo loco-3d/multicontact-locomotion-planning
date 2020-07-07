@@ -5,6 +5,7 @@ from rospkg import RosPack
 import gepetto.corbaserver
 from mlp.utils.util import numpy2DToList, hppConfigFromMatrice, discretizeCurve, build_fullbody
 from mlp.utils.requirements import Requirements
+from pathlib import Path
 pin.switchToNumpyArray()
 
 
@@ -85,10 +86,7 @@ def addSteppingStone(gui, placement, name, group, size, color):
 def hideSteppingStone(gui):
     node_list = gui.getNodeList()
     for node in node_list:
-        if node.startswith(STONE_LF + "/") \
-                or node.startswith(STONE_RF + "/") \
-                or node.startswith(STONE_LH + "/") \
-                or node.startswith(STONE_RH + "/"):
+        if any(node.startswith(stone + "/") for stone in [STONE_LF, STONE_RF, STONE_LH, STONE_RH]):
             gui.setVisibility(node, "OFF")
 
 def displaySteppingStones(cs, gui, sceneName, Robot):
@@ -233,7 +231,7 @@ def displayContactSequence(v, cs, step=0.2):
     displayWBconfig(v, cs.contactPhases[-1].q_final)
 
 
-def initScene(Robot, envName="multicontact/ground", genLimbsDB=True, context = None):
+def initScene(Robot, envName="multicontact/ground", genLimbsDB=True, context=None):
     from hpp.gepetto import ViewerFactory
     fullBody, ps = build_fullbody(Robot, genLimbsDB, context)
     vf = ViewerFactory(ps)
@@ -246,8 +244,8 @@ def initScene(Robot, envName="multicontact/ground", genLimbsDB=True, context = N
 def initScenePinocchio(urdf_name, package_name, env_name=None, env_package_name="hpp_environments", scene_name = "world"):
     rp = RosPack()
     package_path = rp.get_path(package_name)
-    urdf = package_path + '/urdf/' + urdf_name + '.urdf'
-    robot = pin.RobotWrapper.BuildFromURDF(urdf, package_path, pin.JointModelFreeFlyer(),)
+    urdf_path = str(Path(package_path) / 'urdf' / Path(urdf_name+ '.urdf'))
+    robot = pin.RobotWrapper.BuildFromURDF(urdf_path, package_path, pin.JointModelFreeFlyer())
     robot.initDisplay(loadModel=True)
     robot.displayCollisions(False)
     robot.displayVisuals(True)
