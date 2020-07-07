@@ -3,7 +3,7 @@ from pinocchio import SE3, Quaternion
 import time
 from rospkg import RosPack
 import gepetto.corbaserver
-from mlp.utils.util import numpy2DToList, hppConfigFromMatrice, discretizeCurve, build_fullbody
+from mlp.utils.util import numpy2DToList, hppConfigFromMatrice, discretizeCurve, build_fullbody, Loop
 from mlp.utils.requirements import Requirements
 from pathlib import Path
 pin.switchToNumpyArray()
@@ -292,27 +292,6 @@ def displayWBatT(viewer, cs_wb, t):
     viewer(hppConfigFromMatrice(viewer.robot,q))
 
 
-def displayWBmotion(viewer, q_t, dt_display = 0.04):
-    """
-    Display the motion represented by the given joint trajectory
-    :param viewer: An instance of hpp.gepetto.Viewer
-    :param q_t: a Curves object representing a joint trajectory
-    :param dt_display: the time step between each frame displayed (default to 0.04s = 25fps)
-    """
-    t = q_t.min()
-    while t <= q_t.max():
-        t_start = time.time()
-        displayWBconfig(viewer, q_t(t))
-        t += dt_display
-        elapsed = time.time() - t_start
-        if elapsed > dt_display:
-            print("Warning : display not real time ! choose a greater time step for the display.")
-        else:
-            time.sleep(dt_display - elapsed)
-    # display last config if the total duration is not a multiple of the dt
-    displayWBconfig(viewer, q_t(q_t.max()))
-
-
 def displayFeetTrajFromResult(gui, sceneName, res, Robot):
     """
     Display all effector trajectories stored in a mlp.utils.wholebody_result.Result struct
@@ -396,6 +375,49 @@ def initScenePinocchio(urdf_name, package_name, env_name=None, env_package_name=
     return robot, gui
 
 
+
+class DisplayMotion(Loop):
+    """
+    Class used to display a new configuration of the robot in gepetto-gui at a given frequency
+    """
+    def __init__(self, period, q_t, display_function):
+        """
+        Constructor
+        :param period: the time step between each new frame
+        :param q_t: the joint trajectory to display, stored in a Curves object
+        :param display_function: a pointer to a function that can be called with one argument:
+         a joint configuration vector, and which display it
+        """
+        self.display_function = display_function
+        self.q_t = q_t
+        self.t = q_t.min()
+        self.display_function(q_t(self.t)) # Display the first configuration
+        super().__init__(period)
+
+    def loop(self, signum, frame):
+        self.t += self.period
+        if self.t > self.q_t.max():
+            # Display the last configuration and then stop the loop
+            self.display_function(self.q_t(self.q_t.max()))
+            self.stop()
+        self.display_function(self.q_t(self.t))
+
+
+
+
+def displayWBmotion(viewer, q_t, dt_display=0.04):
+    """
+    Display the motion represented by the given joint trajectory
+    :param viewer: An instance of hpp.gepetto.Viewer
+    :param q_t: a Curves object representing a joint trajectory
+    :param dt_display: the time step between each frame displayed (default to 0.04s = 25fps)
+    """
+    def display_function(q):
+        displayWBconfig(viewer, q)
+    DisplayMotion(dt_display, q_t, display_function)
+
+
+
 def disp_wb_pinocchio(robot, q_t, dt_display = 0.04):
     """
     Display the motion represented by the given joint trajectory
@@ -403,21 +425,4 @@ def disp_wb_pinocchio(robot, q_t, dt_display = 0.04):
     :param q_t: a Curves object representing a joint trajectory
     :param dt_display: the time step between each frame displayed (default to 0.04s = 25 fps)
     """
-    t = q_t.min()
-    while t < q_t.max():
-        t_start = time.time()
-        robot.display(q_t(t))
-        elapsed = time.time() - t_start
-        left = q_t.max() - t
-        if dt_display > left:
-            dt_display = left
-        if elapsed > dt_display:
-            print("Warning : display not real time ! choose a greater time step for the display.")
-        else:
-            time.sleep(dt_display - elapsed)
-        t += dt_display
-    # display last config if the total duration is not a multiple of the dt
-    robot.display(q_t(q_t.max()))
-
-
-
+    DisplayMotion(dt_display, q_t, robot.display)

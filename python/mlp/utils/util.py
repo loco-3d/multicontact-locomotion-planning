@@ -8,6 +8,9 @@ from curves import polynomial, SE3Curve, SO3Linear
 import math
 from hpp.corbaserver.rbprm.rbprmstate import State, StateHelper
 from random import uniform
+import signal, time
+from abc import ABCMeta, abstractmethod
+
 import types
 pinocchio.switchToNumpyArray()
 
@@ -580,3 +583,30 @@ def build_fullbody(Robot, genLimbsDB=True, context = None):
     ps = ProblemSolver(fullBody)
     fullBody.setCurrentConfig(fullBody.referenceConfig[::] + [0] * 6)
     return fullBody, ps
+
+
+class Loop(metaclass=ABCMeta):
+    """
+    Astract Class to allow users to execute self.loop at a given frequency
+    with a timer while self.run can do something else.
+    """
+    def __init__(self, period):
+        self.period = period
+        signal.signal(signal.SIGALRM, self.loop)
+        signal.setitimer(signal.ITIMER_REAL, period, period)
+        self.run()
+
+    def stop(self):
+        signal.setitimer(signal.ITIMER_REAL, 0)
+        raise KeyboardInterrupt  # our self.run is waiting for this.
+
+    def run(self):
+        # Default implementation: don't do anything
+        try:
+            time.sleep(1e9)
+        except KeyboardInterrupt:
+            pass
+
+    @abstractmethod
+    def loop(self, signum, frame):
+        ...
