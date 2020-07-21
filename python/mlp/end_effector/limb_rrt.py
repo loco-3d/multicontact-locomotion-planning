@@ -1,5 +1,6 @@
 import numpy as np
-from mlp.utils.util import createStateFromPhase, discretizeCurve
+from mlp.utils.cs_tools import createStateFromPhase
+from mlp.utils.util import discretizeCurve
 from mlp.utils.trajectories import HPPEffectorTrajectory
 from mlp.utils.requirements import Requirements
 import logging

@@ -75,7 +75,7 @@ def addContactLandmark(M, color, v):
     i_sphere += 1
     gui.addSphere(name, 0.01, color)
     #gui.setVisibility(name,"ALWAYS_ON_TOP")
-    gui.addToGroup(name, viewer.sceneName)
+    gui.addToGroup(name, v.sceneName)
     gui.applyConfiguration(name, SE3ToViewerConfig(M))
     gui.addLandmark(name, 0.03)
     #print "contact altitude : "+str(p[2])

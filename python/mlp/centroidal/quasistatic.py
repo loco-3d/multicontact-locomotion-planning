@@ -1,8 +1,9 @@
 import numpy as np
 import multicontact_api
 from multicontact_api import ContactPhase, ContactSequence
-from mlp.utils.util import createFullbodyStatesFromCS, perturbateContactNormal
-from mlp.utils.cs_tools import connectPhaseTrajToFinalState, setInitialFromFinalValues, copyPhaseInitToFinal
+from mlp.utils.util import perturbateContactNormal
+from mlp.utils.cs_tools import connectPhaseTrajToFinalState, setInitialFromFinalValues, copyPhaseInitToFinal, \
+    createFullbodyStatesFromCS
 from mlp.utils.requirements import Requirements
 import logging
 logging.basicConfig(format='[%(name)-12s] %(levelname)-8s: %(message)s')
