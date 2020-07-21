@@ -12,6 +12,16 @@ from math import ceil
 multicontact_api.switchToNumpyArray()
 
 def createPhaseFromConfig(fb, q, limbsInContact, t_init = -1):
+    """
+    Build a contact phase from a wholebody configuration and a list of active contacts.
+    Set the q_init, c_init and c_final from the joint positions,
+    and add ContactPatch for each limb in contact, with the current placement corresponding to the wholebody configuration
+    :param fb: an rbprm.Fullbody object
+    :param q: a list of joint position
+    :param limbsInContact: a list of limbs currently in contact
+    :param t_init: if provided, the new COntactPhase will begin at this time
+    :return: a new ContactPhase
+    """
     phase = ContactPhase()
     phase.q_init = np.array(q)
     fb.setCurrentConfig(q)
@@ -35,11 +45,27 @@ def createPhaseFromConfig(fb, q, limbsInContact, t_init = -1):
     return phase
 
 def addPhaseFromConfig(fb, cs, q, limbsInContact, t_init = -1):
+    """
+    Add a new contact phase from a wholebody configuration and a list of active contacts.
+    Set the q_init, c_init and c_final from the joint positions,
+    and add ContactPatch for each limb in contact, with the current placement corresponding to the wholebody configuration
+    :param fb: an rbprm.Fullbody object
+    :param cs: the current contact sequence
+    :param q: a list of joint position
+    :param limbsInContact: a list of limbs currently in contact
+    :param t_init: if provided, the new COntactPhase will begin at this time
+    """
     multicontact_api.switchToNumpyArray() # FIXME : why is it required to add it again here ?
     cs.append(createPhaseFromConfig(fb, q, limbsInContact, t_init))
 
 
 def computeCenterOfSupportPolygonFromPhase(phase, DEFAULT_HEIGHT):
+    """
+    Compute 3D point in the center of the support polygon and at a given height
+    :param phase: the ContactPhase used to compute the support polygon
+    :param DEFAULT_HEIGHT: the height of the returned point
+    :return: a numpy array of size 3
+    """
     com = np.zeros(3)
     for patch in phase.contactPatches().values():
         com += patch.placement.translation
@@ -48,6 +74,13 @@ def computeCenterOfSupportPolygonFromPhase(phase, DEFAULT_HEIGHT):
     return com
 
 def generateConfigFromPhase(fb, phase, projectCOM=False):
+    """
+    Compute a wholebody configuration corresponding to the contact placements defined in the given phase
+    :param fb: an rbprm.FullBody object
+    :param phase: the phase used to get the contact placements
+    :param projectCOM: if True, the CoM position of the configuration is projected toward the center of the support polygon
+    :return: a list of joint position
+    """
     fb.usePosturalTaskContactCreation(False)
     effectorsInContact = phase.effectorsInContact()
     contacts = []  # contacts should contains the limb names, not the effector names
@@ -88,6 +121,12 @@ def generateConfigFromPhase(fb, phase, projectCOM=False):
 
 
 def setFinalState(cs, com=None, q=None):
+    """
+    Define the members q_end and c_end for the last phase of the given contact sequence.
+    :param cs: the ContactSequence
+    :param com: the final CoM position, if not provided it is computed from the contact placement
+    :param q: the final joints position
+    """
     phase = cs.contactPhases[-1]
     if q is not None:
         phase.q_end = np.array(q)
@@ -107,10 +146,19 @@ def setFinalState(cs, com=None, q=None):
     phase.c_final = com
 
 
-# generate a walking motion from the last phase in the contact sequence.
-# the contacts will be moved in the order of the 'gait' list. With the first one move only of half the stepLength
-# TODO : make it generic ! it's currently limited to motion in the x direction
 def walk(fb, cs, distance, stepLength, gait, duration_ss = -1 , duration_ds = -1):
+    """
+    Generate a walking motion from the last phase in the contact sequence.
+    The contacts will be moved in the order of the 'gait' list. With the first one move only of half the stepLength
+    TODO : make it generic ! it's currently limited to motion in the x direction
+    :param fb: an rbprm.Fullbody object
+    :param cs: a ContactSequence
+    :param distance: the required distance the first and last contact placement along the X axis
+    :param stepLength: the length of the steps
+    :param gait: a list of limb names used as gait
+    :param duration_ss: the duration of the single support phases
+    :param duration_ds: the duration of the double support phases
+    """
     fb.usePosturalTaskContactCreation(True)
     prev_phase = cs.contactPhases[-1]
     for limb in gait:
@@ -155,6 +203,13 @@ def walk(fb, cs, distance, stepLength, gait, duration_ss = -1 , duration_ds = -1
 
 
 def computePhasesTimings(cs, cfg):
+    """
+    Set the duration and timing of all phases in the sequence according to the hardcoded values in the configuration object.
+    The duration of the phases depend of the number of active contacts
+    and also of the distance traveled by any swing limbs (the velocity of the end effectors can be bounded)
+    :param cs: the ContactSequence to modify
+    :param cfg: a configuration object defining at least DURATION_SS, DURATION_DS, DURATION_TS and DURATION_QS
+    """
     current_t = cs.contactPhases[0].timeInitial
     if current_t < 0:
         current_t = 0.
@@ -234,6 +289,14 @@ def computePhasesCOMValues(cs,DEFAULT_HEIGHT, overwrite = False):
     return cs
 
 def computePhasesConfigurations(cs, fb):
+    """
+    Compute the wholebody initial/final configuration of each phases in the sequence.
+    The configurations are computed by projecting the reference configuration to the contact placements
+    defined in each phases and projecting the CoM toward the middle of the support polygon
+    :param cs: the ContactSequence to modify
+    :param fb: an rbprm.FullBody object
+    :return: the updated ContactSequence
+    """
     for pid, phase in enumerate(cs.contactPhases):
         if not phase.q_init.any():
             if pid > 0 and len(cs.contactPhases[pid-1].getContactsBroken(phase)) == 1 and \
@@ -250,6 +313,10 @@ def computePhasesConfigurations(cs, fb):
     return cs
 
 def initEmptyPhaseCentroidalTrajectory(phase):
+    """
+    Initialize centroidal trajectories with empty piecewise curves
+    :param phase: the ContactPhase
+    """
     phase.c_t = piecewise()
     phase.dc_t = piecewise()
     phase.ddc_t = piecewise()
@@ -258,6 +325,10 @@ def initEmptyPhaseCentroidalTrajectory(phase):
 
 
 def initEmptyPhaseWholeBodyTrajectory(phase):
+    """
+    Initialize wholebody trajectories with empty piecewise curves
+    :param phase: the ContactPhase
+    """
     phase.q_t = piecewise()
     phase.dq_t = piecewise()
     phase.ddq_t = piecewise()
@@ -272,8 +343,8 @@ def setCOMtrajectoryFromPoints(phase, c, dc, ddc, timeline, overwriteInit = True
     :param dc:
     :param ddc:
     :param timeline:
-    :param overwrite: Default True : overwrite init/final values even if they exist
-    :return:
+    :param overwriteInit: Default True : overwrite initial values even if they exist
+    :param overwriteFinal: Default True : overwrite final values even if they exist
     """
     phase.c_t = piecewise.FromPointsList(c,timeline.T)
     phase.dc_t = piecewise.FromPointsList(dc,timeline.T)
@@ -300,8 +371,8 @@ def setAMtrajectoryFromPoints(phase, L, dL, timeline, overwriteInit = True, over
     :param L:
     :param dL:
     :param timeline:
-    :param overwrite: Default True : overwrite init/final values even if they exist
-    :return:
+    :param overwriteInit: Default True : overwrite initial values even if they exist
+    :param overwriteFinal: Default True : overwrite final values even if they exist
     """
     phase.L_t = piecewise.FromPointsList(L,timeline.T)
     phase.dL_t = piecewise.FromPointsList(dL,timeline.T)
@@ -347,8 +418,9 @@ def connectPhaseTrajToFinalState(phase, duration = None):
     """
     Append to the trajectory of c, dc and ddc a quintic spline connecting phase.c_final, dc_final and ddc_final
     and L and dL with a trajectory at 0
-    :param phase:
-    :param duration:
+    :param phase: the contact phase to modify
+    :param duration: the duration of the new trajectories. If not provided, the duration is computed from the last
+    point in the current trajectories and phase.timeFinal
     """
     if phase.c_t is None or phase.dc_t is None or phase.ddc_t is None:
         # initialise empty trajectories
@@ -396,8 +468,8 @@ def connectPhaseTrajToInitialState(phase, duration):
     """
     Insert at the beginning of the trajectory of c, dc and ddc a quintic spline connecting phase.c_init, dc_init and ddc__init
     and L and dL with a trajectory at 0
-    :param phase:
-    :param duration:
+    :param phase: the contact phase to modify
+    :param duration: the duration of the new trajectories.
     """
     if duration <= 0.:
         return
@@ -437,6 +509,11 @@ def connectPhaseTrajToInitialState(phase, duration):
     phase.timeInitial = t_init
 
 def computeRootTrajFromConfigurations(cs):
+    """
+    Add root_t trajectories to each contact phases in the sequences. This trajecories are linear interpolation in SE3
+    from the initial root positon in q_init to it's final position in q_final, with the same duration as the phases.
+    :param cs: the ContactSequence to modify
+    """
     assert cs.haveConfigurationsValues(), "computeRootTrajFromConfigurations require haveConfigurationsValues"
     for phase in cs.contactPhases:
         p_init = SE3FromConfig(phase.q_init)
@@ -445,6 +522,14 @@ def computeRootTrajFromConfigurations(cs):
 
 
 def computeRootTrajFromContacts(Robot, cs):
+    """
+    Add root_t trajectories to each contact phases in the sequences. This trajecories are linear interpolation in SE3
+    computed from the previous/next contact positions:
+    The initial orientation is a mean between both feet contact position in the current (or previous) phase
+    the final orientation is considering the new contact position of the moving feet
+    :param Robot: a Robot configuration class (eg. the class defined in talos_rbprm.talos.Robot)
+    :param cs: the ContactSequence to modifu
+    """
     #Quaternion(rootOrientationFromFeetPlacement(phase, None)[0].rotation)
     for pid in range(cs.size()):
         phase = cs.contactPhases[pid]
@@ -462,6 +547,10 @@ def computeRootTrajFromContacts(Robot, cs):
 
 
 def copyPhaseInitToFinal(phase):
+    """
+    Copy the initial values of the centroidal and configuration data to the final values
+    :param phase: a Contact phase
+    """
     phase.c_final = phase.c_init
     phase.dc_final = phase.dc_init
     phase.ddc_final = phase.ddc_init
@@ -475,7 +564,6 @@ def setFinalFromInitialValues(previous_phase, next_phase):
     to the values of the 'init' in next_phase
     :param previous_phase:
     :param next_phase:
-    :return:
     """
     previous_phase.c_final = next_phase.c_init
     previous_phase.dc_final = next_phase.dc_init
@@ -492,7 +580,6 @@ def setPreviousFinalValues(phase_prev, phase, cfg):
     :param phase_prev:
     :param phase:
     :param cfg:
-    :return:
     """
     if phase_prev is None:
         return
@@ -535,7 +622,6 @@ def setInitialFromFinalValues(previous_phase, next_phase):
     to the values of the 'final' in previous_phase
     :param previous_phase:
     :param next_phase:
-    :return:
     """
     next_phase.c_init = previous_phase.c_final
     next_phase.dc_init = previous_phase.dc_final
@@ -545,6 +631,10 @@ def setInitialFromFinalValues(previous_phase, next_phase):
     next_phase.q_init = previous_phase.q_final
 
 def resetCOMtrajectories(cs):
+    """
+    Assign the c, dc and ddc trajectories of each phases to None
+    :param cs: the contact sequence to modify
+    """
     for phase in cs.contactPhases:
         phase.c_t = None
         phase.dc_t = None
@@ -552,6 +642,10 @@ def resetCOMtrajectories(cs):
 
 
 def deletePhaseWBtrajectories(phase):
+    """
+    Assign the q, dq, ddq and tau trajectories of the contact phase to None
+    :param phase: the contact phase to modify
+    """
     phase.q_t = None
     phase.dq_t = None
     phase.ddq_t = None
@@ -560,9 +654,8 @@ def deletePhaseWBtrajectories(phase):
 
 def deletePhaseCentroidalTrajectories(phase):
     """
-    Delete all the centroidal trajectories of the given phase
-    :param phase:
-    :return:
+    Assign all the centroidal trajectories of the given phase to None
+    :param phase: the contact phase to modify
     """
     phase.c_t = None
     phase.dc_t = None
@@ -573,15 +666,27 @@ def deletePhaseCentroidalTrajectories(phase):
     phase.wrench_t = None
 
 def deletePhaseTrajectories(phase):
+    """
+    Assign all the trajectories of the given phase to None
+    :param phase: the Contact phase to modify
+    """
     deletePhaseCentroidalTrajectories(phase)
     deletePhaseWBtrajectories(phase)
     phase.root_t = None
 
 def deleteAllTrajectories(cs):
+    """
+    Assign all the trajectories of each phases of the sequence to None
+    :param cs: the Contat sequence to modify
+    """
     for phase in cs.contactPhases:
         deletePhaseTrajectories(phase)
 
 def deleteEffectorsTrajectories(phase):
+    """
+    Assign all the effectors trajectories of the given phase to None
+    :param phase: the contact phase to modify
+    """
     for eeName in phase.effectorsWithTrajectory():
         phase.addEffectorTrajectory(eeName, None)
 
@@ -612,9 +717,8 @@ def updateContactPlacement(cs, pid_begin, eeName, placement, update_rotation):
 def setAllUninitializedFrictionCoef(cs, mu):
     """
     For all the contact patch of all the phases, if the friction is <= 0, set it to the given value
-    :param cs:
-    :param mu:
-    :return:
+    :param cs: the contact sequence to modify
+    :param mu: the friction coefficient to apply
     """
     for phase in cs.contactPhases:
         for eeName in phase.effectorsInContact():
@@ -626,7 +730,6 @@ def setAllUninitializedContactModel(cs, Robot):
     For all the contact patch of all the phases, if the contact type is UNDEFINED, set it from the Robot config
     :param cs: The contact sequence to modify
     :param Robot: The Robot class, require the fields cType, dict_size and dict_offset
-    :return:
     """
     for phase in cs.contactPhases:
         for eeName in phase.effectorsInContact():
@@ -642,9 +745,8 @@ def setAllUninitializedContactModel(cs, Robot):
 
 def generateZeroAMreference(cs):
     """
-    For all phases in the sequence, set an L_t and dL_t trajectory constant at 0 with the right duration
-    :param cs:
-    :return:
+    For all phases in the sequence, set an L_t and dL_t trajectory constant at 0 with the correct duration
+    :param cs: the contact sequence to modify
     """
     for phase in cs.contactPhases:
         phase.L_t = polynomial(np.zeros(3), np.zeros(3), phase.timeInitial, phase.timeFinal)
@@ -653,8 +755,8 @@ def generateZeroAMreference(cs):
 def copyEffectorTrajectories(cs_eff, cs):
     """
     Copy all the effector trajectories contained in cs_eff in a copy of cs
-    :param cs_eff:
-    :param cs:
+    :param cs_eff: the contact sequence containing the effector trajectories
+    :param cs: the contact sequence to copy
     :return: A new ContactSequence, which is a copy of cs with the addition of the trajectories from cs_eff
     Return None if the phases do not have the same duration in cs_eff and cs
     """

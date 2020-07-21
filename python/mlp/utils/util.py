@@ -14,14 +14,27 @@ pinocchio.switchToNumpyArray()
 
 
 def distPointLine(p_l, x1_l, x2_l):
-    p = np.matrix(p_l)
-    x1 = np.matrix(x1_l)
-    x2 = np.matrix(x2_l)
+    """
+    Compute the distance between a point and a line defined by two points
+    :param p_l: the point
+    :param x1_l: one extremity of the line
+    :param x2_l: the other extremity of the line
+    :return: the orthogonal distance between the point and the line
+    """
+    p = np.array(p_l)
+    x1 = np.array(x1_l)
+    x2 = np.array(x2_l)
     return norm(cross(p - x1, p - x2)) / norm(x2 - x1)
 
 
 
 def SE3toVec(M):
+    """
+    Convert a pinocchio.SE3 as a vector 12:
+    [ translation ; rotation[:,0] ; rotation[:,1] ; rotation[:,2] ].T
+    :param M: a SE3 object
+    :return: a numpy array of size 12
+    """
     v = np.zeros(12)
     for j in range(3):
         v[j] = M.translation[j]
@@ -32,6 +45,12 @@ def SE3toVec(M):
 
 
 def MotiontoVec(M):
+    """
+    Convert a pinocchio.Motion as a vector of size 6:
+    [Linear ; angular ].T
+    :param M: a Motion object
+    :return: a numpy array of size 6
+    """
     v = np.zeros(6)
     for j in range(3):
         v[j] = M.linear[j]
@@ -40,6 +59,11 @@ def MotiontoVec(M):
 
 
 def SE3FromVec(vect):
+    """
+    Convert a vector of size 12 to a pinocchio.SE3 object. See SE3toVec()
+    :param vect: a numpy array or matrix of size 12
+    :return: a SE3 object
+    """
     if vect.shape[0] != 12 or vect.shape[1] != 1:
         raise ValueError("SE3FromVect take as input a vector of size 12")
     placement = SE3.Identity()
@@ -59,6 +83,11 @@ def SE3FromVec(vect):
 
 
 def MotionFromVec(vect):
+    """
+    Convert a vector of size 6 to a pinocchio.Motion object. See MotiontoVec()
+    :param vect: a numpy array or matrix of size 6
+    :return: a Motion object
+    """
     if vect.shape[0] != 6 or vect.shape[1] != 1:
         raise ValueError("MotionFromVec take as input a vector of size 6")
     m = Motion.Zero()
@@ -70,10 +99,10 @@ def MotionFromVec(vect):
 
 def numpy2DToList(m):
     """
-    Convert a numpy array of shape (n,m) in a list of list.
-    First list is of length m and contains list of length n
-    :param m:
-    :return:
+    Convert a numpy array of shape (n,m) to a list of list.
+    First list is of length m and contain lists of length n
+    :param m: the numpy array
+    :return: a list of list with the elements from m
     """
     l = []
     for i in range(m.shape[1]):
@@ -85,8 +114,13 @@ def numpy2DToList(m):
     return l
 
 
-# assume that q.size >= 7 with root pos and quaternion(x,y,z,w)
 def SE3FromConfig(q):
+    """
+    Convert a vector of size >=7 to a pinocchio.SE3 object.
+    Assume that the first 3 values of the vector are the translation part, followed by a quaternion(x,y,z,w)
+    :param q: a list or a numpy array of size >=7
+    :return: a SE3 object
+    """
     if isinstance(q, list):
         q = np.array(q)
     placement = SE3.Identity()
@@ -97,15 +131,29 @@ def SE3FromConfig(q):
     return placement
 
 
-# rotate the given placement of 'angle' (in radian) along axis 'axis'
-# axis : either 'x' , 'y' or 'z'
 def rotatePlacement(placement, axis, angle):
+    """
+    Rotate the given placement of the desired angle along the given axis
+    :param placement: a pinocchio.SE3 object
+    :param axis: either 'x' , 'y' or 'z'
+    :param angle: desired rotation (in radian)
+    :return: the updated placement
+    """
     T = rotate(axis, angle)
     placement.rotation = placement.rotation @ T
     return placement
 
 
 def effectorPositionFromHPPPath(fb, problem, eeName, pid, t):
+    """
+    Get the effector position in an HPP joint trajectory at the given time
+    :param fb: an rbprm.FullBody instance
+    :param problem: an hpp.corbaserver.ProblemServer instance containing the path
+    :param eeName: the joint/frame name as defined in fullbody
+    :param pid: the Id of the path in the problem instance
+    :param t: the time index along the path
+    :return: a numpy array of size 3 with the translation of the effecor expressed in the world frame
+    """
     q = problem.configAtParam(pid, t)
     # compute effector pos from q :
     fb.setCurrentConfig(q)
@@ -151,7 +199,7 @@ def computeContactNormal(placement):
     """
     Compute the contact normal assuming that it's orthogonal to the contact orientation
     :param placement: the contact placement
-    :return:
+    :return: the normal, as a numpy array of size 3
     """
     z_up = np.array([0., 0., 1.])
     contactNormal = placement.rotation @ z_up
