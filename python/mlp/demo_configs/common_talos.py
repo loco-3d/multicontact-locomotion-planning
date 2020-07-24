@@ -63,6 +63,8 @@ FEET_MAX_VEL = 0.5  # maximal linear velocity of the effector, if the current du
 FEET_MAX_ANG_VEL = 1.5  # maximal angular velocity of the effectors
 p_max = 0.1  #setting used to compute the default height of the effector trajectory. end_effector/bezier_predef.py : computePosOffset()
 
+Robot.limbs_names = [Robot.rLegId, Robot.lLegId] # Remove the arms from the list of limbs used for contact creation
+
 import numpy as np
 gain_vector = np.array(  # gain vector for postural task
     [

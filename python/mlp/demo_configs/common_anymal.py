@@ -56,6 +56,8 @@ FEET_MAX_ANG_VEL = 1.5
 p_max = 0.2
 EFF_T_PREDEF = 0.
 
+GUIDE_STEP_SIZE = 0.3
+
 import numpy as np
 gain_vector = np.ones(12)
 masks_posture = np.zeros(12)
