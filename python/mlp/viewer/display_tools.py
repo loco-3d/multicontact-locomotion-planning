@@ -252,7 +252,7 @@ def displaySE3Traj(traj, gui, sceneName, name, color, time_interval, offset=SE3.
         gui.addToGroup(name, sceneName)
         gui.refresh()
 
-def displayEffectorTrajectories(cs, viewer, Robot, suffixe = "", colorAlpha = 1):
+def displayEffectorTrajectories(cs, viewer, Robot, suffixe = "", colorAlpha = 1, applyOffset = False):
     """
     Display all the effector trajectories stored in the given ContactSequence.
     With colors for each effectors defined in Robot.dict_limb_color_traj
@@ -268,9 +268,13 @@ def displayEffectorTrajectories(cs, viewer, Robot, suffixe = "", colorAlpha = 1)
             if phase.effectorHaveAtrajectory(eeName):
                 color = Robot.dict_limb_color_traj[eeName]
                 color[-1] = colorAlpha
+                if applyOffset:
+                    offset = -Robot.dict_offset[eeName]
+                else:
+                    offset = SE3.Identity()
                 displaySE3Traj(phase.effectorTrajectory(eeName), viewer.client.gui, viewer.sceneName,
                                  eeName + "_traj_"+ suffixe + str(pid), color,
-                                 [phase.timeInitial, phase.timeFinal], Robot.dict_offset[eeName])
+                                 [phase.timeInitial, phase.timeFinal], offset)
 
 def displayWBconfig(viewer, q_matrix):
     """
