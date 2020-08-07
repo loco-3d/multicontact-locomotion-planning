@@ -29,8 +29,7 @@ class ContactOutputsSl1m(Requirements):
     consistentContacts = True
 
 Z_AXIS = np.array([0, 0, 1])
-EPS_Z = 0.005  # offset added to feet z position, otherwise there is collisions with the ground
-USE_MIP = True # if True, use the MIP formulation: no gait specified, but slower computation time
+EPS_Z = 0.001  # collision margin used, distance between the feet position and the surface required to avoid detecting it as a collision
 
 # global vars that hold constraints for MIP
 __ineq_com = []
@@ -223,7 +222,7 @@ def gen_pb_mip(Robot, R, surfaces):
     return res
 
 def solve(planner, cfg, display_surfaces = False, initial_contacts = None):
-    if USE_MIP:
+    if cfg.SL1M_USE_MIP:
         num_eff = len(cfg.Robot.limbs_names) # number of effectors used to create contacts
         global __ineq_com
         global __ineq_relative
@@ -257,10 +256,10 @@ def solve(planner, cfg, display_surfaces = False, initial_contacts = None):
                                                      pathId,
                                                      viewer if display_surfaces else None,
                                                      step,
-                                                     useIntersection=False,
+                                                     useIntersection=cfg.SL1M_USE_INTERSECTION,
                                                      max_yaw=cfg.GUIDE_MAX_YAW,
                                                      max_surface_area=cfg.MAX_SURFACE_AREA)
-        if USE_MIP:
+        if cfg.SL1M_USE_MIP:
             from sl1m.planner_l1_generic_equalities_as_ineq import solveMIPGurobi, initGlobals, posturalCost, targetCom, \
                 retrieve_points_from_res
             initGlobals(nEffectors=num_eff)
@@ -326,7 +325,7 @@ def generate_contact_sequence_sl1m(cfg):
     fb, v = initScene(cfg.Robot, cfg.ENV_NAME, True)
     q_init = cfg.IK_REFERENCE_CONFIG.tolist() + [0] * 6
     q_init[0:7] = root_init
-    if USE_MIP:
+    if cfg.SL1M_USE_MIP:
         # if MIP is used, allfeetpos contains a list of all position and not just the new position
         feet_height_init = allfeetpos[0][0][2]
     else:
@@ -338,7 +337,7 @@ def generate_contact_sequence_sl1m(cfg):
     if v:
         v(q_init)
 
-    if USE_MIP:
+    if cfg.SL1M_USE_MIP:
         cs = build_cs_from_sl1m_mip(fb, cfg.IK_REFERENCE_CONFIG, root_end, pb, RF, allfeetpos, coms,
                                 cfg.SL1M_USE_ORIENTATION, cfg.SL1M_USE_INTERPOLATED_ORIENTATION, q_init=q_init)
     else:

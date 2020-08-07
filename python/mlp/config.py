@@ -83,6 +83,9 @@ class Config:
         ###  Settings for generate_contact_sequence
         self.FORCE_STRAIGHT_LINE = False  # DEBUG ONLY should be false
         self.SL1M_USE_ORIENTATION = True  # sl1m method use the root orientation computed by the guide planning
+        self.SL1M_USE_MIP = False  #  select between the L1 solver or the MIP solver (the later allow acyclic motion but is a lot slower)
+        self.SL1M_USE_INTERSECTION = True  # if True, the list of candidate contact surface given to SL1M
+        # are the intersection between the surfaces and the ROMs. If False, the complete surfaces are given
         self.GUIDE_STEP_SIZE = 1. # initial discretization step of the guide path used to find the surfaces for SL1M
         self.GUIDE_MAX_YAW = 0.2 # maximal yaw rotation difference between two discretization step
         self.MAX_SURFACE_AREA = 1. # if a contact surface is greater than this value, the intersection is used instead of the whole surface
