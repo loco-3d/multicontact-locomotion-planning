@@ -26,8 +26,8 @@ def createPhaseFromConfig(fb, q, limbsInContact, t_init = -1):
     phase.q_init = np.array(q)
     fb.setCurrentConfig(q)
     com = np.array(fb.getCenterOfMass())
-    if t_init > 0:
-        phase.timeInitial = 0.
+    if t_init >= 0:
+        phase.timeInitial = t_init
     phase.c_init = com.copy()
     phase.c_final = com.copy()
     if  fb.client.robot.getDimensionExtraConfigSpace() >= 6 and len(q) == fb.getConfigSize():
