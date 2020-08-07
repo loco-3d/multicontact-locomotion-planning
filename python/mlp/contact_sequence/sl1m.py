@@ -267,8 +267,9 @@ def solve(planner, cfg, display_surfaces = False, initial_contacts = None):
             initCom = np.array(planner.q_init[0:3])
             endCom = np.array(planner.q_goal[0:3])
             pb, res, time = solveMIPGurobi(pb, surfaces, MIP=True, draw_scene=None, plot=True, l1Contact=False,
-                                           initPos=None, endPos=None, initCom=initCom, endCom=endCom,
-                                           costs=[(10, targetCom)])
+                                           initPos=initial_contacts, endPos=None, initCom=initCom, endCom=endCom,
+                                           costs=[(0.01, posturalCost),(10, targetCom)],
+                                           constraint_init_pos_surface = False)
             coms, footpos, allfeetpos = retrieve_points_from_res(pb, res)
             success = True # FIXME check this from mip outputs ?
         else:
