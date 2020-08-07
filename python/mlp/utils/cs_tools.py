@@ -40,6 +40,8 @@ def createPhaseFromConfig(fb, q, limbsInContact, t_init = -1):
         eeName = fb.dict_limb_joint[limb]
         q_j = fb.getJointPosition(eeName)
         placement = SE3FromConfig(q_j)
+        if fb.cType == '_3_DOF':
+            placement.rotation = np.identity(3) # FIXME:  use contact normal instead of identity, but it's unknown here
         patch = ContactPatch(placement)  # TODO set friction / other parameters here
         phase.addContact(eeName, patch)
     return phase
