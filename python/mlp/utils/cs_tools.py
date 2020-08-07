@@ -738,6 +738,8 @@ def setAllUninitializedContactModel(cs, Robot):
             if phase.contactPatch(eeName).contact_model.contact_type == ContactType.CONTACT_UNDEFINED:
                 if Robot.cType == "_3_DOF":
                     phase.contactPatch(eeName).contact_model.contact_type = ContactType.CONTACT_POINT
+                    phase.contactPatch(eeName).contact_model.contact_points_positions = \
+                        Robot.dict_offset[eeName].translation
                 elif Robot.cType == "_6_DOF":
                     phase.contactPatch(eeName).contact_model.contact_type = ContactType.CONTACT_PLANAR
                     phase.contactPatch(eeName).contact_model.contact_points_positions =\
