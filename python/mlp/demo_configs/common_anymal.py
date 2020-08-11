@@ -57,6 +57,7 @@ p_max = 0.2
 EFF_T_PREDEF = 0.
 
 GUIDE_STEP_SIZE = 0.3
+SL1M_USE_MIP = True
 
 import numpy as np
 gain_vector = np.ones(12)
