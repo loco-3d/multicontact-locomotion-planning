@@ -67,11 +67,8 @@ def quatToConfig(quat):
 
 
 def initial_foot_pose_from_guide(Robot, root_init):
-    return [array(root_init[0:3]) + Robot.dict_ref_effector_from_root[limb_name] for limb_name in Robot.limbs_names]
-    return  [array([0.38437629, 0.18974121, 0.00091648]),
- array([ 0.38437629, -0.18974121,  0.00091648]),
- array([-0.38437629,  0.18974121,  0.00091648]),
- array([-0.38437629, -0.18974121,  0.00091648])]
+    return [array(root_init[0:3]) + Robot.dict_ref_effector_from_root[limb_name] - array([0, 0, EPS_Z]) for limb_name in Robot.limbs_names]
+    # FIXME: apply epsz along the normal
 
 
 def initial_foot_pose_from_fullbody(fullbody, q_init):
@@ -230,7 +227,7 @@ def solve(planner, cfg, display_surfaces = False, initial_contacts = None):
         __ineq_relative = [[None for _ in range(num_eff - 1)] for __ in range(num_eff)]
     if initial_contacts is None:
         initial_contacts = initial_foot_pose_from_guide(cfg.Robot, planner.q_init)
-
+    logger.info("Initial contacts : %s", initial_contacts)
     #  Extract candidate surfaces and root rotation from the guide planning
     success = False
     maxIt = 50
@@ -456,6 +453,7 @@ def build_cs_from_sl1m_mip(fb, q_ref, root_end, pb, RF, allfeetpos, coms, use_or
                 switch = True
                 ee_name = fb.dict_limb_joint[limbs_names[k]]
                 logger.info("Move effector %s ", ee_name)
+                logger.info("To position %s ", pos)
                 placement = SE3.Identity()
                 placement.translation = pos
                 # TODO compute rotation from guide here !
