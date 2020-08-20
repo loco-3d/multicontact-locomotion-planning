@@ -15,7 +15,7 @@ w_com = 1.0  # weight of center of mass task
 w_am =  2e-2
 w_am_track = 2e-2 # weight used for the tracking of the Angular momentum
 w_posture = 0.01  # weight of joint posture task
-w_rootOrientation = 1.  # weight of the root's orientation task
+w_rootOrientation = 0.1  # weight of the root's orientation task
 w_eff = 1.0  # weight of the effector motion task
 kp_contact = 50.0  # proportional gain of contact constraint
 kp_com = 30.  # proportional gain of center of mass task
@@ -27,7 +27,7 @@ kp_Eff = 100.  # proportional gain of the effectors motion task
 level_eff = 0
 level_com = 0
 level_posture = 1
-level_rootOrientation = 1
+level_rootOrientation = 0
 level_am = 1
 
 # The weight of the force regularization task of each contact will start at w_forceRef_init when creating a new contact,
@@ -40,6 +40,7 @@ YAW_ROT_GAIN = 1.
 
 IK_eff_size = Robot.dict_size.copy()
 PLOT_CIRCLE_RADIUS = 0.01 # radius of the circle used to display the contacts
+SOLVER_DT = 0.05  # time step used for centroidal methods
 
 # phases duration
 DURATION_INIT = 1.  # Time to init the motion
@@ -47,7 +48,7 @@ DURATION_FINAL = 1.  # Time to stop the robot
 DURATION_FINAL_SS = 1.
 DURATION_SS = 1.2
 DURATION_DS = 1.2
-DURATION_TS = 0.6
+DURATION_TS = 0.4
 DURATION_QS = 0.1
 DURATION_CONNECT_GOAL = 0.
 
@@ -58,9 +59,10 @@ FEET_MAX_ANG_VEL = 1.5
 p_max = 0.05
 EFF_T_PREDEF = 0.
 
-GUIDE_STEP_SIZE = 0.3
+GUIDE_STEP_SIZE = 0.5
 SL1M_USE_MIP = True
-SL1M_USE_INTERSECTION = False
+SL1M_USE_INTERSECTION = True
+SL1M_MAX_STEP = 10
 
 import numpy as np
 gain_vector = np.ones(12)
