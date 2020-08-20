@@ -9,7 +9,7 @@ from pinocchio.utils import *
 import importlib
 import multicontact_api
 from multicontact_api import ContactSequence
-from mlp.utils.cs_tools import addPhaseFromConfig, setFinalState
+from mlp.utils.cs_tools import addPhaseFromConfig, setFinalState, computeCenterOfSupportPolygonFromPhase
 from mlp.viewer.display_tools import initScene, displaySteppingStones
 from pinocchio.utils import matrixToRpy
 from pinocchio import Quaternion, SE3
@@ -477,6 +477,7 @@ def build_cs_from_sl1m_mip(fb, q_ref, root_end, pb, RF, allfeetpos, coms, use_or
 
     # final phase :
     # fixme : assume root is in the middle of the last 2 feet pos ...
+    """
     q_end = q_ref.tolist() + [0] * 6
     # p_end = (allfeetpos[-1] + allfeetpos[-2]) / 2.
     # for i in range(3):
@@ -485,8 +486,12 @@ def build_cs_from_sl1m_mip(fb, q_ref, root_end, pb, RF, allfeetpos, coms, use_or
     feet_height_end = allfeetpos[-1][0][2]
     logger.info("feet height final = %s", feet_height_end)
     q_end[2] = feet_height_end + q_ref[2]
-    q_end[2] += EPS_Z
+    #q_end[2] += EPS_Z
     fb.setCurrentConfig(q_end)
     com = fb.getCenterOfMass()
     setFinalState(cs, com, q=q_end)
+    """
+    p_final = cs.contactPhases[-1]
+    p_final.c_final = computeCenterOfSupportPolygonFromPhase(p_final, fb.DEFAULT_COM_HEIGHT)
+    p_final.c_init = p_final.c_final
     return cs
