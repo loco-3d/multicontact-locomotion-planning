@@ -79,6 +79,7 @@ class LocoPlannerReactive(LocoPlanner):
         cfg.TIME_SHIFT_COM = 0.
         self.previous_connect_goal = cfg.DURATION_CONNECT_GOAL
         cfg.DURATION_CONNECT_GOAL = 0.
+        self.TIMEOPT_CONFIG_FILE = cfg.TIMEOPT_CONFIG_FILE
         super().__init__(cfg)
         # Get the centroidal and wholebody methods selected in the configuraton file
         self.generate_centroidal, self.CentroidalInputs, self.CentroidalOutputs = self.cfg.get_centroidal_method()
@@ -331,11 +332,11 @@ class LocoPlannerReactive(LocoPlanner):
         if last_iter:
             # Set settings specific to the last iteration that need to connect exactly to the final goal position
             self.cfg.DURATION_CONNECT_GOAL = self.previous_connect_goal
-            self.cfg.TIMEOPT_CONFIG_FILE = "cfg_softConstraints_talos.yaml"
+            self.cfg.TIMEOPT_CONFIG_FILE = self.TIMEOPT_CONFIG_FILE
         else:
             # Set settings for the middle of the sequence: do not need to connect exactly to the goal
             self.cfg.DURATION_CONNECT_GOAL = 0.
-            self.cfg.TIMEOPT_CONFIG_FILE = "cfg_softConstraints_talos_lowgoal.yaml"
+            self.cfg.TIMEOPT_CONFIG_FILE = self.TIMEOPT_CONFIG_FILE.rstrip(".yaml") + "_lowgoal.yaml"
         if not self.CentroidalInputs.checkAndFillRequirements(cs, self.cfg, None):
             raise RuntimeError(
                 "The current contact sequence cannot be given as input to the centroidal method selected.")
