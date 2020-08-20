@@ -66,16 +66,20 @@ def quatToConfig(quat):
     return [quat.x, quat.y, quat.z, quat.w]
 
 
-def initial_foot_pose_from_guide(Robot, root_init):
-    return [array(root_init[0:3]) + Robot.dict_ref_effector_from_root[limb_name] - array([0, 0, EPS_Z]) for limb_name in Robot.limbs_names]
+def foot_pose_from_guide(Robot, root_pos):
+    return [array(root_pos[0:3]) + Robot.dict_ref_effector_from_root[limb_name] +
+            Robot.dict_offset[Robot.dict_limb_joint[limb_name]].translation
+            for limb_name in Robot.limbs_names]
     # FIXME: apply epsz along the normal
 
 
 def initial_foot_pose_from_fullbody(fullbody, q_init):
     fullbody.setCurrentConfig(q_init)
-    lf_0 = fullbody.getJointPosition(fullbody.lfoot)[:3]
-    rf_0 = fullbody.getJointPosition(fullbody.rfoot)[:3]
-    return lf_0, rf_0
+    ee_names = [fullbody.dict_limb_joint[limb] for limb in fullbody.limbs_names]
+    return [array(fullbody.getJointPosition(ee_name)[:3]) +
+            fullbody.dict_offset[ee_name].translation
+            for ee_name in ee_names]
+    # FIXME: apply epsz along the normal
 
 
 def gen_pb(Robot, initial_contacts, R, surfaces):
@@ -201,7 +205,6 @@ def genRelativeConstraints(Robot, rotation, normals):
 
 
 def gen_pb_mip(Robot, R, surfaces):
-    #  Nested function declaration, as they need access to the Robot variable:
     normals = [np.array([0, 0, 1]) for _ in range(len(Robot.limbs_names))] #FIXME: compute it from the surfaces
     logger.debug("surfaces = %s",surfaces)
     logger.info("number of surfaces : %d", len(surfaces))
@@ -218,7 +221,7 @@ def gen_pb_mip(Robot, R, surfaces):
     res["phaseData"] = phaseData
     return res
 
-def solve(planner, cfg, display_surfaces = False, initial_contacts = None):
+def solve(planner, cfg, display_surfaces = False, initial_contacts = None, final_contacts = None):
     if cfg.SL1M_USE_MIP:
         num_eff = len(cfg.Robot.limbs_names) # number of effectors used to create contacts
         global __ineq_com
@@ -226,8 +229,12 @@ def solve(planner, cfg, display_surfaces = False, initial_contacts = None):
         __ineq_com = [None for _ in range(num_eff)]
         __ineq_relative = [[None for _ in range(num_eff - 1)] for __ in range(num_eff)]
     if initial_contacts is None:
-        initial_contacts = initial_foot_pose_from_guide(cfg.Robot, planner.q_init)
+        initial_contacts = foot_pose_from_guide(cfg.Robot, planner.q_init)
+    if final_contacts is None:
+        final_contacts = foot_pose_from_guide(cfg.Robot, planner.q_goal)
+
     logger.info("Initial contacts : %s", initial_contacts)
+    logger.info("Final contacts : %s", final_contacts)
     #  Extract candidate surfaces and root rotation from the guide planning
     success = False
     maxIt = 50
