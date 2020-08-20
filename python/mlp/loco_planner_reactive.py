@@ -210,10 +210,8 @@ class LocoPlannerReactive(LocoPlanner):
         last_phase = self.get_last_phase()
         if last_phase:
             q_init = None
-            initial_contacts = [
-                last_phase.contactPatch(loco_planner.fullBody.lfoot).placement.translation,
-                last_phase.contactPatch(loco_planner.fullBody.rfoot).placement.translation
-            ]
+            initial_contacts = [last_phase.contactPatch(ee_name).placement.translation
+                                for ee_name in last_phase.effectorsInContact()]
             first_phase = ContactPhase()
             tools.copyContactPlacement(last_phase, first_phase)
             tools.setInitialFromFinalValues(last_phase, first_phase)
@@ -223,13 +221,13 @@ class LocoPlannerReactive(LocoPlanner):
             initial_contacts = sl1m.initial_foot_pose_from_fullbody(self.fullBody, q_init)
 
         self.guide_planner.pathId = self.current_guide_id
-        pathId, pb, coms, footpos, allfeetpos, res = sl1m.solve(self.guide_planner, cfg.GUIDE_STEP_SIZE,
-                                                                cfg.GUIDE_MAX_YAW, cfg.MAX_SURFACE_AREA, False,
+
+        pathId, pb, coms, footpos, allfeetpos, res = sl1m.solve(self.guide_planner, self.cfg, False,
                                                                 initial_contacts)
         root_end = self.guide_planner.ps.configAtParam(pathId, self.guide_planner.ps.pathLength(pathId) - 0.001)[0:7]
         logger.info("SL1M, root_end = %s", root_end)
 
-        self.cs = sl1m.build_cs_from_sl1m(self.fullBody, self.cfg.IK_REFERENCE_CONFIG, root_end, pb, sl1m.RF,
+        self.cs = sl1m.build_cs_from_sl1m(self.cfg.SL1M_USE_MIP, self.fullBody, self.cfg.IK_REFERENCE_CONFIG, root_end, pb, sl1m.sl1m.RF,
                                           allfeetpos, cfg.SL1M_USE_ORIENTATION, cfg.SL1M_USE_INTERPOLATED_ORIENTATION,
                                           q_init, first_phase)
         logger.warning("## Compute cs from guide done.")
