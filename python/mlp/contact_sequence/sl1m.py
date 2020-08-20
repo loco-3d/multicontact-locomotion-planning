@@ -262,17 +262,19 @@ def solve(planner, cfg, display_surfaces = False, initial_contacts = None, final
                                                      step,
                                                      useIntersection=cfg.SL1M_USE_INTERSECTION,
                                                      max_yaw=cfg.GUIDE_MAX_YAW,
-                                                     max_surface_area=cfg.MAX_SURFACE_AREA)
+                                                     max_surface_area=cfg.MAX_SURFACE_AREA,
+                                                     use_all_limbs = cfg.SL1M_USE_MIP)
         if cfg.SL1M_USE_MIP:
             from sl1m.planner_l1_generic_equalities_as_ineq import solveMIPGurobi, initGlobals, posturalCost, targetCom, \
-                retrieve_points_from_res
+                retrieve_points_from_res, targetLegCenter, targetEndPos
             initGlobals(nEffectors=num_eff)
             pb = gen_pb_mip(cfg.Robot, R, surfaces)
             initCom = np.array(planner.q_init[0:3])
             endCom = np.array(planner.q_goal[0:3])
             pb, res, time = solveMIPGurobi(pb, surfaces, MIP=True, draw_scene=None, plot=True, l1Contact=False,
-                                           initPos=initial_contacts, endPos=None, initCom=initCom, endCom=endCom,
-                                           costs=[(0.01, posturalCost),(10, targetCom)],
+                                           initPos=initial_contacts, endPos=final_contacts,
+                                           initCom=initCom, endCom=endCom,
+                                           costs=[(1., posturalCost), (1., targetEndPos)],
                                            constraint_init_pos_surface = False)
             coms, footpos, allfeetpos = retrieve_points_from_res(pb, res)
             success = True # FIXME check this from mip outputs ?
