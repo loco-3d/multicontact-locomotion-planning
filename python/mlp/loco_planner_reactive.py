@@ -208,28 +208,76 @@ class LocoPlannerReactive(LocoPlanner):
         """
         initial_contacts = None
         last_phase = self.get_last_phase()
-        if last_phase:
-            q_init = None
-            initial_contacts = [last_phase.contactPatch(ee_name).placement.translation
-                                for ee_name in last_phase.effectorsInContact()]
-            first_phase = ContactPhase()
-            tools.copyContactPlacement(last_phase, first_phase)
-            tools.setInitialFromFinalValues(last_phase, first_phase)
+
+
+        if self.cfg.SL1M_MAX_STEP > 0:
+            # compute the pathlength corresponding to this number of steps:
+            max_path_length = self.cfg.SL1M_MAX_STEP * self.cfg.GUIDE_STEP_SIZE
+            total_path_length = self.guide_planner.ps.pathLength(self.current_guide_id)
+            if total_path_length > max_path_length:
+                # split the guide path in several segment of max_path_length length
+                guide_ids = []
+                t = 0.
+                while t < total_path_length:
+                    t_next = t + max_path_length
+                    if t_next > total_path_length:
+                        t_next = total_path_length
+                    self.guide_planner.ps.extractPath(self.current_guide_id, t, t_next)
+                    guide_ids += [self.guide_planner.ps.numberPaths() - 1]
+                    t = t_next
+            else:
+                guide_ids = [self.current_guide_id]
         else:
-            first_phase = None
-            q_init = self.fullBody.getCurrentConfig()
-            initial_contacts = sl1m.initial_foot_pose_from_fullbody(self.fullBody, q_init)
+            guide_ids = [self.current_guide_id]
+        print("#####  compute sl1m from guide id(s) : ", guide_ids)
 
-        self.guide_planner.pathId = self.current_guide_id
+        self.cs = ContactSequence()
+        for guide_id in guide_ids:
+            self.guide_planner.pathId = guide_id
+            self.guide_planner.q_goal = self.guide_planner.ps.configAtParam(
+                guide_id, self.guide_planner.ps.pathLength(guide_id))
+            print("### FORLOOP, guide id = ", guide_id)
+            # compute initial contacts position, either from last_phase or from the wholebody configuration
+            if last_phase:
+                q_init = None
+                initial_contacts = [last_phase.contactPatch(ee_name).placement.translation
+                                    + self.fullBody.dict_offset[ee_name].translation
+                                    for ee_name in
+                                    [self.fullBody.dict_limb_joint[limb] for limb in self.fullBody.limbs_names]]
+                first_phase = ContactPhase()
+                tools.copyContactPlacement(last_phase, first_phase)
+                tools.setInitialFromFinalValues(last_phase, first_phase)
+            else:
+                first_phase = None
+                q_init = self.fullBody.getCurrentConfig()
+                initial_contacts = sl1m.initial_foot_pose_from_fullbody(self.fullBody, q_init)
 
-        pathId, pb, coms, footpos, allfeetpos, res = sl1m.solve(self.guide_planner, self.cfg, False,
-                                                                initial_contacts)
-        root_end = self.guide_planner.ps.configAtParam(pathId, self.guide_planner.ps.pathLength(pathId) - 0.001)[0:7]
-        logger.info("SL1M, root_end = %s", root_end)
+            pathId, pb, coms, footpos, allfeetpos, res = sl1m.solve(self.guide_planner,
+                                                                    self.cfg,
+                                                                    False,
+                                                                    initial_contacts)
+            root_end = self.guide_planner.ps.configAtParam(pathId, self.guide_planner.ps.pathLength(pathId) - 0.001)[0:7]
+            logger.info("SL1M, root_end = %s", root_end)
 
-        self.cs = sl1m.build_cs_from_sl1m(self.cfg.SL1M_USE_MIP, self.fullBody, self.cfg.IK_REFERENCE_CONFIG, root_end, pb, sl1m.sl1m.RF,
-                                          allfeetpos, cfg.SL1M_USE_ORIENTATION, cfg.SL1M_USE_INTERPOLATED_ORIENTATION,
-                                          q_init, first_phase)
+            current_cs = sl1m.build_cs_from_sl1m(self.cfg.SL1M_USE_MIP,
+                                                 self.fullBody,
+                                                 self.cfg.IK_REFERENCE_CONFIG,
+                                                 root_end,
+                                                 pb,
+                                                 sl1m.sl1m.RF,
+                                                 allfeetpos,
+                                                 cfg.SL1M_USE_ORIENTATION,
+                                                 cfg.SL1M_USE_INTERPOLATED_ORIENTATION,
+                                                 q_init,
+                                                 first_phase)
+            last_phase = current_cs.contactPhases[-1]
+            # Merge current_cs in cs
+            if self.cs.size() == 0:
+                [self.cs.append(phase) for phase in current_cs.contactPhases]
+            else:
+                # first new phase is the same as last previous phase
+                [self.cs.append(phase) for phase in current_cs.contactPhases[1:]]
+
         logger.warning("## Compute cs from guide done.")
         process_stones = Process(target=self.display_stones_lock)
         process_stones.start()
