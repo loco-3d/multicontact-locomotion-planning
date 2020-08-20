@@ -274,8 +274,9 @@ def solve(planner, cfg, display_surfaces = False, initial_contacts = None, final
             pb, res, time = solveMIPGurobi(pb, surfaces, MIP=True, draw_scene=None, plot=True, l1Contact=False,
                                            initPos=initial_contacts, endPos=final_contacts,
                                            initCom=initCom, endCom=endCom,
-                                           costs=[(1., posturalCost), (1., targetEndPos)],
-                                           constraint_init_pos_surface = False)
+                                           costs=[(5., posturalCost), (1., targetEndPos)],
+                                           constraint_init_pos_surface = False,
+                                           refPos = foot_pose_from_guide(cfg.Robot, [0, 0 ,planner.q_init[2]]))
             coms, footpos, allfeetpos = retrieve_points_from_res(pb, res)
             success = True # FIXME check this from mip outputs ?
         else:
