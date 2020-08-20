@@ -338,18 +338,14 @@ def generate_contact_sequence_sl1m(cfg):
     else:
         feet_height_init = allfeetpos[0][2]
     logger.info("feet height initial = %s", feet_height_init)
-    q_init[2] = feet_height_init + cfg.IK_REFERENCE_CONFIG[2]
-    q_init[2] += EPS_Z
+    #q_init[2] = feet_height_init + cfg.IK_REFERENCE_CONFIG[2]
+    #q_init[2] += EPS_Z
     #q_init[2] = fb.referenceConfig[2] # 0.98 is in the _path script
     if v:
         v(q_init)
 
-    if cfg.SL1M_USE_MIP:
-        cs = build_cs_from_sl1m_mip(fb, cfg.IK_REFERENCE_CONFIG, root_end, pb, RF, allfeetpos, coms,
+    cs = build_cs_from_sl1m(cfg.SL1M_USE_MIP, fb, cfg.IK_REFERENCE_CONFIG, root_end, pb, RF, allfeetpos,
                                 cfg.SL1M_USE_ORIENTATION, cfg.SL1M_USE_INTERPOLATED_ORIENTATION, q_init=q_init)
-    else:
-        cs = build_cs_from_sl1m(fb, cfg.IK_REFERENCE_CONFIG, root_end, pb, RF, allfeetpos,
-                            cfg.SL1M_USE_ORIENTATION, cfg.SL1M_USE_INTERPOLATED_ORIENTATION, q_init = q_init)
 
     if cfg.DISPLAY_CS_STONES:
         displaySteppingStones(cs, v.client.gui, v.sceneName, fb)
@@ -378,8 +374,16 @@ def compute_orientation_for_feet_placement(fb, pb, pId, moving, RF, prev_contact
         rot = quat0  # rotation of the root, from the guide
     return rot
 
+def build_cs_from_sl1m(use_mip, fb, q_ref, root_end, pb, RF, allfeetpos, use_orientation, use_interpolated_orientation,
+                       q_init = None, first_phase = None):
+    if use_mip:
+        return build_cs_from_sl1m_mip(fb, q_ref, root_end, pb, allfeetpos, use_orientation, use_interpolated_orientation,
+         q_init, first_phase)
+    else:
+        return build_cs_from_sl1m_l1(fb, q_ref, root_end, pb, RF, allfeetpos, use_orientation, use_interpolated_orientation,
+        q_init, first_phase)
 
-def build_cs_from_sl1m(fb, q_ref, root_end, pb, RF, allfeetpos, use_orientation, use_interpolated_orientation,
+def build_cs_from_sl1m_l1(fb, q_ref, root_end, pb, RF, allfeetpos, use_orientation, use_interpolated_orientation,
                        q_init = None, first_phase = None):
     # init contact sequence with first phase : q_ref move at the right root pose and with both feet in contact
     # FIXME : allow to customize that first phase
@@ -429,7 +433,7 @@ def build_cs_from_sl1m(fb, q_ref, root_end, pb, RF, allfeetpos, use_orientation,
 
     return cs
 
-def build_cs_from_sl1m_mip(fb, q_ref, root_end, pb, RF, allfeetpos, coms, use_orientation, use_interpolated_orientation,
+def build_cs_from_sl1m_mip(fb, q_ref, root_end, pb, allfeetpos, use_orientation, use_interpolated_orientation,
                        q_init = None, first_phase = None):
     # init contact sequence with first phase : q_ref move at the right root pose and with both feet in contact
     # FIXME : allow to customize that first phase
@@ -456,11 +460,13 @@ def build_cs_from_sl1m_mip(fb, q_ref, root_end, pb, RF, allfeetpos, coms, use_or
             raise NotImplementedError("A phase in the output of SL1M do not have all the effectors in contact.")
         switch = False # True if a repostionning have been detected
         for k, pos in enumerate(eff_placements):
-            if norm(pos - previous_eff_placements[k]) > 1e-4:
+            if norm(pos - previous_eff_placements[k]) > 1e-3:
                 if switch:
                     raise NotImplementedError("Several contact changes between two adjacent phases in SL1M output")
                 switch = True
                 ee_name = fb.dict_limb_joint[limbs_names[k]]
+                #pos[2] += EPS_Z # FIXME: apply epsz along the normal
+                pos = fb.dict_offset[ee_name].actInv(pos)
                 logger.info("Move effector %s ", ee_name)
                 logger.info("To position %s ", pos)
                 placement = SE3.Identity()
