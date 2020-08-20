@@ -56,8 +56,10 @@ FEET_MAX_ANG_VEL = 1.5
 p_max = 0.2
 EFF_T_PREDEF = 0.
 
-GUIDE_STEP_SIZE = 0.3
+GUIDE_STEP_SIZE = 0.6
 SL1M_USE_MIP = True
+SL1M_USE_INTERSECTION = False
+
 
 import numpy as np
 gain_vector = np.ones(12)

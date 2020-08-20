@@ -1,6 +1,6 @@
 TIMEOPT_CONFIG_FILE = "cfg_softConstraints_anymal.yaml"
 from .common_anymal import *
-SCRIPT_PATH = "sandbox.ANYmal"
+SCRIPT_PATH = "demos"
 ENV_NAME = "multicontact/ground"
 
 DURATION_INIT = 2.  # Time to init the motion
