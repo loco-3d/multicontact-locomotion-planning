@@ -34,6 +34,10 @@ V_GOAL = 0.1
 SCALE_OBSTACLE_COLLISION = 0.1  # value added to the size of the collision obstacles manually added
 TIMEOUT_CONNECTIONS = 10.  # the time (in second) after which a process close if it did not receive new data
 
+USE_PYB = True
+if USE_PYB:
+    from solo_impedance_control.pyb_solo_simulator import pybullet_simulator, SimulatorLoop
+
 
 def update_root_traj_timings(cs):
     """
@@ -111,6 +115,7 @@ class LocoPlannerReactive(LocoPlanner):
         self.client_hpp = None
         self.robot = None
         self.gui = None
+        self.pyb_sim = None
         self.guide_planner = self.init_guide_planner()
         # initialize a fullBody rbprm object
         self.fullBody, _ = initScene(cfg.Robot, cfg.ENV_NAME, context="fullbody")
@@ -119,6 +124,9 @@ class LocoPlannerReactive(LocoPlanner):
         self.current_guide_id = 0
         # Set up gepetto gui and a pinocchio robotWrapper with display
         self.init_viewer()
+        # Set up a pybullet environment:
+        if USE_PYB:
+            self.init_pybullet()
 
     def init_guide_planner(self):
         """
@@ -160,6 +168,26 @@ class LocoPlannerReactive(LocoPlanner):
         self.robot, self.gui = initScenePinocchio(cfg.Robot.urdfName + cfg.Robot.urdfSuffix, cfg.Robot.packageName,
                                                   cfg.ENV_NAME)
         self.robot.display(self.cfg.IK_REFERENCE_CONFIG)
+
+    def init_pybullet(self):
+        self.pyb_sim = pybullet_simulator(dt=self.cfg.IK_dt,
+                                          q_init=self.cfg.IK_REFERENCE_CONFIG[7:].reshape(-1, 1),
+                                          root_init=[0, 0, 0.1],
+                                          env_name=cfg.ENV_NAME + ".urdf",
+                                          env_package="hpp_environments",
+                                          use_gui=False)
+
+    def execute_motion(self, q_t, dq_t):
+        if USE_PYB:
+            self.viewer_lock.acquire()
+            SimulatorLoop(self.pyb_sim, self.cfg.IK_dt, q_t, dq_t, self.robot.display)
+            self.viewer_lock.release()
+        else:
+            self.viewer_lock.acquire()
+            disp_wb_pinocchio(self.robot, q_t, self.cfg.DT_DISPLAY)
+            self.viewer_lock.release()
+
+
 
     def plan_guide(self, root_goal):
         """
@@ -554,9 +582,7 @@ class LocoPlannerReactive(LocoPlanner):
                 timeout = 0.1
                 if last_phase:
                     self.set_last_phase(last_phase)
-                self.viewer_lock.acquire()
-                disp_wb_pinocchio(self.robot, q_t, cfg.DT_DISPLAY)
-                self.viewer_lock.release()
+                self.execute_motion(q_t, dq_t)
                 if self.stop_motion_flag.value:
                     logger.info("STOP MOTION in viewer")
                     last_iter = True
