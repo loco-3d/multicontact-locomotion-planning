@@ -553,7 +553,7 @@ class LocoPlannerReactive(LocoPlanner):
                     cs_wb, last_q, last_v, last_phase, robot = self.compute_wholebody(
                         robot, cs_com, last_q, last_v, last_iter)
                     logger.info("-- Add a cs_wb to the queue")
-                    self.queue_qt.put([cs_wb.concatenateQtrajectories(), last_phase, last_iter])
+                    self.queue_qt.put([cs_wb.concatenateQtrajectories(), cs_wb.concatenateDQtrajectories(), last_phase, last_iter])
                 else:
                     timeout = True
                     logger.warning("Loop wholebody closed because pipe is empty since 10 seconds")
@@ -578,7 +578,7 @@ class LocoPlannerReactive(LocoPlanner):
         timeout = TIMEOUT_CONNECTIONS
         try:
             while not last_iter:
-                q_t, last_phase, last_iter = self.queue_qt.get(timeout=timeout)
+                q_t, dq_t, last_phase, last_iter = self.queue_qt.get(timeout=timeout)
                 timeout = 0.1
                 if last_phase:
                     self.set_last_phase(last_phase)

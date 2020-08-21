@@ -213,7 +213,10 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None, robot=None,
             phase.q_t.append(q, t)
             #phase.root_t.append(SE3FromConfig(q), t)
         if queue_qt:
-            queue_qt.put([phase.q_t.curve_at_index(phase.q_t.num_curves()-1), None, False])
+            queue_qt.put([phase.q_t.curve_at_index(phase.q_t.num_curves()-1),
+                          phase.dq_t.curve_at_index(phase.dq_t.num_curves()-1),
+                          None,
+                          False])
 
     def appendJointsDerivatives(first_iter_for_phase=False):
         if first_iter_for_phase:
@@ -303,9 +306,9 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None, robot=None,
 
 
     def storeData(first_iter_for_phase = False):
-        appendJointsValues(first_iter_for_phase)
         if cfg.IK_store_joints_derivatives:
             appendJointsDerivatives(first_iter_for_phase)
+        appendJointsValues(first_iter_for_phase)
         if cfg.IK_store_joints_torque:
             appendTorques(first_iter_for_phase)
         if cfg.IK_store_centroidal:
