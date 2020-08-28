@@ -148,7 +148,7 @@ def setFinalState(cs, com=None, q=None):
     phase.c_final = com
 
 
-def walk(fb, cs, distance, stepLength, gait, duration_ss = -1 , duration_ds = -1):
+def walk(fb, cs, distance, stepLength, gait, duration_ss = -1 , duration_ds = -1, first_half_step=True):
     """
     Generate a walking motion from the last phase in the contact sequence.
     The contacts will be moved in the order of the 'gait' list. With the first one move only of half the stepLength
@@ -166,7 +166,7 @@ def walk(fb, cs, distance, stepLength, gait, duration_ss = -1 , duration_ds = -1
     for limb in gait:
         eeName = fb.dict_limb_joint[limb]
         assert prev_phase.isEffectorInContact(eeName), "All limbs in gait should be in contact in the first phase"
-    isFirst = True
+    isFirst = first_half_step
     reached = False
     firstContactReachedGoal = False
     remainingDistance = distance
@@ -179,7 +179,7 @@ def walk(fb, cs, distance, stepLength, gait, duration_ss = -1 , duration_ds = -1
                 isFirst = False
             else:
                 length = stepLength
-            if k == 0:
+            if k == 0 and first_half_step:
                 if length > (remainingDistance + stepLength / 2.):
                     length = remainingDistance + stepLength / 2.
                     firstContactReachedGoal = True
@@ -191,7 +191,7 @@ def walk(fb, cs, distance, stepLength, gait, duration_ss = -1 , duration_ds = -1
             transform.translation = np.array([length, 0, 0])
             cs.moveEffectorOf(eeName, transform, duration_ds, duration_ss)
         remainingDistance -= stepLength
-    if not firstContactReachedGoal:
+    if first_half_step and not firstContactReachedGoal:
         transform = SE3.Identity()
         #print("last length = ", stepLength)
         transform.translation  = np.array([stepLength / 2., 0, 0])
