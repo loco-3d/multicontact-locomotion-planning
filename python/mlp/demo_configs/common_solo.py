@@ -30,6 +30,12 @@ level_posture = 1
 level_rootOrientation = 0
 level_am = 1
 
+# scaling and weight for the bounds tasks in TSID:
+w_torque_bounds = 1000.
+w_joint_bounds = 1000.
+scaling_torque_bounds = 1.5
+scaling_vel_bounds = 1.
+
 # The weight of the force regularization task of each contact will start at w_forceRef_init when creating a new contact,
 # and then linearly reduce to w_forceRef_end over a time period of phase_duration * w_forceRef_time_ratio
 w_forceRef_init = 1.

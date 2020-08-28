@@ -474,6 +474,20 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None, robot=None,
     usedEffectors = cs.getAllEffectorsInContact()
     dic_effectors_tasks = createEffectorTasksDic(cfg, usedEffectors, robot)
 
+    # Add bounds tasks if required:
+    if cfg.w_torque_bounds > 0.:
+        tau_max = cfg.scaling_torque_bounds*robot.model().effortLimit[-robot.na:]
+        tau_min = -tau_max
+        actuationBoundsTask = tsid.TaskActuationBounds("task-actuation-bounds", robot)
+        actuationBoundsTask.setBounds(tau_min, tau_max)
+        invdyn.addActuationTask(actuationBoundsTask, cfg.w_torque_bounds, 0, 0.0)
+    if cfg.w_joint_bounds > 0.:
+        jointBoundsTask = tsid.TaskJointBounds("task-joint-bounds", robot, cfg.IK_dt)
+        v_max = cfg.scaling_vel_bounds * robot.model().velocityLimit[-robot.na:]
+        v_min = -v_max
+        print("v_max : ", v_max)
+        jointBoundsTask.setVelocityBounds(v_min, v_max)
+        invdyn.addMotionTask(jointBoundsTask, cfg.w_joint_bounds, 0, 0.0)
 
     solver = tsid.SolverHQuadProg("qp solver")
     solver.resize(invdyn.nVar, invdyn.nEq, invdyn.nIn)
