@@ -33,6 +33,7 @@ class LocoPlanner:
         self.fullBody = None
         self.viewer = None
         self.gui = None
+        self.pin_robot = None
         # arrays used to store the cs after each iterations of the dynamic filter
         self.cs_com_iters = []
         self.cs_ref_iters = []
@@ -132,7 +133,7 @@ class LocoPlanner:
             self.cfg.w_am = self.cfg.w_am_track
             self.cfg.kp_am = self.cfg.kp_am_track
 
-        self.cs_wb, robot = generate_wholebody(self.cfg, self.cs_ref, self.fullBody, self.viewer)
+        self.cs_wb, self.pin_robot = generate_wholebody(self.cfg, self.cs_ref, self.fullBody, self.viewer)
         WholebodyOutputs.assertRequirements(self.cs_wb)
         WholebodyOutputs.assertWholebodyData(self.cs_wb, self.cfg)
         self.cs_wb_iters += [self.cs_wb]
