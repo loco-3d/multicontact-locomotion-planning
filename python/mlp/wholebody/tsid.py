@@ -746,4 +746,4 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None, robot=None,
     logger.info("Desired COM Position %s", cs.contactPhases[-1].c_final)
     if queue_qt:
         queue_qt.put([phase.q_t.curve_at_index(phase.q_t.num_curves() - 1), None, True])
-    return cs, robot
+    return cs, pinRobot
