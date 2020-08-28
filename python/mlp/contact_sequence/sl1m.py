@@ -10,6 +10,7 @@ import importlib
 import multicontact_api
 from multicontact_api import ContactSequence
 from mlp.utils.cs_tools import addPhaseFromConfig, setFinalState, computeCenterOfSupportPolygonFromPhase
+from mlp.utils.util import rotationFromNormal
 from mlp.viewer.display_tools import initScene, displaySteppingStones
 from pinocchio.utils import matrixToRpy
 from pinocchio import Quaternion, SE3
@@ -56,6 +57,16 @@ def normal(phase):
     logger.debug("normal %s", n)
     return n
 
+def normal_from_ineq(s_ineq):
+    logger.debug("s_ineq value : %s", s_ineq)
+    n = s_ineq[0][-1]
+    if n[2] < 0:
+        n = -n
+    n2 = s_ineq[2]
+    logger.debug("normal from ineq : %s", n)
+    logger.debug("normal stored : %s", n2)
+
+    return n2
 
 def quatConfigFromMatrix(m):
     quat = Quaternion(m)
@@ -472,7 +483,12 @@ def build_cs_from_sl1m_mip(fb, q_ref, root_end, pb, allfeetpos, use_orientation,
                 logger.info("To position %s ", pos)
                 placement = SE3.Identity()
                 placement.translation = pos
-                # TODO compute rotation from guide here !
+                # compute orientation of the contact from the surface normal:
+                phase_data = pb["phaseData"][pid+1] # +1 because the for loop start at id = 1
+                n = normal_from_ineq(phase_data["S"][phase_data["id_surface"]])
+                placement.rotation = rotationFromNormal(n)
+                logger.debug("new contact placement : %s", placement)
+                # TODO add yaw rotation from guide here !
                 cs.moveEffectorToPlacement(ee_name, placement)
 
         #if not switch:
