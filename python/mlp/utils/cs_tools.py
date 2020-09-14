@@ -579,21 +579,41 @@ def resetCOMtrajectories(cs):
         phase.dc_t = None
         phase.ddc_t = None
 
-def deleteAllTrajectories(cs):
-    for phase in cs.contactPhases:
-        deletePhaseWBtrajectories(phase)
-        phase.c_t = None
-        phase.dc_t = None
-        phase.ddc_t = None
-        phase.L_t = None
-        phase.dL_t = None
-        phase.root_t = None
 
 def deletePhaseWBtrajectories(phase):
     phase.q_t = None
     phase.dq_t = None
     phase.ddq_t = None
     phase.tau_t = None
+
+
+def deletePhaseCentroidalTrajectories(phase):
+    """
+    Delete all the centroidal trajectories of the given phase
+    :param phase:
+    :return:
+    """
+    phase.c_t = None
+    phase.dc_t = None
+    phase.ddc_t = None
+    phase.L_t = None
+    phase.dL_t = None
+    phase.zmp_t = None
+    phase.wrench_t = None
+
+def deletePhaseTrajectories(phase):
+    deletePhaseCentroidalTrajectories(phase)
+    deletePhaseWBtrajectories(phase)
+    phase.root_t = None
+
+def deleteAllTrajectories(cs):
+    for phase in cs.contactPhases:
+        deletePhaseTrajectories(phase)
+
+def deleteEffectorsTrajectories(phase):
+    for eeName in phase.effectorsWithTrajectory():
+        phase.addEffectorTrajectory(eeName, None)
+
 
 def updateContactPlacement(cs, pid_begin, eeName, placement, update_rotation):
     """
@@ -680,6 +700,15 @@ def copyEffectorTrajectories(cs_eff, cs):
                 phase.addEffectorTrajectory(eeName, traj)
     return cs_res
 
+
+def copyContactPlacement(p0, p1):
+    """
+    Copy all the contacts patch of p0 to p1
+    :param p0:
+    :param p1:
+    """
+    for eeName in p0.effectorsInContact():
+        p1.addContact(eeName, p0.contactPatch(eeName))
 
 
 def generate_effector_trajectories_for_sequence(cfg, cs, generate_end_effector_traj, fullBody = None):

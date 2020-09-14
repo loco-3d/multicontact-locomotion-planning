@@ -5,7 +5,7 @@ from mlp.utils.requirements import Requirements
 import logging
 logging.basicConfig(format='[%(name)-12s] %(levelname)-8s: %(message)s')
 logger = logging.getLogger("limb-rrt")
-logger.setLevel(logging.WARNING) #DEBUG, INFO or WARNING
+logger.setLevel(logging.ERROR) #DEBUG, INFO or WARNING
 
 class EffectorInputsLimbrrt(Requirements):
     timings = True

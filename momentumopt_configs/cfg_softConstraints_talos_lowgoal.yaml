@@ -1,0 +1,63 @@
+planner_variables:
+
+  load_kinematics: false
+  display_motion: false
+
+  floor_height: 0.0 # offset between the contact position and the 'floor' surface used to constraint the height
+  min_rel_height: 0.75 # minimum allowed distance from the robot CoM to the floor
+
+  heuristic: TrustRegion  # Types: TrustRegion, SoftConstraint, TimeOptimization #
+  n_act_eefs: 2 # number of effector used for contact, will be overwrited with value from the Contact sequence
+  time_step: 0.05 # time step used by the solver, will be overwrited by the value defined inside the planner
+  time_horizon: 0. # duration of the motion, will be overwrited by the value inside the contact sequence
+  time_range: [0.01, 0.2] # Bounds on the value of dt during time optimization
+  is_time_horizon_fixed: true # Allow to change the total duration of the motion
+  external_force: [0.00, 0.00, 0.00]
+  com_displacement: [0., 0., 0.] # will be overwrited with values from the contact sequence
+  num_com_viapoints: 0
+  com_viapoints:
+  max_time_iterations: 1000
+  max_time_residual_tolerance: 1e-3
+  min_time_residual_improvement: 1e-5
+
+  gravity: 9.81
+  robot_mass: 90.27
+  friction_coeff: 0.3
+  friction_cone: LinearCone  # Types: LinearCone, SocCone #
+  torque_range: [-1000.0, 1000.0]
+  # Constraint on the distance between the CoM and the active contact :
+  max_eef_lengths: [0.87,  0.87,  0.9,  0.9]
+  # transform used for each effector to compute the maximal distance
+  eff_offset_rf: [ 0.00,  0.00,  0.00]
+  eff_offset_lf: [ 0.00,  0.00,  0.00]
+  eff_offset_rh: [ 0.00, -0.15,  0.45]
+  eff_offset_lh: [ 0.00,  0.15,  0.45]
+  # size of the contact surfaces used to constraint the CoP position
+  cop_range_rf: [-0.03,  0.03, -0.03,  0.03]
+  cop_range_lf: [-0.03,  0.03, -0.03,  0.03]
+  cop_range_rh: [-0.01,  0.01, -0.01,  0.01]
+  cop_range_lh: [-0.01,  0.01, -0.01,  0.01]
+
+  w_trq_arm:       0.000
+  w_trq_leg:       0.000
+  w_time_penalty:   100. # weight of the cost to reduce the total duration of the motion
+  w_time:           1000.0 # weight of the cost to keep the defined duration of each phases
+  w_com:           [ 100.0,  1000.,  100.0] # weight on the final CoM position
+  w_amom:          [ 0.500,  0.500,  0.500] # weight for the minimization of the angular momentum
+  w_lmom:          [ 0.010,  0.001,  0.001] # weight for the minimization of the linear momentum
+  w_amomd:         [ 0.100,  0.400,  0.100] # weight for the minimization of the angular momentum derivative
+  w_lmomd:         [ 0.015,  0.015,  0.015] # weight for the minimization of the linear momentum derivative
+  w_amom_final:    [ 10.00,  10.00,  10.00] # weight on the final angular momentum value
+  w_lmom_final:    [ 10.00,  10.00,  10.00] # weight on the final linear momentum value
+  w_com_via:       [ 1.000,  1.000,  50000] # weight on the CoM viapoints positions
+  w_frc_arm:       [ 0.001,  0.001,  0.001]
+  w_frc_leg:       [ 0.001,  0.001,  0.001]
+  w_dfrc_arm:      [ 0.000,  0.000,  0.000]
+  w_dfrc_leg:      [ 0.000,  0.000,  0.000]
+  w_com_track:     [ 0.000,  0.000,  0.000]  # weight used to track the CoM position from the Kinematic Sequence
+  w_amom_track:    [ 100.0,  100.0,  100.0]  # weight used to track the angular momentum value from the Kinematic Sequence
+  w_lmom_track:    [ 0.010,  0.001,  0.001]  # weight used to track the linear momentum value from the Kinematic Sequence
+
+
+  store_data: False
+  use_default_solver_setting: True

@@ -19,7 +19,7 @@ from mlp.utils.requirements import Requirements
 import logging
 logging.basicConfig(format='[%(name)-12s] %(levelname)-8s: %(message)s')
 logger = logging.getLogger("sl1m")
-logger.setLevel(logging.WARNING) #DEBUG, INFO or WARNING
+logger.setLevel(logging.ERROR) #DEBUG, INFO or WARNING
 multicontact_api.switchToNumpyArray()
 
 class ContactOutputsSl1m(Requirements):
@@ -121,13 +121,26 @@ def quatToConfig(quat):
 
 
 # FIXME : HARDCODED stuff for talos in this method !
-def gen_pb(root_init, R, surfaces, ref_root_height):
+def initial_foot_pose_from_guide(root_init, ref_root_height):
+    lf_0 = array(root_init[0:3]) + array([0, 0.085, -ref_root_height])  # values for talos !
+    rf_0 = array(root_init[0:3]) + array([0, -0.085, -ref_root_height])  # values for talos !
+    return lf_0, rf_0
+
+
+def initial_foot_pose_from_fullbody(fullbody, q_init):
+    fullbody.setCurrentConfig(q_init)
+    lf_0 = fullbody.getJointPosition(fullbody.lfoot)[:3]
+    rf_0 = fullbody.getJointPosition(fullbody.rfoot)[:3]
+    return lf_0, rf_0
+
+
+def gen_pb(lf_0, rf_0, R, surfaces):
     logger.debug("surfaces = %s",surfaces)
     logger.info("number of surfaces : %d", len(surfaces))
     logger.info("number of rotation matrix for root : %d", len(R))
     nphases = len(surfaces)
-    lf_0 = array(root_init[0:3]) + array([0, 0.085, -ref_root_height])  # values for talos !
-    rf_0 = array(root_init[0:3]) + array([0, -0.085, -ref_root_height])  # values for talos !
+    logger.info("lf_0 = ", lf_0)
+    logger.info("rf_0 = ", rf_0)
     #init_floor_height = surfaces[0][0][2][0]
     # z value of the first surface in intersection with the rom in the initial configuration
     #lf_0[2] = init_floor_height
@@ -161,9 +174,15 @@ def gen_pb(root_init, R, surfaces, ref_root_height):
     return res
 
 
-def solve(planner, guide_step_size, guide_max_yaw, max_surface_area, ref_root_height):
+def solve(planner, guide_step_size, guide_max_yaw, max_surface_area, display_surfaces = False, initial_contacts = None):
     from sl1m.fix_sparsity import solveL1
     #surfaces_dict = getAllSurfacesDict(planner.afftool)
+    if initial_contacts is None:
+        lf_0, rf_0 = initial_foot_pose_from_guide(planner.q_init, planner.rbprmBuilder.ref_height)
+    else:
+        #FIXME : assume order and size of arguments, do something more generic
+        lf_0 = initial_contacts[0]
+        rf_0 = initial_contacts[1]
     success = False
     maxIt = 50
     it = 0
@@ -188,12 +207,12 @@ def solve(planner, guide_step_size, guide_max_yaw, max_surface_area, ref_root_he
                                                      planner.ps,
                                                      planner.afftool,
                                                      pathId,
-                                                     viewer,
+                                                     viewer if display_surfaces else None,
                                                      step,
                                                      useIntersection=True,
                                                      max_yaw=guide_max_yaw,
                                                      max_surface_area=max_surface_area)
-        pb = gen_pb(planner.q_init, R, surfaces, ref_root_height)
+        pb = gen_pb(lf_0, rf_0, R, surfaces)
         try:
             pb, coms, footpos, allfeetpos, res = solveL1(pb, surfaces, None)
             success = True
@@ -218,7 +237,8 @@ def runLPFromGuideScript(cfg):
     planner.run()
     # compute sequence of surfaces from guide path
     pathId, pb, coms, footpos, allfeetpos, res = solve(planner, cfg.GUIDE_STEP_SIZE, cfg.GUIDE_MAX_YAW,
-                                                       cfg.MAX_SURFACE_AREA,  cfg.IK_REFERENCE_CONFIG[2])
+                                                       cfg.MAX_SURFACE_AREA,
+                                                       cfg.DISPLAY_SL1M_SURFACES)
     root_init = planner.ps.configAtParam(pathId, 0.001)[0:7]
     root_end = planner.ps.configAtParam(pathId, planner.ps.pathLength(pathId) - 0.001)[0:7]
     return RF, root_init, root_end, pb, coms, footpos, allfeetpos, res
@@ -254,10 +274,25 @@ def generate_contact_sequence_sl1m(cfg):
     if v:
         v(q_init)
 
+    cs = build_cs_from_sl1m(fb, cfg.IK_REFERENCE_CONFIG, root_end, pb, RF, allfeetpos,
+                            cfg.SL1M_USE_ORIENTATION, cfg.SL1M_USE_INTERPOLATED_ORIENTATION, q_init = q_init)
+
+    if cfg.DISPLAY_CS_STONES:
+        displaySteppingStones(cs, v.client.gui, v.sceneName, fb)
+
+    return cs, fb, v
+
+def build_cs_from_sl1m(fb, q_ref, root_end, pb, RF, allfeetpos, use_orientation, use_interpolated_orientation,
+                       q_init = None, first_phase = None):
     # init contact sequence with first phase : q_ref move at the right root pose and with both feet in contact
     # FIXME : allow to customize that first phase
     cs = ContactSequence(0)
-    addPhaseFromConfig(fb, cs, q_init, [fb.rLegId, fb.lLegId])
+    if q_init:
+        addPhaseFromConfig(fb, cs, q_init, [fb.rLegId, fb.lLegId])
+    elif first_phase:
+        cs.append(first_phase)
+    else:
+        raise ValueError("build_cs_from_sl1m should have either q_init or first_phase argument defined")
 
     # loop over all phases of pb and add them to the cs :
     for pId in range(2, len(pb["phaseData"])):  # start at 2 because the first two ones are already done in the q_init
@@ -271,13 +306,13 @@ def generate_contact_sequence_sl1m(cfg):
         pos = allfeetpos[pId]  # array, desired position for the feet movingID
         pos[2] += EPS_Z  # FIXME it shouldn't be required !!
         # compute desired foot rotation :
-        if cfg.SL1M_USE_ORIENTATION:
+        if use_orientation:
             quat0 = Quaternion(pb["phaseData"][pId]["rootOrientation"])
             if pId < len(pb["phaseData"]) - 1:
                 quat1 = Quaternion(pb["phaseData"][pId + 1]["rootOrientation"])
             else:
                 quat1 = Quaternion(pb["phaseData"][pId]["rootOrientation"])
-            if cfg.SL1M_USE_INTERPOLATED_ORIENTATION :
+            if  use_interpolated_orientation:
                 rot = quat0.slerp(0.5, quat1)
                 # check if feets do not cross :
                 if moving == RF:
@@ -300,19 +335,17 @@ def generate_contact_sequence_sl1m(cfg):
 
     # final phase :
     # fixme : assume root is in the middle of the last 2 feet pos ...
-    q_end = cfg.IK_REFERENCE_CONFIG.tolist() + [0] * 6
+    q_end = q_ref.tolist() + [0] * 6
     #p_end = (allfeetpos[-1] + allfeetpos[-2]) / 2.
     #for i in range(3):
     #    q_end[i] += p_end[i]
     q_end[0:7] = root_end
     feet_height_end = allfeetpos[-1][2]
     logger.info("feet height final = %s", feet_height_end)
-    q_end[2] = feet_height_end + cfg.IK_REFERENCE_CONFIG[2]
+    q_end[2] = feet_height_end + q_ref[2]
     q_end[2] += EPS_Z
     fb.setCurrentConfig(q_end)
     com = fb.getCenterOfMass()
     setFinalState(cs, com, q=q_end)
-    if cfg.DISPLAY_CS_STONES:
-        displaySteppingStones(cs, v.client.gui, v.sceneName, fb)
 
-    return cs, fb, v
+    return cs

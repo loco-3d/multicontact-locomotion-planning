@@ -1,8 +1,11 @@
 import pinocchio as pin
 from pinocchio import SE3, Quaternion
 import time
-from mlp.utils.util import numpy2DToList, hppConfigFromMatrice, discretizeCurve
+from rospkg import RosPack
+import gepetto.corbaserver
+from mlp.utils.util import numpy2DToList, hppConfigFromMatrice, discretizeCurve, build_fullbody
 from mlp.utils.requirements import Requirements
+from pathlib import Path
 pin.switchToNumpyArray()
 
 
@@ -78,7 +81,13 @@ def addSteppingStone(gui, placement, name, group, size, color):
     gui.addBox(name, size[0], size[1], STONE_HEIGHT, color)
     gui.addToGroup(name, group)
     gui.applyConfiguration(name, SE3ToViewerConfig(placement))
+    gui.setVisibility(name, "ON")
 
+def hideSteppingStone(gui):
+    node_list = gui.getNodeList()
+    for node in node_list:
+        if any(node.startswith(stone + "/") for stone in [STONE_LF, STONE_RF, STONE_LH, STONE_RH]):
+            gui.setVisibility(node, "OFF")
 
 def displaySteppingStones(cs, gui, sceneName, Robot):
     gui.createGroup(STONE_GROUP)
@@ -222,26 +231,51 @@ def displayContactSequence(v, cs, step=0.2):
     displayWBconfig(v, cs.contactPhases[-1].q_final)
 
 
-def initScene(Robot, envName="multicontact/ground", genLimbsDB=True):
-    from hpp.gepetto import Viewer, ViewerFactory
-    from hpp.corbaserver.rbprm.rbprmfullbody import FullBody
-    from hpp.corbaserver import ProblemSolver
-    fullBody = Robot()
-    fullBody.client.robot.setDimensionExtraConfigSpace(6)
-    fullBody.setJointBounds("root_joint", [-100, 100, -100, 100, -100, 100])
-    fullBody.client.robot.setExtraConfigSpaceBounds([-100, 100, -100, 100, -100, 100, -100, 100, -100, 100, -100, 100])
-    fullBody.setReferenceConfig(fullBody.referenceConfig[::] + [0] * 6)
-    fullBody.setPostureWeights(fullBody.postureWeights[::] + [0] * 6)
-    try:
-        if genLimbsDB:
-            fullBody.loadAllLimbs("static", nbSamples=100)
-        else:
-            fullBody.loadAllLimbs("static", nbSamples=1)
-    except AttributeError:
-        print("WARNING initScene : fullBody do not have loadAllLimbs, some scripts may fails.")
-    ps = ProblemSolver(fullBody)
+def initScene(Robot, envName="multicontact/ground", genLimbsDB=True, context=None):
+    from hpp.gepetto import ViewerFactory
+    fullBody, ps = build_fullbody(Robot, genLimbsDB, context)
     vf = ViewerFactory(ps)
     vf.loadObstacleModel("package://hpp_environments/urdf/" + envName + ".urdf", "planning")
     v = vf.createViewer(ghost = True, displayCoM=True)
     v(fullBody.getCurrentConfig())
     return fullBody, v
+
+
+def initScenePinocchio(urdf_name, package_name, env_name=None, env_package_name="hpp_environments", scene_name = "world"):
+    rp = RosPack()
+    package_path = rp.get_path(package_name)
+    urdf_path = str(Path(package_path) / 'urdf' / Path(urdf_name+ '.urdf'))
+    robot = pin.RobotWrapper.BuildFromURDF(urdf_path, package_path, pin.JointModelFreeFlyer())
+    robot.initDisplay(loadModel=True)
+    robot.displayCollisions(False)
+    robot.displayVisuals(True)
+    #robot.display(robot.model.neutralConfiguration)
+
+    cl = gepetto.corbaserver.Client()
+    gui = cl.gui
+    if env_name:
+        urdfEnvPath = rp.get_path(env_package_name)
+        urdfEnv = urdfEnvPath + '/urdf/' + env_name + '.urdf'
+        gui.addUrdfObjects(scene_name + "/environments", urdfEnv, True)
+    return robot, gui
+
+
+def disp_wb_pinocchio(robot, q_t, dt_display = 0.04):
+    t = q_t.min()
+    while t < q_t.max():
+        t_start = time.time()
+        robot.display(q_t(t))
+        elapsed = time.time() - t_start
+        left = q_t.max() - t
+        if dt_display > left:
+            dt_display = left
+        if elapsed > dt_display:
+            print("Warning : display not real time ! choose a greater time step for the display.")
+        else:
+            time.sleep(dt_display - elapsed)
+        t += dt_display
+    # display last config if the total duration is not a multiple of the dt
+    robot.display(q_t(q_t.max()))
+
+
+
