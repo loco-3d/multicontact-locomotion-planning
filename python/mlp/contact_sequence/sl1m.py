@@ -58,15 +58,7 @@ def normal(phase):
     return n
 
 def normal_from_ineq(s_ineq):
-    logger.debug("s_ineq value : %s", s_ineq)
-    n = s_ineq[0][-1]
-    if n[2] < 0:
-        n = -n
-    n2 = s_ineq[2]
-    logger.debug("normal from ineq : %s", n)
-    logger.debug("normal stored : %s", n2)
-
-    return n2
+    return s_ineq[2]
 
 def quatConfigFromMatrix(m):
     quat = Quaternion(m)
