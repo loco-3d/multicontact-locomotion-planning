@@ -20,7 +20,7 @@ limbs = fb.limbs_names
 q_ref = fb.referenceConfig[::] + [0] * 6
 addPhaseFromConfig(fb, cs, q_ref, limbs)
 
-walk(fb, cs, 1., 0.1, limbs, first_half_step=False)
+walk(fb, cs, 0.5, 0.1, limbs, first_half_step=False)
 
 display_tools.displaySteppingStones(cs, gui, sceneName, fb)
 
