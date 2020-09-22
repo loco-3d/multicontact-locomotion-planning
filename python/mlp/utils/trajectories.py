@@ -5,6 +5,7 @@ from numpy.polynomial.polynomial import polyval
 from numpy.linalg import pinv
 from pinocchio import SE3, log3, exp3, Motion, Quaternion
 from pinocchio.utils import zero as mat_zeros
+from mlp.utils.util import effectorPositionFromHPPPath
 
 
 # COM Trajecotry smoothing using cubic spline
@@ -232,7 +233,7 @@ class HPPEffectorTrajectory(RefTrajectory):
     def __init__(self, eeName, fullBody, problem, pid, name="HPP-effector-trajectory"):
         RefTrajectory.__init__(self, name)
         self._dim = 3
-        self._eeName = eenName
+        self._eeName = eeName
         self._fb = fullBody
         self._problem = problem
         self._pid = pid

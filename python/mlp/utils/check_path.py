@@ -5,7 +5,17 @@ import numpy as np
 
 
 class PathChecker():
+    """
+    This class implement collision checking for a joint trajectory represented by a Curve object.
+    The collision test are done through the hpp-rbprm-corba
+    """
     def __init__(self, fullBody, dt, verbose=False):
+        """
+        Constructor
+        :param fullBody: an rbprm.Fullbody object initialized with the robot model
+        :param dt: the discretization step used for collision checking
+        :param verbose: if True: print all invalid times and the joints in collision at this times
+        """
         self.fullBody = fullBody  # with effector collision disabled
         self.configSize = fullBody.getConfigSize()
         self.dt = dt
@@ -15,11 +25,11 @@ class PathChecker():
 
     def checkConfig(self, q_m):
         """
-        convert to correct format for hpp, add extra dof if necessary
-        return valid,message  : valid = bool, message = string
+        Check if the given joint configuration is valid
         :param q_m: configuration of size nq represented as a numpy array
-        :return:
+        :return: valid,message  : valid = bool, message = string
         """
+        # convert to correct format for hpp (python list), add extra dof if necessary
         q = [0] * self.configSize
         q[:q_m.shape[0]] = q_m.tolist()
         res = self.fullBody.isConfigValid(q)

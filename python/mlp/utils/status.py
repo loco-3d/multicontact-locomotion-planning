@@ -3,6 +3,9 @@ from ast import literal_eval
 
 
 class Status:
+    """
+    Helper class used to log the success or causes of errors of each methods
+    """
     def __init__(self, filename=None):
         self.q_init = []
         self.q_goal = []

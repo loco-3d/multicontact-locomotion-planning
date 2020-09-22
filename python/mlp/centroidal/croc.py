@@ -2,8 +2,7 @@ import numpy as np
 import multicontact_api
 from multicontact_api import ContactPhase, ContactSequence
 from curves import bezier, piecewise
-from mlp.utils.util import createFullbodyStatesFromCS
-from mlp.utils.cs_tools import resetCOMtrajectories
+from mlp.utils.cs_tools import resetCOMtrajectories, createFullbodyStatesFromCS
 from mlp.utils.requirements import Requirements
 multicontact_api.switchToNumpyArray()
 import logging
