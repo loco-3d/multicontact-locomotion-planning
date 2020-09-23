@@ -205,8 +205,15 @@ def computeContactNormal(placement):
     contactNormal = placement.rotation @ z_up
     return contactNormal
 
-
-
+def rotationFromNormal(n):
+    """
+    return a rotation matrix corresponding to the given contact normal
+    :param n: the normal of the surface (as a numpy array)
+    :return: a rotation matrix
+    """
+    z_up = np.array([0., 0., 1.])
+    q = Quaternion.FromTwoVectors(z_up, n)
+    return q.matrix()
 
 def discretizeCurve(curve,dt):
     """

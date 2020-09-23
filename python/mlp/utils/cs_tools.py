@@ -26,8 +26,8 @@ def createPhaseFromConfig(fb, q, limbsInContact, t_init = -1):
     phase.q_init = np.array(q)
     fb.setCurrentConfig(q)
     com = np.array(fb.getCenterOfMass())
-    if t_init > 0:
-        phase.timeInitial = 0.
+    if t_init >= 0:
+        phase.timeInitial = t_init
     phase.c_init = com.copy()
     phase.c_final = com.copy()
     if  fb.client.robot.getDimensionExtraConfigSpace() >= 6 and len(q) == fb.getConfigSize():
@@ -40,6 +40,8 @@ def createPhaseFromConfig(fb, q, limbsInContact, t_init = -1):
         eeName = fb.dict_limb_joint[limb]
         q_j = fb.getJointPosition(eeName)
         placement = SE3FromConfig(q_j)
+        if fb.cType == '_3_DOF':
+            placement.rotation = np.identity(3) # FIXME:  use contact normal instead of identity, but it's unknown here
         patch = ContactPatch(placement)  # TODO set friction / other parameters here
         phase.addContact(eeName, patch)
     return phase
@@ -146,7 +148,7 @@ def setFinalState(cs, com=None, q=None):
     phase.c_final = com
 
 
-def walk(fb, cs, distance, stepLength, gait, duration_ss = -1 , duration_ds = -1):
+def walk(fb, cs, distance, stepLength, gait, duration_ss = -1 , duration_ds = -1, first_half_step=True):
     """
     Generate a walking motion from the last phase in the contact sequence.
     The contacts will be moved in the order of the 'gait' list. With the first one move only of half the stepLength
@@ -164,7 +166,7 @@ def walk(fb, cs, distance, stepLength, gait, duration_ss = -1 , duration_ds = -1
     for limb in gait:
         eeName = fb.dict_limb_joint[limb]
         assert prev_phase.isEffectorInContact(eeName), "All limbs in gait should be in contact in the first phase"
-    isFirst = True
+    isFirst = first_half_step
     reached = False
     firstContactReachedGoal = False
     remainingDistance = distance
@@ -177,7 +179,7 @@ def walk(fb, cs, distance, stepLength, gait, duration_ss = -1 , duration_ds = -1
                 isFirst = False
             else:
                 length = stepLength
-            if k == 0:
+            if k == 0 and first_half_step:
                 if length > (remainingDistance + stepLength / 2.):
                     length = remainingDistance + stepLength / 2.
                     firstContactReachedGoal = True
@@ -189,7 +191,7 @@ def walk(fb, cs, distance, stepLength, gait, duration_ss = -1 , duration_ds = -1
             transform.translation = np.array([length, 0, 0])
             cs.moveEffectorOf(eeName, transform, duration_ds, duration_ss)
         remainingDistance -= stepLength
-    if not firstContactReachedGoal:
+    if first_half_step and not firstContactReachedGoal:
         transform = SE3.Identity()
         #print("last length = ", stepLength)
         transform.translation  = np.array([stepLength / 2., 0, 0])
@@ -736,6 +738,8 @@ def setAllUninitializedContactModel(cs, Robot):
             if phase.contactPatch(eeName).contact_model.contact_type == ContactType.CONTACT_UNDEFINED:
                 if Robot.cType == "_3_DOF":
                     phase.contactPatch(eeName).contact_model.contact_type = ContactType.CONTACT_POINT
+                    phase.contactPatch(eeName).contact_model.contact_points_positions = \
+                        Robot.dict_offset[eeName].translation
                 elif Robot.cType == "_6_DOF":
                     phase.contactPatch(eeName).contact_model.contact_type = ContactType.CONTACT_PLANAR
                     phase.contactPatch(eeName).contact_model.contact_points_positions =\

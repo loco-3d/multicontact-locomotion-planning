@@ -34,6 +34,10 @@ V_GOAL = 0.1
 SCALE_OBSTACLE_COLLISION = 0.1  # value added to the size of the collision obstacles manually added
 TIMEOUT_CONNECTIONS = 10.  # the time (in second) after which a process close if it did not receive new data
 
+USE_PYB = True
+if USE_PYB:
+    from solo_impedance_control.pyb_solo_simulator import pybullet_simulator, SimulatorLoop
+
 
 def update_root_traj_timings(cs):
     """
@@ -79,6 +83,7 @@ class LocoPlannerReactive(LocoPlanner):
         cfg.TIME_SHIFT_COM = 0.
         self.previous_connect_goal = cfg.DURATION_CONNECT_GOAL
         cfg.DURATION_CONNECT_GOAL = 0.
+        self.TIMEOPT_CONFIG_FILE = cfg.TIMEOPT_CONFIG_FILE
         super().__init__(cfg)
         # Get the centroidal and wholebody methods selected in the configuraton file
         self.generate_centroidal, self.CentroidalInputs, self.CentroidalOutputs = self.cfg.get_centroidal_method()
@@ -110,6 +115,7 @@ class LocoPlannerReactive(LocoPlanner):
         self.client_hpp = None
         self.robot = None
         self.gui = None
+        self.pyb_sim = None
         self.guide_planner = self.init_guide_planner()
         # initialize a fullBody rbprm object
         self.fullBody, _ = initScene(cfg.Robot, cfg.ENV_NAME, context="fullbody")
@@ -118,6 +124,9 @@ class LocoPlannerReactive(LocoPlanner):
         self.current_guide_id = 0
         # Set up gepetto gui and a pinocchio robotWrapper with display
         self.init_viewer()
+        # Set up a pybullet environment:
+        if USE_PYB:
+            self.init_pybullet()
 
     def init_guide_planner(self):
         """
@@ -159,6 +168,26 @@ class LocoPlannerReactive(LocoPlanner):
         self.robot, self.gui = initScenePinocchio(cfg.Robot.urdfName + cfg.Robot.urdfSuffix, cfg.Robot.packageName,
                                                   cfg.ENV_NAME)
         self.robot.display(self.cfg.IK_REFERENCE_CONFIG)
+
+    def init_pybullet(self):
+        self.pyb_sim = pybullet_simulator(dt=self.cfg.IK_dt,
+                                          q_init=self.cfg.IK_REFERENCE_CONFIG[7:].reshape(-1, 1),
+                                          root_init=[0, 0, 0.1],
+                                          env_name=cfg.ENV_NAME + ".urdf",
+                                          env_package="hpp_environments",
+                                          use_gui=False)
+
+    def execute_motion(self, q_t, dq_t):
+        if USE_PYB:
+            self.viewer_lock.acquire()
+            SimulatorLoop(self.pyb_sim, self.cfg.IK_dt, q_t, dq_t, self.robot.display)
+            self.viewer_lock.release()
+        else:
+            self.viewer_lock.acquire()
+            disp_wb_pinocchio(self.robot, q_t, self.cfg.DT_DISPLAY)
+            self.viewer_lock.release()
+
+
 
     def plan_guide(self, root_goal):
         """
@@ -207,30 +236,76 @@ class LocoPlannerReactive(LocoPlanner):
         """
         initial_contacts = None
         last_phase = self.get_last_phase()
-        if last_phase:
-            q_init = None
-            initial_contacts = [
-                last_phase.contactPatch(loco_planner.fullBody.lfoot).placement.translation,
-                last_phase.contactPatch(loco_planner.fullBody.rfoot).placement.translation
-            ]
-            first_phase = ContactPhase()
-            tools.copyContactPlacement(last_phase, first_phase)
-            tools.setInitialFromFinalValues(last_phase, first_phase)
+
+
+        if self.cfg.SL1M_MAX_STEP > 0:
+            # compute the pathlength corresponding to this number of steps:
+            max_path_length = self.cfg.SL1M_MAX_STEP * self.cfg.GUIDE_STEP_SIZE
+            total_path_length = self.guide_planner.ps.pathLength(self.current_guide_id)
+            if total_path_length > max_path_length:
+                # split the guide path in several segment of max_path_length length
+                guide_ids = []
+                t = 0.
+                while t < total_path_length:
+                    t_next = t + max_path_length
+                    if t_next > total_path_length:
+                        t_next = total_path_length
+                    self.guide_planner.ps.extractPath(self.current_guide_id, t, t_next)
+                    guide_ids += [self.guide_planner.ps.numberPaths() - 1]
+                    t = t_next
+            else:
+                guide_ids = [self.current_guide_id]
         else:
-            first_phase = None
-            q_init = self.fullBody.getCurrentConfig()
-            initial_contacts = sl1m.initial_foot_pose_from_fullbody(self.fullBody, q_init)
+            guide_ids = [self.current_guide_id]
+        print("#####  compute sl1m from guide id(s) : ", guide_ids)
 
-        self.guide_planner.pathId = self.current_guide_id
-        pathId, pb, coms, footpos, allfeetpos, res = sl1m.solve(self.guide_planner, cfg.GUIDE_STEP_SIZE,
-                                                                cfg.GUIDE_MAX_YAW, cfg.MAX_SURFACE_AREA, False,
-                                                                initial_contacts)
-        root_end = self.guide_planner.ps.configAtParam(pathId, self.guide_planner.ps.pathLength(pathId) - 0.001)[0:7]
-        logger.info("SL1M, root_end = %s", root_end)
+        self.cs = ContactSequence()
+        for guide_id in guide_ids:
+            self.guide_planner.pathId = guide_id
+            self.guide_planner.q_goal = self.guide_planner.ps.configAtParam(
+                guide_id, self.guide_planner.ps.pathLength(guide_id))
+            print("### FORLOOP, guide id = ", guide_id)
+            # compute initial contacts position, either from last_phase or from the wholebody configuration
+            if last_phase:
+                q_init = None
+                initial_contacts = [last_phase.contactPatch(ee_name).placement.translation
+                                    + self.fullBody.dict_offset[ee_name].translation
+                                    for ee_name in
+                                    [self.fullBody.dict_limb_joint[limb] for limb in self.fullBody.limbs_names]]
+                first_phase = ContactPhase()
+                tools.copyContactPlacement(last_phase, first_phase)
+                tools.setInitialFromFinalValues(last_phase, first_phase)
+            else:
+                first_phase = None
+                q_init = self.fullBody.getCurrentConfig()
+                initial_contacts = sl1m.initial_foot_pose_from_fullbody(self.fullBody, q_init)
 
-        self.cs = sl1m.build_cs_from_sl1m(self.fullBody, self.cfg.IK_REFERENCE_CONFIG, root_end, pb, sl1m.RF,
-                                          allfeetpos, cfg.SL1M_USE_ORIENTATION, cfg.SL1M_USE_INTERPOLATED_ORIENTATION,
-                                          q_init, first_phase)
+            pathId, pb, coms, footpos, allfeetpos, res = sl1m.solve(self.guide_planner,
+                                                                    self.cfg,
+                                                                    False,
+                                                                    initial_contacts)
+            root_end = self.guide_planner.ps.configAtParam(pathId, self.guide_planner.ps.pathLength(pathId) - 0.001)[0:7]
+            logger.info("SL1M, root_end = %s", root_end)
+
+            current_cs = sl1m.build_cs_from_sl1m(self.cfg.SL1M_USE_MIP,
+                                                 self.fullBody,
+                                                 self.cfg.IK_REFERENCE_CONFIG,
+                                                 root_end,
+                                                 pb,
+                                                 sl1m.sl1m.RF,
+                                                 allfeetpos,
+                                                 cfg.SL1M_USE_ORIENTATION,
+                                                 cfg.SL1M_USE_INTERPOLATED_ORIENTATION,
+                                                 q_init,
+                                                 first_phase)
+            last_phase = current_cs.contactPhases[-1]
+            # Merge current_cs in cs
+            if self.cs.size() == 0:
+                [self.cs.append(phase) for phase in current_cs.contactPhases]
+            else:
+                # first new phase is the same as last previous phase
+                [self.cs.append(phase) for phase in current_cs.contactPhases[1:]]
+
         logger.warning("## Compute cs from guide done.")
         process_stones = Process(target=self.display_stones_lock)
         process_stones.start()
@@ -331,11 +406,11 @@ class LocoPlannerReactive(LocoPlanner):
         if last_iter:
             # Set settings specific to the last iteration that need to connect exactly to the final goal position
             self.cfg.DURATION_CONNECT_GOAL = self.previous_connect_goal
-            self.cfg.TIMEOPT_CONFIG_FILE = "cfg_softConstraints_talos.yaml"
+            self.cfg.TIMEOPT_CONFIG_FILE = self.TIMEOPT_CONFIG_FILE
         else:
             # Set settings for the middle of the sequence: do not need to connect exactly to the goal
             self.cfg.DURATION_CONNECT_GOAL = 0.
-            self.cfg.TIMEOPT_CONFIG_FILE = "cfg_softConstraints_talos_lowgoal.yaml"
+            self.cfg.TIMEOPT_CONFIG_FILE = self.TIMEOPT_CONFIG_FILE.rstrip(".yaml") + "_lowgoal.yaml"
         if not self.CentroidalInputs.checkAndFillRequirements(cs, self.cfg, None):
             raise RuntimeError(
                 "The current contact sequence cannot be given as input to the centroidal method selected.")
@@ -478,7 +553,7 @@ class LocoPlannerReactive(LocoPlanner):
                     cs_wb, last_q, last_v, last_phase, robot = self.compute_wholebody(
                         robot, cs_com, last_q, last_v, last_iter)
                     logger.info("-- Add a cs_wb to the queue")
-                    self.queue_qt.put([cs_wb.concatenateQtrajectories(), last_phase, last_iter])
+                    self.queue_qt.put([cs_wb.concatenateQtrajectories(), cs_wb.concatenateDQtrajectories(), last_phase, last_iter])
                 else:
                     timeout = True
                     logger.warning("Loop wholebody closed because pipe is empty since 10 seconds")
@@ -503,13 +578,11 @@ class LocoPlannerReactive(LocoPlanner):
         timeout = TIMEOUT_CONNECTIONS
         try:
             while not last_iter:
-                q_t, last_phase, last_iter = self.queue_qt.get(timeout=timeout)
+                q_t, dq_t, last_phase, last_iter = self.queue_qt.get(timeout=timeout)
                 timeout = 0.1
                 if last_phase:
                     self.set_last_phase(last_phase)
-                self.viewer_lock.acquire()
-                disp_wb_pinocchio(self.robot, q_t, cfg.DT_DISPLAY)
-                self.viewer_lock.release()
+                self.execute_motion(q_t, dq_t)
                 if self.stop_motion_flag.value:
                     logger.info("STOP MOTION in viewer")
                     last_iter = True

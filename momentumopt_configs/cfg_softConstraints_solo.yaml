@@ -1,0 +1,61 @@
+planner_variables:
+
+  load_kinematics: false
+  display_motion: false
+
+  floor_height: 0.0 # offset between the contact position and the 'floor' surface used to constraint the height
+  min_rel_height: 0.15 # minimum allowed distance from the robot CoM to the floor
+
+  heuristic: TrustRegion  # Types: TrustRegion, SoftConstraint, TimeOptimization #
+  n_act_eefs: 4
+  time_step: 0.01
+  time_horizon: 0. # duration of the motion, will be overwrited by the value inside the contact sequence
+  time_range: [0.01, 0.2] # Bounds on the value of dt during time optimization
+  is_time_horizon_fixed: false # Allow to change the total duration of the motion
+  external_force: [0.00, 0.00, 0.00]
+  com_displacement: [0., 0., 0.]
+  num_com_viapoints: 0
+  com_viapoints:
+  max_time_iterations: 100000
+  max_time_residual_tolerance: 1e-3
+  min_time_residual_improvement: 1e-6
+
+  gravity: 9.81
+  robot_mass: 2.5
+  friction_coeff: 0.3
+  friction_cone: LinearCone  # Types: LinearCone, SocCone #
+  torque_range: [-10.0, 10.0]
+  eff_offset_rf: [0.19, -0.15, 0]
+  eff_offset_lf: [0.19, 0.15, 0]
+  eff_offset_rh: [-0.19, -0.15 ,0]
+  eff_offset_lh: [-0.19, 0.15 ,0]
+  cop_range_rf: [-0.01,  0.01, -0.01,  0.01]
+  cop_range_lf: [-0.01,  0.01, -0.01,  0.01]
+  cop_range_rh: [-0.01,  0.01, -0.01,  0.01]
+  cop_range_lh: [-0.01,  0.01, -0.01,  0.01]
+  max_eef_lengths: [0.28,  0.28,  0.28,  0.28]
+  #max_eef_lengths: [0.6,  0.6,  0.6,  0.6]
+
+  w_trq_arm:       1.000
+  w_trq_leg:       1.000
+  w_time_penalty: 100. # weight of the cost to reduce the total duration of the motion
+  w_time: 1000.0 # weight of the cost to keep the defined duration of each phases
+  w_com:           [ 1000,  1000,  100]
+  w_amom:          [ 0.500,  0.500,  0.500]
+  w_lmom:          [ 0.2,  10.,  0.1]
+  w_amomd:         [ 0.100,  0.400,  0.100]
+  w_lmomd:         [ 0.01,  1.,  0.5]
+  w_amom_final:    [ 10.00,  10.00,  10.00]
+  w_lmom_final:    [ 10.00,  10.00,  10.00]
+  w_com_via:       [ 0.0001,  0.0001,  500.000]
+  w_frc_arm:       [ 0.001,  0.001,  0.001]
+  w_frc_leg:       [ 0.001,  0.001,  0.001]
+  w_dfrc_arm:      [ 0.000,  0.000,  0.000]
+  w_dfrc_leg:      [ 0.000,  0.000,  0.000]
+  w_com_track:     [ 0.000,  0.000,  0.000]  # weight used to track the CoM position from the Kinematic Sequence
+  w_amom_track:    [ 1.000,  1.000,  1.000]
+  w_lmom_track:    [ 0.100,  0.100,  0.100]
+
+
+  store_data: True
+  use_default_solver_setting: True

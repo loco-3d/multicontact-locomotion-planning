@@ -20,7 +20,7 @@ class Config:
 
     def __init__(self):
         ## methods setting : choose which method will be used to solve each subproblem :
-        self.contact_generation_method = "rbprm"
+        self.contact_generation_method = "load"
         self.centroidal_initGuess_method = "none"
         self.centroidal_method = "momentumopt"
         self.end_effector_initGuess_method = "bezier_predef"
@@ -74,7 +74,7 @@ class Config:
         self.DISPLAY_WB_MOTION = False  # display whole body motion automatically once it's computed
         # dt used to display the wb motion (one configuration every dt is displayed) It have to be greater than IK_dt
         self.DT_DISPLAY = 0.05
-        self.PLOT = False  # Generate plot for various data
+        self.PLOT = True  # Generate plot for various data
         # plot COM trajectory computed by the centroidal dynamic solver, before trying to compute the wholebody motion
         self.PLOT_CENTROIDAL = False
         self.DISPLAY_PLOT = self.PLOT and True  # display plot directly
@@ -83,6 +83,11 @@ class Config:
         ###  Settings for generate_contact_sequence
         self.FORCE_STRAIGHT_LINE = False  # DEBUG ONLY should be false
         self.SL1M_USE_ORIENTATION = True  # sl1m method use the root orientation computed by the guide planning
+        self.SL1M_USE_MIP = False  #  select between the L1 solver or the MIP solver (the later allow acyclic motion but is a lot slower)
+        self.SL1M_USE_INTERSECTION = True  # if True, the list of candidate contact surface given to SL1M
+        self.SL1M_MAX_STEP = -1  # Maximum number of phases per SL1M call, if negative: unlimited
+
+        # are the intersection between the surfaces and the ROMs. If False, the complete surfaces are given
         self.GUIDE_STEP_SIZE = 1. # initial discretization step of the guide path used to find the surfaces for SL1M
         self.GUIDE_MAX_YAW = 0.2 # maximal yaw rotation difference between two discretization step
         self.MAX_SURFACE_AREA = 1. # if a contact surface is greater than this value, the intersection is used instead of the whole surface
@@ -118,12 +123,12 @@ class Config:
         self.CHECK_FINAL_MOTION = True  # After computation of the motion, check the complete motion for {self-}collision and joints limits
         ### The following settings enable the computation of various values stored in the wholeBody_result struct.
         # Enabling them increase the computation time of the wholeBody script
-        self.IK_store_centroidal = False  # c,dc,ddc,L,dL (of the computed wholebody motion)
-        self.IK_store_zmp = False
-        self.IK_store_effector = False
-        self.IK_store_contact_forces = False
-        self.IK_store_joints_derivatives = False
-        self.IK_store_joints_torque = False
+        self.IK_store_centroidal = True  # c,dc,ddc,L,dL (of the computed wholebody motion)
+        self.IK_store_zmp = True
+        self.IK_store_effector = True
+        self.IK_store_contact_forces = True
+        self.IK_store_joints_derivatives = True
+        self.IK_store_joints_torque = True
 
         self.DEMO_NAME = "undefined"
         self.CS_FILENAME = self.CONTACT_SEQUENCE_PATH + "/" + self.DEMO_NAME + ".cs"

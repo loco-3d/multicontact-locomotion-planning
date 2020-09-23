@@ -213,7 +213,10 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None, robot=None,
             phase.q_t.append(q, t)
             #phase.root_t.append(SE3FromConfig(q), t)
         if queue_qt:
-            queue_qt.put([phase.q_t.curve_at_index(phase.q_t.num_curves()-1), None, False])
+            queue_qt.put([phase.q_t.curve_at_index(phase.q_t.num_curves()-1),
+                          phase.dq_t.curve_at_index(phase.dq_t.num_curves()-1),
+                          None,
+                          False])
 
     def appendJointsDerivatives(first_iter_for_phase=False):
         if first_iter_for_phase:
@@ -303,9 +306,9 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None, robot=None,
 
 
     def storeData(first_iter_for_phase = False):
-        appendJointsValues(first_iter_for_phase)
         if cfg.IK_store_joints_derivatives:
             appendJointsDerivatives(first_iter_for_phase)
+        appendJointsValues(first_iter_for_phase)
         if cfg.IK_store_joints_torque:
             appendTorques(first_iter_for_phase)
         if cfg.IK_store_centroidal:
@@ -471,6 +474,20 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None, robot=None,
     usedEffectors = cs.getAllEffectorsInContact()
     dic_effectors_tasks = createEffectorTasksDic(cfg, usedEffectors, robot)
 
+    # Add bounds tasks if required:
+    if cfg.w_torque_bounds > 0.:
+        tau_max = cfg.scaling_torque_bounds*robot.model().effortLimit[-robot.na:]
+        tau_min = -tau_max
+        actuationBoundsTask = tsid.TaskActuationBounds("task-actuation-bounds", robot)
+        actuationBoundsTask.setBounds(tau_min, tau_max)
+        invdyn.addActuationTask(actuationBoundsTask, cfg.w_torque_bounds, 0, 0.0)
+    if cfg.w_joint_bounds > 0.:
+        jointBoundsTask = tsid.TaskJointBounds("task-joint-bounds", robot, cfg.IK_dt)
+        v_max = cfg.scaling_vel_bounds * robot.model().velocityLimit[-robot.na:]
+        v_min = -v_max
+        print("v_max : ", v_max)
+        jointBoundsTask.setVelocityBounds(v_min, v_max)
+        invdyn.addMotionTask(jointBoundsTask, cfg.w_joint_bounds, 0, 0.0)
 
     solver = tsid.SolverHQuadProg("qp solver")
     solver.resize(invdyn.nVar, invdyn.nEq, invdyn.nIn)
@@ -676,6 +693,7 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None, robot=None,
                         # save the first q_t trajectory computed, for limb-rrt
                         first_q_t = phase.q_t
                     logger.warning("Phase %d not valid at t = %f", pid, t_invalid)
+                    logger.info("First invalid q : %s", phase.q_t(t_invalid))
                     if t_invalid <= (phase.timeInitial + cfg.EFF_T_PREDEF) \
                             or t_invalid >= (phase.timeFinal - cfg.EFF_T_PREDEF):
                         logger.error("Motion is invalid during predefined phases, cannot change this.")
@@ -728,4 +746,4 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None, robot=None,
     logger.info("Desired COM Position %s", cs.contactPhases[-1].c_final)
     if queue_qt:
         queue_qt.put([phase.q_t.curve_at_index(phase.q_t.num_curves() - 1), None, True])
-    return cs, robot
+    return cs, pinRobot
