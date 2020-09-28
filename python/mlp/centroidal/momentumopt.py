@@ -39,10 +39,9 @@ class CentroidalOutputsMomentumopt(CentroidalInputsMomentumopt):
 def setDuration(planner_setting, cs, dt):
     """
     Update the planner_setting with the time_horizon, dt and number of steps from the CS and the config file
-    :param planner_setting:
-    :param cs:
+    :param planner_setting: a planner_setting instance from momentumopt that will be modified
+    :param cs: the ContactSequence used to find the duration of the complete motion
     :param dt: discretization step used
-    :return:
     """
     duration = cs.contactPhases[-1].timeFinal - cs.contactPhases[0].timeInitial
     n_time_steps = int(floor(duration/dt))
@@ -54,10 +53,10 @@ def setDuration(planner_setting, cs, dt):
 def extractEffectorPhasesFromCS(cs, eeName, dt):
     """
     extract a list of effector phase (t start, t end, placement) (as defined by momentumopt) from a ContactSequence
-    :param cs:
-    :param eeName: the effector name (CS notation)
+    :param cs: the ContactSequence containing all the contact phases
+    :param eeName: the effector name (multicontact_api notation)
     :param dt: discretization step used
-    :return:
+    :return: The effector phases in momentumopt format
     """
     t_last = cs.contactPhases[-1].timeFinal
     ee_phases = []
@@ -95,7 +94,7 @@ def contactPlanFromCS(planner_setting, cs, dict_ee_to_timeopt, dt):
     :param dict_ee_to_timeopt: a dictionnary with key = effector names in ContactSequence,
      value = effector ID in momentumopt
     :param dt: discretization step used
-    :return: the ContactPlan
+    :return: the ContactPlan (momemtumopt format)
     """
     logger.info("Generate contact plan from CS ...")
     contact_plan = ContactPlanFromFile()
@@ -120,9 +119,8 @@ def contactPlanFromCS(planner_setting, cs, dict_ee_to_timeopt, dt):
 def setFinalCOM(planner_setting, cs):
     """
     set the CoM_motion for momentumopt from the contactSequence
-    :param planner_setting:
-    :param cs:
-    :return:
+    :param planner_setting: the planner_setting from momemtumopt that will be modified
+    :param cs: the ContactSequence containing the CoM motion
     """
     com_motion = cs.contactPhases[-1].c_final - cs.contactPhases[0].c_init
     logger.debug("Desired com motion : %s", com_motion)
@@ -132,11 +130,10 @@ def setFinalCOM(planner_setting, cs):
 def addCOMviapoints(planner_setting, cs, viewer=None, display_wp = False):
     """
     Add CoM viapoint to the momentumopt problem. Computed for each double support phases from the planned configuration
-    :param planner_setting:
-    :param cs: the ContactSequence
+    :param planner_setting: the planner_setting from momemtumopt that will be modified
+    :param cs: the ContactSequence containing the CoM position at the beginning of each new double support phases
     :param viewer: an instance of the gepetto-gui
     :param display_wp: if True and a viewer is provided, display black sphere at the position of the waypoints used
-    :return:
     """
     logger.info("Add waypoints ...")
     com_viapoints = []
@@ -156,7 +153,6 @@ def addCOMviapoints(planner_setting, cs, viewer=None, display_wp = False):
 def initStateFromPhase(phase, use_shift_com, com_shift_z, dict_ee_to_timeopt, mass):
     """
     Create a momentumopt initial state from a multicontact_api contact phase
-
     :param phase: a multicontact_api ContactPhase
     :param use_shift_com: True if the offset to the CoM must be applied
     :param com_shift_z: the distance along the z axis from which the CoM is moved before the beginning of the motion
@@ -201,8 +197,8 @@ def buildEmptyKinSequence(planner_setting):
 def buildKinSequenceFromCS(planner_setting, cs, t_init):
     """
     Build a KinematicSequence and fill it with values from the centroidal trajectory stored in CS.
-    :param planner_setting:
-    :param cs:
+    :param planner_setting: the planner_setting from momemtumopt
+    :param cs: the contactSequence object containing the centroidal trajectory (c, dc, and L)
     :param t_init: time at which the centroidal trajectory start in the CS
     :return: a pymomentum.KinematicsSequence
     """
@@ -232,8 +228,8 @@ def buildKinSequenceFromCS(planner_setting, cs, t_init):
 def isNewPhase(ds1, ds2):
     """
     Check if two dynamicsState have the same contacts
-    :param ds1:
-    :param ds2:
+    :param ds1: the first phase
+    :param ds2: the second phase
     :return: True if they have the same contacts, False otherwise
     """
     assert ds1.effNum() == ds2.effNum(), "The two dynamic states do not comes from the same model."
@@ -247,7 +243,7 @@ def isNewPhase(ds1, ds2):
 def CSfromMomentumopt(planner_setting, cs, init_state, dyn_states, t_init = 0., connect_goal = True):
     """
     Create a ContactSequence and fill it with the results from momentumopt
-    :param planner_setting:
+    :param planner_setting: the planner_setting object from momentumopt
     :param cs: a multicontact_api ContactSequence from which the contacts are copied
     :param init_state: initial state used by momentumopt
     :param dyn_states: the results of momentumopt

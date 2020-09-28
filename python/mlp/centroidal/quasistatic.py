@@ -11,6 +11,15 @@ logger = logging.getLogger("quasistatic")
 logger.setLevel(logging.ERROR) #DEBUG, INFO or WARNING
 multicontact_api.switchToNumpyArray()
 
+
+"""
+Produce a centroidal trajectory where the CoM only move when the contacts are fixed.
+It is then fixed during the swing phase where one contact is repositionned.
+The position reached by the CoM are given with 2-PAC
+The trajectory of the CoM is a quintic spline with initial and final velocity/acceleration constrained to 0
+"""
+
+
 class CentroidalInputsQuasistatic(Requirements):
     timings = True
     consistentContacts = True
@@ -20,13 +29,15 @@ class CentroidalOutputsQuasistatic(CentroidalInputsQuasistatic):
     COMtrajectories = True
     COMvalues = True
 
-## Produce a centroidal trajectory where the CoM only move when the contacts are fixed.
-## It is then fixed during the swing phase where one contact is repositionned.
-## The position reached by the CoM are given with 2-PAC
-## The trajectory of the CoM is a quintic spline with initial and final velocity/acceleration constrained to 0
-
 
 def getTargetCOMPosition(fullBody, id_state, com_shift_z):
+    """
+    Compute the CoM position for the given rbprm state with 2-PAC
+    :param fullBody: an instance of rbprm.Fullbody object
+    :param id_state: the id of the state (in fullbody)
+    :param com_shift_z: an optionnal offset added to the z position computed by 2-PAC
+    :return: the CoM position for this state (as a numpy array 3)
+    """
     s_id_init = id_state
     s_id_final = id_state+1
     success = False

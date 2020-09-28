@@ -12,7 +12,7 @@ def zeroStepCapturability(phase, cfg):
     Try to compute a centroidal trajectory that bring the given phase to a complete stop without contact changes.
     I take the initial centroidal state and the duration from the state. As long as the contacts.
     If successfull, it fill the final centroidal state in the phase and the centroidal trajectories
-    :param phase:
+    :param phase: the current ContactPhase, must have contacts and initial centroidal values defined
     :return: [success, phase]
     """
     # initialize the equilibrium lib
