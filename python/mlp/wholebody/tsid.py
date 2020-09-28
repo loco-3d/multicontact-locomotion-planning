@@ -47,6 +47,13 @@ class WholebodyOutputsTsid(Requirements):
 
 
 def getCurrentEffectorPosition(robot, data, eeName):
+    """
+    Get the position of the effector with the current robot Data
+    :param robot: a RobotWrapper instance
+    :param data: the Data used
+    :param eeName: the name of the joint (or frame)
+    :return: the position of the desired effector, as a pinocchio.SE3
+    """
     id = robot.model().getJointId(eeName)
     if id < len(data.oMi):
         return robot.position(data, id)
@@ -56,6 +63,13 @@ def getCurrentEffectorPosition(robot, data, eeName):
 
 
 def getCurrentEffectorVelocity(robot, data, eeName):
+    """
+    Get the velocity of the effector with the current robot Data
+    :param robot: a RobotWrapper instance
+    :param data: the Data used
+    :param eeName: the name of the joint (or frame)
+    :return: the position of the desired effector, as a pinocchio.Motion
+    """
     id = robot.model().getJointId(eeName)
     if id < len(data.oMi):
         return robot.velocity(data, id)
@@ -65,6 +79,13 @@ def getCurrentEffectorVelocity(robot, data, eeName):
 
 
 def getCurrentEffectorAcceleration(robot, data, eeName):
+    """
+    Get the acceleration of the effector with the current robot Data
+    :param robot: a RobotWrapper instance
+    :param data: the Data used
+    :param eeName: the name of the joint (or frame)
+    :return: the position of the desired effector, as a pinocchio.Motion
+    """
     id = robot.model().getJointId(eeName)
     if id < len(data.oMi):
         return robot.acceleration(data, id)
@@ -139,6 +160,12 @@ def createEffectorTasksDic(cfg, effectorsNames, robot):
 
 
 def curvesToTSID(curves,t):
+    """
+    Build a tsid.TrajectorySample from the given curve and time index
+    :param curves: a list of curves for the position, velocity, and optionally acceleration
+    :param t: the time index
+    :return: a tsid.TrajectorySample object with the values from the curves
+    """
     # adjust t to bounds, required due to precision issues:
     if curves[0].min() > t > curves[0].min() - 1e-3:
         t = curves[0].min()
@@ -152,6 +179,14 @@ def curvesToTSID(curves,t):
     return sample
 
 def curveSE3toTSID(curve,t, computeAcc = False):
+    """
+    Build a tsid.TrajectorySample from the given SE3 curve and time index
+    :param curve: an SE3 curve
+    :param t: the time index
+    :param computeAcc: if True, derivate twice the given curve and set velocity and acceleration,
+    if False only derivate once and set the velocity
+    :return: a tsid.TrajectorySample object with the values from the curves
+    """
     # adjust t to bounds, required due to precision issues:
     if curve.min() > t > curve.min() - 1e-3:
         t = curve.min()
@@ -176,7 +211,6 @@ def adjustEndEffectorTrajectoryIfNeeded(cfg, phase, robot, data, eeName, effecto
     :param data: Robotwrapper.data instance
     :param eeName: Name of the effector
     :param effectorMethod: Pointer to the method used to generate end-effector trajectory for one phase
-    :return:
     """
     current_placement = getCurrentEffectorPosition(robot, data, eeName)
     ref_placement = phase.effectorTrajectory(eeName).evaluateAsSE3(phase.timeInitial)
@@ -203,8 +237,14 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None, robot=None,
     and the other trajectories computed from the wholebody motion request with cfg.IK_STORE_* and a robotWrapper instance
     """
 
-    ### define nested functions used in control loop ###
+    # define nested functions used in control loop #
+
     def appendJointsValues(first_iter_for_phase = False):
+        """
+        Append the current q value to the current phase.q_t trajectory
+        :param first_iter_for_phase: if True, set the current phase.q_init value
+        and initialize a new Curve for phase.q_t
+        """
         if first_iter_for_phase:
             phase.q_init = q
             phase.q_t = piecewise(polynomial(q.reshape(-1,1), t, t))
@@ -219,6 +259,10 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None, robot=None,
                           False])
 
     def appendJointsDerivatives(first_iter_for_phase=False):
+        """
+        Append the current v and dv value to the current phase.dq_t and phase.ddq_t trajectory
+        :param first_iter_for_phase: if True, initialize a new Curve for phase.dq_t and phase.ddq_t
+        """
         if first_iter_for_phase:
             phase.dq_t = piecewise(polynomial(v.reshape(-1, 1), t, t))
             phase.ddq_t = piecewise(polynomial(dv.reshape(-1, 1), t, t))
@@ -227,6 +271,10 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None, robot=None,
             phase.ddq_t.append(dv, t)
 
     def appendTorques(first_iter_for_phase = False):
+        """
+        Append the current tau value to the current phase.tau_t trajectory
+        :param first_iter_for_phase: if True, initialize a new Curve for phase.tau_t
+        """
         tau = invdyn.getActuatorForces(sol)
         if first_iter_for_phase:
             phase.tau_t = piecewise(polynomial(tau.reshape(-1,1), t, t))
@@ -234,6 +282,12 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None, robot=None,
             phase.tau_t.append(tau, t)
 
     def appendCentroidal(first_iter_for_phase = False):
+        """
+        Compute the values of the CoM position, velocity, acceleration, the anuglar momentum and it's derivative
+        from the wholebody data and append them to the current phase trajectories
+        :param first_iter_for_phase: if True, set the initial values for the current phase
+        and initialize the centroidal trajectories
+        """
         pcom, vcom, acom = pinRobot.com(q, v, dv)
         L = pinRobot.centroidalMomentum(q, v).angular
         dL = pin.computeCentroidalMomentumTimeVariation(pinRobot.model, pinRobot.data, q, v, dv).angular
@@ -256,6 +310,10 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None, robot=None,
             phase.dL_t.append(dL, t)
 
     def appendZMP(first_iter_for_phase = False):
+        """
+        Compute the zmp from the current wholebody data and append it to the current phase
+        :param first_iter_for_phase: if True, initialize a new Curve for phase.zmp_t
+        """
         tau = pin.rnea(pinRobot.model, pinRobot.data, q, v, dv)
         # tau without external forces, only used for the 6 first
         # res.tau_t[:6,k_t] = tau[:6]
@@ -270,6 +328,10 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None, robot=None,
             phase.wrench_t.append(wrench, t)
 
     def appendEffectorsTraj(first_iter_for_phase = False):
+        """
+        Append the current position of the effectors not in contact to the current phase trajectories
+        :param first_iter_for_phase: if True, initialize a new Curve for the phase effector trajectories
+        """
         if first_iter_for_phase and phase_prev:
             for eeName in phase_prev.effectorsWithTrajectory():
                 if t > phase_prev.effectorTrajectory(eeName).max():
@@ -285,6 +347,10 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None, robot=None,
 
 
     def appendContactForcesTrajs(first_iter_for_phase = False):
+        """
+        Append the current contact force value to the current phase, for all the effectors in contact
+        :param first_iter_for_phase: if True, initialize a new Curve for the phase contact trajectories
+        """
         for eeName in phase.effectorsInContact():
             contact = dic_contacts[eeName]
             if invdyn.checkContact(contact.name, sol):
@@ -306,6 +372,11 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None, robot=None,
 
 
     def storeData(first_iter_for_phase = False):
+        """
+        Append all the required data (selected in the configuration file) to the current ContactPhase
+        :param first_iter_for_phase: if True, set the initial values for the current phase
+        and correctly initiliaze empty trajectories for this phase
+        """
         if cfg.IK_store_joints_derivatives:
             appendJointsDerivatives(first_iter_for_phase)
         appendJointsValues(first_iter_for_phase)
@@ -322,6 +393,10 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None, robot=None,
 
 
     def printIntermediate():
+        """
+        Print the current state: active contacts, tracking errors, computed joint acceleration and velocity
+        :return:
+        """
         if logger.isEnabledFor(logging.INFO):
             print("Time %.3f" % (t))
             for eeName, contact in dic_contacts.items():
@@ -339,6 +414,9 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None, robot=None,
             print("\t||v||: %.3f\t ||dv||: %.3f" % (norm(v, 2), norm(dv)))
 
     def checkDiverge():
+        """
+        Check if either the joint velocity or acceleration is over a treshold or is NaN, and raise an error
+        """
         if norm(dv) > 1e6 or norm(v) > 1e6:
             logger.error("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
             logger.error("/!\ ABORT : controler unstable at t = %f  /!\ ", t)
@@ -351,6 +429,10 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None, robot=None,
             raise ValueError("ABORT : controler unstable at t = " + str(t))
 
     def stopHere():
+        """
+        Set the current data as final values for the current phase, resize the contact sequence if needed and return
+        :return: [The current ContactSequence, the RobotWrapper]
+        """
         setPreviousFinalValues(phase_prev, phase, cfg)
         if cfg.WB_ABORT_WHEN_INVALID:
             # cut the sequence up to the last phase
@@ -746,4 +828,4 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None, robot=None,
     logger.info("Desired COM Position %s", cs.contactPhases[-1].c_final)
     if queue_qt:
         queue_qt.put([phase.q_t.curve_at_index(phase.q_t.num_curves() - 1), None, True])
-    return cs, pinRobot
+    return cs, robot
