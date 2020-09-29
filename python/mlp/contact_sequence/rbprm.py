@@ -11,9 +11,10 @@ from numpy import array
 import enum
 import importlib
 import logging
+
 logging.basicConfig(format='[%(name)-12s] %(levelname)-8s: %(message)s')
 logger = logging.getLogger("rbprm")
-logger.setLevel(logging.ERROR) #DEBUG, INFO or WARNING
+logger.setLevel(logging.ERROR)  # DEBUG, INFO or WARNING
 multicontact_api.switchToNumpyArray()
 
 
@@ -22,7 +23,11 @@ class ContactOutputsRbprm(Requirements):
     COMvalues = True
     configurationValues = True
 
+
 class VariationType(enum.Enum):
+    """
+    Enum used to define what kind of contact transition happen between two states
+    """
     NONE = 0
     BROKEN = 1
     CREATED = 2
@@ -30,6 +35,13 @@ class VariationType(enum.Enum):
 
 
 def contactPlacementFromRBPRMState(fb, stateId, eeName):
+    """
+    Compute the placement of eeName for the given stateId
+    :param fb: an instance of rbprm.FullBody
+    :param stateId: the Id of the state
+    :param eeName: the name of the effector
+    :return: the placement represented as a pinocchio.SE3 object
+    """
     # get limbName from effector name :
     fb.setCurrentConfig(fb.getConfigAtState(stateId))
     placement = SE3FromConfig(fb.getJointPosition(eeName))
@@ -42,7 +54,14 @@ def contactPlacementFromRBPRMState(fb, stateId, eeName):
     return placement
 
 
-def createPhaseFromRBPRMState(fb, stateId, t_init = -1):
+def createPhaseFromRBPRMState(fb, stateId, t_init=-1):
+    """
+    Create a multicontact_api ContactPhase object from an rbprm state
+    :param fb: an instance of rbprm.FullBody
+    :param stateId: the Id of the state
+    :param t_init: the initial time of the contact phase
+    :return: a multicontact_api.ContactPhase with the same contacts as the rbprm state
+    """
     q = fb.getConfigAtState(stateId)
     limbs_contact = fb.getAllLimbsInContact(stateId)
     cp = createPhaseFromConfig(fb, q, limbs_contact, t_init)
@@ -60,7 +79,16 @@ def createPhaseFromRBPRMState(fb, stateId, t_init = -1):
             print("New placement : ", normal)
     return cp
 
+
 def getContactVariationBetweenStates(fb, s1, s2):
+    """
+    Check if there a contact variation between two rbprm states,
+    Return the moving effector and the type of contact change
+    :param fb: an instance of rbprm.FullBody
+    :param s1: the first state
+    :param s2: the second state
+    :return: The name of the effector moving (or None) and the type of contact variation (see VariationType Enum)
+    """
     # Determine the contact changes which are going to occur :
     variations = fb.getContactsVariations(s1, s2)
     logger.debug("Contact variations : %s", variations)
@@ -79,9 +107,18 @@ def getContactVariationBetweenStates(fb, s1, s2):
     variationType = VariationType(variationValue)
     logger.info("movingLimb = %s", movingLimb)
     logger.info("variation type : %s", variationType.name)
-    return fb.dict_limb_joint[movingLimb],variationType
+    return fb.dict_limb_joint[movingLimb], variationType
+
 
 def setPhaseInitialValues(fb, stateId, phase):
+    """
+    Set the phase initial wholebody configuration, CoM position, velocity and acceleration from the rbprm state
+    The CoM position is computed from the wholebody configuration,
+    it's velocity and acceleration from the path planning (saved in the 6 last extra config)
+    :param fb: an instance of rbprm.FullBody
+    :param stateId: the state id
+    :param phase: the ContactPhase to modify
+    """
     # get q, c, dc and ddc from planning for the current state :
     q = fb.getConfigAtState(stateId)
     fb.setCurrentConfig(q)
@@ -94,7 +131,16 @@ def setPhaseInitialValues(fb, stateId, phase):
     phase.dc_init = vel
     phase.ddc_init = acc
 
+
 def setPhaseFinalValues(fb, stateId, phase):
+    """
+    Set the phase final wholebody configuration, CoM position, velocity and acceleration from the rbprm state
+    The CoM position is computed from the wholebody configuration,
+    it's velocity and acceleration from the path planning (saved in the 6 last extra config)
+    :param fb: an instance of rbprm.FullBody
+    :param stateId: the state id
+    :param phase: the ContactPhase to modify
+    """
     # get q, c, dc and ddc from planning for the current state :
     q = fb.getConfigAtState(stateId)
     fb.setCurrentConfig(q)
@@ -109,9 +155,15 @@ def setPhaseFinalValues(fb, stateId, phase):
 
 
 def runRBPRMScript(cfg):
-    #the following script must produce a sequence of configurations in contact (configs)
-    # with exactly one contact change between each configurations
-    # It must also initialise a FullBody object name fullBody and optionnaly a Viewer object named V
+    """
+    Run the given rbprm ContactGenerator class
+    :param cfg: the configuration class, must define either SCRIPT_ABSOLUTE_PATH or
+    (RBPRM_SCRIPT_PATH, SCRIPT_PATH, DEMO_NAME)
+    the defined script must produce a sequence of configurations in contact (configs)
+    with exactly one contact change between each configurations
+    It must also initialise a FullBody object name fullBody and optionnaly a Viewer object named V
+    :return: [fullbody object, viewer object, first state Id, last state Id]
+    """
     if hasattr(cfg, 'SCRIPT_ABSOLUTE_PATH'):
         scriptName = cfg.SCRIPT_ABSOLUTE_PATH
     else:
@@ -132,6 +184,13 @@ def runRBPRMScript(cfg):
 
 
 def contactSequenceFromRBPRMConfigs(fb, beginId, endId):
+    """
+    Build a multicontact_api ContactSequence from rbprm states list
+    :param fb: an instance of rbprm.FullBody
+    :param beginId: the first state Id
+    :param endId: the last state Id
+    :return: a multicontact_api ContactSequence
+    """
     logger.warning("generate contact sequence from planning : ")
     n_states = endId - beginId + 1
     # There could be either contact break, creation or repositionning between each adjacent states.
@@ -142,10 +201,10 @@ def contactSequenceFromRBPRMConfigs(fb, beginId, endId):
 
     # create initial ContactPhase
     cs.append(createPhaseFromRBPRMState(fb, beginId))
-    for stateId in range(beginId + 1, endId + 1): #from the second state to the last one
+    for stateId in range(beginId + 1, endId + 1):  # from the second state to the last one
         logger.info("current state id = %d", stateId)
         previous_phase = cs.contactPhases[-1]
-        eeName, variationType = getContactVariationBetweenStates(fb,stateId-1, stateId)
+        eeName, variationType = getContactVariationBetweenStates(fb, stateId - 1, stateId)
 
         if eeName is not None:
             if variationType == VariationType.REPOSITIONNED:
@@ -161,13 +220,13 @@ def contactSequenceFromRBPRMConfigs(fb, beginId, endId):
                 cs.breakContact(eeName)
             else:
                 # get placement of the new contact from the planning :
-                contact_placement = contactPlacementFromRBPRMState(fb,stateId,eeName)
+                contact_placement = contactPlacementFromRBPRMState(fb, stateId, eeName)
             if variationType == VariationType.CREATED:
                 # create a new contact :
                 cs.createContact(eeName, ContactPatch(contact_placement))
             elif variationType == VariationType.REPOSITIONNED:
                 # move existing contact to new placement :
-                cs.moveEffectorToPlacement(eeName,contact_placement)
+                cs.moveEffectorToPlacement(eeName, contact_placement)
                 # set the initial values for the current phase from planning :
                 setPhaseInitialValues(fb, stateId, cs.contactPhases[-1])
                 # set the same values as the final ones for the intermediate state created :
@@ -181,4 +240,3 @@ def generate_contact_sequence_rbprm(cfg):
     fb, viewer, beginId, endId = runRBPRMScript(cfg)
     cs = contactSequenceFromRBPRMConfigs(fb, beginId, endId)
     return cs, fb, viewer
-

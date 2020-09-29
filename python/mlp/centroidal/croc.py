@@ -25,9 +25,8 @@ def setCOMfromCurve(phase, curve_normalized):
     Initialise the phase c_t dc_t and ddc_t from the given curve,
     Also set the final values for the CoM from the final points of the curve
     Also set or increase the final time from the duration of the curve
-    :param phase:
+    :param phase: the ContactPhase to modify
     :param curve_normalized: the curve is defined in [0,max], we need to shift it
-    :return:
     """
     if phase.c_t is None:
         phase.c_t = piecewise()
