@@ -51,6 +51,12 @@ w_forceRef_init = 0.1
 w_forceRef_end = 1e-5
 w_forceRef_time_ratio = 0.5
 
+# scaling and weight for the bounds tasks in TSID:
+w_torque_bounds = 0.
+w_joint_bounds = 0.
+scaling_torque_bounds = 1.
+scaling_vel_bounds = 1.
+
 #IK_dt = 0.001
 IK_eff_size = Robot.dict_size.copy()
 PLOT_CIRCLE_RADIUS = 0.05 # radius of the circle used to display the contacts
