@@ -24,7 +24,7 @@ def export(cfg, q_t, v):
     print("motion exported to ", filename)
 
 
-def exportSteppingStones(v):
+def exportSteppingStones(cfg, v):
     from mlp.viewer.display_tools import STONE_GROUP, STONE_LF, STONE_LH, STONE_RF, STONE_RH
     path = cfg.EXPORT_PATH + "/blender/stepping_stones/" + cfg.DEMO_NAME
     if not os.path.exists(path):
