@@ -1,4 +1,3 @@
-htop
 from multicontact_api import ContactSequence
 import mlp.viewer.display_tools as display_tools
 from mlp.utils.requirements import Requirements
