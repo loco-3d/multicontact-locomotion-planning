@@ -455,11 +455,13 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None, robot=None,
     deleteAllTrajectories(cs)
 
     # Create a robot wrapper
-
     if robot is None or cfg.IK_store_centroidal or cfg.IK_store_zmp:
         rp = RosPack()
-        package_path = rp.get_path(cfg.Robot.packageName)
-        urdf = package_path + '/urdf/' + cfg.Robot.urdfName + cfg.Robot.urdfSuffix + '.urdf'
+        package_name = cfg.Robot.packageName.split("/")[0]
+        package_path = rp.get_path(package_name)
+        urdf = package_path + cfg.Robot.packageName.lstrip(
+            package_name) + '/urdf/' + cfg.Robot.urdfName + cfg.Robot.urdfSuffix + '.urdf'
+        logger.info("load robot : %s", urdf)
     if robot is None:
         logger.info("load robot : %s", urdf)
         robot = tsid.RobotWrapper(urdf, pin.StdVec_StdString(), pin.JointModelFreeFlyer(), False)
