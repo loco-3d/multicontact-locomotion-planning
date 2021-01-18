@@ -103,7 +103,7 @@ def generateLimbRRTPath(q_init, q_end, phase_previous, phase, phase_next, fullBo
     # run limb-rrt in hpp :
 
     logger.info("start limb-rrt ... ")
-    paths_rrt_ids = fullBody.comRRTOnePhase(s0, s1, path_com_id, 10)
+    paths_rrt_ids = fullBody.comRRTOnePhase(s0, s1, path_com_id, 1)
     logger.info("Limb-rrt returned path(s) : %s", paths_rrt_ids)
     path_rrt_id = int(paths_rrt_ids[0])
 

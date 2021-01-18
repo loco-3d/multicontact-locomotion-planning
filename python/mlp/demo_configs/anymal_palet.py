@@ -1,11 +1,8 @@
 TIMEOPT_CONFIG_FILE = "cfg_softConstraints_anymal_kinOrientation.yaml"
 from .common_anymal import *
 SCRIPT_PATH = "sandbox.ANYmal"
-#ENV_NAME = "ori/modular_palet_low_collision"
 ENV_NAME = "ori/modular_palet_flat"
 DEMO_NAME = "anymal_palet"
-#ENV_NAME = "ori/modular_palet_flat"
-#DEMO_NAME = "anymal_modular_palet_flat"
 DURATION_INIT = 2.  # Time to init the motion
 DURATION_FINAL = 2.  # Time to stop the robot
 DURATION_FINAL_SS = 1.
@@ -28,7 +25,7 @@ CHECK_DT = IK_dt * 10.
 #w_rootOrientation = 1.       # weight of the root's orientation task
 #kp_rootOrientation = 5000.     # proportional gain of the root's orientation task
 
-EFF_T_PREDEF = 0.  # duration during which the motion of the end effector is forced to be orthogonal to the contact surface, at the beginning and the end of the phase
+EFF_T_PREDEF = 0.05  # duration during which the motion of the end effector is forced to be orthogonal to the contact surface, at the beginning and the end of the phase
 FEET_MAX_VEL = 10.
 
 #p_max = 0.18

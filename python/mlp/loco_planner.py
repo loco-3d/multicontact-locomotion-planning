@@ -215,7 +215,7 @@ class LocoPlanner:
             npz.export(self.cfg, self.cs_ref, self.cs_wb, self.cfg)
         if cfg.EXPORT_BLENDER:
             blender.export(self.cfg, self.cs_wb.concatenateQtrajectories(), self.viewer)
-            blender.exportSteppingStones(self.viewer)
+            blender.exportSteppingStones(self.cfg, self.viewer)
         if cfg.EXPORT_SOT:
             sotTalosBalance.export(self.cfg, self.cs_wb)  # FIXME
 
