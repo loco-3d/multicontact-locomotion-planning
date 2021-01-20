@@ -5,7 +5,7 @@ import pinocchio as pin
 import logging
 logging.basicConfig(format='[%(name)-12s] %(levelname)-8s: %(message)s')
 logger = logging.getLogger("load wholebody")
-logger.setLevel(logging.WARNING) #DEBUG, INFO or WARNING
+logger.setLevel(logging.ERROR) #DEBUG, INFO or WARNING
 
 class WholebodyOutputsLoad(WholebodyInputsLoad):
     consistentContacts = True
@@ -22,4 +22,4 @@ def generate_wholebody_load(cfg, cs, fullBody=None, viewer=None):
     cs_wb = ContactSequence()
     logger.warning("Load wholebody contact sequence from  file : %s", cfg.WB_FILENAME)
     cs_wb.loadFromBinary(cfg.WB_FILENAME)
-    return cs_wb
+    return cs_wb, robot

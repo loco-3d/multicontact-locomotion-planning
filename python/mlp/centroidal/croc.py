@@ -2,14 +2,13 @@ import numpy as np
 import multicontact_api
 from multicontact_api import ContactPhase, ContactSequence
 from curves import bezier, piecewise
-from mlp.utils.util import createFullbodyStatesFromCS
-from mlp.utils.cs_tools import resetCOMtrajectories
+from mlp.utils.cs_tools import resetCOMtrajectories, createFullbodyStatesFromCS
 from mlp.utils.requirements import Requirements
 multicontact_api.switchToNumpyArray()
 import logging
 logging.basicConfig(format='[%(name)-12s] %(levelname)-8s: %(message)s')
 logger = logging.getLogger("croc")
-logger.setLevel(logging.WARNING) #DEBUG, INFO or WARNING
+logger.setLevel(logging.ERROR) #DEBUG, INFO or WARNING
 
 class CentroidalInputsCroc(Requirements):
     timings = True
@@ -26,9 +25,8 @@ def setCOMfromCurve(phase, curve_normalized):
     Initialise the phase c_t dc_t and ddc_t from the given curve,
     Also set the final values for the CoM from the final points of the curve
     Also set or increase the final time from the duration of the curve
-    :param phase:
+    :param phase: the ContactPhase to modify
     :param curve_normalized: the curve is defined in [0,max], we need to shift it
-    :return:
     """
     if phase.c_t is None:
         phase.c_t = piecewise()

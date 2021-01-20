@@ -11,7 +11,7 @@ pinocchio.switchToNumpyArray()
 import logging
 logging.basicConfig(format='[%(name)-12s] %(levelname)-8s: %(message)s')
 logger = logging.getLogger("bezier-predef")
-logger.setLevel(logging.WARNING) #DEBUG, INFO or WARNING
+logger.setLevel(logging.ERROR) #DEBUG, INFO or WARNING
 
 class EffectorInputsBezier(Requirements):
     consistentContacts = True

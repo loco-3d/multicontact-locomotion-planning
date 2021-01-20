@@ -1,11 +1,12 @@
 import numpy as np
-from mlp.utils.util import createStateFromPhase, discretizeCurve
+from mlp.utils.cs_tools import createStateFromPhase
+from mlp.utils.util import discretizeCurve
 from mlp.utils.trajectories import HPPEffectorTrajectory
 from mlp.utils.requirements import Requirements
 import logging
 logging.basicConfig(format='[%(name)-12s] %(levelname)-8s: %(message)s')
 logger = logging.getLogger("limb-rrt")
-logger.setLevel(logging.WARNING) #DEBUG, INFO or WARNING
+logger.setLevel(logging.ERROR) #DEBUG, INFO or WARNING
 
 class EffectorInputsLimbrrt(Requirements):
     timings = True
@@ -102,7 +103,7 @@ def generateLimbRRTPath(q_init, q_end, phase_previous, phase, phase_next, fullBo
     # run limb-rrt in hpp :
 
     logger.info("start limb-rrt ... ")
-    paths_rrt_ids = fullBody.comRRTOnePhase(s0, s1, path_com_id, 10)
+    paths_rrt_ids = fullBody.comRRTOnePhase(s0, s1, path_com_id, 1)
     logger.info("Limb-rrt returned path(s) : %s", paths_rrt_ids)
     path_rrt_id = int(paths_rrt_ids[0])
 

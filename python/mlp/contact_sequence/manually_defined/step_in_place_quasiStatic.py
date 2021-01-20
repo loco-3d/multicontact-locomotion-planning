@@ -1,5 +1,4 @@
-from mlp.utils.cs_tools import addPhaseFromConfig, setFinalState
-from mlp.utils.util import genCOMTrajFromPhaseStates, genAMTrajFromPhaseStates
+from mlp.utils.cs_tools import addPhaseFromConfig, setFinalState, genCOMTrajFromPhaseStates, genAMTrajFromPhaseStates
 import multicontact_api
 from multicontact_api import ContactSequence, ContactPatch
 import mlp.viewer.display_tools as display_tools

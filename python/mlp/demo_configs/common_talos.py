@@ -1,4 +1,11 @@
-from talos_rbprm.talos import Robot
+try:
+    from talos_rbprm.talos import Robot
+except ImportError:
+    message = "ERROR: Cannot import anymal-talos_rbprm package.\n"
+    message += "Did you correctly installed it?\n"
+    message +="https://github.com/humanoid-path-planner/talos-rbprm"
+    raise ImportError(message)
+
 MASS = 90.27
 
 GUIDE_STEP_SIZE = 1.
@@ -25,7 +32,6 @@ w_am = 2e-2 # weight used for the minimization of the Angular momentum
 w_am_track = 2e-2 # weight used for the tracking of the Angular momentum
 w_posture = 0.1  # weight of joint posture task
 w_rootOrientation = 1.  # weight of the root's orientation task
-w_forceRef = 1e-3  # weight of force regularization task
 w_eff = 1.0  # weight of the effector motion task
 kp_contact = 30.0  # proportional gain of contact constraint
 kp_com = 20.  # proportional gain of center of mass task
@@ -39,6 +45,17 @@ level_com = 0
 level_posture = 1
 level_rootOrientation = 1
 level_am = 1
+# The weight of the force regularization task of each contact will start at w_forceRef_init when creating a new contact,
+# and then linearly reduce to w_forceRef_end over a time period of phase_duration * w_forceRef_time_ratio
+w_forceRef_init = 0.1
+w_forceRef_end = 1e-5
+w_forceRef_time_ratio = 0.5
+
+# scaling and weight for the bounds tasks in TSID:
+w_torque_bounds = 0.
+w_joint_bounds = 0.
+scaling_torque_bounds = 1.
+scaling_vel_bounds = 1.
 
 #IK_dt = 0.001
 IK_eff_size = Robot.dict_size.copy()
@@ -51,6 +68,8 @@ EFF_T_DELAY = 0.05  # duration at the beginning and the end of the phase where t
 FEET_MAX_VEL = 0.5  # maximal linear velocity of the effector, if the current duration of the phase lead to a greater velocity than this setting, the duration of the phase is increased
 FEET_MAX_ANG_VEL = 1.5  # maximal angular velocity of the effectors
 p_max = 0.1  #setting used to compute the default height of the effector trajectory. end_effector/bezier_predef.py : computePosOffset()
+
+Robot.limbs_names = [Robot.rLegId, Robot.lLegId] # Remove the arms from the list of limbs used for contact creation
 
 import numpy as np
 gain_vector = np.array(  # gain vector for postural task

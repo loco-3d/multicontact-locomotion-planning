@@ -3,11 +3,11 @@ from mlp.utils.util import discretizeCurve, discretizeDerivateCurve, discretizeS
     discretizeSE3CurveToVec, discretizeSE3CurveQuaternion, constantSE3curve
 from curves import piecewise_SE3
 class Result:
-
-    ### This class store discretized data points, the time step can be accessed with res.dt.
-    # Each data in this struct is stored in a numpy matrix, with one discretized point per column.
-    # nq is the configuration size of the robot, nv the tangent vector size,  nu the control vector size :
-
+    """
+     This class store discretized data points, the time step can be accessed with res.dt.
+     Each data in this struct is stored in a numpy matrix, with one discretized point per column.
+     nq is the configuration size of the robot, nv the tangent vector size,  nu the control vector size :
+    """
     def __init__(self, nq, nv, dt, eeNames, N=None, cs=None, t_begin=0, nu=None):
         self.dt = dt
         if cs:

@@ -3,24 +3,38 @@ from numpy import cross
 from numpy.linalg import norm
 import pinocchio
 from pinocchio import SE3, Quaternion, Motion
-from pinocchio.utils import rpyToMatrix, rotate
+from pinocchio.utils import  rotate
 from curves import polynomial, SE3Curve, SO3Linear
-import math
 from hpp.corbaserver.rbprm.rbprmstate import State, StateHelper
 from random import uniform
-import types
+import signal, time
+from abc import ABCMeta, abstractmethod
+from math import isnan
 pinocchio.switchToNumpyArray()
 
 
 def distPointLine(p_l, x1_l, x2_l):
-    p = np.matrix(p_l)
-    x1 = np.matrix(x1_l)
-    x2 = np.matrix(x2_l)
+    """
+    Compute the distance between a point and a line defined by two points
+    :param p_l: the point
+    :param x1_l: one extremity of the line
+    :param x2_l: the other extremity of the line
+    :return: the orthogonal distance between the point and the line
+    """
+    p = np.array(p_l)
+    x1 = np.array(x1_l)
+    x2 = np.array(x2_l)
     return norm(cross(p - x1, p - x2)) / norm(x2 - x1)
 
 
 
 def SE3toVec(M):
+    """
+    Convert a pinocchio.SE3 as a vector 12:
+    [ translation ; rotation[:,0] ; rotation[:,1] ; rotation[:,2] ].T
+    :param M: a SE3 object
+    :return: a numpy array of size 12
+    """
     v = np.zeros(12)
     for j in range(3):
         v[j] = M.translation[j]
@@ -31,6 +45,12 @@ def SE3toVec(M):
 
 
 def MotiontoVec(M):
+    """
+    Convert a pinocchio.Motion as a vector of size 6:
+    [Linear ; angular ].T
+    :param M: a Motion object
+    :return: a numpy array of size 6
+    """
     v = np.zeros(6)
     for j in range(3):
         v[j] = M.linear[j]
@@ -39,6 +59,11 @@ def MotiontoVec(M):
 
 
 def SE3FromVec(vect):
+    """
+    Convert a vector of size 12 to a pinocchio.SE3 object. See SE3toVec()
+    :param vect: a numpy array or matrix of size 12
+    :return: a SE3 object
+    """
     if vect.shape[0] != 12 or vect.shape[1] != 1:
         raise ValueError("SE3FromVect take as input a vector of size 12")
     placement = SE3.Identity()
@@ -58,6 +83,11 @@ def SE3FromVec(vect):
 
 
 def MotionFromVec(vect):
+    """
+    Convert a vector of size 6 to a pinocchio.Motion object. See MotiontoVec()
+    :param vect: a numpy array or matrix of size 6
+    :return: a Motion object
+    """
     if vect.shape[0] != 6 or vect.shape[1] != 1:
         raise ValueError("MotionFromVec take as input a vector of size 6")
     m = Motion.Zero()
@@ -69,10 +99,10 @@ def MotionFromVec(vect):
 
 def numpy2DToList(m):
     """
-    Convert a numpy array of shape (n,m) in a list of list.
-    First list is of length m and contains list of length n
-    :param m:
-    :return:
+    Convert a numpy array of shape (n,m) to a list of list.
+    First list is of length m and contain lists of length n
+    :param m: the numpy array
+    :return: a list of list with the elements from m
     """
     l = []
     for i in range(m.shape[1]):
@@ -84,8 +114,13 @@ def numpy2DToList(m):
     return l
 
 
-# assume that q.size >= 7 with root pos and quaternion(x,y,z,w)
 def SE3FromConfig(q):
+    """
+    Convert a vector of size >=7 to a pinocchio.SE3 object.
+    Assume that the first 3 values of the vector are the translation part, followed by a quaternion(x,y,z,w)
+    :param q: a list or a numpy array of size >=7
+    :return: a SE3 object
+    """
     if isinstance(q, list):
         q = np.array(q)
     placement = SE3.Identity()
@@ -96,97 +131,34 @@ def SE3FromConfig(q):
     return placement
 
 
-# rotate the given placement of 'angle' (in radian) along axis 'axis'
-# axis : either 'x' , 'y' or 'z'
 def rotatePlacement(placement, axis, angle):
+    """
+    Rotate the given placement of the desired angle along the given axis
+    :param placement: a pinocchio.SE3 object
+    :param axis: either 'x' , 'y' or 'z'
+    :param angle: desired rotation (in radian)
+    :return: the updated placement
+    """
     T = rotate(axis, angle)
     placement.rotation = placement.rotation @ T
     return placement
 
 
-def rotateFromRPY(placement, rpy):
-    trans = SE3.Identity()
-    trans.rotation = rpyToMatrix(rpy)
-    return placement.act(trans)
-
-
-
-
 def effectorPositionFromHPPPath(fb, problem, eeName, pid, t):
+    """
+    Get the effector position in an HPP joint trajectory at the given time
+    :param fb: an rbprm.FullBody instance
+    :param problem: an hpp.corbaserver.ProblemServer instance containing the path
+    :param eeName: the joint/frame name as defined in fullbody
+    :param pid: the Id of the path in the problem instance
+    :param t: the time index along the path
+    :return: a numpy array of size 3 with the translation of the effecor expressed in the world frame
+    """
     q = problem.configAtParam(pid, t)
     # compute effector pos from q :
     fb.setCurrentConfig(q)
     p = fb.getJointPosition(eeName)[0:3]
     return np.array(p)
-
-
-def genAMTrajFromPhaseStates(phase, constraintVelocity = True):
-    """
-    Generate a cubic spline connecting (L_init, dL_init) to (L_final, dL_final) and set it as the phase AM trajectory
-    :param phase: the ContactPhase to use
-    :param constraintVelocity: if False, generate only a linear interpolation and ignore the values of dL
-    :return:
-    """
-    if constraintVelocity:
-        am_traj = polynomial(phase.L_init, phase.dL_init, phase.L_final, phase.dL_final,
-                              phase.timeInitial, phase.timeFinal)
-    else:
-        am_traj = polynomial(phase.L_init, phase.L_final, phase.timeInitial, phase.timeFinal)
-    phase.L_t = am_traj
-    phase.dL_t = am_traj.compute_derivate(1)
-
-
-def genCOMTrajFromPhaseStates(phase, constraintVelocity = True, constraintAcceleration = True):
-    """
-    Generate a quintic spline connecting exactly (c, dc, ddc) init to final
-    :param phase:
-    :param constraintVelocity: if False, generate only a linear interpolation and ignore ddc, and dc values
-    :param constraintAcceleration: if False, generate only a cubic spline and ignore ddc values
-    :return:
-    """
-    if constraintAcceleration and not constraintVelocity:
-        raise ValueError("Cannot constraints acceleration if velocity is not constrained.")
-    if constraintAcceleration:
-        com_traj = polynomial(phase.c_init, phase.dc_init, phase.ddc_init,
-                              phase.c_final, phase.dc_final, phase.ddc_final,phase.timeInitial, phase.timeFinal)
-    elif constraintVelocity:
-        com_traj = polynomial(phase.c_init, phase.dc_init, phase.c_final, phase.dc_final,
-                              phase.timeInitial, phase.timeFinal)
-    else:
-        com_traj = polynomial(phase.c_init, phase.c_final, phase.timeInitial, phase.timeFinal)
-    phase.c_t = com_traj
-    phase.dc_t = com_traj.compute_derivate(1)
-    phase.ddc_t = com_traj.compute_derivate(2)
-
-
-def effectorPlacementFromPhaseConfig(phase, eeName, fullBody):
-    if fullBody is None :
-        raise RuntimeError("Cannot compute the effector placement from the configuration without initialized fullBody object.")
-    if not phase.q_init.any():
-        raise RuntimeError("Cannot compute the effector placement as the initial configuration is not initialized in the ContactPhase.")
-
-    fullBody.setCurrentConfig(phase.q_init.tolist())
-    return SE3FromConfig(fullBody.getJointPosition(eeName))
-
-
-
-def createStateFromPhase(fullBody, phase, q=None):
-    """
-    Create and add an RBPRM state to fullBody corresponding to the contacts defined in the given phase
-    :param fullBody:
-    :param phase:
-    :param q: if given, set the state wholebody configuration
-    :return: the Id of the state in fullbody
-    """
-    if q is None:
-        q = hppConfigFromMatrice(fullBody.client.robot, phase.q_init)
-    effectorsInContact = phase.effectorsInContact()
-    contacts = [] # contacts should contains the limb names, not the effector names
-    list_effector = list(fullBody.dict_limb_joint.values())
-    for eeName in effectorsInContact:
-        contacts += [list(fullBody.dict_limb_joint.keys())[list_effector.index(eeName)]]
-    # FIXME : check if q is consistent with the contacts, and project it if not.
-    return fullBody.createState(q, contacts)
 
 
 def hppConfigFromMatrice(robot, q_matrix):
@@ -203,97 +175,6 @@ def hppConfigFromMatrice(robot, q_matrix):
         q += [0] * extraDof
     return q
 
-
-def computeEffectorTranslationBetweenStates(cs, pid):
-    """
-    Compute the distance travelled by the effector (suppose a straight line) between
-    it's contact placement in pid+1 and it's previous contact placement
-    :param cs:
-    :param pid:
-    :return:
-    """
-    phase = cs.contactPhases[pid]
-    next_phase = cs.contactPhases[pid+1]
-    eeNames = phase.getContactsCreated(next_phase)
-    if len(eeNames) > 1:
-        raise NotImplementedError("Several effectors are moving during the same phase.")
-    if len(eeNames) == 0 :
-        # no effectors motions in this phase
-        return 0.
-    eeName = eeNames[0]
-    i = pid
-    while not cs.contactPhases[i].isEffectorInContact(eeName) and i >= 0:
-        i -= 1
-    if i < 0:
-        # this is the first phase where this effector enter in contact
-        # TODO what should we do here ?
-        return 0.
-
-    d = next_phase.contactPatch(eeName).placement.translation -  cs.contactPhases[i].contactPatch(eeName).placement.translation
-    return norm(d)
-
-
-def computeEffectorRotationBetweenStates(cs, pid):
-    """
-    Compute the rotation applied to the effector  between
-    it's contact placement in pid+1 and it's previous contact placement
-    :param cs:
-    :param pid:
-    :return:
-    """
-    phase = cs.contactPhases[pid]
-    next_phase = cs.contactPhases[pid + 1]
-    eeNames = phase.getContactsCreated(next_phase)
-    if len(eeNames) > 1:
-        raise NotImplementedError("Several effectors are moving during the same phase.")
-    if len(eeNames) == 0:
-        # no effectors motions in this phase
-        return 0.
-    eeName = eeNames[0]
-    i = pid
-    while not cs.contactPhases[pid].isEffectorInContact(eeName) and i >= 0:
-        i -= 1
-    if i < 0:
-        # this is the first phase where this effector enter in contact
-        # TODO what should we do here ?
-        return 0.
-
-    P = next_phase.contactPatch(eeName).placement.rotation
-    Q = cs.contactPhases[i].contactPatch(eeName).placement.rotation
-    R = P.dot(Q.T)
-    tR = R.trace()
-    try:
-        res = abs(math.acos((tR - 1.) / 2.))
-    except ValueError as e:
-        print("WARNING : when computing rotation between two contacts, got error : ", e)
-        print("With trace value = ", tR)
-        res = 0.
-    return res
-
-
-
-def createFullbodyStatesFromCS(cs, fb):
-    """
-    Create all the rbprm State corresponding to the given cs object, and add them to the fullbody object
-    :param cs: a ContactSequence
-    :param fb: the Fullbody object used
-    :return: the first and last Id of the states added to fb
-    """
-    #lastId = fullBodyStatesExists(cs, fb)
-    #if lastId > 0:
-    #    print("States already exist in fullBody instance. endId = ", lastId)
-    #    return 0, lastId
-    phase_prev = cs.contactPhases[0]
-    beginId = createStateFromPhase(fb, phase_prev)
-    lastId = beginId
-    print("CreateFullbodyStateFromCS ##################")
-    print("beginId = ", beginId)
-    for pid, phase in enumerate(cs.contactPhases[1:]):
-        if not np.array_equal(phase_prev.q_init, phase.q_init):
-            lastId = createStateFromPhase(fb, phase)
-            print("add phase " + str(pid) + " at state index : " + str(lastId))
-            phase_prev = phase
-    return beginId, lastId
 
 def perturbateContactNormal(fb, state_id, epsilon = 1e-2):
     """
@@ -318,83 +199,21 @@ def computeContactNormal(placement):
     """
     Compute the contact normal assuming that it's orthogonal to the contact orientation
     :param placement: the contact placement
-    :return:
+    :return: the normal, as a numpy array of size 3
     """
     z_up = np.array([0., 0., 1.])
     contactNormal = placement.rotation @ z_up
     return contactNormal
 
-
-
-def rootOrientationFromFeetPlacement(Robot, phase_prev, phase, phase_next):
+def rotationFromNormal(n):
     """
-    Compute an initial and final root orientation for the ContactPhase
-    The initial orientation is a mean between both feet contact position in the current (or previous) phase
-    the final orientation is with considering the newt contact position of the feet
-    :param phase_prev:
-    :param phase:
-    :param phase_next:
-    :return:
+    return a rotation matrix corresponding to the given contact normal
+    :param n: the normal of the surface (as a numpy array)
+    :return: a rotation matrix
     """
-    #FIXME : extract only the yaw rotation
-    qr = None
-    ql = None
-    patchR = None
-    patchL = None
-    if phase.isEffectorInContact(Robot.rfoot):
-        patchR = phase.contactPatch(Robot.rfoot)
-    elif phase_prev and phase_prev.isEffectorInContact(Robot.rfoot):
-        patchR = phase_prev.contactPatch(Robot.rfoot)
-    if patchR:
-        qr = Quaternion(patchR.placement.rotation)
-        qr.x = 0
-        qr.y = 0
-        qr.normalize()
-    if phase.isEffectorInContact(Robot.lfoot):
-        patchL = phase.contactPatch(Robot.lfoot)
-    elif phase_prev and phase_prev.isEffectorInContact(Robot.lfoot):
-        patchL = phase_prev.contactPatch(Robot.lfoot)
-    if patchL:
-        ql = Quaternion(patchL.placement.rotation)
-        ql.x = 0
-        ql.y = 0
-        ql.normalize()
-    if ql is not None and qr is not None:
-        q_rot = qr.slerp(0.5, ql)
-    elif qr is not None:
-        q_rot = qr
-    elif ql is not None:
-        q_rot = ql
-    else:
-        raise RuntimeError("In rootOrientationFromFeetPlacement, cannot deduce feet initial contacts positions.")
-    placement_init = SE3.Identity()
-    placement_init.rotation = q_rot.matrix()
-
-    # compute the final orientation :
-    if phase_next:
-        if not phase.isEffectorInContact(Robot.rfoot) and phase_next.isEffectorInContact(Robot.rfoot):
-            qr = Quaternion(phase_next.contactPatch(Robot.rfoot).placement.rotation)
-            qr.x = 0
-            qr.y = 0
-            qr.normalize()
-        if not phase.isEffectorInContact(Robot.lfoot) and phase_next.isEffectorInContact(Robot.lfoot):
-            ql = Quaternion(phase_next.contactPatch(Robot.lfoot).placement.rotation)
-            ql.x = 0
-            ql.y = 0
-            ql.normalize()
-    if ql is not None and qr is not None:
-        q_rot = qr.slerp(0.5, ql)
-    elif qr is not None:
-        q_rot = qr
-    elif ql is not None:
-        q_rot = ql
-    else:
-        raise RuntimeError("In rootOrientationFromFeetPlacement, cannot deduce feet initial contacts positions.")
-    placement_end = SE3.Identity()
-    placement_end.rotation = q_rot.matrix()
-    return placement_init, placement_end
-
-
+    z_up = np.array([0., 0., 1.])
+    q = Quaternion.FromTwoVectors(z_up, n)
+    return q.matrix()
 
 def discretizeCurve(curve,dt):
     """
@@ -409,7 +228,7 @@ def discretizeCurve(curve,dt):
     numPoints = round((curve.max() - curve.min()) / dt ) + 1
     res = np.zeros([curve.dim(), numPoints])
     timeline = np.zeros(numPoints)
-    t = curve.min()
+    t = curve.min() + 0.0001 # add an epsilon to be sure to be AFTER the discontinuities at each phase changes
     for i in range(numPoints):
         res[:,i] = curve(t)
         timeline[i] = t
@@ -541,3 +360,109 @@ def buildRectangularContactPoints(size, transform):
     contact_Point[1, :] = [-lyn, lyp, -lyn, lyp]
     contact_Point[2, :] = [lz] * 4
     return contact_Point
+
+
+def build_fullbody(Robot, genLimbsDB=True, context = None):
+    """
+    Build an rbprm FullBody instance
+    :param Robot: The class of the robot
+    :param genLimbsDB: if true, generate the limbs database
+    :param context: An optional string that give a name to a corba context instance
+    :return: a fullbody instance and a problemsolver containing this fullbody
+    """
+    # Local import, as they are optional dependencies
+    from hpp.corbaserver import createContext, loadServerPlugin, Client, ProblemSolver
+    from hpp.corbaserver.rbprm import Client as RbprmClient
+    if context:
+        createContext(context)
+        loadServerPlugin(context, 'rbprm-corba.so')
+        loadServerPlugin(context, 'affordance-corba.so')
+        hpp_client = Client(context=context)
+        hpp_client.problem.selectProblem(context)
+        rbprm_client = RbprmClient(context=context)
+    else:
+        hpp_client = None
+        rbprm_client = None
+    fullBody = Robot(client = hpp_client, clientRbprm = rbprm_client)
+    fullBody.client.robot.setDimensionExtraConfigSpace(6)
+    fullBody.setJointBounds("root_joint", [-100, 100, -100, 100, -100, 100])
+    fullBody.client.robot.setExtraConfigSpaceBounds([-100, 100, -100, 100, -100, 100, -100, 100, -100, 100, -100, 100])
+    fullBody.setReferenceConfig(fullBody.referenceConfig[::] + [0] * 6)
+    fullBody.setPostureWeights(fullBody.postureWeights[::] + [0] * 6)
+    try:
+        if genLimbsDB:
+            fullBody.loadAllLimbs("static", nbSamples=100)
+        else:
+            fullBody.loadAllLimbs("static", nbSamples=1)
+    except AttributeError:
+        print("WARNING initScene : fullBody do not have loadAllLimbs, some scripts may fails.")
+    ps = ProblemSolver(fullBody)
+    fullBody.setCurrentConfig(fullBody.referenceConfig[::] + [0] * 6)
+    return fullBody, ps
+
+
+def computeCenterOfSupportPolygonFromState(s):
+    """
+    Compute the center of the support polygon from the current state and the height defined in fullbody.DEFAULT_COM_HEIGHT
+    :param s: a rbprm.State defining the current contacts
+    :return: a list of size 3
+    """
+    com = np.zeros(3)
+    numContacts = float(len(s.getLimbsInContact()))
+    for limbId in s.getLimbsInContact():
+        com += np.array(s.getCenterOfContactForLimb(limbId)[0])
+    com /= numContacts
+    com[2] += s.fullBody.DEFAULT_COM_HEIGHT
+    return com.tolist()
+
+
+
+def projectCoMInSupportPolygon(s):
+    """
+    Project the given state CoM to the center of it's support polygon, with an height defined in fullbody.DEFAULT_COM_HEIGHT
+    :param s: a rbprm.State defining the current contacts
+    :return: a boolean indicating the success of the projection
+    """
+    desiredCOM = computeCenterOfSupportPolygonFromState(s)
+    # print "try to project state to com position : ",desiredCOM
+    success = False
+    maxIt = 20
+    #print "project state to com : ", desiredCOM
+    q_save = s.q()[::]
+    while not success and maxIt > 0:
+        success = s.fullBody.projectStateToCOM(s.sId, desiredCOM, maxNumSample=0)
+        maxIt -= 1
+        desiredCOM[2] -= 0.005
+    #print "success = ", success
+    #print "result = ", s.q()
+    if success and isnan(s.q()[0]):  # FIXME why does it happen ?
+        success = False
+        s.setQ(q_save)
+    return success
+
+
+class Loop(metaclass=ABCMeta):
+    """
+    Astract Class to allow users to execute self.loop at a given frequency
+    with a timer while self.run can do something else.
+    """
+    def __init__(self, period):
+        self.period = period
+        signal.signal(signal.SIGALRM, self.loop)
+        signal.setitimer(signal.ITIMER_REAL, period, period)
+        self.run()
+
+    def stop(self):
+        signal.setitimer(signal.ITIMER_REAL, 0)
+        raise KeyboardInterrupt  # our self.run is waiting for this.
+
+    def run(self):
+        # Default implementation: don't do anything
+        try:
+            time.sleep(1e9)
+        except KeyboardInterrupt:
+            pass
+
+    @abstractmethod
+    def loop(self, signum, frame):
+        ...

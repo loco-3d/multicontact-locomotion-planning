@@ -418,7 +418,7 @@ def plotKneeTorque(cs, dt, kneeIds, offset):
     plt.suptitle("Knee torque")
     ax = fig.gca()
     ax.set_xlabel('time (s)')
-    ax.set_ylabel("Torque")
+    ax.set_ylabel("Nm")
     ax.yaxis.grid()
     tau, timeline = discretizeCurve(cs.concatenateTauTrajectories(), dt)
     for k, name in enumerate(kneeIds.keys()):

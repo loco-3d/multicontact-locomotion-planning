@@ -33,6 +33,7 @@ class LocoPlanner:
         self.fullBody = None
         self.viewer = None
         self.gui = None
+        self.pin_robot = None
         # arrays used to store the cs after each iterations of the dynamic filter
         self.cs_com_iters = []
         self.cs_ref_iters = []
@@ -96,7 +97,7 @@ class LocoPlanner:
 
         if self.cfg.DISPLAY_COM_TRAJ:
             colors = [self.viewer.color.blue, self.viewer.color.green]
-            display_tools.displayCOMTrajectory(self.cs_com, self.gui, self.viewer.sceneName, self.cfg.DT_DISPLAY, colors)
+            display_tools.displayCOMTrajectory(self.cs_com, self.gui, self.viewer.sceneName, self.cfg.SOLVER_DT, colors)
         if self.cfg.PLOT_CENTROIDAL:
             plot.plotCOMTraj(self.cs_com, self.cfg.SOLVER_DT, " - iter " + str(iter_dynamic_filter))
             plot.plotAMTraj(self.cs_com, self.cfg.SOLVER_DT, " - iter " + str(iter_dynamic_filter))
@@ -114,7 +115,7 @@ class LocoPlanner:
                 raise RuntimeError(
                     "The current contact sequence cannot be given as input to the end effector method selected.")
             self.cs_ref = generate_effector_trajectories(self.cfg, self.cs_com, self.fullBody)
-            EffectorOutputs.assertRequirements(self.cs_ref)
+            EffectorOutputs.assertRequirements(self.cs_ref, self.cfg.Robot.cType == "_6_DOF")
         self.cs_ref_iters += [self.cs_ref]
 
         if self.cfg.DISPLAY_ALL_FEET_TRAJ:
@@ -132,7 +133,7 @@ class LocoPlanner:
             self.cfg.w_am = self.cfg.w_am_track
             self.cfg.kp_am = self.cfg.kp_am_track
 
-        self.cs_wb = generate_wholebody(self.cfg, self.cs_ref, self.fullBody, self.viewer)
+        self.cs_wb, self.pin_robot = generate_wholebody(self.cfg, self.cs_ref, self.fullBody, self.viewer)
         WholebodyOutputs.assertRequirements(self.cs_wb)
         WholebodyOutputs.assertWholebodyData(self.cs_wb, self.cfg)
         self.cs_wb_iters += [self.cs_wb]
@@ -214,7 +215,7 @@ class LocoPlanner:
             npz.export(self.cfg, self.cs_ref, self.cs_wb, self.cfg)
         if cfg.EXPORT_BLENDER:
             blender.export(self.cfg, self.cs_wb.concatenateQtrajectories(), self.viewer)
-            blender.exportSteppingStones(self.viewer)
+            blender.exportSteppingStones(self.cfg, self.viewer)
         if cfg.EXPORT_SOT:
             sotTalosBalance.export(self.cfg, self.cs_wb)  # FIXME
 

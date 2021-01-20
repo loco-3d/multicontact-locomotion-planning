@@ -7,13 +7,11 @@ import time
 import os
 from subprocess import check_output
 from mlp.utils.status import Status
-from rospkg import RosPack
-import gepetto.corbaserver
 import pinocchio as pin
 from pinocchio import SE3
 from mlp.viewer.display_tools import displayCOMTrajectory, displaySteppingStones, displayFeetTrajFromResult
+from mlp.viewer.display_tools import initScenePinocchio
 
-sceneName = "world"
 
 
 class Robot:  # data for talos (to avoid a depencie on talos-rbprm for this script)
@@ -43,24 +41,6 @@ class Robot:  # data for talos (to avoid a depencie on talos-rbprm for this scri
     dict_display_offset = {rfoot: MRsole_display, lfoot: MLsole_display, rhand: MRhand_display, lhand: MLhand_display}
     dict_limb_color_traj = {rfoot: [0, 1, 0, 1], lfoot: [1, 0, 0, 1], rhand: [0, 0, 1, 1], lhand: [0.9, 0.5, 0, 1]}
     dict_size = {rfoot: [0.2, 0.13], lfoot: [0.2, 0.13], rhand: [0.1, 0.1], lhand: [0.1, 0.1]}
-
-
-def initScenePinocchio(urdfName, packageName, envName=None, envPackageName="hpp_environments"):
-    rp = RosPack()
-    urdf = rp.get_path(packageName) + '/urdf/' + urdfName + '.urdf'
-    robot = pin.RobotWrapper.BuildFromURDF(urdf, pin.StdVec_StdString(), pin.JointModelFreeFlyer())
-    robot.initDisplay(loadModel=True)
-    robot.displayCollisions(False)
-    robot.displayVisuals(True)
-    robot.display(robot.model.neutralConfiguration)
-
-    cl = gepetto.corbaserver.Client()
-    gui = cl.gui
-    if envName:
-        urdfEnvPath = rp.get_path(envPackageName)
-        urdfEnv = urdfEnvPath + '/urdf/' + envName + '.urdf'
-        gui.addUrdfObjects(sceneName + "/environments", urdfEnv, urdfEnvPath, True)
-    return robot, gui
 
 
 def loadMotionFromFiles(gui, path, npzFilename, csFilename):

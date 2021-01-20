@@ -2,13 +2,12 @@ import numpy as np
 import multicontact_api
 from multicontact_api import ContactPhase, ContactSequence
 from mlp.utils.requirements import Requirements
-from mlp.utils.util import genCOMTrajFromPhaseStates, genAMTrajFromPhaseStates
-from mlp.utils.cs_tools import computePhasesCOMValues
+from mlp.utils.cs_tools import computePhasesCOMValues, genCOMTrajFromPhaseStates, genAMTrajFromPhaseStates
 import math
 import logging
 logging.basicConfig(format='[%(name)-12s] %(levelname)-8s: %(message)s')
 logger = logging.getLogger("geometric")
-logger.setLevel(logging.WARNING) #DEBUG, INFO or WARNING
+logger.setLevel(logging.ERROR) #DEBUG, INFO or WARNING
 
 multicontact_api.switchToNumpyArray()
 

@@ -17,14 +17,15 @@ from curves import piecewise, piecewise_SE3, polynomial
 from mlp.utils.computation_tools import shiftZMPtoFloorAltitude
 import mlp.viewer.display_tools as display_tools
 import math
-from mlp.utils.util import constantSE3curve, SE3toVec, MotiontoVec
+from mlp.utils.util import constantSE3curve, SE3toVec, MotiontoVec, buildRectangularContactPoints
 from mlp.utils.requirements import Requirements
 import eigenpy
-from mlp.utils.cs_tools import deleteAllTrajectories, deletePhaseWBtrajectories, updateContactPlacement, setPreviousFinalValues
+from mlp.utils.cs_tools import deleteAllTrajectories, deletePhaseWBtrajectories, deletePhaseTrajectories,\
+    updateContactPlacement, setPreviousFinalValues, deleteEffectorsTrajectories
 import logging
 logging.basicConfig(format='[%(name)-12s] %(levelname)-8s: %(message)s')
 logger = logging.getLogger("tsid")
-logger.setLevel(logging.WARNING) #DEBUG, INFO or WARNING
+logger.setLevel(logging.ERROR) #DEBUG, INFO or WARNING
 
 eigenpy.switchToNumpyArray()
 
@@ -46,6 +47,13 @@ class WholebodyOutputsTsid(Requirements):
 
 
 def getCurrentEffectorPosition(robot, data, eeName):
+    """
+    Get the position of the effector with the current robot Data
+    :param robot: a RobotWrapper instance
+    :param data: the Data used
+    :param eeName: the name of the joint (or frame)
+    :return: the position of the desired effector, as a pinocchio.SE3
+    """
     id = robot.model().getJointId(eeName)
     if id < len(data.oMi):
         return robot.position(data, id)
@@ -55,6 +63,13 @@ def getCurrentEffectorPosition(robot, data, eeName):
 
 
 def getCurrentEffectorVelocity(robot, data, eeName):
+    """
+    Get the velocity of the effector with the current robot Data
+    :param robot: a RobotWrapper instance
+    :param data: the Data used
+    :param eeName: the name of the joint (or frame)
+    :return: the position of the desired effector, as a pinocchio.Motion
+    """
     id = robot.model().getJointId(eeName)
     if id < len(data.oMi):
         return robot.velocity(data, id)
@@ -64,6 +79,13 @@ def getCurrentEffectorVelocity(robot, data, eeName):
 
 
 def getCurrentEffectorAcceleration(robot, data, eeName):
+    """
+    Get the acceleration of the effector with the current robot Data
+    :param robot: a RobotWrapper instance
+    :param data: the Data used
+    :param eeName: the name of the joint (or frame)
+    :return: the position of the desired effector, as a pinocchio.Motion
+    """
     id = robot.model().getJointId(eeName)
     if id < len(data.oMi):
         return robot.acceleration(data, id)
@@ -72,13 +94,14 @@ def getCurrentEffectorAcceleration(robot, data, eeName):
         return robot.frameAcceleration(data, id)
 
 
-def createContactForEffector(cfg, invdyn, robot, eeName, patch):
+def createContactForEffector(cfg, invdyn, robot, eeName, patch, use_force_reg = True):
     """
     Add a contact task in invdyn for the given effector, at it's current placement
     :param invdyn:
     :param robot:
     :param eeName: name of the effector
     :param patch: the ContactPatch object to use. Take friction coefficient and placement for the contact from this object
+    :param use_force_reg: if True, use the cfg.w_forceRef_init otherwise use cfg.w_forceRef_end
     :return: the contact task
     """
     contactNormal = np.array(cfg.Robot.dict_normal[eeName])
@@ -89,6 +112,7 @@ def createContactForEffector(cfg, invdyn, robot, eeName, patch):
     if patch.contact_model.contact_type == ContactType.CONTACT_POINT:
         contact = tsid.ContactPoint("contact_" + eeName, robot, eeName, contactNormal, patch.friction, cfg.fMin, cfg.fMax)
         mask = np.ones(3)
+        force_ref = np.zeros(3)
         contact.useLocalFrame(False)
         logger.info("create contact point")
     elif patch.contact_model.contact_type == ContactType.CONTACT_PLANAR:
@@ -96,6 +120,7 @@ def createContactForEffector(cfg, invdyn, robot, eeName, patch):
         contact = tsid.Contact6d("contact_" + eeName, robot, eeName, contact_points, contactNormal, patch.friction, cfg.fMin,
                                  cfg.fMax)
         mask = np.ones(6)
+        force_ref = np.zeros(6)
         logger.info("create rectangular contact")
         logger.info("contact points : \n %s", contact_points)
     else:
@@ -103,7 +128,12 @@ def createContactForEffector(cfg, invdyn, robot, eeName, patch):
     contact.setKp(cfg.kp_contact * mask)
     contact.setKd(2.0 * np.sqrt(cfg.kp_contact) * mask)
     contact.setReference(patch.placement)
-    invdyn.addRigidContact(contact, cfg.w_forceRef)
+    contact.setForceReference(force_ref)
+    if use_force_reg:
+        w_forceRef = cfg.w_forceRef_init
+    else:
+        w_forceRef = cfg.w_forceRef_end
+    invdyn.addRigidContact(contact, w_forceRef)
     return contact
 
 
@@ -130,6 +160,12 @@ def createEffectorTasksDic(cfg, effectorsNames, robot):
 
 
 def curvesToTSID(curves,t):
+    """
+    Build a tsid.TrajectorySample from the given curve and time index
+    :param curves: a list of curves for the position, velocity, and optionally acceleration
+    :param t: the time index
+    :return: a tsid.TrajectorySample object with the values from the curves
+    """
     # adjust t to bounds, required due to precision issues:
     if curves[0].min() > t > curves[0].min() - 1e-3:
         t = curves[0].min()
@@ -143,6 +179,14 @@ def curvesToTSID(curves,t):
     return sample
 
 def curveSE3toTSID(curve,t, computeAcc = False):
+    """
+    Build a tsid.TrajectorySample from the given SE3 curve and time index
+    :param curve: an SE3 curve
+    :param t: the time index
+    :param computeAcc: if True, derivate twice the given curve and set velocity and acceleration,
+    if False only derivate once and set the velocity
+    :return: a tsid.TrajectorySample object with the values from the curves
+    """
     # adjust t to bounds, required due to precision issues:
     if curve.min() > t > curve.min() - 1e-3:
         t = curve.min()
@@ -167,7 +211,6 @@ def adjustEndEffectorTrajectoryIfNeeded(cfg, phase, robot, data, eeName, effecto
     :param data: Robotwrapper.data instance
     :param eeName: Name of the effector
     :param effectorMethod: Pointer to the method used to generate end-effector trajectory for one phase
-    :return:
     """
     current_placement = getCurrentEffectorPosition(robot, data, eeName)
     ref_placement = phase.effectorTrajectory(eeName).evaluateAsSE3(phase.timeInitial)
@@ -178,20 +221,30 @@ def adjustEndEffectorTrajectoryIfNeeded(cfg, phase, robot, data, eeName, effecto
         phase.addEffectorTrajectory(eeName, ref_traj)
 
 
-def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
+def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None, robot=None, queue_qt = None):
     """
     Generate the whole body motion corresponding to the given contactSequence
     :param cs: Contact sequence containing the references,
      it will only be modified if the end effector trajectories are not valid.
      New references will be generated and added to the cs
-    :param fullBody:
-    :param viewer:
+    :param fullBody: Required to compute collision free end effector trajectories
+    :param viewer: If provided, and the settings are enabled, display the end effector trajectories and the last step computed
+    :param robot: a tsid.RobotWrapper instance. If None, a new one is created from the urdf files defined in cfg
+    :param queue_qt: If not None, the joint trajectories are send to this multiprocessing.Queue during computation
+        The queue take a tuple: [q_t (a Curve object), ContactPhase (may be None), Bool (True mean that this is the
+         last trajectory of the motion)]
     :return: a new ContactSequence object, containing the wholebody trajectories,
-    and the other trajectories computed from the wholebody motion request with cfg.IK_STORE_*
+    and the other trajectories computed from the wholebody motion request with cfg.IK_STORE_* and a robotWrapper instance
     """
 
-    ### define nested functions used in control loop ###
+    # define nested functions used in control loop #
+
     def appendJointsValues(first_iter_for_phase = False):
+        """
+        Append the current q value to the current phase.q_t trajectory
+        :param first_iter_for_phase: if True, set the current phase.q_init value
+        and initialize a new Curve for phase.q_t
+        """
         if first_iter_for_phase:
             phase.q_init = q
             phase.q_t = piecewise(polynomial(q.reshape(-1,1), t, t))
@@ -199,8 +252,17 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
         else:
             phase.q_t.append(q, t)
             #phase.root_t.append(SE3FromConfig(q), t)
+        if queue_qt:
+            queue_qt.put([phase.q_t.curve_at_index(phase.q_t.num_curves()-1),
+                          phase.dq_t.curve_at_index(phase.dq_t.num_curves()-1),
+                          None,
+                          False])
 
     def appendJointsDerivatives(first_iter_for_phase=False):
+        """
+        Append the current v and dv value to the current phase.dq_t and phase.ddq_t trajectory
+        :param first_iter_for_phase: if True, initialize a new Curve for phase.dq_t and phase.ddq_t
+        """
         if first_iter_for_phase:
             phase.dq_t = piecewise(polynomial(v.reshape(-1, 1), t, t))
             phase.ddq_t = piecewise(polynomial(dv.reshape(-1, 1), t, t))
@@ -209,6 +271,10 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
             phase.ddq_t.append(dv, t)
 
     def appendTorques(first_iter_for_phase = False):
+        """
+        Append the current tau value to the current phase.tau_t trajectory
+        :param first_iter_for_phase: if True, initialize a new Curve for phase.tau_t
+        """
         tau = invdyn.getActuatorForces(sol)
         if first_iter_for_phase:
             phase.tau_t = piecewise(polynomial(tau.reshape(-1,1), t, t))
@@ -216,6 +282,12 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
             phase.tau_t.append(tau, t)
 
     def appendCentroidal(first_iter_for_phase = False):
+        """
+        Compute the values of the CoM position, velocity, acceleration, the anuglar momentum and it's derivative
+        from the wholebody data and append them to the current phase trajectories
+        :param first_iter_for_phase: if True, set the initial values for the current phase
+        and initialize the centroidal trajectories
+        """
         pcom, vcom, acom = pinRobot.com(q, v, dv)
         L = pinRobot.centroidalMomentum(q, v).angular
         dL = pin.computeCentroidalMomentumTimeVariation(pinRobot.model, pinRobot.data, q, v, dv).angular
@@ -238,6 +310,10 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
             phase.dL_t.append(dL, t)
 
     def appendZMP(first_iter_for_phase = False):
+        """
+        Compute the zmp from the current wholebody data and append it to the current phase
+        :param first_iter_for_phase: if True, initialize a new Curve for phase.zmp_t
+        """
         tau = pin.rnea(pinRobot.model, pinRobot.data, q, v, dv)
         # tau without external forces, only used for the 6 first
         # res.tau_t[:6,k_t] = tau[:6]
@@ -252,44 +328,36 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
             phase.wrench_t.append(wrench, t)
 
     def appendEffectorsTraj(first_iter_for_phase = False):
+        """
+        Append the current position of the effectors not in contact to the current phase trajectories
+        :param first_iter_for_phase: if True, initialize a new Curve for the phase effector trajectories
+        """
         if first_iter_for_phase and phase_prev:
             for eeName in phase_prev.effectorsWithTrajectory():
                 if t > phase_prev.effectorTrajectory(eeName).max():
                     placement = getCurrentEffectorPosition(robot, invdyn.data(), eeName)
                     phase_prev.effectorTrajectory(eeName).append(placement, t)
-        if first_iter_for_phase:
-            for eeName in phase.effectorsWithTrajectory():
-                placement = getCurrentEffectorPosition(robot, invdyn.data(), eeName)
+
+        for eeName in phase.effectorsWithTrajectory():
+            placement = getCurrentEffectorPosition(robot, invdyn.data(), eeName)
+            if first_iter_for_phase:
                 phase.addEffectorTrajectory(eeName, piecewise_SE3(constantSE3curve(placement, t)))
-        else:
-            for eeName in phase.effectorsWithTrajectory():
-                placement = getCurrentEffectorPosition(robot, invdyn.data(), eeName)
+            else:
                 phase.effectorTrajectory(eeName).append(placement, t)
 
 
     def appendContactForcesTrajs(first_iter_for_phase = False):
-        if first_iter_for_phase and phase_prev:
-            for eeName in phase_prev.effectorsInContact():
-                if t > phase_prev.contactForce(eeName).max():
-                    if phase.isEffectorInContact(eeName):
-                        contact = dic_contacts[eeName]
-                        contact_forces = invdyn.getContactForce(contact.name, sol)
-                        contact_normal_force = np.array(contact.getNormalForce(contact_forces))
-                    else:
-                        contact_normal_force = np.zeros(1)
-                        if cfg.Robot.cType == "_3_DOF":
-                            contact_forces = np.zeros(3)
-                        else:
-                            contact_forces = np.zeros(12)
-                    phase_prev.contactForce(eeName).append(contact_forces, t)
-                    phase_prev.contactNormalForce(eeName).append(contact_normal_force.reshape(1), t)
-
+        """
+        Append the current contact force value to the current phase, for all the effectors in contact
+        :param first_iter_for_phase: if True, initialize a new Curve for the phase contact trajectories
+        """
         for eeName in phase.effectorsInContact():
             contact = dic_contacts[eeName]
             if invdyn.checkContact(contact.name, sol):
                 contact_forces = invdyn.getContactForce(contact.name, sol)
                 contact_normal_force = np.array(contact.getNormalForce(contact_forces))
             else:
+                logger.warning("invdyn check contact returned false while the reference contact is active !")
                 contact_normal_force = np.zeros(1)
                 if cfg.Robot.cType == "_3_DOF":
                     contact_forces = np.zeros(3)
@@ -304,9 +372,14 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
 
 
     def storeData(first_iter_for_phase = False):
-        appendJointsValues(first_iter_for_phase)
+        """
+        Append all the required data (selected in the configuration file) to the current ContactPhase
+        :param first_iter_for_phase: if True, set the initial values for the current phase
+        and correctly initiliaze empty trajectories for this phase
+        """
         if cfg.IK_store_joints_derivatives:
             appendJointsDerivatives(first_iter_for_phase)
+        appendJointsValues(first_iter_for_phase)
         if cfg.IK_store_joints_torque:
             appendTorques(first_iter_for_phase)
         if cfg.IK_store_centroidal:
@@ -320,6 +393,10 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
 
 
     def printIntermediate():
+        """
+        Print the current state: active contacts, tracking errors, computed joint acceleration and velocity
+        :return:
+        """
         if logger.isEnabledFor(logging.INFO):
             print("Time %.3f" % (t))
             for eeName, contact in dic_contacts.items():
@@ -337,6 +414,9 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
             print("\t||v||: %.3f\t ||dv||: %.3f" % (norm(v, 2), norm(dv)))
 
     def checkDiverge():
+        """
+        Check if either the joint velocity or acceleration is over a treshold or is NaN, and raise an error
+        """
         if norm(dv) > 1e6 or norm(v) > 1e6:
             logger.error("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
             logger.error("/!\ ABORT : controler unstable at t = %f  /!\ ", t)
@@ -349,21 +429,25 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
             raise ValueError("ABORT : controler unstable at t = " + str(t))
 
     def stopHere():
+        """
+        Set the current data as final values for the current phase, resize the contact sequence if needed and return
+        :return: [The current ContactSequence, the RobotWrapper]
+        """
         setPreviousFinalValues(phase_prev, phase, cfg)
         if cfg.WB_ABORT_WHEN_INVALID:
             # cut the sequence up to the last phase
             cs.resize(pid)
-            return cs
+            return cs, robot
         elif cfg.WB_RETURN_INVALID:
             # cut the sequence up to the current phase
             cs.resize(pid+1)
-            return cs
+            return cs, robot
 
     ### End of nested functions definitions ###
-
     if not viewer:
         logger.warning("No viewer linked, cannot display end_effector trajectories.")
     logger.warning("Start TSID ... ")
+
 
     # copy the given contact sequence to keep it as reference :
     cs = ContactSequence(cs_ref)
@@ -371,11 +455,16 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
     deleteAllTrajectories(cs)
 
     # Create a robot wrapper
-    rp = RosPack()
-    package_path = rp.get_path(cfg.Robot.packageName)
-    urdf = package_path + '/urdf/' + cfg.Robot.urdfName + cfg.Robot.urdfSuffix + '.urdf'
-    logger.info("load robot : %s", urdf)
-    robot = tsid.RobotWrapper(urdf, pin.StdVec_StdString(), pin.JointModelFreeFlyer(), False)
+
+    if robot is None or cfg.IK_store_centroidal or cfg.IK_store_zmp:
+        rp = RosPack()
+        package_path = rp.get_path(cfg.Robot.packageName)
+        urdf = package_path + '/urdf/' + cfg.Robot.urdfName + cfg.Robot.urdfSuffix + '.urdf'
+    if robot is None:
+        logger.info("load robot : %s", urdf)
+        robot = tsid.RobotWrapper(urdf, pin.StdVec_StdString(), pin.JointModelFreeFlyer(), False)
+    else:
+        logger.info("Use given robot in tsid.")
     logger.info("robot loaded in tsid.")
     if cfg.IK_store_centroidal or cfg.IK_store_zmp:
         logger.info("load pinocchio robot ...")
@@ -395,10 +484,13 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
     q = phase0.q_init[:robot.nq].copy()
     if not q.any():
         raise RuntimeError("The contact sequence doesn't contain an initial whole body configuration")
-    v = np.zeros(robot.nv)
     t = phase0.timeInitial
+    if cs_ref.contactPhases[0].dq_t and cs_ref.contactPhases[0].dq_t.min() <= t <= cs_ref.contactPhases[0].dq_t.max():
+        v = cs_ref.contactPhases[0].dq_t(t)
+    else:
+        v = np.zeros(robot.nv)
+    logger.debug("V_init used in tsid : %s", v)
 
-    # init states list with initial state (assume joint velocity is null for t=0)
     invdyn = tsid.InverseDynamicsFormulationAccForce("tsid", robot, False)
     invdyn.computeProblemData(t, q, v)
     simulator.init(q, v)
@@ -411,7 +503,7 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
                                getCurrentEffectorPosition(robot, invdyn.data(), eeName),
                                cfg.Robot.cType == "_6_DOF")
         # create the contacts :
-        contact = createContactForEffector(cfg, invdyn, robot, eeName, phase0.contactPatch(eeName))
+        contact = createContactForEffector(cfg, invdyn, robot, eeName, phase0.contactPatch(eeName), False)
         dic_contacts.update({eeName: contact})
 
     if cfg.EFF_CHECK_COLLISION:  # initialise object needed to check the motion
@@ -464,6 +556,20 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
     usedEffectors = cs.getAllEffectorsInContact()
     dic_effectors_tasks = createEffectorTasksDic(cfg, usedEffectors, robot)
 
+    # Add bounds tasks if required:
+    if cfg.w_torque_bounds > 0.:
+        tau_max = cfg.scaling_torque_bounds*robot.model().effortLimit[-robot.na:]
+        tau_min = -tau_max
+        actuationBoundsTask = tsid.TaskActuationBounds("task-actuation-bounds", robot)
+        actuationBoundsTask.setBounds(tau_min, tau_max)
+        invdyn.addActuationTask(actuationBoundsTask, cfg.w_torque_bounds, 0, 0.0)
+    if cfg.w_joint_bounds > 0.:
+        jointBoundsTask = tsid.TaskJointBounds("task-joint-bounds", robot, cfg.IK_dt)
+        v_max = cfg.scaling_vel_bounds * robot.model().velocityLimit[-robot.na:]
+        v_min = -v_max
+        print("v_max : ", v_max)
+        jointBoundsTask.setVelocityBounds(v_min, v_max)
+        invdyn.addMotionTask(jointBoundsTask, cfg.w_joint_bounds, 0, 0.0)
 
     solver = tsid.SolverHQuadProg("qp solver")
     solver.resize(invdyn.nVar, invdyn.nEq, invdyn.nIn)
@@ -499,7 +605,7 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
 
         # take CoM and AM trajectory from the phase, with their derivatives
         com_traj = [phase_ref.c_t, phase_ref.dc_t, phase_ref.ddc_t]
-        am_traj = [phase_ref.L_t, phase_ref.dL_t]
+        am_traj = [phase_ref.L_t, phase_ref.L_t, phase_ref.dL_t]
 
         # add root's orientation ref from reference config :
         root_traj = phase_ref.root_t
@@ -514,6 +620,7 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
                 logger.info("t interval : %s", time_interval)
 
         # add newly created contacts :
+        new_contacts_names = [] # will store the names of the contact tasks created at this phase
         for eeName in usedEffectors:
             if phase_prev and phase_ref.isEffectorInContact(eeName) and not phase_prev.isEffectorInContact(eeName):
                 invdyn.removeTask(dic_effectors_tasks[eeName].name, 0.0)  # remove pin task for this contact
@@ -526,6 +633,7 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
                                        getCurrentEffectorPosition(robot, invdyn.data(), eeName),
                                        cfg.Robot.cType == "_6_DOF")
                 contact = createContactForEffector(cfg, invdyn, robot, eeName, phase.contactPatch(eeName))
+                new_contacts_names += [contact.name]
                 dic_contacts.update({eeName: contact})
                 logger.info("Create contact for : %s", eeName)
 
@@ -538,6 +646,15 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
                             t, contact.name, transition_time)
                 exist = invdyn.removeRigidContact(contact.name, transition_time)
                 assert exist, "Try to remove a non existing contact !"
+
+        # Remove all effectors not in contact at this phase,
+        # This is required as the block above may not remove the contact exactly at the desired time
+        # FIXME: why is it required ? Numerical approximation in the transition_time ?
+        for eeName, contact in dic_contacts.items():
+            if not phase.isEffectorInContact(eeName):
+                exist = invdyn.removeRigidContact(contact.name, 0.)
+                if exist:
+                    logger.warning("Contact "+eeName+" was not remove after the given transition time.")
 
         if cfg.WB_STOP_AT_EACH_PHASE:
             input('start simulation')
@@ -590,6 +707,16 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
                 if orientationRootTask:
                     sampleRoot = curveSE3toTSID(root_traj,t)
                     orientationRootTask.setReference(sampleRoot)
+
+                # update weight of regularization tasks for the new contacts:
+                if len(new_contacts_names) > 0 :
+                    # linearly decrease the weight of the tasks for the newly created contacts
+                    u_w_force = (t - phase.timeInitial) / (phase.duration * cfg.w_forceRef_time_ratio)
+                    if u_w_force <= 1.:
+                        current_w_force = cfg.w_forceRef_init * (1. - u_w_force) + cfg.w_forceRef_end * u_w_force
+                        for contact_name in new_contacts_names:
+                            success = invdyn.updateRigidContactWeights(contact_name, current_w_force)
+                            assert success, "Unable to change the weight of the force regularization task for contact "+contact_name
 
                 logger.debug("### references given : ###")
                 logger.debug("com  pos : %s", sampleCom.pos())
@@ -648,6 +775,7 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
                         # save the first q_t trajectory computed, for limb-rrt
                         first_q_t = phase.q_t
                     logger.warning("Phase %d not valid at t = %f", pid, t_invalid)
+                    logger.info("First invalid q : %s", phase.q_t(t_invalid))
                     if t_invalid <= (phase.timeInitial + cfg.EFF_T_PREDEF) \
                             or t_invalid >= (phase.timeFinal - cfg.EFF_T_PREDEF):
                         logger.error("Motion is invalid during predefined phases, cannot change this.")
@@ -685,7 +813,7 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
             if phaseValid:
                 setPreviousFinalValues(phase_prev, phase, cfg)
                 # display the progress by moving the robot at the last configuration computed
-                if viewer:
+                if viewer and cfg.IK_SHOW_PROGRESS:
                     display_tools.displayWBconfig(viewer,q)
         #end while not phaseValid
     # end for all phases
@@ -698,4 +826,6 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None):
     logger.warning("Whole body motion generated in : %f s.", time_end)
     logger.info("\nFinal COM Position  %s", robot.com(invdyn.data()))
     logger.info("Desired COM Position %s", cs.contactPhases[-1].c_final)
-    return cs
+    if queue_qt:
+        queue_qt.put([phase.q_t.curve_at_index(phase.q_t.num_curves() - 1), None, True])
+    return cs, robot

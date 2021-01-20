@@ -1,4 +1,10 @@
-from hpp.corbaserver.rbprm.anymal import Robot
+try:
+    from anymal_rbprm.anymal import Robot
+except ImportError:
+    message = "ERROR: Cannot import anymal-rbprm package.\n"
+    message += "Did you correctly installed it?\n"
+    message +="https://github.com/humanoid-path-planner/anymal-rbprm"
+    raise ImportError(message)
 MASS = 30.47  # cannot retrieve it from urdf because the file is not parsed here ...
 
 ## weight and gains used by TSID
@@ -9,7 +15,6 @@ w_com = 1.0  # weight of center of mass task
 w_am = 0.
 w_posture = 0.01  # weight of joint posture task
 w_rootOrientation = 1.  # weight of the root's orientation task
-w_forceRef = 1e-3  # weight of force regularization task
 w_eff = 1.0  # weight of the effector motion task
 kp_contact = 50.0  # proportional gain of contact constraint
 kp_com = 30.  # proportional gain of center of mass task
@@ -22,6 +27,17 @@ level_com = 0
 level_posture = 1
 level_rootOrientation = 1
 level_am = 1
+
+w_torque_bounds = 0.
+w_joint_bounds = 0.
+scaling_torque_bounds = 1.
+scaling_vel_bounds = 1.
+
+# The weight of the force regularization task of each contact will start at w_forceRef_init when creating a new contact,
+# and then linearly reduce to w_forceRef_end over a time period of phase_duration * w_forceRef_time_ratio
+w_forceRef_init = 1.
+w_forceRef_end = 1e-5
+w_forceRef_time_ratio = 0.5
 
 YAW_ROT_GAIN = 1.
 
@@ -44,6 +60,11 @@ FEET_MAX_VEL = 0.7
 FEET_MAX_ANG_VEL = 1.5
 p_max = 0.2
 EFF_T_PREDEF = 0.
+
+GUIDE_STEP_SIZE = 0.6
+SL1M_USE_MIP = True
+SL1M_USE_INTERSECTION = False
+
 
 import numpy as np
 gain_vector = np.ones(12)
