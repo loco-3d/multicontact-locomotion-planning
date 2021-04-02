@@ -1,10 +1,9 @@
 import numpy as np
 import pinocchio as pin
 from pinocchio import SE3, Motion, Force
-from curves import piecewise, polynomial
+from ndcurves import piecewise, polynomial
 from rospkg import RosPack
 from pinocchio.robot_wrapper import RobotWrapper
-from curves import piecewise
 
 def pacthSameAltitude(M1, M2, eps=1e-3):
     return abs(M1.translation[2] == M2.translation[2]) <= eps
