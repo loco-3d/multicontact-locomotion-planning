@@ -2,7 +2,7 @@ from hpp_centroidal_dynamics import Equilibrium, EquilibriumAlgorithm, SolverLP
 import hpp_bezier_com_traj as com_traj
 from mlp.utils.util import buildRectangularContactPoints, computeContactNormal
 import numpy as np
-from curves import bezier
+from ndcurves import bezier
 from numpy import array
 MARGIN = 0.02 # reduction of the size of the feets in each direction
 USE_AM = True

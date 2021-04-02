@@ -13,7 +13,7 @@ import os
 from rospkg import RosPack
 import time
 from multicontact_api import ContactPhase, ContactSequence, ContactType
-from curves import piecewise, piecewise_SE3, polynomial
+from ndcurves import piecewise, piecewise_SE3, polynomial
 from mlp.utils.computation_tools import shiftZMPtoFloorAltitude
 import mlp.viewer.display_tools as display_tools
 import math

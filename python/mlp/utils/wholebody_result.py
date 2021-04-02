@@ -1,7 +1,7 @@
 import numpy as np
 from mlp.utils.util import discretizeCurve, discretizeDerivateCurve, discretizeSE3CurveTranslation,\
     discretizeSE3CurveToVec, discretizeSE3CurveQuaternion, constantSE3curve
-from curves import piecewise_SE3
+from ndcurves import piecewise_SE3
 class Result:
     """
      This class store discretized data points, the time step can be accessed with res.dt.

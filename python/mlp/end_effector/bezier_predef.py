@@ -2,7 +2,7 @@ import pinocchio
 from pinocchio import SE3, Quaternion
 import numpy.linalg
 import numpy as np
-from curves import bezier, piecewise_bezier, SE3Curve, piecewise_SE3
+from ndcurves import bezier, piecewise_bezier, SE3Curve, piecewise_SE3
 import hpp_bezier_com_traj as bezier_com
 import math
 from mlp.utils.requirements import Requirements

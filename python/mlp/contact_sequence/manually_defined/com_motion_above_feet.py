@@ -4,7 +4,7 @@ from multicontact_api import ContactSequence
 import mlp.viewer.display_tools as display_tools
 from pinocchio import SE3
 from numpy import array, zeros
-from curves import piecewise, polynomial
+from ndcurves import piecewise, polynomial
 
 from talos_rbprm.talos import Robot  # change robot here
 multicontact_api.switchToNumpyArray()
