@@ -395,17 +395,26 @@ def solve(planner, cfg, display_surfaces = False, initial_contacts = None, final
             # ~ pb = gen_pb(cfg.Robot, initial_contacts, R, surfaces)
         # ~ pb = gen_pb(cfg.Robot, initial_contacts, R, surfaces)
         pb = Problem(cfg.Robot, suffix_com= cfg.SL1M_SUFFIX_COM_CONSTRAINTS, suffix_feet=cfg.SL1M_SUFFIX_FEET_CONSTRAINTS, limb_names=cfg.SL1M_FEET_NAME_FOR_CONSTRAINTS)
-        pb.generate_problem(R, surfaces[:1], cfg.SL1M_GAIT, initial_contacts, np.array(planner.q_init[0:3]))
-        print("pb ", pb)
+        pb.generate_problem(R, surfaces[:1], cfg.SL1M_GAIT, initial_contacts, np.array(planner.q_init[0:3])) #TODO COM position not used
         try:
             resultData = solveFun(pb, surfaces)
             # ~ pb, coms, footpos, allfeetpos, res = solve(pb, surfaces, None)
             success = True
-        except:
+        except Exception as e:
             logger.warning("## Planner failed at iter : %d with step length = %f", it, step)
         it += 1
     if not success:
         raise RuntimeError("planner always fail.")
+    
+    
+    # ~ import sl1m.tools.plot_tools as plot
+    # ~ from mpl_toolkits.mplot3d import Axes3D
+    # ~ ax = plot.draw_scene([], cfg.SL1M_GAIT)
+    # ~ plot.plot_initial_contacts(initial_contacts, ax=ax)
+    # ~ if(success):
+        # ~ plot.plot_planner_result(resultData.coms, resultData.moving_foot_pos, resultData.all_feet_pos, ax, True)
+    # ~ else:
+        # ~ plt.show(block=False)
     return pathId, pb, resultData #pb, coms, footpos, allfeetpos, res
     
     # ~ if cfg.SL1M_USE_MIP:
@@ -712,7 +721,7 @@ def build_cs_from_sl1m_mip(fb, q_ref, root_end, pb, allfeetpos, use_orientation,
     """
     # init contact sequence with first phase : q_ref move at the right root pose and with both feet in contact
     # FIXME : allow to customize that first phase
-    num_steps = len(pb["phaseData"]) - 1 # number of contact repositionning
+    num_steps = len(pb.phaseData) - 1 # number of contact repositionning
     limbs_names = fb.limbs_names
     num_effectors = len(limbs_names)
     logger.info(" limbs names : %s", limbs_names)
@@ -726,12 +735,15 @@ def build_cs_from_sl1m_mip(fb, q_ref, root_end, pb, allfeetpos, use_orientation,
         raise ValueError("build_cs_from_sl1m should have either q_init or first_phase argument defined")
     logger.info("Initial phase added, contacts : %s ", cs.contactPhases[0].effectorsInContact())
     # loop for all effector placements, and create the required contact phases
+    allfeetpos = [[el[i] for el in allfeetpos] for i in range(len(allfeetpos[0]))]
     previous_eff_placements = allfeetpos[0]
     if len(previous_eff_placements) != num_effectors:
         raise NotImplementedError("A phase in the output of SL1M do not have all the effectors in contact.")
     for pid, eff_placements in enumerate(allfeetpos[1:]):
         logger.info("Loop allfeetpos, id = %d", pid)
         if len(eff_placements) != num_effectors:
+            print ("eff_placements", eff_placements)
+            print ("num_effectors", num_effectors)
             raise NotImplementedError("A phase in the output of SL1M do not have all the effectors in contact.")
         switch = False # True if a repostionning have been detected
         for k, pos in enumerate(eff_placements):
@@ -741,14 +753,17 @@ def build_cs_from_sl1m_mip(fb, q_ref, root_end, pb, allfeetpos, use_orientation,
                 switch = True
                 ee_name = fb.dict_limb_joint[limbs_names[k]]
                 #pos[2] += EPS_Z # FIXME: apply epsz along the normal
-                pos = fb.dict_offset[ee_name].actInv(pos)
+                pos = fb.dict_offset[ee_name].actInv(pos); 
                 logger.info("Move effector %s ", ee_name)
                 logger.info("To position %s ", pos)
                 placement = SE3.Identity()
                 placement.translation = pos
                 # compute orientation of the contact from the surface normal:
-                phase_data = pb["phaseData"][pid+1] # +1 because the for loop start at id = 1
-                n = normal_from_ineq(phase_data["S"][phase_data["id_surface"]])
+                # ~ phase_data = pb.phaseData[pid+1] # +1 because the for loop start at id = 1
+                phase_data = pb.phaseData[pid] # +1 because the for loop start at id = 1
+                # ~ n = normal_from_ineq(phase_data.S[phase_data["id_surface"]])
+                #TODO RETRIEVE SURFACE NORMAL
+                n = array([0.,0.,1.])
                 placement.rotation = rotationFromNormal(n)
                 logger.debug("new contact placement : %s", placement)
                 # TODO add yaw rotation from guide here !
