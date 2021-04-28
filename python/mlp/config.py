@@ -20,7 +20,7 @@ class Config:
 
     def __init__(self):
         ## methods setting : choose which method will be used to solve each subproblem :
-        self.contact_generation_method = "load"
+        self.contact_generation_method = "rbprm"
         self.centroidal_initGuess_method = "none"
         self.centroidal_method = "momentumopt"
         self.end_effector_initGuess_method = "bezier_predef"
@@ -84,8 +84,12 @@ class Config:
         self.FORCE_STRAIGHT_LINE = False  # DEBUG ONLY should be false
         self.SL1M_USE_ORIENTATION = True  # sl1m method use the root orientation computed by the guide planning
         self.SL1M_USE_MIP = False  #  select between the L1 solver or the MIP solver (the later allow acyclic motion but is a lot slower)
-        self.SL1M_USE_INTERSECTION = True  # if True, the list of candidate contact surface given to SL1M
+        self.SL1M_USE_INTERSECTION = False  # if True, the list of candidate contact surface given to SL1M
         self.SL1M_MAX_STEP = -1  # Maximum number of phases per SL1M call, if negative: unlimited
+        self.SL1M_GAIT = [1,0]
+        self.SL1M_SUFFIX_COM_CONSTRAINTS  =   ".obj"
+        self.SL1M_SUFFIX_FEET_CONSTRAINTS =   ".obj"
+        self.SL1M_FEET_NAME_FOR_CONSTRAINTS =   None
 
         # are the intersection between the surfaces and the ROMs. If False, the complete surfaces are given
         self.GUIDE_STEP_SIZE = 1. # initial discretization step of the guide path used to find the surfaces for SL1M
