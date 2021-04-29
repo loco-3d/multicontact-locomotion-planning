@@ -114,7 +114,9 @@ masks_posture = np.ones(32)
 
 # Reference config used by the wholeBody script, may be different than the one used by the planning (default value is the same as planning)
 IK_REFERENCE_CONFIG = np.array(Robot.referenceConfig)
-SL1M_FEET_NAME_FOR_CONSTRAINTS = ["LF", "RF"]
+SL1M_FEET_NAME_FOR_CONSTRAINTS = ["RF", "LF"]
 SL1M_SUFFIX_COM_CONSTRAINTS  =   "_effector_frame_reduced.obj"
 SL1M_SUFFIX_FEET_CONSTRAINTS =   "_quasi_flat_REDUCED.obj"
+# ~ SL1M_USE_MIP=False
 SL1M_USE_MIP=True
+SL1M_GAIT = [0,1]

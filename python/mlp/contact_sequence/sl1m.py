@@ -352,10 +352,16 @@ def solve(planner, cfg, display_surfaces = False, initial_contacts = None, final
     else:
         pathId = planner.ps.numberPaths() - 1
     
-    solveFun = solve_L1_combinatorial  
+    solveFun = None  
     if cfg.SL1M_USE_MIP:
-        print ("******************************************* USING MIP ***************************************")
-        solve = solve_MIP  
+        def f(pb, surfaces):
+            return solve_MIP(pb, surfaces, costs={"final_com" : [1., planner.q_goal[0:3]]})
+        solveFun = f
+    else:
+        def f(pb, surfaces):
+            return solve_L1_combinatorial(pb, surfaces, costs={"final_com" : [1., planner.q_goal[0:3]]})
+        solveFun = f
+        
     
     while not success and it < maxIt:
         if it > 0:
@@ -372,33 +378,10 @@ def solve(planner, cfg, display_surfaces = False, initial_contacts = None, final
                                                      useIntersection=cfg.SL1M_USE_INTERSECTION,
                                                      max_yaw=cfg.GUIDE_MAX_YAW,
                                                      max_surface_area=cfg.MAX_SURFACE_AREA)
-                                                     # ~ use_all_limbs = cfg.SL1M_USE_MIP)
-        # ~ if cfg.SL1M_USE_MIP:
-            # ~ solve = solve_MIP
-            # ~ from sl1m.planner_l1_generic_equalities_as_ineq import solveMIPGurobi, initGlobals, posturalCost, targetCom, \
-                # ~ retrieve_points_from_res, targetLegCenter, targetEndPos
-            # ~ initGlobals(nEffectors=num_eff)
-            # ~ pb = gen_pb_mip(cfg.Robot, R, surfaces)
-            # ~ initCom = np.array(planner.q_init[0:3])
-            # ~ endCom = np.array(planner.q_goal[0:3])
-            # ~ pb, res, time = solveMIPGurobi(pb, surfaces, MIP=True, draw_scene=None, plot=True, l1Contact=False,
-                                           # ~ initPos=initial_contacts, endPos=final_contacts,
-                                           # ~ initCom=initCom, endCom=endCom,
-                                           # ~ costs=[(5., posturalCost), (1., targetEndPos)],
-                                           # ~ constraint_init_pos_surface = False,
-                                           # ~ refPos = foot_pose_from_guide(cfg.Robot, [0, 0 ,planner.q_init[2]]))
-            # ~ coms, footpos, allfeetpos = retrieve_points_from_res(pb, res)
-            
-            # ~ success = True # FIXME check this from mip outputs ?
-        # ~ else:
-            # ~ from sl1m.fix_sparsity import solveL1
-            # ~ pb = gen_pb(cfg.Robot, initial_contacts, R, surfaces)
-        # ~ pb = gen_pb(cfg.Robot, initial_contacts, R, surfaces)
         pb = Problem(cfg.Robot, suffix_com= cfg.SL1M_SUFFIX_COM_CONSTRAINTS, suffix_feet=cfg.SL1M_SUFFIX_FEET_CONSTRAINTS, limb_names=cfg.SL1M_FEET_NAME_FOR_CONSTRAINTS)
-        pb.generate_problem(R, surfaces[:1], cfg.SL1M_GAIT, initial_contacts, np.array(planner.q_init[0:3])) #TODO COM position not used
+        pb.generate_problem(R, surfaces[:], cfg.SL1M_GAIT, initial_contacts, np.array(planner.q_init[0:3])) #TODO COM position not used
         try:
             resultData = solveFun(pb, surfaces)
-            # ~ pb, coms, footpos, allfeetpos, res = solve(pb, surfaces, None)
             success = True
         except Exception as e:
             logger.warning("## Planner failed at iter : %d with step length = %f", it, step)
@@ -415,77 +398,7 @@ def solve(planner, cfg, display_surfaces = False, initial_contacts = None, final
         # ~ plot.plot_planner_result(resultData.coms, resultData.moving_foot_pos, resultData.all_feet_pos, ax, True)
     # ~ else:
         # ~ plt.show(block=False)
-    return pathId, pb, resultData #pb, coms, footpos, allfeetpos, res
-    
-    # ~ if cfg.SL1M_USE_MIP:
-        # ~ num_eff = len(cfg.Robot.limbs_names) # number of effectors used to create contacts
-        # ~ global __ineq_com
-        # ~ global __ineq_relative
-        # ~ __ineq_com = [None for _ in range(num_eff)]
-        # ~ __ineq_relative = [[None for _ in range(num_eff - 1)] for __ in range(num_eff)]
-    # ~ if initial_contacts is None:
-        # ~ initial_contacts = foot_pose_from_guide(cfg.Robot, planner.q_init)
-    # ~ if final_contacts is None:
-        # ~ final_contacts = foot_pose_from_guide(cfg.Robot, planner.q_goal)
-
-    # ~ logger.info("Initial contacts : %s", initial_contacts)
-    # ~ logger.info("Final contacts : %s", final_contacts)
-    # ~ #  Extract candidate surfaces and root rotation from the guide planning
-    # ~ success = False
-    # ~ maxIt = 50
-    # ~ it = 0
-    # ~ defaultStep = cfg.GUIDE_STEP_SIZE
-    # ~ step = defaultStep
-    # ~ variation = 0.4  # FIXME : put it in config file, +- bounds on the step size
-    # ~ if hasattr(planner, "pathId"):
-        # ~ pathId = planner.pathId
-    # ~ elif hasattr(planner, "pId"):
-        # ~ pathId = planner.pId
-    # ~ else:
-        # ~ pathId = planner.ps.numberPaths() - 1
-    # ~ while not success and it < maxIt:
-        # ~ if it > 0:
-            # ~ step = defaultStep + random.uniform(-variation, variation)
-        # ~ viewer = planner.v
-        # ~ if not hasattr(viewer, "client"):
-            # ~ viewer = None
-        # ~ R, surfaces = getSurfacesFromGuideContinuous(planner.rbprmBuilder,
-                                                     # ~ planner.ps,
-                                                     # ~ planner.afftool,
-                                                     # ~ pathId,
-                                                     # ~ viewer if display_surfaces else None,
-                                                     # ~ step,
-                                                     # ~ useIntersection=cfg.SL1M_USE_INTERSECTION,
-                                                     # ~ max_yaw=cfg.GUIDE_MAX_YAW,
-                                                     # ~ max_surface_area=cfg.MAX_SURFACE_AREA,
-                                                     # ~ use_all_limbs = cfg.SL1M_USE_MIP)
-        # ~ if cfg.SL1M_USE_MIP:
-            # ~ from sl1m.planner_l1_generic_equalities_as_ineq import solveMIPGurobi, initGlobals, posturalCost, targetCom, \
-                # ~ retrieve_points_from_res, targetLegCenter, targetEndPos
-            # ~ initGlobals(nEffectors=num_eff)
-            # ~ pb = gen_pb_mip(cfg.Robot, R, surfaces)
-            # ~ initCom = np.array(planner.q_init[0:3])
-            # ~ endCom = np.array(planner.q_goal[0:3])
-            # ~ pb, res, time = solveMIPGurobi(pb, surfaces, MIP=True, draw_scene=None, plot=True, l1Contact=False,
-                                           # ~ initPos=initial_contacts, endPos=final_contacts,
-                                           # ~ initCom=initCom, endCom=endCom,
-                                           # ~ costs=[(5., posturalCost), (1., targetEndPos)],
-                                           # ~ constraint_init_pos_surface = False,
-                                           # ~ refPos = foot_pose_from_guide(cfg.Robot, [0, 0 ,planner.q_init[2]]))
-            # ~ coms, footpos, allfeetpos = retrieve_points_from_res(pb, res)
-            # ~ success = True # FIXME check this from mip outputs ?
-        # ~ else:
-            # ~ from sl1m.fix_sparsity import solveL1
-            # ~ pb = gen_pb(cfg.Robot, initial_contacts, R, surfaces)
-            # ~ try:
-                # ~ pb, coms, footpos, allfeetpos, res = solveL1(pb, surfaces, None)
-                # ~ success = True
-            # ~ except:
-                # ~ logger.warning("## Planner failed at iter : %d with step length = %f", it, step)
-        # ~ it += 1
-    # ~ if not success:
-        # ~ raise RuntimeError("planner always fail.")
-    # ~ return pathId, pb, coms, footpos, allfeetpos, res
+    return pathId, pb, resultData 
 
 
 def runLPFromGuideScript(cfg):
@@ -557,11 +470,7 @@ def generate_contact_sequence_sl1m(cfg):
     fb, v = initScene(cfg.Robot, cfg.ENV_NAME, True)
     q_init = cfg.IK_REFERENCE_CONFIG.tolist() + [0] * 6
     q_init[0:7] = root_init
-    if cfg.SL1M_USE_MIP:
-        # if MIP is used, allfeetpos contains a list of all position and not just the new position
-        feet_height_init = allfeetpos[0][0][2]
-    else:
-        feet_height_init = allfeetpos[0][2]
+    feet_height_init = allfeetpos[0][0][2]
     logger.info("feet height initial = %s", feet_height_init)
     #q_init[2] = feet_height_init + cfg.IK_REFERENCE_CONFIG[2]
     #q_init[2] += EPS_Z
@@ -631,12 +540,12 @@ def build_cs_from_sl1m(use_mip, fb, q_ref, root_end, pb, RF, allfeetpos, use_ori
     :param first_phase: the first multicontact_api.ContactPhase object (either this or q_init should be provided)
     :return: the multicontact_api.ContactSequence, with all ContactPhase created at the correct placement
     """
-    if use_mip:
-        return build_cs_from_sl1m_mip(fb, q_ref, root_end, pb, allfeetpos, use_orientation, use_interpolated_orientation,
-         q_init, first_phase)
-    else:
-        return build_cs_from_sl1m_l1(fb, q_ref, root_end, pb, RF, allfeetpos, use_orientation, use_interpolated_orientation,
-        q_init, first_phase)
+    # ~ if use_mip:
+    return build_cs_from_sl1m_mip(fb, q_ref, root_end, pb, allfeetpos, use_orientation, use_interpolated_orientation,
+     q_init, first_phase)
+    # ~ else:
+        # ~ return build_cs_from_sl1m_l1(fb, q_ref, root_end, pb, RF, allfeetpos, use_orientation, use_interpolated_orientation,
+        # ~ q_init, first_phase)
 
 def build_cs_from_sl1m_l1(fb, q_ref, root_end, pb, RF, allfeetpos, use_orientation, use_interpolated_orientation,
                        q_init = None, first_phase = None):
@@ -742,8 +651,6 @@ def build_cs_from_sl1m_mip(fb, q_ref, root_end, pb, allfeetpos, use_orientation,
     for pid, eff_placements in enumerate(allfeetpos[1:]):
         logger.info("Loop allfeetpos, id = %d", pid)
         if len(eff_placements) != num_effectors:
-            print ("eff_placements", eff_placements)
-            print ("num_effectors", num_effectors)
             raise NotImplementedError("A phase in the output of SL1M do not have all the effectors in contact.")
         switch = False # True if a repostionning have been detected
         for k, pos in enumerate(eff_placements):
@@ -752,12 +659,11 @@ def build_cs_from_sl1m_mip(fb, q_ref, root_end, pb, allfeetpos, use_orientation,
                     raise NotImplementedError("Several contact changes between two adjacent phases in SL1M output")
                 switch = True
                 ee_name = fb.dict_limb_joint[limbs_names[k]]
-                #pos[2] += EPS_Z # FIXME: apply epsz along the normal
                 pos = fb.dict_offset[ee_name].actInv(pos); 
                 logger.info("Move effector %s ", ee_name)
                 logger.info("To position %s ", pos)
                 placement = SE3.Identity()
-                placement.translation = pos
+                placement.translation = pos;
                 # compute orientation of the contact from the surface normal:
                 # ~ phase_data = pb.phaseData[pid+1] # +1 because the for loop start at id = 1
                 phase_data = pb.phaseData[pid] # +1 because the for loop start at id = 1

@@ -86,7 +86,7 @@ class Config:
         self.SL1M_USE_MIP = False  #  select between the L1 solver or the MIP solver (the later allow acyclic motion but is a lot slower)
         self.SL1M_USE_INTERSECTION = False  # if True, the list of candidate contact surface given to SL1M
         self.SL1M_MAX_STEP = -1  # Maximum number of phases per SL1M call, if negative: unlimited
-        self.SL1M_GAIT = [1,0]
+        self.SL1M_GAIT = [0,1]
         self.SL1M_SUFFIX_COM_CONSTRAINTS  =   ".obj"
         self.SL1M_SUFFIX_FEET_CONSTRAINTS =   ".obj"
         self.SL1M_FEET_NAME_FOR_CONSTRAINTS =   None
