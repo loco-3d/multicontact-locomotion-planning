@@ -13,7 +13,7 @@ import os
 from rospkg import RosPack
 import time
 from multicontact_api import ContactPhase, ContactSequence, ContactType
-from curves import piecewise, piecewise_SE3, polynomial
+from ndcurves import piecewise, piecewise_SE3, polynomial
 from mlp.utils.computation_tools import shiftZMPtoFloorAltitude
 import mlp.viewer.display_tools as display_tools
 import math
@@ -455,11 +455,13 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None, robot=None,
     deleteAllTrajectories(cs)
 
     # Create a robot wrapper
-
     if robot is None or cfg.IK_store_centroidal or cfg.IK_store_zmp:
         rp = RosPack()
-        package_path = rp.get_path(cfg.Robot.packageName)
-        urdf = package_path + '/urdf/' + cfg.Robot.urdfName + cfg.Robot.urdfSuffix + '.urdf'
+        package_name = cfg.Robot.packageName.split("/")[0]
+        package_path = rp.get_path(package_name)
+        urdf = package_path + cfg.Robot.packageName.lstrip(
+            package_name) + '/urdf/' + cfg.Robot.urdfName + cfg.Robot.urdfSuffix + '.urdf'
+        logger.info("load robot : %s", urdf)
     if robot is None:
         logger.info("load robot : %s", urdf)
         robot = tsid.RobotWrapper(urdf, pin.StdVec_StdString(), pin.JointModelFreeFlyer(), False)
@@ -532,7 +534,7 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None, robot=None,
         postureTask = tsid.TaskJointPosture("task-joint-posture", robot)
         postureTask.setKp(cfg.kp_posture * cfg.gain_vector)
         postureTask.setKd(2.0 * np.sqrt(cfg.kp_posture * cfg.gain_vector))
-        postureTask.mask(cfg.masks_posture)
+        postureTask.setMask(cfg.masks_posture)
         invdyn.addMotionTask(postureTask, cfg.w_posture, cfg.level_posture, 0.0)
         q_ref = cfg.IK_REFERENCE_CONFIG
         samplePosture = tsid.TrajectorySample(q_ref.shape[0] - 7)

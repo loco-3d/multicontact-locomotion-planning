@@ -8,9 +8,9 @@ import time
 import os, sys, traceback
 import numpy as np
 import eigenpy
-import curves
+import ndcurves as curves
 import math
-from curves import SE3Curve, polynomial
+from ndcurves import SE3Curve, polynomial
 from multicontact_api import ContactSequence, ContactPhase
 import mlp.utils.cs_tools as tools
 from multiprocessing import Process, Queue, Pipe, Value, Array, Lock

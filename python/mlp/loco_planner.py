@@ -5,7 +5,7 @@ import os, sys, argparse
 import eigenpy
 import time
 import pinocchio
-import curves
+import ndcurves as curves
 import multicontact_api
 from mlp.utils.requirements import Requirements
 from mlp.utils import plot

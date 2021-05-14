@@ -1,5 +1,8 @@
 try:
-    import sl1m.planner as sl1m
+    # ~ import sl1m.planner as sl1m
+    from sl1m.generic_solver import solve_L1_combinatorial, solve_MIP
+    from sl1m.problem_definition import Problem
+    from sl1m.stand_alone_scenarios.surfaces.stair_surfaces import quadruped_surfaces
 except ImportError:
     message = "ERROR: Cannot import SL1M python library.\n"
     message += "Did you correctly installed it?\n"
@@ -31,17 +34,6 @@ class ContactOutputsSl1m(Requirements):
 
 Z_AXIS = np.array([0, 0, 1])
 EPS_Z = 0.001  # collision margin used, distance between the feet position and the surface required to avoid detecting it as a collision
-
-# global vars that hold constraints for MIP
-__ineq_com = []
-__ineq_relative = []
-# global vars that hold constraints for sl1m
-__ineq_right_foot = None
-__ineq_left_foot = None
-__ineq_right_foot_reduced = None
-__ineq_left_foot_reduced = None
-__ineq_rf_in_rl = None
-__ineq_lf_in_rf = None
 
 
 ####################################
@@ -118,190 +110,11 @@ def initial_foot_pose_from_fullbody(fullbody, q_init):
             for ee_name in ee_names]
     # FIXME: apply epsz along the normal
 
-
-def gen_pb(Robot, initial_contacts, R, surfaces):
-    """
-    Build a SL1M problem, with all the kinematics and foot relative position constraints required
-    :param Robot:
-    :param initial_contacts: A list of the initial contact positions
-    :param R: a list of rotation matrix for the base of the robot (must be the same size as surfaces)
-    :param surfaces: A list of surfaces candidates, with one set of surface candidates for each phase
-    :return: a "res" dictionnary with the format required by SL1M
-    """
-    #  Nested function declaration, as they need access to the Robot variable:
-    def right_foot_constraints(transform):
-        global __ineq_right_foot
-        if __ineq_right_foot is None:
-            obj = sl1m.load_obj(Robot.filekin_right)
-            __ineq_right_foot = sl1m.as_inequalities(obj)
-        transform2 = transform.copy()
-        transform2[2, 3] += 0.105
-        ine = sl1m.rotate_inequalities(__ineq_right_foot, transform2)
-        return (ine.A, ine.b)
-
-    def left_foot_constraints(transform):
-        global __ineq_left_foot
-        if __ineq_left_foot is None:
-            obj = sl1m.load_obj(Robot.filekin_left)
-            __ineq_left_foot = sl1m.as_inequalities(obj)
-        transform2 = transform.copy()
-        transform2[2, 3] += 0.105
-        ine = sl1m.rotate_inequalities(__ineq_left_foot, transform2)
-        return (ine.A, ine.b)
-
-    # add foot offset
-    def right_foot_in_lf_frame_constraints(transform):
-        global __ineq_rf_in_rl
-        if __ineq_rf_in_rl is None:
-            obj = sl1m.load_obj(Robot.file_rf_in_lf)
-            __ineq_rf_in_rl = sl1m.as_inequalities(obj)
-        transform2 = transform.copy()
-        ine = sl1m.rotate_inequalities(__ineq_rf_in_rl, transform2)
-        return (ine.A, ine.b)
-
-    def left_foot_in_rf_frame_constraints(transform):
-        global __ineq_lf_in_rf
-        if __ineq_lf_in_rf is None:
-            obj = sl1m.load_obj(Robot.file_lf_in_rf)
-            __ineq_lf_in_rf = sl1m.as_inequalities(obj)
-        transform2 = transform.copy()
-        ine = sl1m.rotate_inequalities(__ineq_lf_in_rf, transform2)
-        return (ine.A, ine.b)
-
-    logger.debug("surfaces = %s",surfaces)
-    logger.info("number of surfaces : %d", len(surfaces))
-    logger.info("number of rotation matrix for root : %d", len(R))
-    nphases = len(surfaces)
-    logger.info("init_contacts = %s", initial_contacts)
-
-    res = {"p0": initial_contacts, "c0": None, "nphases": nphases}
-    #print "number of rotations values : ",len(R)
-    #print "R= ",R
-    #TODO in non planar cases, K must be rotated
-    phaseData = [{
-        "moving":
-        i % 2,
-        "fixed": (i + 1) % 2,
-        "K": [
-            sl1m.genKinematicConstraints(left_foot_constraints, right_foot_constraints, index=i, rotation=R, min_height=0.3)
-            for _ in range(len(surfaces[i]))
-        ],
-        "relativeK": [
-            sl1m.genFootRelativeConstraints(right_foot_in_lf_frame_constraints,
-                                       left_foot_in_rf_frame_constraints,
-                                       index=i,
-                                       rotation=R)[(i) % 2] for _ in range(len(surfaces[i]))
-        ],
-        "rootOrientation":
-        R[i],
-        "S":
-        surfaces[i]
-    } for i in range(nphases)]
-    res["phaseData"] = phaseData
-    return res
-
-## Helper methods to load constraints :
-# add foot offset
-def com_in_limb_effector_frame_constraint(Robot, transform, limbId):
-    """
-    Generate the inequalities constraints for the CoM position given a contact position for one limb
-    :param Robot:
-    :param transform: Transformation to apply to the constraints
-    :param limbId: the Id of the limb used (see Robot.limbs_names list)
-    :return: [A, b] the inequalities, in the form Ax <= b
-    """
-    global __ineq_com
-    assert (limbId <= len(Robot.limbs_names))
-    limb_name = Robot.limbs_names[limbId]
-    if __ineq_com[limbId] is None:
-        filekin = Robot.kinematic_constraints_path +"/COM_constraints_in_"+limb_name+ "_effector_frame_quasi_static_reduced.obj"
-        obj = sl1m.load_obj(filekin)
-        __ineq_com[limbId] = sl1m.as_inequalities(obj)
-    transform2 = transform.copy()
-    # ~ transform2[2,3] += 0.105
-    ine = sl1m.rotate_inequalities(__ineq_com[limbId], transform2)
-    return ine.A, ine.b
-
-
 def realIdxFootId(limbId, footId):
     if footId > limbId:
         return footId -1
     return footId
 
-# add foot offset
-def foot_in_limb_effector_frame_constraint(Robot, transform, limbId, footId):
-    """
-    Generate the constraints for the position of a given effector, given another effector position
-    :param Robot:
-    :param transform: The transform to apply to the constraints
-    :param limbId: the Id of the fixed limb (see Robot.limbs_names list)
-    :param footId: the Id of the limb for which the constraint are build
-    :return: [A, b] the inequalities, in the form Ax <= b
-    """
-    global __ineq_relative
-    assert (limbId != footId)
-    limb_name = Robot.limbs_names[limbId]
-    eff_name = Robot.dict_limb_joint[Robot.limbs_names[footId]]
-    if __ineq_relative[limbId][realIdxFootId(limbId,footId)] is None:
-        filekin = Robot.relative_feet_constraints_path + "/" + eff_name + "_constraints_in_" + limb_name + "_reduced.obj"
-        obj = sl1m.load_obj(filekin)
-        __ineq_relative[limbId][realIdxFootId(limbId,footId)] = sl1m.as_inequalities(obj)
-    transform2 = transform.copy()
-    ine = sl1m.rotate_inequalities(__ineq_relative[limbId][realIdxFootId(limbId,footId)], transform2)
-    return ine.A, ine.b
-
-def genCOMConstraints(Robot, rotation, normals):
-    """
-    Generate the constraints on the CoM position for all the effectors
-    :param Robot:
-    :param rotation: the rotation to apply to the constraints
-    :param normals: the default contact normals of each effectors
-    :return: a list of [A,b] inequalities, in the form Ax <= b
-    """
-    return [com_in_limb_effector_frame_constraint(Robot, sl1m.default_transform_from_pos_normal_(rotation, sl1m.zero3, normals[idx]),idx)
-            for idx in range(len(Robot.limbs_names))]
-
-def genRelativeConstraints(Robot, rotation, normals):
-    """
-    Generate all the relative position constraints for all limbs
-    :param Robot:
-    :param rotation: the rotation to apply to the constraints
-    :param normals: the default contact normals of each effectors
-    :return: a list of [A,b] inequalities, in the form Ax <= b
-    """
-    transforms = [sl1m.default_transform_from_pos_normal_(rotation, sl1m.zero3, normals[idx])
-                  for idx in range(len(Robot.limbs_names))]
-    res = []
-    for limbId, transform in enumerate(transforms):
-        res += [[(footId, foot_in_limb_effector_frame_constraint(Robot, transform, limbId, footId))
-                 for footId in range(len(Robot.limbs_names)) if footId != limbId]]
-    return res
-
-
-def gen_pb_mip(Robot, R, surfaces):
-    """
-    Build a SL1M problem for the Mixed Integer formulation,
-    with all the kinematics and foot relative position constraints required
-    :param Robot:
-    :param R: a list of rotation matrix for the base of the robot (must be the same size as surfaces)
-    :param surfaces: A list of surfaces candidates, with one set of surface candidates for each phase
-    :return: a "res" dictionnary with the format required by SL1M
-    """
-    normals = [np.array([0, 0, 1]) for _ in range(len(Robot.limbs_names))] #FIXME: compute it from the surfaces
-    logger.debug("surfaces = %s",surfaces)
-    logger.info("number of surfaces : %d", len(surfaces))
-    logger.info("number of rotation matrix for root : %d", len(R))
-    nphases = len(surfaces)
-    res = {"p0": None, "c0": None, "nphases": nphases}
-    #TODO in non planar cases, K must be rotated
-    phaseData = [{
-        "K": [genCOMConstraints(Robot, R[i], normals) for _ in range(len(surfaces[i]))],
-        "allRelativeK": [genRelativeConstraints(Robot, R[i], normals) for _ in range(len(surfaces[i]))],
-        "rootOrientation":R[i],
-        "S": surfaces[i]
-    } for i in range(nphases)]
-    res["phaseData"] = phaseData
-    return res
 
 def solve(planner, cfg, display_surfaces = False, initial_contacts = None, final_contacts = None):
     """
@@ -325,12 +138,7 @@ def solve(planner, cfg, display_surfaces = False, initial_contacts = None, final
     allfeetpos: a list of effector position at each phase, computed by SL1M
     res: A dictionary containing the otput of SL1M
     """
-    if cfg.SL1M_USE_MIP:
-        num_eff = len(cfg.Robot.limbs_names) # number of effectors used to create contacts
-        global __ineq_com
-        global __ineq_relative
-        __ineq_com = [None for _ in range(num_eff)]
-        __ineq_relative = [[None for _ in range(num_eff - 1)] for __ in range(num_eff)]
+    
     if initial_contacts is None:
         initial_contacts = foot_pose_from_guide(cfg.Robot, planner.q_init)
     if final_contacts is None:
@@ -344,13 +152,25 @@ def solve(planner, cfg, display_surfaces = False, initial_contacts = None, final
     it = 0
     defaultStep = cfg.GUIDE_STEP_SIZE
     step = defaultStep
-    variation = 0.4  # FIXME : put it in config file, +- bounds on the step size
+    variation = 0.4  # FIXME : put it in config file, +- bounds on the step size    
     if hasattr(planner, "pathId"):
         pathId = planner.pathId
     elif hasattr(planner, "pId"):
         pathId = planner.pId
     else:
         pathId = planner.ps.numberPaths() - 1
+    
+    solveFun = None  
+    if cfg.SL1M_USE_MIP:
+        def f(pb, surfaces):
+            return solve_MIP(pb, surfaces, costs={"final_com" : [1., planner.q_goal[0:3]]})
+        solveFun = f
+    else:
+        def f(pb, surfaces):
+            return solve_L1_combinatorial(pb, surfaces, costs={"final_com" : [1., planner.q_goal[0:3]]})
+        solveFun = f
+        
+    
     while not success and it < maxIt:
         if it > 0:
             step = defaultStep + random.uniform(-variation, variation)
@@ -365,35 +185,28 @@ def solve(planner, cfg, display_surfaces = False, initial_contacts = None, final
                                                      step,
                                                      useIntersection=cfg.SL1M_USE_INTERSECTION,
                                                      max_yaw=cfg.GUIDE_MAX_YAW,
-                                                     max_surface_area=cfg.MAX_SURFACE_AREA,
-                                                     use_all_limbs = cfg.SL1M_USE_MIP)
-        if cfg.SL1M_USE_MIP:
-            from sl1m.planner_l1_generic_equalities_as_ineq import solveMIPGurobi, initGlobals, posturalCost, targetCom, \
-                retrieve_points_from_res, targetLegCenter, targetEndPos
-            initGlobals(nEffectors=num_eff)
-            pb = gen_pb_mip(cfg.Robot, R, surfaces)
-            initCom = np.array(planner.q_init[0:3])
-            endCom = np.array(planner.q_goal[0:3])
-            pb, res, time = solveMIPGurobi(pb, surfaces, MIP=True, draw_scene=None, plot=True, l1Contact=False,
-                                           initPos=initial_contacts, endPos=final_contacts,
-                                           initCom=initCom, endCom=endCom,
-                                           costs=[(5., posturalCost), (1., targetEndPos)],
-                                           constraint_init_pos_surface = False,
-                                           refPos = foot_pose_from_guide(cfg.Robot, [0, 0 ,planner.q_init[2]]))
-            coms, footpos, allfeetpos = retrieve_points_from_res(pb, res)
-            success = True # FIXME check this from mip outputs ?
-        else:
-            from sl1m.fix_sparsity import solveL1
-            pb = gen_pb(cfg.Robot, initial_contacts, R, surfaces)
-            try:
-                pb, coms, footpos, allfeetpos, res = solveL1(pb, surfaces, None)
-                success = True
-            except:
-                logger.warning("## Planner failed at iter : %d with step length = %f", it, step)
+                                                     max_surface_area=cfg.MAX_SURFACE_AREA)
+        pb = Problem(cfg.Robot, suffix_com= cfg.SL1M_SUFFIX_COM_CONSTRAINTS, suffix_feet=cfg.SL1M_SUFFIX_FEET_CONSTRAINTS, limb_names=cfg.SL1M_FEET_NAME_FOR_CONSTRAINTS)
+        pb.generate_problem(R, surfaces[:], cfg.SL1M_GAIT, initial_contacts, np.array(planner.q_init[0:3])) #TODO COM position not used
+        try:
+            resultData = solveFun(pb, surfaces)
+            success = True
+        except Exception as e:
+            logger.warning("## Planner failed at iter : %d with step length = %f", it, step)
         it += 1
     if not success:
         raise RuntimeError("planner always fail.")
-    return pathId, pb, coms, footpos, allfeetpos, res
+    
+    
+    # ~ import sl1m.tools.plot_tools as plot
+    # ~ from mpl_toolkits.mplot3d import Axes3D
+    # ~ ax = plot.draw_scene([], cfg.SL1M_GAIT)
+    # ~ plot.plot_initial_contacts(initial_contacts, ax=ax)
+    # ~ if(success):
+        # ~ plot.plot_planner_result(resultData.coms, resultData.moving_foot_pos, resultData.all_feet_pos, ax, True)
+    # ~ else:
+        # ~ plt.show(block=False)
+    return pathId, pb, resultData 
 
 
 def runLPFromGuideScript(cfg):
@@ -421,10 +234,12 @@ def runLPFromGuideScript(cfg):
     planner = module.PathPlanner()
     planner.run()
     # compute sequence of surfaces from guide path
-    pathId, pb, coms, footpos, allfeetpos, res = solve(planner, cfg, cfg.DISPLAY_SL1M_SURFACES)
+    # ~ pathId, pb, coms, footpos, allfeetpos, res = solve(planner, cfg, cfg.DISPLAY_SL1M_SURFACES)
+    pathId, pb, resultData = solve(planner, cfg, cfg.DISPLAY_SL1M_SURFACES)
     root_init = planner.ps.configAtParam(pathId, 0.001)[0:7]
     root_end = planner.ps.configAtParam(pathId, planner.ps.pathLength(pathId) - 0.001)[0:7]
-    return sl1m.RF, root_init, root_end, pb, coms, footpos, allfeetpos, res
+    # ~ return sl1m.RF, root_init, root_end, pb, resultData
+    return cfg.SL1M_GAIT[0], root_init, root_end, pb, resultData
 
 
 def runLPScript(cfg):
@@ -456,17 +271,14 @@ def runLPScript(cfg):
 
 def generate_contact_sequence_sl1m(cfg):
     #RF,root_init,pb, coms, footpos, allfeetpos, res = runLPScript(cfg)
-    RF, root_init, root_end, pb, coms, footpos, allfeetpos, res = runLPFromGuideScript(cfg)
+    RF, root_init, root_end, pb, resultData = runLPFromGuideScript(cfg)
+    allfeetpos = resultData.all_feet_pos
     multicontact_api.switchToNumpyArray()
     # load scene and robot
     fb, v = initScene(cfg.Robot, cfg.ENV_NAME, True)
     q_init = cfg.IK_REFERENCE_CONFIG.tolist() + [0] * 6
     q_init[0:7] = root_init
-    if cfg.SL1M_USE_MIP:
-        # if MIP is used, allfeetpos contains a list of all position and not just the new position
-        feet_height_init = allfeetpos[0][0][2]
-    else:
-        feet_height_init = allfeetpos[0][2]
+    feet_height_init = allfeetpos[0][0][2]
     logger.info("feet height initial = %s", feet_height_init)
     #q_init[2] = feet_height_init + cfg.IK_REFERENCE_CONFIG[2]
     #q_init[2] += EPS_Z
@@ -474,7 +286,7 @@ def generate_contact_sequence_sl1m(cfg):
     if v:
         v(q_init)
 
-    cs = build_cs_from_sl1m(cfg.SL1M_USE_MIP, fb, cfg.IK_REFERENCE_CONFIG, root_end, pb, RF, allfeetpos,
+    cs = build_cs_from_sl1m(fb, cfg.IK_REFERENCE_CONFIG, root_end, pb, RF, allfeetpos,
                                 cfg.SL1M_USE_ORIENTATION, cfg.SL1M_USE_INTERPOLATED_ORIENTATION, q_init=q_init)
 
     if cfg.DISPLAY_CS_STONES:
@@ -517,36 +329,10 @@ def compute_orientation_for_feet_placement(fb, pb, pId, moving, RF, prev_contact
         rot = quat0  # rotation of the root, from the guide
     return rot
 
-def build_cs_from_sl1m(use_mip, fb, q_ref, root_end, pb, RF, allfeetpos, use_orientation, use_interpolated_orientation,
+def build_cs_from_sl1m(fb, q_ref, root_end, pb, RF, allfeetpos, use_orientation, use_interpolated_orientation,
                        q_init = None, first_phase = None):
     """
     Build a multicontact_api.ContactSequence from the SL1M outputs.
-    :param use_mip: should be True if the MIP solver was called, false otherwise
-    (this change the data format of the outputs)
-    :param fb: an instance of rbprm.Fullbody
-    :param q_ref: the reference wholebody configuration of the robot
-    :param root_end: the final base position
-    :param pb: the SL1M problem dictionary, containing all the contact surfaces and data
-    :param RF: the Id of the right feet in the SL1M formulation
-    :param allfeetpos: the list of all foot position for each phase, computed by SL1M
-    :param use_orientation: if True, change the contact yaw rotation to match the orientation of the base in the guide
-    :param use_interpolated_orientation: if True, the feet yaw orientation will 'anticipate' the base orientation
-    of the next phase
-    :param q_init: the initial wholebody configuration (either this or first_phase should be provided)
-    :param first_phase: the first multicontact_api.ContactPhase object (either this or q_init should be provided)
-    :return: the multicontact_api.ContactSequence, with all ContactPhase created at the correct placement
-    """
-    if use_mip:
-        return build_cs_from_sl1m_mip(fb, q_ref, root_end, pb, allfeetpos, use_orientation, use_interpolated_orientation,
-         q_init, first_phase)
-    else:
-        return build_cs_from_sl1m_l1(fb, q_ref, root_end, pb, RF, allfeetpos, use_orientation, use_interpolated_orientation,
-        q_init, first_phase)
-
-def build_cs_from_sl1m_l1(fb, q_ref, root_end, pb, RF, allfeetpos, use_orientation, use_interpolated_orientation,
-                       q_init = None, first_phase = None):
-    """
-    Build a multicontact_api.ContactSequence from the SL1M outputs, when not using the MIP formulation
     :param fb: an instance of rbprm.Fullbody
     :param q_ref: the reference wholebody configuration of the robot
     :param root_end: the final base position
@@ -562,71 +348,7 @@ def build_cs_from_sl1m_l1(fb, q_ref, root_end, pb, RF, allfeetpos, use_orientati
     """
     # init contact sequence with first phase : q_ref move at the right root pose and with both feet in contact
     # FIXME : allow to customize that first phase
-    cs = ContactSequence(0)
-    if q_init:
-        addPhaseFromConfig(fb, cs, q_init, [fb.rLegId, fb.lLegId])
-    elif first_phase:
-        cs.append(first_phase)
-    else:
-        raise ValueError("build_cs_from_sl1m should have either q_init or first_phase argument defined")
-
-    # loop over all phases of pb and add them to the cs :
-    for pId in range(2, len(pb["phaseData"])):  # start at 2 because the first two ones are already done in the q_init
-        prev_contactPhase = cs.contactPhases[-1]
-        #n = normal(pb["phaseData"][pId])
-        phase = pb["phaseData"][pId]
-        moving = phase["moving"]
-        movingID = fb.lfoot
-        if moving == RF:
-            movingID = fb.rfoot
-        pos = allfeetpos[pId]  # array, desired position for the feet movingID
-        pos[2] += EPS_Z  # FIXME it shouldn't be required !!
-        # compute desired foot rotation :
-        if use_orientation:
-            rot = compute_orientation_for_feet_placement(fb, pb, pId, moving, RF, prev_contactPhase, use_interpolated_orientation)
-        else:
-            rot = Quaternion.Identity()
-        placement = SE3()
-        placement.translation = np.array(pos).T
-        placement.rotation = rot.matrix()
-        cs.moveEffectorToPlacement(movingID, placement)
-
-    # final phase :
-    # fixme : assume root is in the middle of the last 2 feet pos ...
-    q_end = q_ref.tolist() + [0] * 6
-    #p_end = (allfeetpos[-1] + allfeetpos[-2]) / 2.
-    #for i in range(3):
-    #    q_end[i] += p_end[i]
-    q_end[0:7] = root_end
-    feet_height_end = allfeetpos[-1][2]
-    logger.info("feet height final = %s", feet_height_end)
-    q_end[2] = feet_height_end + q_ref[2]
-    q_end[2] += EPS_Z
-    fb.setCurrentConfig(q_end)
-    com = fb.getCenterOfMass()
-    setFinalState(cs, com, q=q_end)
-
-    return cs
-
-def build_cs_from_sl1m_mip(fb, q_ref, root_end, pb, allfeetpos, use_orientation, use_interpolated_orientation,
-                       q_init = None, first_phase = None):
-    """
-    Build a multicontact_api.ContactSequence from the SL1M outputs when using the MIP formulation
-    :param fb: an instance of rbprm.Fullbody
-    :param q_ref: the reference wholebody configuration of the robot
-    :param root_end: the final base position
-    :param pb: the SL1M problem dictionary, containing all the contact surfaces and data
-    :param allfeetpos: the list of all foot position for each phase, computed by SL1M
-    :param use_orientation: if True, change the contact yaw rotation to match the orientation of the base in the guide
-    :param use_interpolated_orientation: if True, the feet yaw orientation will 'anticipate' the base orientation
-    of the next phase
-    :param q_init: the initial wholebody configuration (either this or first_phase should be provided)
-    :param first_phase: the first multicontact_api.ContactPhase object (either this or q_init should be provided)
-    :return: the multicontact_api.ContactSequence, with all ContactPhase created at the correct placement
-    """
-    # init contact sequence with first phase : q_ref move at the right root pose and with both feet in contact
-    # FIXME : allow to customize that first phase
-    num_steps = len(pb["phaseData"]) - 1 # number of contact repositionning
+    num_steps = len(pb.phaseData) - 1 # number of contact repositionning
     limbs_names = fb.limbs_names
     num_effectors = len(limbs_names)
     logger.info(" limbs names : %s", limbs_names)
@@ -640,6 +362,7 @@ def build_cs_from_sl1m_mip(fb, q_ref, root_end, pb, allfeetpos, use_orientation,
         raise ValueError("build_cs_from_sl1m should have either q_init or first_phase argument defined")
     logger.info("Initial phase added, contacts : %s ", cs.contactPhases[0].effectorsInContact())
     # loop for all effector placements, and create the required contact phases
+    allfeetpos = [[el[i] for el in allfeetpos] for i in range(len(allfeetpos[0]))]
     previous_eff_placements = allfeetpos[0]
     if len(previous_eff_placements) != num_effectors:
         raise NotImplementedError("A phase in the output of SL1M do not have all the effectors in contact.")
@@ -654,15 +377,17 @@ def build_cs_from_sl1m_mip(fb, q_ref, root_end, pb, allfeetpos, use_orientation,
                     raise NotImplementedError("Several contact changes between two adjacent phases in SL1M output")
                 switch = True
                 ee_name = fb.dict_limb_joint[limbs_names[k]]
-                #pos[2] += EPS_Z # FIXME: apply epsz along the normal
-                pos = fb.dict_offset[ee_name].actInv(pos)
+                pos = fb.dict_offset[ee_name].actInv(pos); 
                 logger.info("Move effector %s ", ee_name)
                 logger.info("To position %s ", pos)
                 placement = SE3.Identity()
-                placement.translation = pos
+                placement.translation = pos;
                 # compute orientation of the contact from the surface normal:
-                phase_data = pb["phaseData"][pid+1] # +1 because the for loop start at id = 1
-                n = normal_from_ineq(phase_data["S"][phase_data["id_surface"]])
+                # ~ phase_data = pb.phaseData[pid+1] # +1 because the for loop start at id = 1
+                phase_data = pb.phaseData[pid] # +1 because the for loop start at id = 1
+                # ~ n = normal_from_ineq(phase_data.S[phase_data["id_surface"]])
+                #TODO RETRIEVE SURFACE NORMAL
+                n = array([0.,0.,1.])
                 placement.rotation = rotationFromNormal(n)
                 logger.debug("new contact placement : %s", placement)
                 # TODO add yaw rotation from guide here !

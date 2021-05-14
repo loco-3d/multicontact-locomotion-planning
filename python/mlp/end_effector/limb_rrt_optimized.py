@@ -2,7 +2,7 @@ from .limb_rrt import DISPLAY_RRT_PATH, generateLimbRRTPath
 from .limb_rrt import EffectorInputsLimbrrt, EffectorOutputsLimbrrt
 import hpp_bezier_com_traj as bezier_com
 from mlp.end_effector.bezier_predef import generatePredefBeziers, generateSmoothBezierTraj
-from curves import bezier, SE3Curve, piecewise_SE3
+from ndcurves import bezier, SE3Curve, piecewise_SE3
 from mlp.utils.util import effectorPositionFromHPPPath
 import quadprog
 import math

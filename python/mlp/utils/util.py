@@ -4,7 +4,7 @@ from numpy.linalg import norm
 import pinocchio
 from pinocchio import SE3, Quaternion, Motion
 from pinocchio.utils import  rotate
-from curves import polynomial, SE3Curve, SO3Linear
+from ndcurves import polynomial, SE3Curve, SO3Linear
 from hpp.corbaserver.rbprm.rbprmstate import State, StateHelper
 from random import uniform
 import signal, time
