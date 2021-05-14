@@ -3,7 +3,7 @@ import os
 import pinocchio as pin
 from mlp.utils.util import discretizeCurve, discretizeSE3CurveTranslation, discretizeDerivateCurve
 import matplotlib
-matplotlib.use("Qt4agg")
+#matplotlib.use("Qt4agg")
 import matplotlib.pyplot as plt
 from multiprocessing import Process
 from mlp.utils.requirements import Requirements
