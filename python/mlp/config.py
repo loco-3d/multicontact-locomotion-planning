@@ -29,12 +29,13 @@ class Config:
         self.simulator_method = "pinocchio_integration"
 
         ## PATHS settings :
-        PKG_PATH = os.environ['DEVEL_HPP_DIR']+"/src/multicontact-locomotion-planning"
-        OUTPUT_DIR = "/res"
-        CONTACT_SEQUENCE_PATH = OUTPUT_DIR
-        TIME_OPT_CONFIG_PATH = PKG_PATH +'/timeOpt_configs'
-        STATUS_FILENAME = OUTPUT_DIR + "/infos.log"
-        EXPORT_PATH = OUTPUT_DIR
+        self.PKG_PATH = os.environ['DEVEL_HPP_DIR']+"/src/multicontact-locomotion-planning"
+        self.OUTPUT_DIR = "/res"
+        self.CONTACT_SEQUENCE_PATH = self.OUTPUT_DIR
+        self.TIME_OPT_CONFIG_PATH = self.PKG_PATH +'/momentumopt_configs'
+        self.STATUS_FILENAME = self.OUTPUT_DIR + "/infos.log"
+        self.EXPORT_PATH = self.OUTPUT_DIR
+        self.CONTACT_SEQUENCE_PATH = self.OUTPUT_DIR + "/contact_sequences"
         # if absolute script path is given for rbprm, this path is prepended
         self.RBPRM_SCRIPT_PATH = "hpp.corbaserver.rbprm.scenarios"
 
