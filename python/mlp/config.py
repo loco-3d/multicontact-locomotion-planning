@@ -29,21 +29,12 @@ class Config:
         self.simulator_method = "pinocchio_integration"
 
         ## PATHS settings :
-        self.PKG_PATH = pathlib.Path(__file__).parent.parent.parent.absolute()
-        # check if run from the source folder or from the installed directory
-        is_installed = self.PKG_PATH.parent.name == "lib"
-        print ("PKG_PATH = ",self.PKG_PATH)
-        if is_installed:
-            self.OUTPUT_DIR = str(self.PKG_PATH.parent.parent / "share" / "mlp" / "res")
-            self.TIME_OPT_CONFIG_PATH = str(self.PKG_PATH.parent.parent / "share" / "mlp" / "momentumopt_configs")
-        else:
-            self.OUTPUT_DIR = str(self.PKG_PATH / "res")
-            self.TIME_OPT_CONFIG_PATH = str(self.PKG_PATH / "momentumopt_configs")
-
-        self.CONTACT_SEQUENCE_PATH = self.OUTPUT_DIR + "/contact_sequences"
-
-        self.STATUS_FILENAME = self.OUTPUT_DIR + "/infos.log"
-        self.EXPORT_PATH = self.OUTPUT_DIR + "/export"
+        PKG_PATH = os.environ['DEVEL_HPP_DIR']+"/src/multicontact-locomotion-planning"
+        OUTPUT_DIR = "/res"
+        CONTACT_SEQUENCE_PATH = OUTPUT_DIR
+        TIME_OPT_CONFIG_PATH = PKG_PATH +'/timeOpt_configs'
+        STATUS_FILENAME = OUTPUT_DIR + "/infos.log"
+        EXPORT_PATH = OUTPUT_DIR
         # if absolute script path is given for rbprm, this path is prepended
         self.RBPRM_SCRIPT_PATH = "hpp.corbaserver.rbprm.scenarios"
 
