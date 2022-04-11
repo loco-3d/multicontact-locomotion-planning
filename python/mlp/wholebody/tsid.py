@@ -534,7 +534,7 @@ def generate_wholebody_tsid(cfg, cs_ref, fullBody=None, viewer=None, robot=None,
         postureTask = tsid.TaskJointPosture("task-joint-posture", robot)
         postureTask.setKp(cfg.kp_posture * cfg.gain_vector)
         postureTask.setKd(2.0 * np.sqrt(cfg.kp_posture * cfg.gain_vector))
-        postureTask.mask(cfg.masks_posture)
+        postureTask.setMask(cfg.masks_posture)
         invdyn.addMotionTask(postureTask, cfg.w_posture, cfg.level_posture, 0.0)
         q_ref = cfg.IK_REFERENCE_CONFIG
         samplePosture = tsid.TrajectorySample(q_ref.shape[0] - 7)
