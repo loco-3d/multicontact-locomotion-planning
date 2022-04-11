@@ -105,8 +105,8 @@ class Config:
         ## Settings for end effector :
         self.EFF_CHECK_COLLISION = True  # After generating of whole body motion for a phase with an effector motion, check collision and joints limits for this motion and retry if invalid and if choosen method allow it
         self.CHECK_DT = 0.01  # time step (in seconds) at which the (self-)collision and joints limits are tested
-        self.WB_ABORT_WHEN_INVALID = False  # stop wb script when stuck with an invalid motion and return the VALID part (before the phase with collision)
-        self.WB_RETURN_INVALID = not self.WB_ABORT_WHEN_INVALID and True  # stop wb script when stuck with an invalid motion and return  the computed part of motion, incuding the last INVALID phase
+        self.WB_ABORT_WHEN_INVALID = True  # stop wb script when stuck with an invalid motion and return the VALID part (before the phase with collision)
+        self.WB_RETURN_INVALID = not self.WB_ABORT_WHEN_INVALID and False  # stop wb script when stuck with an invalid motion and return  the computed part of motion, incuding the last INVALID phase
 
         ##  Settings for whole body :
         self.YAW_ROT_GAIN = 1.  # gain for the orientation task of the root orientation, along the yaw axis (wrt to the other axis of the orientation task)
