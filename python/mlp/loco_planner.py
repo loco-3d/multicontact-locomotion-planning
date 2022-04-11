@@ -162,6 +162,7 @@ class LocoPlanner:
             print("## Check final motion, valid = ", motion_valid)
             if not motion_valid:
                 print("## First invalid time : ", t_invalid)
+                sys.exit(1)  
             if self.cfg.WRITE_STATUS:
                 with open(self.cfg.STATUS_FILENAME, "a") as f:
                     f.write("motion_valid: " + str(motion_valid) + "\n")
