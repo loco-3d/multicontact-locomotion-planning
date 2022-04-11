@@ -39,12 +39,12 @@ class Config:
         self.RBPRM_SCRIPT_PATH = "hpp.corbaserver.rbprm.scenarios"
 
         ## Export setting
-        self.SAVE_CS = True
-        self.SAVE_CS_COM = True
-        self.SAVE_CS_REF = True
-        self.SAVE_CS_WB = True
+        self.SAVE_CS = False
+        self.SAVE_CS_COM = False
+        self.SAVE_CS_REF = False
+        self.SAVE_CS_WB = False
         self.EXPORT_GAZEBO = False
-        self.EXPORT_NPZ = False
+        self.EXPORT_NPZ = True
         self.EXPORT_BLENDER = False
         self.EXPORT_SOT = False
         self.EXPORT_OPENHRP = False
