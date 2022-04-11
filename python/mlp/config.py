@@ -74,7 +74,7 @@ class Config:
         self.DISPLAY_WB_MOTION = False  # display whole body motion automatically once it's computed
         # dt used to display the wb motion (one configuration every dt is displayed) It have to be greater than IK_dt
         self.DT_DISPLAY = 0.05
-        self.PLOT = True  # Generate plot for various data
+        self.PLOT = False  # Generate plot for various data
         # plot COM trajectory computed by the centroidal dynamic solver, before trying to compute the wholebody motion
         self.PLOT_CENTROIDAL = False
         self.DISPLAY_PLOT = self.PLOT and True  # display plot directly
