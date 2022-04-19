@@ -55,6 +55,7 @@ planner_variables:
   w_frc_leg:       [ 0.001,  0.001,  0.001]
   w_dfrc_arm:      [ 0.000,  0.000,  0.000]
   w_dfrc_leg:      [ 0.000,  0.000,  0.000]
+  w_com_track:     [ 0.000,  0.000,  0.000]  # weight used to track the CoM position from the Kinematic Sequence
   w_amom_track:    [ 1.000,  1.000,  1.000]
   w_lmom_track:    [ 0.100,  0.100,  0.100]
 
