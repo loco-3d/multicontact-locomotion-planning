@@ -7,4 +7,4 @@ EFF_T_PREDEF = 0.2
 EFF_T_DELAY = 0.05
 p_max = 0.07
 
-YAW_ROT_GAIN = 0.01
+YAW_ROT_GAIN = 1.
