@@ -59,7 +59,7 @@ class Config:
         self.DISPLAY_CS_STONES = True  # display stepping stones
         self.DISPLAY_INIT_GUESS_TRAJ = False
         # display waypoints found by the planner and used in the cost function of the centroidal dynamic solver
-        self.DISPLAY_WP_COST = True
+        self.DISPLAY_WP_COST = False
         self.DISPLAY_COM_TRAJ = True
         self.DISPLAY_FEET_TRAJ = True  # display the feet trajectories used in the final motion
         self.DISPLAY_ALL_FEET_TRAJ = False  # display all the trajectory used as reference, even the invalid ones
@@ -115,7 +115,7 @@ class Config:
         self.WB_STOP_AT_EACH_PHASE = False  # wait for user input between each phase
         self.IK_dt = 0.001  # controler time step (in second)
         self.IK_PRINT_N = 500  # print state of the problem every IK_PRINT_N time steps (if verbose >= 1)
-        self.IK_SHOW_PROGRESS = True # if True, display the last configuration of each phase computed during the computation
+        self.IK_SHOW_PROGRESS = False # if True, display the last configuration of each phase computed during the computation
         self.CHECK_FINAL_MOTION = True  # After computation of the motion, check the complete motion for {self-}collision and joints limits
         ### The following settings enable the computation of various values stored in the wholeBody_result struct.
         # Enabling them increase the computation time of the wholeBody script
